@@ -588,6 +588,28 @@ window.LANG_IT = {
     "traditionalChineseTW": "Cinese Tradizionale (TW)",
     "pinyin": "Pinyin"
   },
+  "lyricsCacheEditor": {
+    "title": "Modifica pronuncia / traduzione salvata",
+    "unknownTrack": "Brano sconosciuto",
+    "lineCount": "Righe modificabili",
+    "close": "Chiudi",
+    "loading": "Caricamento del testo salvato...",
+    "original": "Originale",
+    "reference": "Riferimento",
+    "cached": "In cache",
+    "empty": "Vuoto",
+    "pronunciationPlaceholder": "Una riga per ogni riga del testo",
+    "translationPlaceholder": "Una riga per ogni riga del testo",
+    "cancel": "Annulla",
+    "saving": "Salvataggio...",
+    "save": "Salva cache",
+    "loadFailed": "Impossibile caricare il testo salvato.",
+    "lineOverflow": "Il numero di righe modificate non può superare il numero di righe del testo originale.",
+    "trackMissing": "Nessun brano attivo trovato.",
+    "saved": "La pronuncia e la traduzione salvate sono state aggiornate.",
+    "saveFailed": "Impossibile salvare il testo salvato.",
+    "button": "Modifica pronuncia / traduzione salvata"
+  },
   "notifications": {
     "languageChanged": "Lingua cambiata. Verrà applicata dopo l'aggiornamento.",
     "settingsSaved": "Impostazioni salvate",

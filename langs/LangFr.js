@@ -588,6 +588,28 @@ window.LANG_FR = {
     "traditionalChineseTW": "Chinois trad. (TW)",
     "pinyin": "Pinyin"
   },
+  "lyricsCacheEditor": {
+    "title": "Modifier la prononciation / traduction en cache",
+    "unknownTrack": "Titre inconnu",
+    "lineCount": "Lignes modifiables",
+    "close": "Fermer",
+    "loading": "Chargement des paroles en cache...",
+    "original": "Original",
+    "reference": "Référence",
+    "cached": "En cache",
+    "empty": "Vide",
+    "pronunciationPlaceholder": "Une ligne par ligne de paroles",
+    "translationPlaceholder": "Une ligne par ligne de paroles",
+    "cancel": "Annuler",
+    "saving": "Enregistrement...",
+    "save": "Enregistrer le cache",
+    "loadFailed": "Impossible de charger les paroles en cache.",
+    "lineOverflow": "Le nombre de lignes modifiées ne peut pas dépasser celui des paroles d'origine.",
+    "trackMissing": "Aucun titre en cours de lecture n'a été trouvé.",
+    "saved": "La prononciation et la traduction en cache ont été mises à jour.",
+    "saveFailed": "Impossible d'enregistrer les paroles en cache.",
+    "button": "Modifier la prononciation / traduction en cache"
+  },
   "notifications": {
     "languageChanged": "Langue changée. Appliqué après actualisation.",
     "settingsSaved": "Paramètres enregistrés",

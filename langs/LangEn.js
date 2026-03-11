@@ -588,6 +588,28 @@ window.LANG_EN = {
     "traditionalChineseTW": "Traditional Chinese (TW)",
     "pinyin": "Pinyin"
   },
+  "lyricsCacheEditor": {
+    "title": "Edit Cached Pronunciation / Translation",
+    "unknownTrack": "Unknown Track",
+    "lineCount": "Editable lines",
+    "close": "Close",
+    "loading": "Loading cached lyrics...",
+    "original": "Original",
+    "reference": "Reference",
+    "cached": "Cached",
+    "empty": "Empty",
+    "pronunciationPlaceholder": "One line per lyric line",
+    "translationPlaceholder": "One line per lyric line",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "save": "Save Cache",
+    "loadFailed": "Failed to load cached lyrics.",
+    "lineOverflow": "The number of edited lines cannot exceed the original lyric lines.",
+    "trackMissing": "No active track was found.",
+    "saved": "Cached pronunciation and translation were updated.",
+    "saveFailed": "Failed to save cached lyrics.",
+    "button": "Edit cached pronunciation / translation"
+  },
   "notifications": {
     "languageChanged": "Language changed. Will be applied after refresh.",
     "settingsSaved": "Settings saved",

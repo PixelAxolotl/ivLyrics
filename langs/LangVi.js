@@ -588,6 +588,28 @@ window.LANG_VI = {
     "traditionalChineseTW": "Tiếng Trung Phồn thể (Đài Loan)",
     "pinyin": "Pinyin (Bính âm)"
   },
+  "lyricsCacheEditor": {
+    "title": "Chỉnh sửa phiên âm / bản dịch đã lưu",
+    "unknownTrack": "Bài hát không xác định",
+    "lineCount": "Số dòng có thể chỉnh sửa",
+    "close": "Đóng",
+    "loading": "Đang tải lời bài hát đã lưu...",
+    "original": "Bản gốc",
+    "reference": "Tham chiếu",
+    "cached": "Đã lưu cache",
+    "empty": "Trống",
+    "pronunciationPlaceholder": "Mỗi dòng lời bài hát tương ứng một dòng",
+    "translationPlaceholder": "Mỗi dòng lời bài hát tương ứng một dòng",
+    "cancel": "Hủy",
+    "saving": "Đang lưu...",
+    "save": "Lưu cache",
+    "loadFailed": "Không thể tải lời bài hát đã lưu.",
+    "lineOverflow": "Số dòng đã chỉnh sửa không được vượt quá số dòng lời gốc.",
+    "trackMissing": "Không tìm thấy bài hát đang phát.",
+    "saved": "Đã cập nhật phiên âm và bản dịch đã lưu.",
+    "saveFailed": "Không thể lưu lời bài hát đã lưu.",
+    "button": "Chỉnh sửa phiên âm / bản dịch đã lưu"
+  },
   "notifications": {
     "languageChanged": "Ngôn ngữ đã thay đổi. Sẽ áp dụng sau khi tải lại trang.",
     "settingsSaved": "Đã lưu cài đặt",

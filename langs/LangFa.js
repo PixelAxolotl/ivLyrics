@@ -588,6 +588,28 @@ window.LANG_FA = {
     "traditionalChineseTW": "چینی سنتی (تایوان)",
     "pinyin": "پین‌یین"
   },
+  "lyricsCacheEditor": {
+    "title": "ویرایش آوانویسی / ترجمه ذخیره‌شده",
+    "unknownTrack": "آهنگ نامشخص",
+    "lineCount": "خط‌های قابل ویرایش",
+    "close": "بستن",
+    "loading": "در حال بارگذاری متن ذخیره‌شده...",
+    "original": "متن اصلی",
+    "reference": "مرجع",
+    "cached": "کش شده",
+    "empty": "خالی",
+    "pronunciationPlaceholder": "برای هر خط از متن، یک خط وارد کنید",
+    "translationPlaceholder": "برای هر خط از متن، یک خط وارد کنید",
+    "cancel": "لغو",
+    "saving": "در حال ذخیره...",
+    "save": "ذخیره کش",
+    "loadFailed": "بارگذاری متن ذخیره‌شده انجام نشد.",
+    "lineOverflow": "تعداد خط‌های ویرایش‌شده نمی‌تواند از تعداد خط‌های متن اصلی بیشتر باشد.",
+    "trackMissing": "آهنگ در حال پخش پیدا نشد.",
+    "saved": "آوانویسی و ترجمه ذخیره‌شده به‌روزرسانی شد.",
+    "saveFailed": "ذخیره متن انجام نشد.",
+    "button": "ویرایش آوانویسی / ترجمه ذخیره‌شده"
+  },
   "notifications": {
     "languageChanged": "زبان تغییر کرد. پس از رفرش اعمال می‌شود.",
     "settingsSaved": "تنظیمات ذخیره شد",

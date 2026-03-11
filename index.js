@@ -2503,6 +2503,310 @@ const fontSizeLimit = { min: 16, max: 256, step: 4 };
 
 const thresholdSizeLimit = { min: 0, max: 100, step: 5 };
 
+const LyricsCacheEditModal = ({
+  isOpen,
+  isLoading,
+  isSaving,
+  originalLines,
+  pronunciationText,
+  translationText,
+  expectedLineCount,
+  hasPronunciationCache,
+  hasTranslationCache,
+  trackTitle,
+  trackArtist,
+  provider,
+  error,
+  onClose,
+  onSave,
+  onPronunciationChange,
+  onTranslationChange,
+}) => {
+  if (!isOpen) {
+    return null;
+  }
+
+  const normalizeEditorLines = (text, count) => {
+    const lines = String(text ?? "").replace(/\r\n?/g, "\n").split("\n");
+    while (lines.length < count) {
+      lines.push("");
+    }
+    return lines.slice(0, count);
+  };
+
+  const sanitizedOriginalLines = Array.isArray(originalLines)
+    ? Array.from({ length: expectedLineCount }, (_, index) =>
+      String(originalLines[index] ?? "")
+    )
+    : normalizeEditorLines("", expectedLineCount);
+  const pronunciationLines = normalizeEditorLines(
+    pronunciationText,
+    expectedLineCount
+  );
+  const translationLines = normalizeEditorLines(
+    translationText,
+    expectedLineCount
+  );
+
+  const updateLine = (lines, index, nextValue, onChange) => {
+    const nextLines = [...lines];
+    nextLines[index] = String(nextValue ?? "").replace(/\r\n?/g, " ");
+    onChange(nextLines.join("\n"));
+  };
+
+  const handleOverlayClick = (event) => {
+    if (event.target === event.currentTarget && !isSaving) {
+      onClose();
+    }
+  };
+
+  return react.createElement(
+    "div",
+    {
+      className: "ivlyrics-cache-edit-overlay",
+      onClick: handleOverlayClick,
+    },
+    react.createElement(
+      "div",
+      {
+        className: "ivlyrics-cache-edit-modal",
+        role: "dialog",
+        "aria-modal": true,
+        "aria-label": I18n.t("lyricsCacheEditor.title"),
+      },
+      react.createElement(
+        "div",
+        { className: "ivlyrics-cache-edit-header" },
+        react.createElement(
+          "div",
+          { className: "ivlyrics-cache-edit-header-copy" },
+          react.createElement(
+            "h2",
+            { className: "ivlyrics-cache-edit-title" },
+            I18n.t("lyricsCacheEditor.title")
+          ),
+          react.createElement(
+            "p",
+            { className: "ivlyrics-cache-edit-subtitle" },
+            `${trackTitle || I18n.t("lyricsCacheEditor.unknownTrack")}${trackArtist ? ` · ${trackArtist}` : ""}`
+          ),
+          react.createElement(
+            "p",
+            { className: "ivlyrics-cache-edit-meta" },
+            `${I18n.t("lyricsCacheEditor.lineCount")}: ${expectedLineCount}${provider ? ` · ${provider}` : ""}`
+          )
+        ),
+        react.createElement(
+          "button",
+          {
+            type: "button",
+            className: "ivlyrics-cache-edit-close",
+            onClick: onClose,
+            disabled: isSaving,
+            "aria-label": I18n.t("lyricsCacheEditor.close"),
+          },
+          "×"
+        )
+      ),
+      react.createElement(
+        "div",
+        { className: "ivlyrics-cache-edit-body" },
+        isLoading
+          ? react.createElement(
+            "div",
+            { className: "ivlyrics-cache-edit-loading" },
+            I18n.t("lyricsCacheEditor.loading")
+          )
+          : react.createElement(
+            "div",
+            { className: "ivlyrics-cache-edit-content" },
+            react.createElement(
+              "div",
+              { className: "ivlyrics-cache-edit-status" },
+              react.createElement(
+                "div",
+                { className: "ivlyrics-cache-edit-status-item" },
+                react.createElement(
+                  "span",
+                  null,
+                  I18n.t("menu.pronunciation")
+                ),
+                react.createElement(
+                  "span",
+                  { className: "ivlyrics-cache-edit-badge" },
+                  hasPronunciationCache
+                    ? I18n.t("lyricsCacheEditor.cached")
+                    : I18n.t("lyricsCacheEditor.empty")
+                )
+              ),
+              react.createElement(
+                "div",
+                { className: "ivlyrics-cache-edit-status-item" },
+                react.createElement(
+                  "span",
+                  null,
+                  I18n.t("menu.translationLabel")
+                ),
+                react.createElement(
+                  "span",
+                  { className: "ivlyrics-cache-edit-badge" },
+                  hasTranslationCache
+                    ? I18n.t("lyricsCacheEditor.cached")
+                    : I18n.t("lyricsCacheEditor.empty")
+                )
+              )
+            ),
+            react.createElement(
+              "div",
+              { className: "ivlyrics-cache-edit-list" },
+              ...sanitizedOriginalLines.map((originalLine, index) =>
+                react.createElement(
+                  "div",
+                  {
+                    key: `cache-edit-line-${index}`,
+                    className: "ivlyrics-cache-edit-item",
+                  },
+                  react.createElement(
+                    "div",
+                    { className: "ivlyrics-cache-edit-item-index" },
+                    index + 1
+                  ),
+                  react.createElement(
+                    "div",
+                    { className: "ivlyrics-cache-edit-item-fields" },
+                    react.createElement(
+                      "div",
+                      { className: "ivlyrics-cache-edit-field" },
+                      react.createElement(
+                        "div",
+                        { className: "ivlyrics-cache-edit-field-header" },
+                        react.createElement(
+                          "span",
+                          null,
+                          I18n.t("lyricsCacheEditor.original")
+                        ),
+                        react.createElement(
+                          "span",
+                          { className: "ivlyrics-cache-edit-badge" },
+                          I18n.t("lyricsCacheEditor.reference")
+                        )
+                      ),
+                      react.createElement(
+                        "div",
+                        { className: "ivlyrics-cache-edit-original-line" },
+                        originalLine || " "
+                      )
+                    ),
+                    react.createElement(
+                      "div",
+                      { className: "ivlyrics-cache-edit-field" },
+                      react.createElement(
+                        "div",
+                        { className: "ivlyrics-cache-edit-field-header" },
+                        react.createElement(
+                          "span",
+                          null,
+                          I18n.t("menu.pronunciation")
+                        )
+                      ),
+                      react.createElement("textarea", {
+                        className: "ivlyrics-cache-edit-line-input",
+                        rows: 2,
+                        value: pronunciationLines[index] ?? "",
+                        onChange: (event) =>
+                          updateLine(
+                            pronunciationLines,
+                            index,
+                            event.target.value,
+                            onPronunciationChange
+                          ),
+                        onKeyDown: (event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                          }
+                        },
+                        spellCheck: false,
+                        placeholder: I18n.t(
+                          "lyricsCacheEditor.pronunciationPlaceholder"
+                        ),
+                      })
+                    ),
+                    react.createElement(
+                      "div",
+                      { className: "ivlyrics-cache-edit-field" },
+                      react.createElement(
+                        "div",
+                        { className: "ivlyrics-cache-edit-field-header" },
+                        react.createElement(
+                          "span",
+                          null,
+                          I18n.t("menu.translationLabel")
+                        )
+                      ),
+                      react.createElement("textarea", {
+                        className: "ivlyrics-cache-edit-line-input",
+                        rows: 2,
+                        value: translationLines[index] ?? "",
+                        onChange: (event) =>
+                          updateLine(
+                            translationLines,
+                            index,
+                            event.target.value,
+                            onTranslationChange
+                          ),
+                        onKeyDown: (event) => {
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                          }
+                        },
+                        spellCheck: true,
+                        placeholder: I18n.t(
+                          "lyricsCacheEditor.translationPlaceholder"
+                        ),
+                      })
+                    )
+                  )
+                )
+              )
+            )
+          ),
+        error &&
+        react.createElement(
+          "p",
+          { className: "ivlyrics-cache-edit-error" },
+          error
+        )
+      ),
+      react.createElement(
+        "div",
+        { className: "ivlyrics-cache-edit-footer" },
+        react.createElement(
+          "button",
+          {
+            type: "button",
+            className: "ivlyrics-cache-edit-button secondary",
+            onClick: onClose,
+            disabled: isSaving,
+          },
+          I18n.t("lyricsCacheEditor.cancel")
+        ),
+        react.createElement(
+          "button",
+          {
+            type: "button",
+            className: "ivlyrics-cache-edit-button primary",
+            onClick: onSave,
+            disabled: isLoading || isSaving,
+          },
+          isSaving
+            ? I18n.t("lyricsCacheEditor.saving")
+            : I18n.t("lyricsCacheEditor.save")
+        )
+      )
+    )
+  );
+};
+
 class LyricsContainer extends react.Component {
   constructor() {
     super();
@@ -2547,6 +2851,15 @@ class LyricsContainer extends react.Component {
       videoInfo: null,
       // 메타데이터 번역
       translatedMetadata: null,
+      isLyricsEditModalOpen: false,
+      isLyricsEditLoading: false,
+      isLyricsEditSaving: false,
+      lyricsEditOriginalLines: [],
+      lyricsEditPronunciationText: "",
+      lyricsEditTranslationText: "",
+      lyricsEditHasPronunciationCache: false,
+      lyricsEditHasTranslationCache: false,
+      lyricsEditError: "",
     };
     this.currentTrackUri = "";
     this.nextTrackUri = "";
@@ -2673,6 +2986,239 @@ class LyricsContainer extends react.Component {
     }
 
     this.openFloatingMenu();
+  }
+
+  getTranslationTargetLanguage() {
+    const targetLanguage =
+      window.CONFIG?.visual?.["translate:target-language"] ||
+      localStorage.getItem("ivLyrics:visual:translate:target-language");
+
+    if (targetLanguage && targetLanguage !== "auto") {
+      return targetLanguage;
+    }
+
+    return (
+      window.I18n?.getCurrentLanguage?.() ||
+      Spicetify.Locale?.getLocale?.()?.split("-")[0] ||
+      "en"
+    );
+  }
+
+  getEditingBaseLyrics() {
+    const currentMode = this.getCurrentMode();
+
+    if (currentMode === KARAOKE && Array.isArray(this.state.karaoke)) {
+      return this.state.karaoke;
+    }
+    if (currentMode === SYNCED && Array.isArray(this.state.synced)) {
+      return this.state.synced;
+    }
+    if (currentMode === UNSYNCED && Array.isArray(this.state.unsynced)) {
+      return this.state.unsynced;
+    }
+
+    return this.resolveLyricsForMode(this.state, currentMode) || [];
+  }
+
+  getEditableCacheSourceLines() {
+    return (this.getEditingBaseLyrics() || [])
+      .map((line) => line?.originalText || line?.text || "")
+      .filter((line) => !Utils.isSectionHeader(line) && String(line).trim() !== "");
+  }
+
+  buildCacheEditorText(lines, expectedCount) {
+    const safeLines = Array.isArray(lines) ? lines : [];
+    const normalizedLines = Array.from({ length: expectedCount }, (_, index) => {
+      const line = safeLines[index];
+      return typeof line === "string" ? line : String(line ?? "");
+    });
+    return normalizedLines.join("\n");
+  }
+
+  normalizeCacheEditorLines(text, expectedCount) {
+    const normalizedText = String(text ?? "").replace(/\r\n?/g, "\n");
+    const lines = normalizedText.split("\n");
+
+    if (lines.length > expectedCount) {
+      return null;
+    }
+
+    while (lines.length < expectedCount) {
+      lines.push("");
+    }
+
+    return lines;
+  }
+
+  closeLyricsEditModal() {
+    if (this.state.isLyricsEditSaving) {
+      return;
+    }
+
+    this.setState({
+      isLyricsEditModalOpen: false,
+      isLyricsEditLoading: false,
+      lyricsEditError: "",
+    });
+  }
+
+  async openLyricsEditModal() {
+    const sourceLines = this.getEditableCacheSourceLines();
+    const trackId = this.state.uri?.split(":")[2];
+
+    if (!trackId || sourceLines.length === 0) {
+      Toast.error(I18n.t("notifications.noLyricsLoaded"));
+      return;
+    }
+
+    const userLang = this.getTranslationTargetLanguage();
+    const provider = this.state.provider || null;
+
+    this.setState({
+      isLyricsEditModalOpen: true,
+      isLyricsEditLoading: true,
+      isLyricsEditSaving: false,
+      lyricsEditOriginalLines: sourceLines,
+      lyricsEditPronunciationText: "",
+      lyricsEditTranslationText: "",
+      lyricsEditHasPronunciationCache: false,
+      lyricsEditHasTranslationCache: false,
+      lyricsEditError: "",
+    });
+
+    try {
+      const [phoneticCache, translationCache] = await Promise.all([
+        LyricsCache.getTranslation(trackId, userLang, true, provider),
+        LyricsCache.getTranslation(trackId, userLang, false, provider),
+      ]);
+
+      const phoneticLines = Array.isArray(phoneticCache?.phonetic)
+        ? phoneticCache.phonetic
+        : [];
+      const translationLines = Array.isArray(translationCache?.translation)
+        ? translationCache.translation
+        : [];
+
+      this.setState({
+        isLyricsEditLoading: false,
+        lyricsEditPronunciationText: this.buildCacheEditorText(
+          phoneticLines,
+          sourceLines.length
+        ),
+        lyricsEditTranslationText: this.buildCacheEditorText(
+          translationLines,
+          sourceLines.length
+        ),
+        lyricsEditHasPronunciationCache: phoneticLines.some(
+          (line) => String(line ?? "").trim() !== ""
+        ),
+        lyricsEditHasTranslationCache: translationLines.some(
+          (line) => String(line ?? "").trim() !== ""
+        ),
+      });
+    } catch (error) {
+      this.setState({
+        isLyricsEditLoading: false,
+        lyricsEditError: I18n.t("lyricsCacheEditor.loadFailed"),
+      });
+    }
+  }
+
+  refreshLyricsAfterCacheEdit() {
+    const trackUri = this.state.uri;
+    if (trackUri) {
+      CacheManager.clearByUri(trackUri);
+      if (this._dmResults?.[trackUri]) {
+        delete this._dmResults[trackUri];
+      }
+    }
+
+    const trackId = trackUri?.split(":")[2];
+    if (trackId) {
+      window.Translator?.clearMemoryCache?.(trackId);
+      window.Translator?.clearInflightRequests?.(trackId);
+    }
+
+    this.lastProcessedMode = null;
+    this.lyricsSource(this.state, this.getCurrentMode());
+  }
+
+  async saveLyricsEditModal() {
+    if (this.state.isLyricsEditLoading || this.state.isLyricsEditSaving) {
+      return;
+    }
+
+    const expectedLineCount = this.state.lyricsEditOriginalLines.length;
+    const pronunciationLines = this.normalizeCacheEditorLines(
+      this.state.lyricsEditPronunciationText,
+      expectedLineCount
+    );
+    const translationLines = this.normalizeCacheEditorLines(
+      this.state.lyricsEditTranslationText,
+      expectedLineCount
+    );
+
+    if (!pronunciationLines || !translationLines) {
+      this.setState({
+        lyricsEditError: I18n.t("lyricsCacheEditor.lineOverflow"),
+      });
+      return;
+    }
+
+    const trackId = this.state.uri?.split(":")[2];
+    if (!trackId) {
+      this.setState({
+        lyricsEditError: I18n.t("lyricsCacheEditor.trackMissing"),
+      });
+      return;
+    }
+
+    const userLang = this.getTranslationTargetLanguage();
+    const provider = this.state.provider || null;
+
+    this.setState({
+      isLyricsEditSaving: true,
+      lyricsEditError: "",
+    });
+
+    try {
+      await Promise.all([
+        LyricsCache.setTranslation(
+          trackId,
+          userLang,
+          true,
+          { phonetic: pronunciationLines },
+          provider
+        ),
+        LyricsCache.setTranslation(
+          trackId,
+          userLang,
+          false,
+          { translation: translationLines },
+          provider
+        ),
+      ]);
+
+      this.setState({
+        isLyricsEditModalOpen: false,
+        isLyricsEditSaving: false,
+        lyricsEditHasPronunciationCache: pronunciationLines.some(
+          (line) => String(line ?? "").trim() !== ""
+        ),
+        lyricsEditHasTranslationCache: translationLines.some(
+          (line) => String(line ?? "").trim() !== ""
+        ),
+        lyricsEditError: "",
+      });
+
+      this.refreshLyricsAfterCacheEdit();
+      Toast.success(I18n.t("lyricsCacheEditor.saved"));
+    } catch (error) {
+      this.setState({
+        isLyricsEditSaving: false,
+        lyricsEditError: I18n.t("lyricsCacheEditor.saveFailed"),
+      });
+    }
   }
 
   /**
@@ -4880,6 +5426,9 @@ class LyricsContainer extends react.Component {
 
       // 트랙이 변경되었을 때만 실행 (중복 요청 방지)
       if (this.currentTrackUri !== newUri) {
+        if (this.state.isLyricsEditModalOpen) {
+          this.closeLyricsEditModal();
+        }
         // 이전 트랙의 진행 중인 번역 요청 정리
         const previousTrackId = this.currentTrackUri?.split(':')[2];
         if (previousTrackId) {
@@ -5602,6 +6151,29 @@ class LyricsContainer extends react.Component {
     );
 
     const canRegenerateTranslation = hasLoadedGeminiTranslation;
+    const cacheEditModal =
+      this.state.isLyricsEditModalOpen &&
+      react.createElement(LyricsCacheEditModal, {
+        isOpen: this.state.isLyricsEditModalOpen,
+        isLoading: this.state.isLyricsEditLoading,
+        isSaving: this.state.isLyricsEditSaving,
+        originalLines: this.state.lyricsEditOriginalLines,
+        pronunciationText: this.state.lyricsEditPronunciationText,
+        translationText: this.state.lyricsEditTranslationText,
+        expectedLineCount: this.state.lyricsEditOriginalLines.length,
+        hasPronunciationCache: this.state.lyricsEditHasPronunciationCache,
+        hasTranslationCache: this.state.lyricsEditHasTranslationCache,
+        trackTitle: this.state.title,
+        trackArtist: this.state.artist,
+        provider: this.state.provider,
+        error: this.state.lyricsEditError,
+        onClose: () => this.closeLyricsEditModal(),
+        onSave: () => this.saveLyricsEditModal(),
+        onPronunciationChange: (value) =>
+          this.setState({ lyricsEditPronunciationText: value, lyricsEditError: "" }),
+        onTranslationChange: (value) =>
+          this.setState({ lyricsEditTranslationText: value, lyricsEditError: "" }),
+      });
 
     const activeLyricsPage = window.LyricsPageRenderer
       ? react.createElement(window.LyricsPageRenderer, {
@@ -5976,6 +6548,38 @@ class LyricsContainer extends react.Component {
                 Spicetify.Player.data?.item?.album?.images?.[0]?.url || '',
             },
           }),
+          hasLyrics &&
+          react.createElement(
+            Spicetify.ReactComponent.TooltipWrapper,
+            {
+              label: I18n.t("lyricsCacheEditor.button"),
+            },
+            react.createElement(
+              "button",
+              {
+                className: "lyrics-config-button lyrics-cache-edit-button",
+                type: "button",
+                onClick: () => this.openLyricsEditModal(),
+                disabled:
+                  this.state.isLyricsEditLoading || this.state.isLyricsEditSaving,
+                "data-active": this.state.isLyricsEditModalOpen ? "true" : "false",
+              },
+              react.createElement("svg", {
+                width: 18,
+                height: 18,
+                viewBox: "0 0 24 24",
+                fill: "none",
+                stroke: "currentColor",
+                strokeWidth: 2,
+                strokeLinecap: "round",
+                strokeLinejoin: "round",
+                dangerouslySetInnerHTML: {
+                  __html:
+                    '<path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4Z"></path>',
+                },
+              })
+            )
+          ),
           // 마켓플레이스 버튼
           react.createElement(
             Spicetify.ReactComponent.TooltipWrapper,
@@ -6065,6 +6669,7 @@ class LyricsContainer extends react.Component {
           })
         )
       ),
+      cacheEditModal,
       activeLyricsPage
     );
 

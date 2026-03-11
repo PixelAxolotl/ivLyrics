@@ -588,6 +588,28 @@ window.LANG_ID = {
     "traditionalChineseTW": "Mandarin Tradisional (TW)",
     "pinyin": "Pinyin"
   },
+  "lyricsCacheEditor": {
+    "title": "Edit pelafalan / terjemahan yang disimpan",
+    "unknownTrack": "Lagu tidak dikenal",
+    "lineCount": "Baris yang dapat diedit",
+    "close": "Tutup",
+    "loading": "Memuat lirik yang disimpan...",
+    "original": "Asli",
+    "reference": "Referensi",
+    "cached": "Tersimpan di cache",
+    "empty": "Kosong",
+    "pronunciationPlaceholder": "Satu baris untuk setiap baris lirik",
+    "translationPlaceholder": "Satu baris untuk setiap baris lirik",
+    "cancel": "Batal",
+    "saving": "Menyimpan...",
+    "save": "Simpan cache",
+    "loadFailed": "Gagal memuat lirik yang disimpan.",
+    "lineOverflow": "Jumlah baris yang diedit tidak boleh melebihi jumlah baris lirik asli.",
+    "trackMissing": "Tidak ada lagu aktif yang ditemukan.",
+    "saved": "Pelafalan dan terjemahan yang disimpan telah diperbarui.",
+    "saveFailed": "Gagal menyimpan lirik yang disimpan.",
+    "button": "Edit pelafalan / terjemahan yang disimpan"
+  },
   "notifications": {
     "languageChanged": "Bahasa diubah. Akan diterapkan setelah penyegaran.",
     "settingsSaved": "Pengaturan disimpan",

@@ -588,6 +588,28 @@ window.LANG_ZH_CN = {
     "traditionalChineseTW": "繁体中文 (台湾)",
     "pinyin": "拼音"
   },
+  "lyricsCacheEditor": {
+    "title": "编辑已保存的发音 / 翻译歌词",
+    "unknownTrack": "未知曲目",
+    "lineCount": "可编辑行数",
+    "close": "关闭",
+    "loading": "正在加载已保存的歌词...",
+    "original": "原文",
+    "reference": "参考",
+    "cached": "已缓存",
+    "empty": "空",
+    "pronunciationPlaceholder": "每行歌词对应一行",
+    "translationPlaceholder": "每行歌词对应一行",
+    "cancel": "取消",
+    "saving": "保存中...",
+    "save": "保存缓存",
+    "loadFailed": "无法加载已保存的歌词。",
+    "lineOverflow": "编辑后的行数不能超过原歌词行数。",
+    "trackMissing": "找不到当前播放的曲目。",
+    "saved": "已更新保存的发音和翻译歌词。",
+    "saveFailed": "无法保存已保存的歌词。",
+    "button": "编辑已保存的发音 / 翻译歌词"
+  },
   "notifications": {
     "languageChanged": "语言已更改。刷新页面后生效。",
     "settingsSaved": "设置已保存",

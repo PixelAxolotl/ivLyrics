@@ -588,6 +588,28 @@ window.LANG_ZH_TW = {
     "traditionalChineseTW": "繁體中文 (台灣)",
     "pinyin": "拼音"
   },
+  "lyricsCacheEditor": {
+    "title": "編輯已儲存的發音 / 翻譯歌詞",
+    "unknownTrack": "未知曲目",
+    "lineCount": "可編輯行數",
+    "close": "關閉",
+    "loading": "正在載入已儲存的歌詞...",
+    "original": "原文",
+    "reference": "參考",
+    "cached": "已有快取",
+    "empty": "空白",
+    "pronunciationPlaceholder": "每行歌詞對應一行",
+    "translationPlaceholder": "每行歌詞對應一行",
+    "cancel": "取消",
+    "saving": "儲存中...",
+    "save": "儲存快取",
+    "loadFailed": "無法載入已儲存的歌詞。",
+    "lineOverflow": "編輯後的行數不能超過原始歌詞行數。",
+    "trackMissing": "找不到目前播放中的曲目。",
+    "saved": "已更新已儲存的發音與翻譯歌詞。",
+    "saveFailed": "無法儲存已儲存的歌詞。",
+    "button": "編輯已儲存的發音 / 翻譯歌詞"
+  },
   "notifications": {
     "languageChanged": "語言已變更，將在重新整理後生效。",
     "settingsSaved": "設定已儲存",

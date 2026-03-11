@@ -588,6 +588,28 @@ window.LANG_JA = {
     "traditionalChineseTW": "繁体字中国語 (台湾)",
     "pinyin": "ピンイン"
   },
+  "lyricsCacheEditor": {
+    "title": "保存された発音 / 翻訳歌詞を編集",
+    "unknownTrack": "不明な曲",
+    "lineCount": "編集可能な行数",
+    "close": "閉じる",
+    "loading": "保存された歌詞を読み込み中...",
+    "original": "原文",
+    "reference": "参照",
+    "cached": "キャッシュあり",
+    "empty": "空",
+    "pronunciationPlaceholder": "歌詞1行ごとに1行入力",
+    "translationPlaceholder": "歌詞1行ごとに1行入力",
+    "cancel": "キャンセル",
+    "saving": "保存中...",
+    "save": "キャッシュを保存",
+    "loadFailed": "保存された歌詞を読み込めませんでした。",
+    "lineOverflow": "編集した行数は元の歌詞の行数を超えられません。",
+    "trackMissing": "再生中の曲が見つかりませんでした。",
+    "saved": "保存された発音と翻訳歌詞を更新しました。",
+    "saveFailed": "保存された歌詞を保存できませんでした。",
+    "button": "保存された発音 / 翻訳歌詞を編集"
+  },
   "notifications": {
     "languageChanged": "言語が変更されました。再読み込み後に適用されます。",
     "settingsSaved": "設定が保存されました",

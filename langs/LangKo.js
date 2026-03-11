@@ -588,6 +588,28 @@ window.LANG_KO = {
     "traditionalChineseTW": "번체 중국어 (대만)",
     "pinyin": "병음"
   },
+  "lyricsCacheEditor": {
+    "title": "저장된 발음 / 번역 가사 수정",
+    "unknownTrack": "알 수 없는 곡",
+    "lineCount": "수정 가능한 줄 수",
+    "close": "닫기",
+    "loading": "저장된 가사를 불러오는 중...",
+    "original": "원문",
+    "reference": "기준",
+    "cached": "캐시 있음",
+    "empty": "비어 있음",
+    "pronunciationPlaceholder": "가사 한 줄당 한 줄씩 입력",
+    "translationPlaceholder": "가사 한 줄당 한 줄씩 입력",
+    "cancel": "취소",
+    "saving": "저장 중...",
+    "save": "캐시 저장",
+    "loadFailed": "저장된 가사를 불러오지 못했습니다.",
+    "lineOverflow": "수정한 줄 수는 원본 가사 줄 수를 초과할 수 없습니다.",
+    "trackMissing": "현재 재생 중인 곡을 찾을 수 없습니다.",
+    "saved": "저장된 발음과 번역 가사를 업데이트했습니다.",
+    "saveFailed": "저장된 가사를 저장하지 못했습니다.",
+    "button": "저장된 발음 / 번역 가사 수정"
+  },
   "notifications": {
     "languageChanged": "언어가 변경되었습니다. 새로고침 후 적용됩니다.",
     "settingsSaved": "설정이 저장되었습니다",

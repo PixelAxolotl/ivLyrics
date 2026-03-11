@@ -588,6 +588,28 @@ window.LANG_DE = {
     "traditionalChineseTW": "Chinesisch (Traditionell TW)",
     "pinyin": "Pinyin"
   },
+  "lyricsCacheEditor": {
+    "title": "Gespeicherte Aussprache / Übersetzung bearbeiten",
+    "unknownTrack": "Unbekannter Titel",
+    "lineCount": "Bearbeitbare Zeilen",
+    "close": "Schließen",
+    "loading": "Gespeicherte Liedtexte werden geladen...",
+    "original": "Original",
+    "reference": "Referenz",
+    "cached": "Im Cache",
+    "empty": "Leer",
+    "pronunciationPlaceholder": "Eine Zeile pro Liedzeile",
+    "translationPlaceholder": "Eine Zeile pro Liedzeile",
+    "cancel": "Abbrechen",
+    "saving": "Wird gespeichert...",
+    "save": "Cache speichern",
+    "loadFailed": "Gespeicherte Liedtexte konnten nicht geladen werden.",
+    "lineOverflow": "Die Anzahl der bearbeiteten Zeilen darf die Anzahl der Originalzeilen nicht überschreiten.",
+    "trackMissing": "Kein aktiver Titel gefunden.",
+    "saved": "Gespeicherte Aussprache und Übersetzung wurden aktualisiert.",
+    "saveFailed": "Gespeicherte Liedtexte konnten nicht gespeichert werden.",
+    "button": "Gespeicherte Aussprache / Übersetzung bearbeiten"
+  },
   "notifications": {
     "languageChanged": "Sprache geändert. Wird nach dem Aktualisieren wirksam.",
     "settingsSaved": "Einstellungen gespeichert",

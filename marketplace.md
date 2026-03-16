@@ -1,5 +1,5 @@
 
-<img width="2208" height="512" alt="en" src="https://github.com/ivLis-Studio/ivLyrics/blob/main/preview_readme_en.png?raw=true" />
+<img width="2208" height="512" alt="en" src="https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/refs/heads/main/preview_readme_en.png" />
 
 ### preview
 ![preview](https://github.com/user-attachments/assets/c8643d11-44aa-49e2-ab59-b056884e798a)

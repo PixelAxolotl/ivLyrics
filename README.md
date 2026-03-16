@@ -12,7 +12,7 @@
 ### ivLyrics - 당신의 언어로 즐기는, 그런 음악.
 
 
-Spicetify용 가사 확장 프로그램입니다. Google Gemini API를 활용하여 다양한 언어의 발음 표기와 번역을 지원합니다.
+Spicetify용 가사 확장 프로그램입니다. AI API를 활용하여 다양한 언어의 발음 표기와 번역을 지원합니다.
 
 버그 리포트 및 기능 제안은 GitHub Issues 또는 [Discord](https://discord.gg/2fu36fUzdE)를 통해 문의해주세요.
 

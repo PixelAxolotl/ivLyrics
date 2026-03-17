@@ -1468,7 +1468,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     react.createElement("h2", null, "ivLyrics")
                 ),
                 react.createElement("div", { className: "ivlyrics-panel-empty" },
-                    "가사를 불러오는 중..."
+                    I18n.t("syncCreator.loadingLyrics")
                 )
             );
         }

@@ -7,16 +7,16 @@
  * 가사를 검색하고 가져오는 Spicetify 애드온입니다.
  * 
  * 【주요 기능】
- * - 제목 + 가수 구조화 검색만 사용
- * - 재생 시간(Duration) ±3초 이내 결과만 채택
- * - Jaro-Winkler 알고리즘 기반 문자열 유사도 매칭
- * - 싱크 가사(LRC 형식) 및 일반 텍스트 가사 지원
+ * - 구조화 검색 중심 LRCLIB 검색 흐름 적용
+ * - 제목 + 가수 + 앨범 구조화 검색 후 필요 시 다단계 자유검색 폴백
+ * - Jaro-Winkler 알고리즘 기반 아티스트 유사도 매칭
+ * - duration 기반 최근접 후보 선택 및 싱크/일반 가사 지원
  * - 네트워크 오류 시 자동 재시도 메커니즘
  * 
  * 【검색 전략】
- * - track_name + artist_name 파라미터 사용
- * - duration은 클라이언트에서 ±3초로 엄격 검증
- * - 제목/가수 자유검색 폴백 없음
+ * - /api/search 구조화 검색(track_name + artist_name + album_name)
+ * - 구조화 검색에서 적합한 후보가 없을 때 q=title+artist, q=title 순서로 자유검색 폴백
+ * - 아티스트 유사도 또는 강한 제목 일치 + 정확한 duration 조건으로 후보 채택
  *
  * @addon-type lyrics        - 가사 제공자 타입의 애드온
  * @id lrclib               - 고유 식별자
@@ -47,7 +47,7 @@
         name: 'LRCLIB',         // 【표시 이름】 UI에 표시되는 애드온 이름
         author: 'ivLis STUDIO', // 【제작자】 애드온 개발자 정보
         version: '1.0.0',       // 【버전】 시맨틱 버저닝 (Major.Minor.Patch)
-        cacheVersion: '2026-03-18-primary-artist-fallback',
+        cacheVersion: '2026-03-19-search-flow-rework-3',
 
         // 【다국어 설명】 사용자 언어 설정에 따라 표시
         description: {
@@ -81,9 +81,112 @@
     // - GET /api/get?...      : 특정 가사 직접 조회
 
     const LRCLIB_API_BASE = 'https://lrclib.net/api';
-    const LRCLIB_DURATION_TOLERANCE_SEC = 3;
-    const LRCLIB_MIN_TITLE_SCORE = 0.72;
-    const LRCLIB_MIN_ARTIST_SCORE = 0.55;
+    const LRCLIB_DURATION_TOLERANCE_SEC = 15;
+    const LRCLIB_ARTIST_MATCH_THRESHOLD = 0.9;
+    const LRCLIB_FALLBACK_TITLE_MATCH_THRESHOLD = 0.98;
+    const LRCLIB_ENABLE_INEXACT_SEARCH = true;
+    const LRCLIB_CACHE_VERSION_BASE = '2026-03-19-search-flow-rework-3';
+    const LRCLIB_SETTING_KEYS = {
+        fallbackTitleArtist: 'enable_fallback_title_artist',
+        fallbackTitleOnly: 'enable_fallback_title_only'
+    };
+    const LRCLIB_DEFAULT_SETTINGS = {
+        [LRCLIB_SETTING_KEYS.fallbackTitleArtist]: true,
+        [LRCLIB_SETTING_KEYS.fallbackTitleOnly]: true
+    };
+
+    /**
+     * LRCLIB 설정용 LocalStorage 키를 반환합니다.
+     *
+     * @param {string} key - 설정 키
+     * @returns {string} 저장소 키
+     */
+    function getAddonStorageKey(key) {
+        return `ivLyrics:lyrics:addon:${ADDON_INFO.id}:${key}`;
+    }
+
+    /**
+     * LRCLIB 설정값을 읽습니다.
+     * LyricsAddonManager가 있으면 그 경로를 우선 사용하고,
+     * 없으면 LocalStorage에서 직접 읽습니다.
+     *
+     * @param {string} key - 설정 키
+     * @param {*} defaultValue - 기본값
+     * @returns {*} 저장된 값 또는 기본값
+     */
+    function getProviderSetting(key, defaultValue) {
+        if (window.LyricsAddonManager?.getAddonSetting) {
+            return window.LyricsAddonManager.getAddonSetting(ADDON_INFO.id, key, defaultValue);
+        }
+
+        const value = Spicetify.LocalStorage?.get?.(getAddonStorageKey(key));
+        if (value === null || value === undefined) return defaultValue;
+
+        try {
+            return JSON.parse(value);
+        } catch {
+            return value;
+        }
+    }
+
+    /**
+     * LRCLIB 설정값을 저장합니다.
+     * LyricsAddonManager가 있으면 설정 변경 이벤트와 새로고침을 함께 활용합니다.
+     *
+     * @param {string} key - 설정 키
+     * @param {*} value - 저장할 값
+     */
+    function setProviderSetting(key, value) {
+        if (window.LyricsAddonManager?.setAddonSetting) {
+            window.LyricsAddonManager.setAddonSetting(ADDON_INFO.id, key, value);
+            return;
+        }
+
+        const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+        Spicetify.LocalStorage?.set?.(getAddonStorageKey(key), serialized);
+    }
+
+    /**
+     * 현재 활성화된 LRCLIB 자유검색 설정을 반환합니다.
+     *
+     * @returns {{ enableFallbackTitleArtist: boolean, enableFallbackTitleOnly: boolean }}
+     */
+    function getSearchSettings() {
+        return {
+            enableFallbackTitleArtist: getProviderSetting(
+                LRCLIB_SETTING_KEYS.fallbackTitleArtist,
+                LRCLIB_DEFAULT_SETTINGS[LRCLIB_SETTING_KEYS.fallbackTitleArtist]
+            ) !== false,
+            enableFallbackTitleOnly: getProviderSetting(
+                LRCLIB_SETTING_KEYS.fallbackTitleOnly,
+                LRCLIB_DEFAULT_SETTINGS[LRCLIB_SETTING_KEYS.fallbackTitleOnly]
+            ) !== false
+        };
+    }
+
+    /**
+     * 현재 LRCLIB 설정을 반영한 캐시 버전을 생성합니다.
+     *
+     * @returns {string} 설정 상태가 포함된 캐시 버전 문자열
+     */
+    function buildCacheVersion() {
+        const settings = getSearchSettings();
+        return `${LRCLIB_CACHE_VERSION_BASE}:fta=${settings.enableFallbackTitleArtist ? 1 : 0}:fto=${settings.enableFallbackTitleOnly ? 1 : 0}`;
+    }
+
+    /**
+     * 애드온 객체와 결과에 사용할 캐시 버전을 최신 설정에 맞춰 갱신합니다.
+     *
+     * @returns {string} 최신 캐시 버전
+     */
+    function syncAddonCacheVersion() {
+        const version = buildCacheVersion();
+        ADDON_INFO.cacheVersion = version;
+        if (typeof LrclibLyricsAddon !== 'undefined') {
+            LrclibLyricsAddon.cacheVersion = version;
+        }
+        return version;
+    }
 
     // ============================================
     // Helper Functions (헬퍼 함수)
@@ -224,6 +327,75 @@
     }
 
     /**
+     * 아티스트 문자열을 비교 가능한 단위로 분리합니다.
+     * 예: "Artist A, Artist B & Artist C" -> ["Artist A", "Artist B", "Artist C"]
+     *
+     * @param {string} artistText - 원본 아티스트 문자열
+     * @returns {string[]} 정리된 아티스트 배열
+     */
+    function splitArtists(artistText) {
+        if (!artistText || typeof artistText !== 'string') return [];
+        return artistText
+            .split(/[&,]/g)
+            .map(part => part.trim())
+            .filter(Boolean);
+    }
+
+    /**
+     * 제목 문자열 사이의 비교 점수를 계산합니다.
+     * 완전 일치나 포함 관계가 있으면 높은 점수를 주고,
+     * 그 외에는 Jaro-Winkler 점수를 사용합니다.
+     *
+     * @param {string} expectedTitle - 현재 트랙 제목
+     * @param {string} candidateTitle - LRCLIB 후보 제목
+     * @returns {number} 제목 유사도 점수
+     */
+    function getTitleScore(expectedTitle, candidateTitle) {
+        const normalizedExpected = normalize(expectedTitle);
+        const normalizedCandidate = normalize(candidateTitle);
+
+        if (!normalizedExpected || !normalizedCandidate) return 0;
+        if (normalizedExpected === normalizedCandidate) return 1;
+        if (normalizedCandidate.includes(normalizedExpected) || normalizedExpected.includes(normalizedCandidate)) return 0.99;
+
+        return jaroWinkler(normalizedExpected, normalizedCandidate);
+    }
+
+    /**
+     * 자유검색에서 제목 기반으로 후보를 허용할 수 있을 만큼
+     * 재생 시간이 충분히 정확하게 일치하는지 확인합니다.
+     * LRCLIB와 Spotify의 길이 표기가 초 단위인 경우가 많아 반올림 후 비교합니다.
+     *
+     * @param {number} expectedDurationSec - 현재 트랙 길이(초)
+     * @param {number} candidateDurationSec - LRCLIB 후보 길이(초)
+     * @returns {boolean} 초 단위 반올림 기준 정확히 일치하면 true
+     */
+    function hasExactDurationMatch(expectedDurationSec, candidateDurationSec) {
+        if (!Number.isFinite(expectedDurationSec) || !Number.isFinite(candidateDurationSec)) return false;
+        return Math.round(expectedDurationSec) === Math.round(candidateDurationSec);
+    }
+
+    /**
+     * 기대 아티스트 목록과 후보 아티스트 목록 사이의 최고 Jaro-Winkler 점수를 계산합니다.
+     *
+     * @param {string[]} expectedArtists - 현재 트랙의 아티스트 목록
+     * @param {string[]} candidateArtists - LRCLIB 후보의 아티스트 목록
+     * @returns {number} 최고 유사도 점수
+     */
+    function getBestArtistScore(expectedArtists, candidateArtists) {
+        if (!Array.isArray(expectedArtists) || !Array.isArray(candidateArtists)) return 0;
+        if (expectedArtists.length === 0 || candidateArtists.length === 0) return 0;
+
+        let bestScore = 0;
+        for (const expectedArtist of expectedArtists) {
+            for (const candidateArtist of candidateArtists) {
+                bestScore = Math.max(bestScore, jaroWinkler(expectedArtist, candidateArtist));
+            }
+        }
+        return bestScore;
+    }
+
+    /**
      * ────────────────────────────────────────────────────────────────────────────
      * 타임아웃 및 재시도 지원 Fetch 함수
      * ────────────────────────────────────────────────────────────────────────────
@@ -276,51 +448,6 @@
         // 모든 재시도 실패 → null 반환 (에러 메시지 노출 방지)
         window.__ivLyricsDebugLog?.(`[LR-DEBUG] 네트워크 재시도 실패, 스킵`);
         return null;
-    }
-
-    /**
-     * ────────────────────────────────────────────────────────────────────────────
-     * 가사 커버리지 계산 함수
-     * ────────────────────────────────────────────────────────────────────────────
-     * 
-     * 【목적】
-     * 싱크 가사가 곡의 얼마만큼을 커버하는지 계산합니다.
-     * 이를 통해 "짤린 가사"나 "불완전한 가사"를 감지합니다.
-     * 
-     * 【계산 방법】
-     * 1. 가사의 마지막 타임스탬프를 추출
-     * 2. (마지막 타임스탬프 / 곡 전체 길이)로 커버리지 계산
-     * 3. 결과는 0.0 ~ 1.2 범위로 클램핑
-     * 
-     * 【반환값 해석】
-     * - 0.0: 타임스탬프 없음 또는 계산 불가
-     * - 0.5: 곡의 절반만 커버 (불완전한 가사)
-     * - 1.0: 곡 전체를 커버
-     * - >1.0: 가사가 곡보다 길거나 메타데이터 오류
-     * 
-     * @param {string} syncedLyrics - LRC 형식의 싱크 가사 문자열
-     * @param {number} totalDurationMs - 곡의 전체 길이 (밀리초)
-     * @returns {number} 커버리지 비율 (0.0 ~ 1.2)
-     */
-    function getLyricCoverage(syncedLyrics, totalDurationMs) {
-        // 유효성 검사: 가사나 길이 정보가 없으면 0 반환
-        if (!syncedLyrics || !totalDurationMs || totalDurationMs <= 0) return 0;
-
-        // 가사를 줄 단위로 분리
-        const lines = typeof syncedLyrics === 'string' ? syncedLyrics.trim().split('\n') : [];
-
-        // 뒤에서부터 탐색하여 마지막 타임스탬프 찾기 (효율성)
-        for (let i = lines.length - 1; i >= 0; i--) {
-            // LRC 타임스탬프 패턴: [MM:SS.xx] 또는 [MM:SS]
-            const match = lines[i].match(/\[(\d+):(\d+(\.\d+)?)\]/);
-            if (match) {
-                // 마지막 타임스탬프를 밀리초로 변환
-                const lastTimeMs = (parseInt(match[1]) * 60 + parseFloat(match[2])) * 1000;
-                // 커버리지 계산 (1.2를 상한으로 클램핑)
-                return Math.min(lastTimeMs / totalDurationMs, 1.2);
-            }
-        }
-        return 0;  // 타임스탬프를 찾지 못함
     }
 
     /**
@@ -398,26 +525,86 @@
         /**
          * 【초기화 메서드】
          * 애드온이 로드될 때 호출됩니다.
-         * 현재는 특별한 초기화 작업이 없어 비어있습니다.
-         * 필요시 캐시 초기화, 설정 로드 등을 추가할 수 있습니다.
+         * 현재 설정 상태를 반영한 캐시 버전을 동기화합니다.
          */
         async init() {
-            // Initialization silent (초기화 시 로그 출력 안 함)
+            syncAddonCacheVersion();
         },
 
         /**
          * 【설정 UI 메서드】
          * 사용자 설정 화면에 표시될 React 컴포넌트를 반환합니다.
-         * 현재는 빈 컨테이너만 반환 (설정 항목 없음)
+         * 자유검색 폴백 단계를 개별적으로 켜고 끌 수 있습니다.
          * 
          * @returns {Function} React 함수형 컴포넌트
          */
         getSettingsUI() {
             const React = Spicetify.React;  // Spicetify 내장 React 사용
+            const { useState, useCallback } = React;
 
-            // 빈 설정 컨테이너 반환
             return function LrclibLyricsSettings() {
-                return React.createElement('div', { className: 'lyrics-addon-settings lrclib-settings' });
+                const [enableFallbackTitleArtist, setEnableFallbackTitleArtist] = useState(() =>
+                    getProviderSetting(
+                        LRCLIB_SETTING_KEYS.fallbackTitleArtist,
+                        LRCLIB_DEFAULT_SETTINGS[LRCLIB_SETTING_KEYS.fallbackTitleArtist]
+                    ) !== false
+                );
+                const [enableFallbackTitleOnly, setEnableFallbackTitleOnly] = useState(() =>
+                    getProviderSetting(
+                        LRCLIB_SETTING_KEYS.fallbackTitleOnly,
+                        LRCLIB_DEFAULT_SETTINGS[LRCLIB_SETTING_KEYS.fallbackTitleOnly]
+                    ) !== false
+                );
+
+                const handleToggle = useCallback((key, setter) => (e) => {
+                    const checked = !!e.target.checked;
+                    setter(checked);
+                    setProviderSetting(key, checked);
+                    syncAddonCacheVersion();
+                }, []);
+
+                return React.createElement('div', { className: 'lyrics-addon-settings ai-addon-settings lrclib-settings' },
+                    React.createElement('div', { className: 'ai-addon-setting' },
+                        React.createElement('div', {
+                            style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '12px'
+                            }
+                        },
+                            React.createElement('div', { style: { flex: '1 1 auto' } },
+                                React.createElement('label', null, '1st Fallback (title + artist)'),
+                                React.createElement('small', null, '구조화 검색 실패 시 q=title+artist 자유검색을 사용합니다.')
+                            ),
+                            React.createElement('input', {
+                                type: 'checkbox',
+                                checked: enableFallbackTitleArtist,
+                                onChange: handleToggle(LRCLIB_SETTING_KEYS.fallbackTitleArtist, setEnableFallbackTitleArtist)
+                            })
+                        )
+                    ),
+                    React.createElement('div', { className: 'ai-addon-setting' },
+                        React.createElement('div', {
+                            style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '12px'
+                            }
+                        },
+                            React.createElement('div', { style: { flex: '1 1 auto' } },
+                                React.createElement('label', null, '2nd Fallback (title only)'),
+                                React.createElement('small', null, '1차 자유검색에서도 못 찾았을 때 q=title 자유검색을 사용합니다.')
+                            ),
+                            React.createElement('input', {
+                                type: 'checkbox',
+                                checked: enableFallbackTitleOnly,
+                                onChange: handleToggle(LRCLIB_SETTING_KEYS.fallbackTitleOnly, setEnableFallbackTitleOnly)
+                            })
+                        )
+                    )
+                );
             };
         },
 
@@ -434,7 +621,7 @@
          *   - uri: Spotify URI (예: "spotify:track:abc123")
          *   - title: 곡 제목
          *   - artist: 아티스트 이름
-         *   - album: 앨범 이름 (사용 안 함)
+         *   - album: 앨범 이름 (구조화 검색에 사용)
          *   - duration: 곡 길이 (밀리초)
          * 
          * 【반환값】
@@ -448,14 +635,15 @@
          *   - error: 에러 메시지 또는 null
          * 
          * 【검색 전략】
-         * 구조화 검색 1회 + duration ±3초 필터만 적용
+         * 구조화 검색 + 자유검색 폴백 + 아티스트/재생시간 검증
          */
         async getLyrics(info) {
             const startTotal = performance.now();
+            const cacheVersion = syncAddonCacheVersion();
             const result = {
                 uri: info.uri,
                 provider: 'lrclib',
-                cacheVersion: ADDON_INFO.cacheVersion,
+                cacheVersion,
                 karaoke: null,
                 synced: null,
                 unsynced: null,
@@ -480,10 +668,11 @@
             try {
                 const title = info?.title?.trim?.();
                 const artist = info?.artist?.trim?.();
-                const primaryArtist = artist?.split(',')[0]?.trim?.() || artist;
-                const trackDurationMs = Number(info?.duration || 0);
-                const trackDurationSec = trackDurationMs > 0 ? trackDurationMs / 1000 : 0;
-                const normalizedTitle = normalize(title);
+                const album = info?.album?.trim?.();
+                const searchSettings = getSearchSettings();
+                const trackDuration = Number(info?.duration || 0);
+                const trackDurationSec = trackDuration > 0 ? trackDuration / 1000 : 0;
+                const expectedArtists = splitArtists(artist);
 
                 if (!title || !artist || !trackDurationSec) {
                     result.error = 'Missing track metadata';
@@ -492,144 +681,213 @@
                 }
 
                 const headers = { 'x-user-agent': `spicetify v${Spicetify.Config?.version || 'unknown'}` };
-                const runStructuredSearch = async (artistQuery) => {
-                    const normalizedArtistQuery = normalize(artistQuery);
-                    const searchUrl = `${LRCLIB_API_BASE}/search?track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(artistQuery)}&duration=${encodeURIComponent(Math.round(trackDurationSec))}`;
+
+                const runSearch = async (params, label) => {
+                    const query = new URLSearchParams();
+                    if (params.track_name) query.set('track_name', params.track_name);
+                    if (params.artist_name) query.set('artist_name', params.artist_name);
+                    if (params.album_name && params.album_name !== 'undefined') query.set('album_name', params.album_name);
+                    if (params.q) query.set('q', params.q);
+
+                    const searchUrl = `${LRCLIB_API_BASE}/search?${query.toString()}`;
                     const response = await fetchWithTimeout(searchUrl, { headers }, 35000);
 
                     if (!response) {
-                        return { fatal: true, error: 'Network request failed', searchedArtist: artistQuery };
-                    }
-
-                    if (!response.ok) {
-                        if (response.status === 429) {
-                            return { fatal: true, error: 'Rate limit exceeded (429)', searchedArtist: artistQuery };
-                        }
-                        if (response.status === 404) {
-                            return { fatal: false, error: 'No lyrics found', searchedArtist: artistQuery };
-                        }
-                        return { fatal: true, error: `API error: ${response.status}`, searchedArtist: artistQuery };
-                    }
-
-                    const data = await response.json();
-                    if (!Array.isArray(data) || data.length === 0) {
                         return {
-                            fatal: false,
-                            error: 'No lyrics found',
-                            searchedArtist: artistQuery,
-                            totalResults: Array.isArray(data) ? data.length : 0,
+                            fatal: true,
+                            error: 'Network request failed',
+                            searchLabel: label,
+                            totalResults: 0,
                             candidates: []
                         };
                     }
 
-                    const candidates = data
-                        .filter(item => {
-                            const candidateDuration = Number(item?.duration);
-                            if (!Number.isFinite(candidateDuration)) return false;
-                            if (Math.abs(candidateDuration - trackDurationSec) > LRCLIB_DURATION_TOLERANCE_SEC) return false;
-                            if (!item?.syncedLyrics && !item?.plainLyrics && !item?.instrumental) return false;
-                            return true;
-                        })
-                        .map(item => {
-                            const durationDiff = Math.abs(Number(item.duration) - trackDurationSec);
-                            const titleScore = jaroWinkler(title, item.trackName || '');
-                            const artistScore = jaroWinkler(artistQuery, item.artistName || '');
-                            const normalizedCandidateTitle = normalize(item.trackName || '');
-                            const normalizedCandidateArtist = normalize(item.artistName || '');
-                            const titleContains = normalizedCandidateTitle.includes(normalizedTitle) || normalizedTitle.includes(normalizedCandidateTitle);
-                            const artistContains = normalizedCandidateArtist.includes(normalizedArtistQuery) || normalizedArtistQuery.includes(normalizedCandidateArtist);
-                            const syncCoverage = getLyricCoverage(item.syncedLyrics, trackDurationMs);
-                            const score = (titleScore * 0.58) + (artistScore * 0.32) + ((LRCLIB_DURATION_TOLERANCE_SEC - durationDiff) / LRCLIB_DURATION_TOLERANCE_SEC * 0.08) + (item.syncedLyrics ? 0.02 : 0);
-
+                    if (!response.ok) {
+                        if (response.status === 429) {
                             return {
-                                ...item,
-                                durationDiff,
-                                titleScore,
-                                artistScore,
-                                titleContains,
-                                artistContains,
-                                syncCoverage,
-                                score
+                                fatal: true,
+                                error: 'Rate limit exceeded (429)',
+                                searchLabel: label,
+                                totalResults: 0,
+                                candidates: []
                             };
-                        })
-                        .sort((a, b) => {
-                            if (b.score !== a.score) return b.score - a.score;
-                            if (a.durationDiff !== b.durationDiff) return a.durationDiff - b.durationDiff;
-                            if (!!b.syncedLyrics !== !!a.syncedLyrics) return Number(!!b.syncedLyrics) - Number(!!a.syncedLyrics);
-                            return (b.syncCoverage || 0) - (a.syncCoverage || 0);
-                        });
+                        }
+                        if (response.status === 404) {
+                            return {
+                                fatal: false,
+                                error: 'No lyrics found',
+                                searchLabel: label,
+                                totalResults: 0,
+                                candidates: []
+                            };
+                        }
+                        return {
+                            fatal: true,
+                            error: `API error: ${response.status}`,
+                            searchLabel: label,
+                            totalResults: 0,
+                            candidates: []
+                        };
+                    }
+
+                    const data = await response.json();
+                    if (!Array.isArray(data)) {
+                        return {
+                            fatal: true,
+                            error: 'Invalid LRCLIB response',
+                            searchLabel: label,
+                            totalResults: 0,
+                            candidates: []
+                        };
+                    }
 
                     return {
                         fatal: false,
-                        searchedArtist: artistQuery,
+                        error: data.length === 0 ? 'No lyrics found' : null,
+                        searchLabel: label,
                         totalResults: data.length,
-                        candidates
+                        candidates: data
                     };
                 };
 
-                const artistQueries = [...new Set([primaryArtist, artist].filter(Boolean))];
-                let resolvedSearch = null;
-                let lastSearchResult = null;
+                const rankCandidates = (candidates, { allowTitleDrivenMatch = false } = {}) => {
+                    return candidates
+                        .map(item => {
+                            const candidateArtists = splitArtists(item?.artistName || '');
+                            const candidateTitle = item?.trackName || item?.name || '';
+                            const titleScore = getTitleScore(title, candidateTitle);
+                            const artistScore = getBestArtistScore(expectedArtists, candidateArtists);
+                            const durationDiff = Math.abs(Number(item?.duration || 0) - trackDurationSec);
+                            const exactDurationMatch = hasExactDurationMatch(trackDurationSec, Number(item?.duration || 0));
+                            const artistMatched = artistScore > LRCLIB_ARTIST_MATCH_THRESHOLD;
+                            const titleDrivenMatch = allowTitleDrivenMatch
+                                && titleScore >= LRCLIB_FALLBACK_TITLE_MATCH_THRESHOLD
+                                && exactDurationMatch;
 
-                for (const artistQuery of artistQueries) {
-                    const searchResult = await runStructuredSearch(artistQuery);
-                    lastSearchResult = searchResult;
-
-                    if (searchResult.fatal) {
-                        result.error = searchResult.error;
-                        logDebug('Failed', {
-                            error: result.error,
-                            searchedArtist: searchResult.searchedArtist
+                            return {
+                                ...item,
+                                artistScore,
+                                titleScore,
+                                durationDiff,
+                                exactDurationMatch,
+                                artistMatched,
+                                titleDrivenMatch,
+                                matchReason: artistMatched ? 'artist' : (titleDrivenMatch ? 'title' : 'rejected')
+                            };
+                        })
+                        .filter(item => {
+                            if (!item?.syncedLyrics && !item?.plainLyrics && !item?.instrumental) return false;
+                            if (item.artistMatched) return true;
+                            if (allowTitleDrivenMatch && item.titleDrivenMatch) return true;
+                            return false;
+                        })
+                        .sort((a, b) => {
+                            if (a.artistMatched !== b.artistMatched) {
+                                return Number(b.artistMatched) - Number(a.artistMatched);
+                            }
+                            if (b.titleScore !== a.titleScore) {
+                                return b.titleScore - a.titleScore;
+                            }
+                            if (a.durationDiff !== b.durationDiff) {
+                                return a.durationDiff - b.durationDiff;
+                            }
+                            return b.artistScore - a.artistScore;
                         });
-                        return result;
-                    }
+                };
 
-                    if (!searchResult.candidates || searchResult.candidates.length === 0) {
-                        continue;
-                    }
+                const structuredSearch = await runSearch({
+                    track_name: title,
+                    artist_name: artist,
+                    album_name: album
+                }, 'structured');
 
-                    const candidate = searchResult.candidates[0];
-                    const titleAccepted = candidate.titleContains || candidate.titleScore >= LRCLIB_MIN_TITLE_SCORE;
-                    const artistAccepted = candidate.artistContains || candidate.artistScore >= LRCLIB_MIN_ARTIST_SCORE;
-
-                    if (!titleAccepted || !artistAccepted) {
-                        continue;
-                    }
-
-                    resolvedSearch = searchResult;
-                    break;
-                }
-
-                if (!resolvedSearch) {
-                    result.error = lastSearchResult?.candidates?.length
-                        ? 'Low confidence structured match'
-                        : (lastSearchResult?.error || `No LRCLIB results within ±${LRCLIB_DURATION_TOLERANCE_SEC}s`);
+                if (structuredSearch.fatal) {
+                    result.error = structuredSearch.error;
                     logDebug('Failed', {
                         error: result.error,
-                        searchedArtists: artistQueries.join(' -> '),
-                        totalResults: lastSearchResult?.totalResults,
-                        trackDurationSec: trackDurationSec.toFixed(2)
+                        searchMode: structuredSearch.searchLabel
                     });
                     return result;
                 }
 
-                const body = resolvedSearch.candidates[0];
-                const usedFallbackArtist = resolvedSearch.searchedArtist !== primaryArtist;
+                let resolvedSearch = structuredSearch;
+                let rankedCandidates = rankCandidates(structuredSearch.candidates);
+                let usedFallbackQuery = false;
+
+                if (rankedCandidates.length === 0 && LRCLIB_ENABLE_INEXACT_SEARCH) {
+                    const fallbackAttempts = [];
+                    if (searchSettings.enableFallbackTitleArtist && title && artist) {
+                        fallbackAttempts.push({ params: { q: `${title} ${artist}` }, label: 'q:title+artist' });
+                    }
+                    if (searchSettings.enableFallbackTitleOnly && title) {
+                        fallbackAttempts.push({ params: { q: title }, label: 'q:title' });
+                    }
+
+                    for (const attempt of fallbackAttempts) {
+                        const fallbackSearch = await runSearch(attempt.params, attempt.label);
+                        usedFallbackQuery = true;
+
+                        if (fallbackSearch.fatal) {
+                            result.error = fallbackSearch.error;
+                            logDebug('Failed', {
+                                error: result.error,
+                                searchMode: fallbackSearch.searchLabel
+                            });
+                            return result;
+                        }
+
+                        resolvedSearch = fallbackSearch;
+                        rankedCandidates = rankCandidates(fallbackSearch.candidates, { allowTitleDrivenMatch: true });
+
+                        if (rankedCandidates.length > 0) {
+                            break;
+                        }
+                    }
+                }
+
+                const body = rankedCandidates[0];
+                if (!body) {
+                    result.error = resolvedSearch.totalResults > 0
+                        ? 'Low confidence metadata match'
+                        : (resolvedSearch.error || 'No lyrics found');
+                    logDebug('Failed', {
+                        error: result.error,
+                        searchMode: resolvedSearch.searchLabel,
+                        totalResults: resolvedSearch.totalResults,
+                        usedFallbackQuery
+                    });
+                    return result;
+                }
+
+                if (body.durationDiff > LRCLIB_DURATION_TOLERANCE_SEC) {
+                    result.error = `No LRCLIB results within ±${LRCLIB_DURATION_TOLERANCE_SEC}s`;
+                    logDebug('Failed', {
+                        error: result.error,
+                        durationDiff: body.durationDiff.toFixed(2),
+                        searchMode: resolvedSearch.searchLabel,
+                        usedFallbackQuery
+                    });
+                    return result;
+                }
 
                 if (body.instrumental) {
                     result.synced = [{ startTime: 0, text: '♪ Instrumental ♪' }];
                     result.unsynced = [{ text: '♪ Instrumental ♪' }];
                     logDebug('Success', {
                         instrumental: true,
-                        matchedCandidates: resolvedSearch.candidates.length,
+                        matchedCandidates: rankedCandidates.length,
                         durationDiff: body.durationDiff.toFixed(2),
-                        searchedArtist: resolvedSearch.searchedArtist,
-                        usedFallbackArtist
+                        exactDurationMatch: body.exactDurationMatch,
+                        artistScore: body.artistScore.toFixed(3),
+                        titleScore: body.titleScore.toFixed(3),
+                        matchReason: body.matchReason,
+                        searchMode: resolvedSearch.searchLabel,
+                        usedFallbackQuery
                     });
                     return result;
                 }
 
-                if (body.syncedLyrics && body.syncCoverage > 0) {
+                if (body.syncedLyrics) {
                     const parsed = parseLRC(body.syncedLyrics);
                     result.synced = parsed.synced;
                     if (!result.unsynced) {
@@ -648,23 +906,25 @@
                     result.error = 'No lyrics';
                     logDebug('Failed', {
                         error: result.error,
-                        matchedCandidates: resolvedSearch.candidates.length,
-                        searchedArtist: resolvedSearch.searchedArtist,
-                        usedFallbackArtist
+                        matchedCandidates: rankedCandidates.length,
+                        searchMode: resolvedSearch.searchLabel,
+                        usedFallbackQuery
                     });
                     return result;
                 }
 
                 logDebug('Success', {
                     totalResults: resolvedSearch.totalResults,
-                    matchedCandidates: resolvedSearch.candidates.length,
-                    titleScore: body.titleScore.toFixed(3),
+                    matchedCandidates: rankedCandidates.length,
                     artistScore: body.artistScore.toFixed(3),
+                    titleScore: body.titleScore.toFixed(3),
                     durationDiff: body.durationDiff.toFixed(2),
+                    exactDurationMatch: body.exactDurationMatch,
                     hasSynced: !!result.synced,
                     hasUnsynced: !!result.unsynced,
-                    searchedArtist: resolvedSearch.searchedArtist,
-                    usedFallbackArtist
+                    matchReason: body.matchReason,
+                    searchMode: resolvedSearch.searchLabel,
+                    usedFallbackQuery
                 });
                 return result;
 
@@ -676,6 +936,8 @@
 
         }
     };
+
+    syncAddonCacheVersion();
 
     // ============================================
     // Registration (애드온 등록)

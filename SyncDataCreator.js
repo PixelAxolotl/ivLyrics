@@ -1629,8 +1629,12 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		setIsSubmitting(true);
 
 		try {
+			const submitMetadata = {
+				title: trackName,
+				artist: artistName
+			};
 			if (typeof SyncDataService !== 'undefined' && SyncDataService.submitSyncData) {
-				const result = await SyncDataService.submitSyncData(trackId, provider, syncData);
+				const result = await SyncDataService.submitSyncData(trackId, provider, syncData, submitMetadata);
 				if (result) {
 					Toast.success(I18n.t('syncCreator.submitSuccess'));
 					// 캐시 무효화
@@ -1652,7 +1656,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					const response = await fetch('https://lyrics.api.ivl.is/lyrics/sync-data', {
 						method: 'POST',
 						headers: Utils.getApiHeaders({ 'Content-Type': 'application/json' }),
-						body: JSON.stringify({ trackId, provider, syncData, userHash })
+						body: JSON.stringify({ trackId, provider, syncData, userHash, ...submitMetadata })
 					});
 
 				if (response.ok) {
@@ -1678,7 +1682,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 
 		setIsSubmitting(false);
-	}, [syncData, lyricsLines.length, trackId, provider, onClose]);
+	}, [syncData, lyricsLines.length, trackId, provider, trackName, artistName, onClose]);
 
 	// 싱크 데이터 내보내기 (JSON 파일로 저장)
 	const exportSyncData = useCallback(() => {

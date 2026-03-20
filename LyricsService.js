@@ -1338,11 +1338,14 @@
          * @param {string} trackId - Spotify Track ID
          * @param {string} provider - 가사 출처 ('spotify', 'lrclib')
          * @param {Object} syncData - 싱크 데이터 { lines: [...] }
+         * @param {Object} metadata - 선택 메타데이터 { title?: string, artist?: string }
          * @returns {Promise<Object>} - 제출 결과
          */
-	        async function submitSyncData(trackId, provider, syncData) {
+	        async function submitSyncData(trackId, provider, syncData, metadata = {}) {
 	            const userHash = getUserHash();
 	            const authToken = Spicetify.LocalStorage.get("ivLyrics:auth-token");
+                const title = typeof metadata?.title === "string" ? metadata.title.trim() : "";
+                const artist = typeof metadata?.artist === "string" ? metadata.artist.trim() : "";
 
 	            const response = await fetch(`${API_BASE}/lyrics/sync-data`, {
 	                method: 'POST',
@@ -1355,7 +1358,9 @@
 	                    trackId,
                     provider,
                     syncData,
-                    userHash
+                    userHash,
+                    ...(title ? { title } : {}),
+                    ...(artist ? { artist } : {})
                 })
             });
 

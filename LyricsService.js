@@ -185,14 +185,26 @@
                 return String(line || "");
             };
 
+            let cacheKey = "";
+            for (const line of lyrics) {
+                const text = extractTextSafely(line);
+                if (!text) continue;
+                cacheKey = cacheKey ? `${cacheKey} ${text}` : text;
+                if (cacheKey.length >= 200) {
+                    cacheKey = cacheKey.substring(0, 200);
+                    break;
+                }
+            }
+            if (!cacheKey) {
+                return null;
+            }
+            if (this._langDetectCache.has(cacheKey)) {
+                return this._langDetectCache.get(cacheKey);
+            }
+
             const rawLyrics = lyrics.map(extractTextSafely).join(" ");
             if (!rawLyrics || rawLyrics.length === 0) {
                 return null;
-            }
-
-            const cacheKey = rawLyrics.substring(0, 200);
-            if (this._langDetectCache.has(cacheKey)) {
-                return this._langDetectCache.get(cacheKey);
             }
 
             // Language detection regex patterns
@@ -1992,6 +2004,19 @@
     const tinyPinyinPath = "https://cdn.jsdelivr.net/npm/tiny-pinyin/dist/tiny-pinyin.min.js";
     const dictPath = "https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/dict";
 
+    const resolveSpotifyImageUrl = (imageUrl) => {
+        if (!imageUrl || imageUrl.indexOf("localfile") !== -1) {
+            return null;
+        }
+        if (imageUrl.startsWith("spotify:image:")) {
+            return `https://i.scdn.co/image/${imageUrl.substring(imageUrl.lastIndexOf(":") + 1)}`;
+        }
+        if (imageUrl.startsWith("http")) {
+            return imageUrl;
+        }
+        return null;
+    };
+
     // 전역 요청 상태 관리 (중복 요청 방지)
     const _translatorInflightRequests = new Map();
     const _translatorPendingRetries = new Map();
@@ -2751,13 +2776,7 @@
                 const imageUrl = Spicetify.Player.data?.item?.metadata?.image_xlarge_url
                     || Spicetify.Player.data?.item?.metadata?.image_url
                     || Spicetify.Player.data?.item?.metadata?.image_large_url;
-                if (imageUrl && imageUrl.indexOf('localfile') === -1) {
-                    if (imageUrl.startsWith('spotify:image:')) {
-                        albumArt = `https://i.scdn.co/image/${imageUrl.substring(imageUrl.lastIndexOf(':') + 1)}`;
-                    } else if (imageUrl.startsWith('http')) {
-                        albumArt = imageUrl;
-                    }
-                }
+                albumArt = resolveSpotifyImageUrl(imageUrl);
             } catch (e) { }
 
             const mappedLines = lyrics.map(l => {
@@ -2887,13 +2906,7 @@
                                 || Spicetify.Player.data?.item?.metadata?.image_url
                                 || Spicetify.Player.data?.item?.metadata?.image_large_url;
                             let albumArt = null;
-                            if (imageUrl && imageUrl.indexOf('localfile') === -1) {
-                                if (imageUrl.startsWith('spotify:image:')) {
-                                    albumArt = `https://i.scdn.co/image/${imageUrl.substring(imageUrl.lastIndexOf(':') + 1)}`;
-                                } else if (imageUrl.startsWith('http')) {
-                                    albumArt = imageUrl;
-                                }
-                            }
+                            albumArt = resolveSpotifyImageUrl(imageUrl);
                             currentTrack = {
                                 title: Spicetify.Player.data?.item?.metadata?.title || '',
                                 artist: Spicetify.Player.data?.item?.metadata?.artist_name || '',
@@ -2910,14 +2923,7 @@
                             const next = queue.nextTracks[0];
                             if (next?.contextTrack?.metadata) {
                                 const imageUrl = next.contextTrack.metadata.image_url || next.contextTrack.metadata.image_xlarge_url;
-                                let albumArt = null;
-                                if (imageUrl && imageUrl.indexOf('localfile') === -1) {
-                                    if (imageUrl.startsWith('spotify:image:')) {
-                                        albumArt = `https://i.scdn.co/image/${imageUrl.substring(imageUrl.lastIndexOf(':') + 1)}`;
-                                    } else if (imageUrl.startsWith('http')) {
-                                        albumArt = imageUrl;
-                                    }
-                                }
+                                const albumArt = resolveSpotifyImageUrl(imageUrl);
                                 nextTrack = {
                                     title: next.contextTrack.metadata.title || '',
                                     artist: next.contextTrack.metadata.artist_name || '',
@@ -3180,13 +3186,7 @@
                     const imageUrl = Spicetify.Player.data?.item?.metadata?.image_xlarge_url
                         || Spicetify.Player.data?.item?.metadata?.image_url
                         || Spicetify.Player.data?.item?.metadata?.image_large_url;
-                    if (imageUrl && imageUrl.indexOf('localfile') === -1) {
-                        if (imageUrl.startsWith('spotify:image:')) {
-                            albumArt = `https://i.scdn.co/image/${imageUrl.substring(imageUrl.lastIndexOf(':') + 1)}`;
-                        } else if (imageUrl.startsWith('http')) {
-                            albumArt = imageUrl;
-                        }
-                    }
+                    albumArt = resolveSpotifyImageUrl(imageUrl);
                 } catch (e) { }
 
                 const mappedLines = lyrics.map(l => {
@@ -3482,13 +3482,7 @@
                                     || Spicetify.Player.data?.item?.metadata?.image_url
                                     || Spicetify.Player.data?.item?.metadata?.image_large_url;
                                 let albumArt = null;
-                                if (imageUrl && imageUrl.indexOf('localfile') === -1) {
-                                    if (imageUrl.startsWith('spotify:image:')) {
-                                        albumArt = `https://i.scdn.co/image/${imageUrl.substring(imageUrl.lastIndexOf(':') + 1)}`;
-                                    } else if (imageUrl.startsWith('http')) {
-                                        albumArt = imageUrl;
-                                    }
-                                }
+                                albumArt = resolveSpotifyImageUrl(imageUrl);
                                 currentTrack = {
                                     title: Spicetify.Player.data?.item?.metadata?.title || '',
                                     artist: Spicetify.Player.data?.item?.metadata?.artist_name || '',
@@ -3505,14 +3499,7 @@
                                 const next = queue.nextTracks[0];
                                 if (next?.contextTrack?.metadata) {
                                     const imageUrl = next.contextTrack.metadata.image_url || next.contextTrack.metadata.image_xlarge_url;
-                                    let albumArt = null;
-                                    if (imageUrl && imageUrl.indexOf('localfile') === -1) {
-                                        if (imageUrl.startsWith('spotify:image:')) {
-                                            albumArt = `https://i.scdn.co/image/${imageUrl.substring(imageUrl.lastIndexOf(':') + 1)}`;
-                                        } else if (imageUrl.startsWith('http')) {
-                                            albumArt = imageUrl;
-                                        }
-                                    }
+                                    const albumArt = resolveSpotifyImageUrl(imageUrl);
                                     nextTrack = {
                                         title: next.contextTrack.metadata.title || '',
                                         artist: next.contextTrack.metadata.artist_name || '',

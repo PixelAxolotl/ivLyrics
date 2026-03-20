@@ -66,6 +66,16 @@ if (!window.ApiTracker) {
 // 하위 호환성을 위해 LyricsCache 별칭 생성 (기존 코드에서 LyricsCache 직접 참조하는 경우)
 const LyricsCache = window.LyricsCache;
 const ApiTracker = window.ApiTracker;
+const HAN_CHARACTER_REGEX = /\p{Script=Han}/u;
+const KANJI_CHARACTER_REGEX = /[\u4E00-\u9FAF\u3400-\u4DBF]/;
+const CLEAN_HTML_RT_REGEX = /<rt[^>]*>.*?<\/rt>/gi;
+const CLEAN_HTML_RUBY_REGEX = /<\/?ruby[^>]*>/gi;
+const CLEAN_HTML_TAG_REGEX = /<[^>]+>/g;
+const YOUTUBE_ID_PATTERNS = [
+  /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
+  /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+  /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
+];
 
 // Optimized Utils with performance improvements and caching
 const Utils = {
@@ -83,9 +93,9 @@ const Utils = {
 
   convertIntToRGB(colorInt, div = 1) {
     const cacheKey = `${colorInt}_${div}`;
-
-    if (this._colorCache.has(cacheKey)) {
-      return this._colorCache.get(cacheKey);
+    const cached = this._colorCache.get(cacheKey);
+    if (cached !== undefined) {
+      return cached;
     }
 
     // Use bit operations for faster calculations
@@ -116,9 +126,9 @@ const Utils = {
    */
   normalize(s, emptySymbol = true) {
     const cacheKey = `${s}_${emptySymbol}`;
-
-    if (this._normalizeCache.has(cacheKey)) {
-      return this._normalizeCache.get(cacheKey);
+    const cached = this._normalizeCache.get(cacheKey);
+    if (cached !== undefined) {
+      return cached;
     }
 
     // Lazy compile the pattern (최적화 #11 - 정규식 사전 컴파일)
@@ -148,8 +158,7 @@ const Utils = {
    * @returns {boolean}
    */
   containsHanCharacter(s) {
-    const hanRegex = /\p{Script=Han}/u;
-    return hanRegex.test(s);
+    return HAN_CHARACTER_REGEX.test(s);
   },
   /**
    * Singleton Translator instance for {@link toSimplifiedChinese}.
@@ -324,8 +333,21 @@ const Utils = {
 
     reactChildren.push(rubyElems[0]);
     for (let i = 1; i < rubyElems.length; i++) {
-      const kanji = rubyElems[i].split("<rp>")[0];
-      const furigana = rubyElems[i].split("<rt>")[1].split("</rt>")[0];
+      const rubySegment = rubyElems[i];
+      const rpIndex = rubySegment.indexOf("<rp>");
+      const rtStart = rubySegment.indexOf("<rt>");
+      const rtEnd = rubySegment.indexOf("</rt>", rtStart);
+      const rubyEnd = rubySegment.indexOf("</ruby>");
+      const kanji =
+        rpIndex >= 0
+          ? rubySegment.substring(0, rpIndex)
+          : rtStart >= 0
+            ? rubySegment.substring(0, rtStart)
+            : rubySegment;
+      const furigana =
+        rtStart >= 0 && rtEnd >= 0
+          ? rubySegment.substring(rtStart + 4, rtEnd)
+          : "";
       reactChildren.push(
         react.createElement(
           "ruby",
@@ -335,7 +357,7 @@ const Utils = {
         )
       );
 
-      reactChildren.push(rubyElems[i].split("</ruby>")[1]);
+      reactChildren.push(rubyEnd >= 0 ? rubySegment.substring(rubyEnd + 7) : "");
     }
     return react.createElement("p1", null, reactChildren);
   },
@@ -466,8 +488,7 @@ const Utils = {
     }
 
     // Check if text contains kanji
-    const kanjiRegex = /[\u4E00-\u9FAF\u3400-\u4DBF]/;
-    if (!kanjiRegex.test(text)) {
+    if (!KANJI_CHARACTER_REGEX.test(text)) {
       return text;
     }
 
@@ -534,10 +555,11 @@ const Utils = {
     // HTML 태그 제거 헬퍼
     const cleanHtml = (text) => {
       if (!text || typeof text !== "string") return "";
+      if (!text.includes("<")) return text.trim();
       return text
-        .replace(/<rt[^>]*>.*?<\/rt>/gi, "") // rt 태그 제거
-        .replace(/<\/?ruby[^>]*>/gi, "") // ruby 태그 제거
-        .replace(/<[^>]+>/g, "") // 기타 HTML 태그 제거
+        .replace(CLEAN_HTML_RT_REGEX, "") // rt 태그 제거
+        .replace(CLEAN_HTML_RUBY_REGEX, "") // ruby 태그 제거
+        .replace(CLEAN_HTML_TAG_REGEX, "") // 기타 HTML 태그 제거
         .trim();
     };
 
@@ -1796,13 +1818,7 @@ const Utils = {
       return url;
     }
 
-    const patterns = [
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
-      /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/
-    ];
-
-    for (const pattern of patterns) {
+    for (const pattern of YOUTUBE_ID_PATTERNS) {
       const match = url.match(pattern);
       if (match) return match[1];
     }

@@ -310,6 +310,30 @@ const OverlaySender = window.OverlaySender;
 const react = Spicetify.React;
 const { useState, useEffect, useCallback, useMemo, useRef } = react;
 
+const getNonSectionLyricsText = (lyrics = []) =>
+  lyrics
+    .map((line) => line?.text || "")
+    .filter((line) => line && !Utils.isSectionHeader(line))
+    .join("\n");
+
+const hasInstrumentalMarker = (lyrics = []) => {
+  if (!lyrics || lyrics.length === 0 || lyrics.length > 3) return false;
+
+  const firstLine = lyrics[0]?.text?.toLowerCase()?.trim() || "";
+  if (firstLine.includes("no lyrics") || firstLine.includes("instrumental")) {
+    return true;
+  }
+
+  for (const line of lyrics) {
+    const text = line?.text?.toLowerCase() || "";
+    if (text.includes("no lyrics") || text.includes("instrumental")) {
+      return true;
+    }
+  }
+
+  return false;
+};
+
 // Update Banner Component - Fluent Design Style
 const UpdateBanner = ({ updateInfo, onDismiss }) => {
   const [copied, setCopied] = useState(false);
@@ -1116,13 +1140,13 @@ const DBExportManager = {
     for (const target of DB_EXPORT_TARGETS) {
       try {
         const db = await this._openDB(target.name, target.version, target.stores);
-        const existingStores = Array.from(db.objectStoreNames);
-        result[target.name] = {};
-        for (const storeName of target.stores) {
-          if (existingStores.includes(storeName)) {
+      const existingStores = new Set(Array.from(db.objectStoreNames));
+      result[target.name] = {};
+      for (const storeName of target.stores) {
+          if (existingStores.has(storeName)) {
             result[target.name][storeName] = await this._readStore(db, storeName);
           }
-        }
+      }
         db.close();
       } catch (e) {
         console.warn(`[ivLyrics] Failed to export DB ${target.name}:`, e);
@@ -1136,9 +1160,9 @@ const DBExportManager = {
       if (!data[target.name]) continue;
       try {
         const db = await this._openDB(target.name, target.version, target.stores);
-        const existingStores = Array.from(db.objectStoreNames);
+        const existingStores = new Set(Array.from(db.objectStoreNames));
         for (const storeName of target.stores) {
-          if (existingStores.includes(storeName) && data[target.name][storeName]) {
+          if (existingStores.has(storeName) && data[target.name][storeName]) {
             await this._writeStore(db, storeName, data[target.name][storeName]);
           }
         }
@@ -1926,9 +1950,16 @@ const RateLimiter = {
   canMakeCall(key, maxCalls = 5, windowMs = 60000) {
     const now = Date.now();
     const calls = this._calls.get(key) || [];
+    let firstValidIndex = 0;
+    while (
+      firstValidIndex < calls.length &&
+      now - calls[firstValidIndex] >= windowMs
+    ) {
+      firstValidIndex++;
+    }
 
-    // Remove calls outside the window
-    const validCalls = calls.filter((time) => now - time < windowMs);
+    const validCalls =
+      firstValidIndex === 0 ? calls : calls.slice(firstValidIndex);
 
     if (validCalls.length >= maxCalls) {
       return false;
@@ -2177,9 +2208,7 @@ const Prefetcher = {
     }
 
     // Section header 제외한 텍스트 추출
-    const allLines = lyricsArray.map((l) => l?.text || "").filter(Boolean);
-    const nonSectionLines = allLines.filter((line) => !Utils.isSectionHeader(line));
-    const text = nonSectionLines.join("\n");
+    const text = getNonSectionLyricsText(lyricsArray);
 
     if (!text.trim()) return;
 
@@ -3471,11 +3500,7 @@ class LyricsContainer extends react.Component {
       }
 
       // Section line 제거하고 원문 텍스트만 추출 (getGeminiTranslation과 동일)
-      const allLines = originalLyrics.map((l) => l?.text || "").filter(Boolean);
-      const nonSectionLines = allLines.filter(
-        (line) => !Utils.isSectionHeader(line)
-      );
-      const text = nonSectionLines.join("\n");
+      const text = getNonSectionLyricsText(originalLyrics);
 
       const currentUri = lyricsState.uri;
       const currentProvider = lyricsState.provider || "";
@@ -4038,21 +4063,7 @@ class LyricsContainer extends react.Component {
       // 2. First line contains "no lyrics" or "instrumental"
       const checkNoLyrics = (lyrics) => {
         if (!lyrics || lyrics.length === 0) return false;
-        if (lyrics.length > 3) return false;
-
-        // Check first non-empty line
-        const firstLine = lyrics[0]?.text?.toLowerCase()?.trim() || '';
-        if (firstLine.includes('no lyrics') || firstLine.includes('instrumental')) {
-          return true;
-        }
-
-        // Also check if all lines combined contain these keywords
-        const allText = lyrics.map(line => line.text || '').join(' ').toLowerCase();
-        if (allText.includes('no lyrics') || allText.includes('instrumental')) {
-          return true;
-        }
-
-        return false;
+        return hasInstrumentalMarker(lyrics);
       };
 
       // If all lyrics types indicate no lyrics, treat as instrumental
@@ -4790,11 +4801,7 @@ class LyricsContainer extends react.Component {
       }
 
       // Filter out section headers before sending to Gemini for translation
-      const allLines = lyrics.map((l) => l?.text || "").filter(Boolean);
-      const nonSectionLines = allLines.filter(
-        (line) => !Utils.isSectionHeader(line)
-      );
-      const text = nonSectionLines.join("\n");
+      const text = getNonSectionLyricsText(lyrics);
 
       // Create mapping arrays for proper alignment
 	      const originalNonSectionIndexMap = new Map();
@@ -5282,7 +5289,7 @@ class LyricsContainer extends react.Component {
     if (this._inflightGemini) {
       const keysToDelete = [];
       for (const [key] of this._inflightGemini) {
-        if (key.includes(uri)) {
+        if (key.startsWith(`${uri}:`)) {
           keysToDelete.push(key);
         }
       }
@@ -5512,7 +5519,7 @@ class LyricsContainer extends react.Component {
       // 진행 중인 Gemini 요청도 취소
       if (this._inflightGemini && trackUri) {
         for (const [key] of this._inflightGemini) {
-          if (key.includes(trackUri)) {
+          if (key.startsWith(`${trackUri}:`)) {
             this._inflightGemini.delete(key);
           }
         }
@@ -6728,6 +6735,7 @@ class LyricsContainer extends react.Component {
     "Merriweather",
     "Playfair Display",
   ];
+  const GOOGLE_FONT_SET = new Set(GOOGLE_FONTS);
 
   const fontsToLoad = new Set();
 
@@ -6736,7 +6744,7 @@ class LyricsContainer extends react.Component {
     if (!fontString) return;
     const fonts = fontString.split(",").map((f) => f.trim().replace(/['"]/g, ""));
     fonts.forEach((font) => {
-      if (font && GOOGLE_FONTS.includes(font)) {
+      if (font && GOOGLE_FONT_SET.has(font)) {
         fontsToLoad.add(font);
       }
     });

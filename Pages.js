@@ -1248,6 +1248,24 @@ const getUnsyncedLineRenderData = (lyrics, text, originalText, text2) => {
 	};
 };
 
+const buildLyricDisplayState = (isKara, line, text, originalText, text2) => {
+	const { mainText, subText, subText2 } = getLyricsDisplayMode(
+		isKara,
+		line,
+		text,
+		originalText,
+		text2
+	);
+
+	return {
+		mainText,
+		subText,
+		subText2,
+		hasSubLine: !!subText || !!subText2,
+		originalText,
+	};
+};
+
 const getCopyableText = (value) => {
 	if (value === null || value === undefined) {
 		return "";
@@ -1533,6 +1551,39 @@ const LyricsLineBlock = react.memo(({
 	);
 });
 
+const renderLyricsItems = ({ items, isKara, position = 0, activeLineRef = null }) => {
+	const karaokePosition = isKara ? position : 0;
+
+	return items.map((item) => {
+		if (item.type === "indicator") {
+			return react.createElement(IdlingIndicator, {
+				key: item.key,
+				isActive: item.isActive,
+				progress: item.progress,
+				delay: item.delay,
+			});
+		}
+
+		return react.createElement(LyricsLineBlock, {
+			key: item.key,
+			className: item.className,
+			style: item.style,
+			lineRef: item.trackLineRef ? activeLineRef : null,
+			seekTime: item.canSeek ? item.startTime : null,
+			mainText: item.mainText,
+			subText: item.subText,
+			subText2: item.subText2,
+			originalText: item.originalText,
+			isKara,
+			line: item.line,
+			position: karaokePosition,
+			isActive: item.karaokeActive,
+			globalCharOffset: item.globalCharOffset,
+			activeGlobalCharIndex: item.activeGlobalCharIndex,
+		});
+	});
+};
+
 const SyncedLyricsScrollView = react.memo(({
 	lyrics = [],
 	position = 0,
@@ -1553,7 +1604,7 @@ const SyncedLyricsScrollView = react.memo(({
 		},
 		...lyrics.map((line, index) => {
 			const { text, startTime, originalText, text2 } = line;
-			const { mainText, subText, subText2 } = getLyricsDisplayMode(
+			const { mainText, subText, subText2, hasSubLine } = buildLyricDisplayState(
 				isKara,
 				line,
 				text,
@@ -1561,7 +1612,6 @@ const SyncedLyricsScrollView = react.memo(({
 				text2
 			);
 			const isActiveLine = index === activeLyricIndex;
-			const hasSubLine = !!subText || !!subText2;
 
 			return react.createElement(LyricsLineBlock, {
 				key: `scroll-line-${startTime ?? index}-${index}`,
@@ -1692,7 +1742,7 @@ const useSyncedLyricsEngine = ({
 		if (compact && isScrolling) {
 			return lyrics.map((line, index) => {
 				const { text, startTime, originalText, text2 } = line;
-				const { mainText, subText, subText2 } = getLyricsDisplayMode(
+				const { mainText, subText, subText2, hasSubLine } = buildLyricDisplayState(
 					isKara,
 					line,
 					text,
@@ -1700,7 +1750,6 @@ const useSyncedLyricsEngine = ({
 					text2
 				);
 				const isActiveLine = index === Math.max(0, activeLineIndex - leadingEmptyLines);
-				const hasSubLine = !!subText || !!subText2;
 
 				return {
 					type: "line",
@@ -1763,7 +1812,13 @@ const useSyncedLyricsEngine = ({
 				lineNumber,
 				visibleIndex: compactVisibleIndex,
 			});
-			const { mainText, subText, subText2 } = getLyricsDisplayMode(isKara, line, text, originalText, text2);
+			const { mainText, subText, subText2 } = buildLyricDisplayState(
+				isKara,
+				line,
+				text,
+				originalText,
+				text2
+			);
 
 			let className = "lyrics-lyricsContainer-LyricsLine";
 			if (isActiveLine) {
@@ -2146,13 +2201,18 @@ const KaraokeLine = react.memo(({ line, position, isActive, globalCharOffset = 0
 		return "";
 	}
 
-	const rawLineText = line.syllables?.map((syllable) => syllable?.text || "").join("")
-		|| getCopyableText(line.text)
-		|| "";
-	const processedText = Utils.applyFuriganaIfEnabled(rawLineText);
-	const furiganaMap = buildKaraokeFuriganaMap(processedText);
-	const timedChars = buildKaraokeTimedChars(line);
-	const { endTime } = getKaraokeLineBounds(line);
+	const { furiganaMap, timedChars, endTime } = useMemo(() => {
+		const rawLineText = line.syllables?.map((syllable) => syllable?.text || "").join("")
+			|| getCopyableText(line.text)
+			|| "";
+		const processedText = Utils.applyFuriganaIfEnabled(rawLineText);
+
+		return {
+			furiganaMap: buildKaraokeFuriganaMap(processedText),
+			timedChars: buildKaraokeTimedChars(line),
+			endTime: getKaraokeLineBounds(line).endTime,
+		};
+	}, [line]);
 	const isComplete = isActive && position >= endTime;
 
 	const charElements = timedChars.map((charInfo, index) => {
@@ -2309,33 +2369,11 @@ const SyncedLyricsPage = react.memo(({ lyrics = [], provider, contributors, copy
 				},
 				key: lyricsId,
 			},
-			...renderItems.map((item) => {
-				if (item.type === "indicator") {
-					return react.createElement(IdlingIndicator, {
-						key: item.key,
-						progress: item.progress,
-						delay: item.delay,
-						isActive: item.isActive,
-					});
-				}
-
-				return react.createElement(LyricsLineBlock, {
-					key: item.key,
-					className: item.className,
-					style: item.style,
-					lineRef: item.trackLineRef ? compactActiveLineEle : null,
-					seekTime: item.canSeek ? item.startTime : null,
-					mainText: item.mainText,
-					subText: item.subText,
-					subText2: item.subText2,
-					originalText: item.originalText,
-					isKara,
-					line: item.line,
-					position: isKara ? position : 0,
-					isActive: item.karaokeActive,
-					globalCharOffset: item.globalCharOffset,
-					activeGlobalCharIndex: item.activeGlobalCharIndex,
-				});
+			...renderLyricsItems({
+				items: renderItems,
+				isKara,
+				position,
+				activeLineRef: compactActiveLineEle,
 			})
 		)
 	);
@@ -2601,31 +2639,11 @@ const SyncedExpandedLyricsPage = react.memo(({ lyrics = [], provider, contributo
 		react.createElement("p", {
 			className: "lyrics-lyricsContainer-LyricsUnsyncedPadding",
 		}),
-		...renderItems.map((item) => {
-			if (item.type === "indicator") {
-				return react.createElement(IdlingIndicator, {
-					key: item.key,
-					isActive: item.isActive,
-					progress: item.progress,
-					delay: item.delay,
-				});
-			}
-
-			return react.createElement(LyricsLineBlock, {
-				key: item.key,
-				className: item.className,
-				style: item.style,
-				lineRef: item.trackLineRef ? activeLineRef : null,
-				seekTime: item.canSeek ? item.startTime : null,
-				mainText: item.mainText,
-				subText: item.subText,
-				subText2: item.subText2,
-				originalText: item.originalText,
-				isKara,
-				line: item.line,
-				position: isKara ? position : 0,
-				isActive: item.karaokeActive,
-			});
+		...renderLyricsItems({
+			items: renderItems,
+			isKara,
+			position,
+			activeLineRef,
 		}),
 		react.createElement("p", {
 			className: "lyrics-lyricsContainer-LyricsUnsyncedPadding",

@@ -1418,6 +1418,22 @@ const EMPTY_GLOBAL_CHAR_STATE = {
 	activeGlobalCharIndex: -1,
 };
 
+const KARAOKE_PRE_SPACE_MIN_DURATION_MS = 45;
+const KARAOKE_PRE_SPACE_NEXT_CHAR_RATIO = 0.7;
+const KARAOKE_PRE_SPACE_MAX_DURATION_MS = 120;
+
+const buildPreparedSyncedLyrics = (lyrics, isKara) =>
+	lyrics.map((line) => ({
+		...line,
+		...buildLyricDisplayState(
+			isKara,
+			line,
+			line?.text,
+			line?.originalText,
+			line?.text2
+		),
+	}));
+
 const buildPaddedSyncedLyrics = (lyrics, leadingEmptyLines) =>
 	Array.from({ length: leadingEmptyLines }, () => emptyLine)
 		.concat(lyrics)
@@ -1652,9 +1668,14 @@ const useSyncedLyricsEngine = ({
 		compact ? [lyricsId, containerReady] : [lyricsId]
 	);
 
+	const preparedLyrics = useMemo(
+		() => buildPreparedSyncedLyrics(lyrics, isKara),
+		[lyrics, isKara]
+	);
+
 	const paddedLyrics = useMemo(
-		() => buildPaddedSyncedLyrics(lyrics, leadingEmptyLines),
-		[lyrics, leadingEmptyLines]
+		() => buildPaddedSyncedLyrics(preparedLyrics, leadingEmptyLines),
+		[preparedLyrics, leadingEmptyLines]
 	);
 
 	const activeLineIndex = useMemo(
@@ -1670,7 +1691,19 @@ const useSyncedLyricsEngine = ({
 		return Math.max(activeLineIndex - CONFIG.visual["lines-before"], 0);
 	}, [compact, activeLineIndex]);
 
-	const linesToRender = paddedLyrics;
+	const linesToRender = useMemo(() => {
+		if (!compact || isScrolling) {
+			return paddedLyrics;
+		}
+
+		const startIndex = Math.max(compactWindowStartIndex - 2, 0);
+		const endIndex = Math.min(
+			activeLineIndex + CONFIG.visual["lines-after"] + 3,
+			paddedLyrics.length
+		);
+
+		return paddedLyrics.slice(startIndex, endIndex);
+	}, [compact, isScrolling, paddedLyrics, compactWindowStartIndex, activeLineIndex]);
 	const compactAnchorIndex = compact
 		? Math.min(CONFIG.visual["lines-before"], leadingEmptyLines)
 		: activeLineIndex;
@@ -1740,15 +1773,8 @@ const useSyncedLyricsEngine = ({
 
 	const renderItems = useMemo(() => {
 		if (compact && isScrolling) {
-			return lyrics.map((line, index) => {
-				const { text, startTime, originalText, text2 } = line;
-				const { mainText, subText, subText2, hasSubLine } = buildLyricDisplayState(
-					isKara,
-					line,
-					text,
-					originalText,
-					text2
-				);
+			return preparedLyrics.map((line, index) => {
+				const { startTime, originalText, mainText, subText, subText2, hasSubLine } = line;
 				const isActiveLine = index === Math.max(0, activeLineIndex - leadingEmptyLines);
 
 				return {
@@ -1775,7 +1801,14 @@ const useSyncedLyricsEngine = ({
 		}
 
 		return linesToRender.map((line, visibleIndex) => {
-			const { lineNumber = visibleIndex, text, startTime, originalText, text2 } = line;
+			const {
+				lineNumber = visibleIndex,
+				startTime,
+				originalText,
+				mainText,
+				subText,
+				subText2,
+			} = line;
 			const compactVisibleIndex = compact
 				? lineNumber - compactWindowStartIndex
 				: visibleIndex;
@@ -1812,14 +1845,6 @@ const useSyncedLyricsEngine = ({
 				lineNumber,
 				visibleIndex: compactVisibleIndex,
 			});
-			const { mainText, subText, subText2 } = buildLyricDisplayState(
-				isKara,
-				line,
-				text,
-				originalText,
-				text2
-			);
-
 			let className = "lyrics-lyricsContainer-LyricsLine";
 			if (isActiveLine) {
 				className += " lyrics-lyricsContainer-LyricsLine-active";
@@ -1869,6 +1894,7 @@ const useSyncedLyricsEngine = ({
 		activeLineIndex,
 		leadingEmptyLines,
 		lyrics,
+		preparedLyrics,
 		position,
 		paddedLyrics,
 		isScrolling,
@@ -2146,6 +2172,46 @@ const buildKaraokeTimedChars = (line) => {
 	}));
 };
 
+const applyKaraokeWhitespaceCompensation = (timedChars) => {
+	if (!Array.isArray(timedChars) || timedChars.length < 2) {
+		return timedChars;
+	}
+
+	let didChange = false;
+	const compensatedChars = timedChars.map((charInfo, index) => {
+		const nextCharInfo = timedChars[index + 1];
+		if (!nextCharInfo) {
+			return charInfo;
+		}
+
+		const currentChar = charInfo?.char || "";
+		const nextChar = nextCharInfo?.char || "";
+		const duration = Math.max(0, (charInfo?.endTime || 0) - (charInfo?.startTime || 0));
+		const nextCharDuration = Math.max(0, (nextCharInfo?.endTime || 0) - (nextCharInfo?.startTime || 0));
+		const isPreWhitespaceChar = currentChar && !/\s/u.test(currentChar) && /\s/u.test(nextChar);
+
+		if (!isPreWhitespaceChar || duration >= KARAOKE_PRE_SPACE_MIN_DURATION_MS) {
+			return charInfo;
+		}
+
+		const compensatedDuration = Math.max(
+			KARAOKE_PRE_SPACE_MIN_DURATION_MS,
+			Math.min(
+				KARAOKE_PRE_SPACE_MAX_DURATION_MS,
+				nextCharDuration * KARAOKE_PRE_SPACE_NEXT_CHAR_RATIO
+			)
+		);
+
+		didChange = true;
+		return {
+			...charInfo,
+			endTime: charInfo.startTime + compensatedDuration,
+		};
+	});
+
+	return didChange ? compensatedChars : timedChars;
+};
+
 const getKaraokeCharFill = (position, isActive, startTime, endTime) => {
 	if (!isActive) {
 		return 0;
@@ -2206,11 +2272,15 @@ const KaraokeLine = react.memo(({ line, position, isActive, globalCharOffset = 0
 			|| getCopyableText(line.text)
 			|| "";
 		const processedText = Utils.applyFuriganaIfEnabled(rawLineText);
+		const compensatedTimedChars = applyKaraokeWhitespaceCompensation(buildKaraokeTimedChars(line));
 
 		return {
 			furiganaMap: buildKaraokeFuriganaMap(processedText),
-			timedChars: buildKaraokeTimedChars(line),
-			endTime: getKaraokeLineBounds(line).endTime,
+			timedChars: compensatedTimedChars,
+			endTime: compensatedTimedChars.reduce(
+				(maxEndTime, charInfo) => Math.max(maxEndTime, Number.isFinite(charInfo?.endTime) ? charInfo.endTime : 0),
+				getKaraokeLineBounds(line).endTime
+			),
 		};
 	}, [line]);
 	const isComplete = isActive && position >= endTime;

@@ -285,7 +285,8 @@
     const LRCLIB_ARTIST_MATCH_THRESHOLD = 0.9;
     const LRCLIB_FALLBACK_TITLE_MATCH_THRESHOLD = 0.98;
     const LRCLIB_ENABLE_INEXACT_SEARCH = true;
-    const LRCLIB_CACHE_VERSION_BASE = '2026-03-19-search-flow-rework-3';
+    const LRCLIB_CACHE_VERSION_BASE = '2026-03-28-locale-english-fallback-1';
+    const LRCLIB_ENGLISH_ACCEPT_LANGUAGE = 'en-US,en;q=0.9';
     const LRCLIB_SETTING_KEYS = {
         fallbackTitleArtist: 'enable_fallback_title_artist',
         fallbackTitleOnly: 'enable_fallback_title_only'
@@ -650,6 +651,64 @@
         return null;
     }
 
+    async function getTrackMetadataForAcceptLanguage(uri, acceptLanguage) {
+        const lookupEntity = Spicetify.GraphQL?.Definitions?.lookupEntity;
+        const graphQLRequest = Spicetify.GraphQL?.Request;
+        const originalFetch = window.fetch;
+
+        if (!uri || !lookupEntity || typeof graphQLRequest !== 'function' || typeof originalFetch !== 'function') {
+            return null;
+        }
+
+        window.fetch = async (input, init = {}) => {
+            const url = typeof input === 'string' ? input : input?.url || '';
+            const body = typeof init?.body === 'string' ? init.body : '';
+            const isLookupEntityRequest = /graphql|pathfinder/i.test(url) && /lookupEntity/.test(body);
+
+            if (!isLookupEntityRequest) {
+                return originalFetch(input, init);
+            }
+
+            const headers = new Headers(init?.headers || {});
+            headers.set('accept-language', acceptLanguage);
+
+            return originalFetch(input, {
+                ...init,
+                headers
+            });
+        };
+
+        try {
+            const response = await graphQLRequest(lookupEntity, { uri });
+            const track = response?.data?.lookup?.[0]?.data;
+
+            if (track?.__typename !== 'Track') {
+                return null;
+            }
+
+            return {
+                title: track?.name?.trim?.() || '',
+                artist: track?.artists?.items?.map(item => item?.profile?.name).filter(Boolean).join(', ') || ''
+            };
+        } catch (error) {
+            window.__ivLyricsDebugLog?.(`[LR-DEBUG] 영어 메타데이터 조회 실패: ${error?.message || error}`);
+            return null;
+        } finally {
+            window.fetch = originalFetch;
+        }
+    }
+
+    function parsePlainLyrics(plainLyrics) {
+        if (!plainLyrics || typeof plainLyrics !== 'string') return null;
+
+        const lines = plainLyrics
+            .split('\n')
+            .map(line => ({ text: line.trim() }))
+            .filter(line => line.text);
+
+        return lines.length > 0 ? lines : null;
+    }
+
     /**
      * ────────────────────────────────────────────────────────────────────────────
      * LRC 형식 파싱 함수 (Ultra-Flexible)
@@ -950,13 +1009,16 @@
                     };
                 };
 
-                const rankCandidates = (candidates, { allowTitleDrivenMatch = false } = {}) => {
+                const rankCandidates = (candidates, metadata, { allowTitleDrivenMatch = false } = {}) => {
+                    const metadataTitle = metadata?.title || '';
+                    const metadataArtists = metadata?.expectedArtists || [];
+
                     return candidates
                         .map(item => {
                             const candidateArtists = splitArtists(item?.artistName || '');
                             const candidateTitle = item?.trackName || item?.name || '';
-                            const titleScore = getTitleScore(title, candidateTitle);
-                            const artistScore = getBestArtistScore(expectedArtists, candidateArtists);
+                            const titleScore = getTitleScore(metadataTitle, candidateTitle);
+                            const artistScore = getBestArtistScore(metadataArtists, candidateArtists);
                             const durationDiff = Math.abs(Number(item?.duration || 0) - trackDurationSec);
                             const exactDurationMatch = hasExactDurationMatch(trackDurationSec, Number(item?.duration || 0));
                             const artistMatched = artistScore > LRCLIB_ARTIST_MATCH_THRESHOLD;
@@ -995,66 +1057,160 @@
                         });
                 };
 
-                const structuredSearch = await runSearch({
-                    track_name: title,
-                    artist_name: artist,
-                    album_name: album
-                }, 'structured');
+                const runSearchFlow = async (metadata, { includeAlbum = true } = {}) => {
+                    const structuredSearch = await runSearch({
+                        track_name: metadata.title,
+                        artist_name: metadata.artist,
+                        album_name: includeAlbum ? metadata.album : ''
+                    }, includeAlbum ? 'structured' : 'structured:no-album');
 
-                if (structuredSearch.fatal) {
-                    result.error = structuredSearch.error;
+                    if (structuredSearch.fatal) {
+                        return {
+                            fatal: true,
+                            error: structuredSearch.error,
+                            resolvedSearch: structuredSearch,
+                            rankedCandidates: [],
+                            usedFallbackQuery: false,
+                            bestSyncedCandidate: null,
+                            bestPlainCandidate: null
+                        };
+                    }
+
+                    let resolvedSearch = structuredSearch;
+                    let rankedCandidates = rankCandidates(structuredSearch.candidates, metadata);
+                    let usedFallbackQuery = false;
+
+                    if (rankedCandidates.length === 0 && LRCLIB_ENABLE_INEXACT_SEARCH) {
+                        const fallbackAttempts = [];
+                        if (searchSettings.enableFallbackTitleArtist && metadata.title && metadata.artist) {
+                            fallbackAttempts.push({ params: { q: `${metadata.title} ${metadata.artist}` }, label: 'q:title+artist' });
+                        }
+                        if (searchSettings.enableFallbackTitleOnly && metadata.title) {
+                            fallbackAttempts.push({ params: { q: metadata.title }, label: 'q:title' });
+                        }
+
+                        for (const attempt of fallbackAttempts) {
+                            const fallbackSearch = await runSearch(attempt.params, attempt.label);
+                            usedFallbackQuery = true;
+
+                            if (fallbackSearch.fatal) {
+                                return {
+                                    fatal: true,
+                                    error: fallbackSearch.error,
+                                    resolvedSearch: fallbackSearch,
+                                    rankedCandidates: [],
+                                    usedFallbackQuery,
+                                    bestSyncedCandidate: null,
+                                    bestPlainCandidate: null
+                                };
+                            }
+
+                            resolvedSearch = fallbackSearch;
+                            rankedCandidates = rankCandidates(fallbackSearch.candidates, metadata, { allowTitleDrivenMatch: true });
+
+                            if (rankedCandidates.length > 0) {
+                                break;
+                            }
+                        }
+                    }
+
+                    const withinTolerance = item => item?.durationDiff <= LRCLIB_DURATION_TOLERANCE_SEC;
+
+                    return {
+                        fatal: false,
+                        error: null,
+                        resolvedSearch,
+                        rankedCandidates,
+                        usedFallbackQuery,
+                        bestSyncedCandidate: rankedCandidates.find(item => withinTolerance(item) && (item.instrumental || item.syncedLyrics))
+                            || rankedCandidates.find(item => item.instrumental || item.syncedLyrics)
+                            || null,
+                        bestPlainCandidate: rankedCandidates.find(item => withinTolerance(item) && item.plainLyrics)
+                            || rankedCandidates.find(item => item.plainLyrics)
+                            || null
+                    };
+                };
+
+                const primaryMetadata = {
+                    title,
+                    artist,
+                    album,
+                    expectedArtists
+                };
+
+                const primarySearchFlow = await runSearchFlow(primaryMetadata, { includeAlbum: true });
+
+                if (primarySearchFlow.fatal) {
+                    result.error = primarySearchFlow.error;
                     logDebug('Failed', {
                         error: result.error,
-                        searchMode: structuredSearch.searchLabel
+                        searchMode: primarySearchFlow.resolvedSearch?.searchLabel
                     });
                     return result;
                 }
 
-                let resolvedSearch = structuredSearch;
-                let rankedCandidates = rankCandidates(structuredSearch.candidates);
-                let usedFallbackQuery = false;
+                let body = primarySearchFlow.bestSyncedCandidate;
+                let selectedFlow = primarySearchFlow;
+                let selectedSource = body ? 'primary-synced' : 'primary-none';
+                let englishSearchFlow = null;
+                let englishMetadata = null;
+                let englishSearchError = null;
 
-                if (rankedCandidates.length === 0 && LRCLIB_ENABLE_INEXACT_SEARCH) {
-                    const fallbackAttempts = [];
-                    if (searchSettings.enableFallbackTitleArtist && title && artist) {
-                        fallbackAttempts.push({ params: { q: `${title} ${artist}` }, label: 'q:title+artist' });
-                    }
-                    if (searchSettings.enableFallbackTitleOnly && title) {
-                        fallbackAttempts.push({ params: { q: title }, label: 'q:title' });
-                    }
+                if (!body) {
+                    englishMetadata = await getTrackMetadataForAcceptLanguage(info?.uri, LRCLIB_ENGLISH_ACCEPT_LANGUAGE);
 
-                    for (const attempt of fallbackAttempts) {
-                        const fallbackSearch = await runSearch(attempt.params, attempt.label);
-                        usedFallbackQuery = true;
+                    if (englishMetadata?.title && englishMetadata?.artist) {
+                        englishMetadata = {
+                            title: englishMetadata.title.trim(),
+                            artist: englishMetadata.artist.trim(),
+                            album: '',
+                            expectedArtists: splitArtists(englishMetadata.artist)
+                        };
 
-                        if (fallbackSearch.fatal) {
-                            result.error = fallbackSearch.error;
-                            logDebug('Failed', {
-                                error: result.error,
-                                searchMode: fallbackSearch.searchLabel
-                            });
-                            return result;
+                        englishSearchFlow = await runSearchFlow(englishMetadata, { includeAlbum: false });
+
+                        if (englishSearchFlow.fatal) {
+                            englishSearchError = englishSearchFlow.error;
                         }
-
-                        resolvedSearch = fallbackSearch;
-                        rankedCandidates = rankCandidates(fallbackSearch.candidates, { allowTitleDrivenMatch: true });
-
-                        if (rankedCandidates.length > 0) {
-                            break;
+                        else if (englishSearchFlow.bestSyncedCandidate) {
+                            body = englishSearchFlow.bestSyncedCandidate;
+                            selectedFlow = englishSearchFlow;
+                            selectedSource = 'english-synced';
                         }
                     }
                 }
 
-                const body = rankedCandidates[0];
                 if (!body) {
-                    result.error = resolvedSearch.totalResults > 0
-                        ? 'Low confidence metadata match'
-                        : (resolvedSearch.error || 'No lyrics found');
+                    if (primarySearchFlow.bestPlainCandidate) {
+                        body = primarySearchFlow.bestPlainCandidate;
+                        selectedFlow = primarySearchFlow;
+                        selectedSource = 'primary-plain';
+                    }
+                    else if (englishSearchFlow?.bestPlainCandidate) {
+                        body = englishSearchFlow.bestPlainCandidate;
+                        selectedFlow = englishSearchFlow;
+                        selectedSource = 'english-plain';
+                    }
+                }
+
+                if (!body) {
+                    if (englishSearchError) {
+                        result.error = englishSearchError;
+                    }
+                    else {
+                        const finalFlow = englishSearchFlow || primarySearchFlow;
+                        result.error = finalFlow.resolvedSearch.totalResults > 0
+                            ? 'Low confidence metadata match'
+                            : (finalFlow.resolvedSearch.error || 'No lyrics found');
+                    }
                     logDebug('Failed', {
                         error: result.error,
-                        searchMode: resolvedSearch.searchLabel,
-                        totalResults: resolvedSearch.totalResults,
-                        usedFallbackQuery
+                        searchMode: (englishSearchFlow || primarySearchFlow).resolvedSearch?.searchLabel,
+                        totalResults: (englishSearchFlow || primarySearchFlow).resolvedSearch?.totalResults,
+                        usedFallbackQuery: (englishSearchFlow || primarySearchFlow).usedFallbackQuery,
+                        selectedSource,
+                        englishTitle: englishMetadata?.title,
+                        englishArtist: englishMetadata?.artist
                     });
                     return result;
                 }
@@ -1064,8 +1220,9 @@
                     logDebug('Failed', {
                         error: result.error,
                         durationDiff: body.durationDiff.toFixed(2),
-                        searchMode: resolvedSearch.searchLabel,
-                        usedFallbackQuery
+                        searchMode: selectedFlow.resolvedSearch.searchLabel,
+                        usedFallbackQuery: selectedFlow.usedFallbackQuery,
+                        selectedSource
                     });
                     return result;
                 }
@@ -1075,14 +1232,17 @@
                     result.unsynced = [{ text: '♪ Instrumental ♪' }];
                     logDebug('Success', {
                         instrumental: true,
-                        matchedCandidates: rankedCandidates.length,
+                        matchedCandidates: selectedFlow.rankedCandidates.length,
                         durationDiff: body.durationDiff.toFixed(2),
                         exactDurationMatch: body.exactDurationMatch,
                         artistScore: body.artistScore.toFixed(3),
                         titleScore: body.titleScore.toFixed(3),
                         matchReason: body.matchReason,
-                        searchMode: resolvedSearch.searchLabel,
-                        usedFallbackQuery
+                        searchMode: selectedFlow.resolvedSearch.searchLabel,
+                        usedFallbackQuery: selectedFlow.usedFallbackQuery,
+                        selectedSource,
+                        englishTitle: englishMetadata?.title,
+                        englishArtist: englishMetadata?.artist
                     });
                     return result;
                 }
@@ -1095,27 +1255,28 @@
                     }
                 }
                 else if (body.plainLyrics) {
-                    result.unsynced = body.plainLyrics.split('\n').map(line => ({ text: line.trim() })).filter(l => l.text);
+                    result.unsynced = parsePlainLyrics(body.plainLyrics);
                 }
 
                 if (!result.synced && body.plainLyrics && !result.unsynced) {
-                    result.unsynced = body.plainLyrics.split('\n').map(line => ({ text: line.trim() })).filter(l => l.text);
+                    result.unsynced = parsePlainLyrics(body.plainLyrics);
                 }
 
                 if (!result.synced && !result.unsynced) {
                     result.error = 'No lyrics';
                     logDebug('Failed', {
                         error: result.error,
-                        matchedCandidates: rankedCandidates.length,
-                        searchMode: resolvedSearch.searchLabel,
-                        usedFallbackQuery
+                        matchedCandidates: selectedFlow.rankedCandidates.length,
+                        searchMode: selectedFlow.resolvedSearch.searchLabel,
+                        usedFallbackQuery: selectedFlow.usedFallbackQuery,
+                        selectedSource
                     });
                     return result;
                 }
 
                 logDebug('Success', {
-                    totalResults: resolvedSearch.totalResults,
-                    matchedCandidates: rankedCandidates.length,
+                    totalResults: selectedFlow.resolvedSearch.totalResults,
+                    matchedCandidates: selectedFlow.rankedCandidates.length,
                     artistScore: body.artistScore.toFixed(3),
                     titleScore: body.titleScore.toFixed(3),
                     durationDiff: body.durationDiff.toFixed(2),
@@ -1123,8 +1284,11 @@
                     hasSynced: !!result.synced,
                     hasUnsynced: !!result.unsynced,
                     matchReason: body.matchReason,
-                    searchMode: resolvedSearch.searchLabel,
-                    usedFallbackQuery
+                    searchMode: selectedFlow.resolvedSearch.searchLabel,
+                    usedFallbackQuery: selectedFlow.usedFallbackQuery,
+                    selectedSource,
+                    englishTitle: englishMetadata?.title,
+                    englishArtist: englishMetadata?.artist
                 });
                 return result;
 

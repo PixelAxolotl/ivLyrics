@@ -37,7 +37,6 @@
 		"langs/LangVi.js",
 		"I18n.js",
 		"Pages.js",
-		"SettingsObject.js",
 		"Settings.js",
 		"OptionsMenu.js",
 		"TabBar.js",

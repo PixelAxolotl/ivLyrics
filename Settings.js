@@ -10827,17 +10827,14 @@ const ConfigModal = ({
 
                 try {
                   const cfg = await StorageManager.exportConfig();
-                  window.__ivLyricsDebugLog?.("[Settings] Config before serialize:", cfg);
-                  window.__ivLyricsDebugLog?.("[Settings] Has track-sync-offsets:", "ivLyrics:track-sync-offsets" in cfg);
-                  const u8 = settingsObject.serialize(cfg);
-                  // download as file
-                  const blob = new Blob([u8], {
-                    type: "application/octet-stream",
+                  const serializedConfig = JSON.stringify(cfg, null, 2);
+                  const blob = new Blob([serializedConfig], {
+                    type: "application/json",
                   });
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement("a");
                   a.href = url;
-                  a.download = "ivLyrics.lpconfig";
+                  a.download = "ivLyrics-settings.json";
                   document.body.appendChild(a);
                   a.click();
                   document.body.removeChild(a);
@@ -10958,7 +10955,7 @@ const ConfigModal = ({
                 try {
                   const fileInput = document.createElement("input");
                   fileInput.type = "file";
-                  fileInput.accept = ".lpconfig,.json";
+                  fileInput.accept = ".json,application/json";
                   fileInput.onchange = async (e) => {
                     if (!fileInput.files || fileInput.files.length === 0) {
                       button.textContent = originalText;
@@ -10970,27 +10967,15 @@ const ConfigModal = ({
                     reader.onload = async (e) => {
                       const contents = e.target.result;
                       try {
-                        // check file type
-                        const fileType = file.type;
-                        const isLpconfig =
-                          !fileType && file.name.includes("lpconfig");
-                        const isJson = fileType && fileType.includes("json");
-                        if (!isLpconfig && !isJson) {
-                          window.__ivLyricsDebugLog?.(fileType);
-                          window.__ivLyricsDebugLog?.(file.name);
-                          throw new Error("Invalid file type " + fileType);
+                        if (typeof contents !== "string") {
+                          throw new Error(I18n.t("settingsAdvanced.exportImport.import.invalidFormat"));
                         }
-                        if (isJson) {
-                          const arraBuffer2Text = (ab) => {
-                            return new TextDecoder("utf-8").decode(ab);
-                          };
-                          const cfg = JSON.parse(arraBuffer2Text(contents));
-                          await StorageManager.importConfig(cfg);
-                        } else {
-                          const u8 = new Uint8Array(contents);
-                          const cfg = settingsObject.deserialize(u8);
-                          await StorageManager.importConfig(cfg);
+
+                        const cfg = JSON.parse(contents);
+                        if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) {
+                          throw new Error(I18n.t("settingsAdvanced.exportImport.import.invalidFormat"));
                         }
+                        await StorageManager.importConfig(cfg);
 
                         const settingRow = button.closest(".setting-row");
                         let resultContainer = settingRow?.nextElementSibling;
@@ -11100,7 +11085,7 @@ const ConfigModal = ({
                         button.disabled = false;
                       }
                     };
-                    reader.readAsArrayBuffer(file);
+                    reader.readAsText(file, "utf-8");
                   };
                   document.body.appendChild(fileInput);
                   fileInput.click();
@@ -11137,12 +11122,12 @@ const ConfigModal = ({
 
                 try {
                   const data = await DBExportManager.exportAllDBs();
-                  const json = JSON.stringify(data);
+                  const json = JSON.stringify(data, null, 2);
                   const blob = new Blob([json], { type: "application/json" });
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement("a");
                   a.href = url;
-                  a.download = "ivLyrics.ivldb";
+                  a.download = "ivLyrics-db.json";
                   document.body.appendChild(a);
                   a.click();
                   document.body.removeChild(a);
@@ -11259,7 +11244,7 @@ const ConfigModal = ({
                 try {
                   const fileInput = document.createElement("input");
                   fileInput.type = "file";
-                  fileInput.accept = ".ivldb";
+                  fileInput.accept = ".json,application/json";
                   fileInput.onchange = async (e) => {
                     if (!fileInput.files || fileInput.files.length === 0) {
                       button.textContent = originalText;
@@ -11281,8 +11266,10 @@ const ConfigModal = ({
                     reader.onload = async (e) => {
                       const contents = e.target.result;
                       try {
-                        const text = new TextDecoder("utf-8").decode(contents);
-                        const data = JSON.parse(text);
+                        if (typeof contents !== "string") {
+                          throw new Error(I18n.t("settingsAdvanced.exportImport.import.invalidFormat"));
+                        }
+                        const data = JSON.parse(contents);
                         await DBExportManager.importAllDBs(data);
 
                         const settingRow = button.closest(".setting-row");
@@ -11386,7 +11373,7 @@ const ConfigModal = ({
                         button.disabled = false;
                       }
                     };
-                    reader.readAsArrayBuffer(file);
+                    reader.readAsText(file, "utf-8");
                   };
                   document.body.appendChild(fileInput);
                   fileInput.click();

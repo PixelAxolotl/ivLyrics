@@ -1122,11 +1122,14 @@
                         resolvedSearch,
                         rankedCandidates,
                         usedFallbackQuery,
-                        bestSyncedCandidate: rankedCandidates.find(item => withinTolerance(item) && (item.instrumental || item.syncedLyrics))
-                            || rankedCandidates.find(item => item.instrumental || item.syncedLyrics)
+                        bestSyncedCandidate: rankedCandidates.find(item => withinTolerance(item) && item.syncedLyrics)
+                            || rankedCandidates.find(item => item.syncedLyrics)
                             || null,
                         bestPlainCandidate: rankedCandidates.find(item => withinTolerance(item) && item.plainLyrics)
                             || rankedCandidates.find(item => item.plainLyrics)
+                            || null,
+                        bestInstrumentalCandidate: rankedCandidates.find(item => withinTolerance(item) && item.instrumental)
+                            || rankedCandidates.find(item => item.instrumental)
                             || null
                     };
                 };
@@ -1190,6 +1193,16 @@
                         body = englishSearchFlow.bestPlainCandidate;
                         selectedFlow = englishSearchFlow;
                         selectedSource = 'english-plain';
+                    }
+                    else if (primarySearchFlow.bestInstrumentalCandidate) {
+                        body = primarySearchFlow.bestInstrumentalCandidate;
+                        selectedFlow = primarySearchFlow;
+                        selectedSource = 'primary-instrumental';
+                    }
+                    else if (englishSearchFlow?.bestInstrumentalCandidate) {
+                        body = englishSearchFlow.bestInstrumentalCandidate;
+                        selectedFlow = englishSearchFlow;
+                        selectedSource = 'english-instrumental';
                     }
                 }
 

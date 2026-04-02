@@ -2629,7 +2629,7 @@ const ShareImageModal = ({ lyrics, trackInfo, onClose }) => {
   const [customSettings, setCustomSettings] = react.useState({});
   const [showCopyrightModal, setShowCopyrightModal] = react.useState(false);
   const [pendingAction, setPendingAction] = react.useState(null); // 'copy' | 'download' | 'share'
-  const MAX_LINES = 3;
+  const MAX_LINES = 10;
 
   const presets = Object.entries(LyricsShareImage?.PRESETS || {}).map(([key, val]) => ({
     key,
@@ -2723,7 +2723,7 @@ const ShareImageModal = ({ lyrics, trackInfo, onClose }) => {
           albumCover: trackInfo.cover || '',
           template,
           customSettings,
-          width: 800, // smaller for preview
+          width: 1080, // same width as export for consistency
         });
         setPreviewUrl(result.dataUrl);
       } catch (e) {

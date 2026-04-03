@@ -351,6 +351,10 @@ CRITICAL RULES:
 - Do NOT output the original lyrics unchanged
 - Do NOT output romanization or pronunciation instead of translation
 - Output EXACTLY ${lineCount} lines, one translation per line
+- Preserve the original line breaks exactly
+- Never merge multiple input lines into a single output line
+- Never split a single input line into multiple output lines
+- Line N in the output must translate only line N from the input
 - Keep empty lines as empty
 - Keep ♪ symbols and markers like [Chorus], (Yeah) as-is
 - Do NOT add line numbers, prefixes, or explanations
@@ -359,6 +363,18 @@ CRITICAL RULES:
 
 INPUT:
 ${text}
+
+Example:
+Input:
+Hello mr my
+yesterday
+
+Correct output:
+안녕 나의
+어제여
+
+Wrong output:
+안녕 나의 어제여
 
 OUTPUT (${lineCount} lines in ${langInfo.native}):`;
     }

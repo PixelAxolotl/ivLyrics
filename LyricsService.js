@@ -155,6 +155,94 @@
     // ============================================
     // Utils - 유틸리티 함수들 (Extension 전용)
     // ============================================
+    const IVLYRICS_PROGRESS_GUARD_KEY = "__ivLyricsPlaybackProgressGuard";
+    const IVLYRICS_PROGRESS_CORRECTION_THRESHOLD_MS = 350;
+    const IVLYRICS_PROGRESS_DISCONTINUITY_THRESHOLD_MS = 1500;
+
+    const clampPlayerProgress = (value) => {
+        const num = Number(value);
+        return Number.isFinite(num) && num > 0 ? num : 0;
+    };
+
+    const ensurePlaybackProgressGuard = () => {
+        if (window[IVLYRICS_PROGRESS_GUARD_KEY]) {
+            return window[IVLYRICS_PROGRESS_GUARD_KEY];
+        }
+
+        const guard = {
+            initialized: false,
+            currentUri: "",
+            correctionMs: 0,
+            songChangeAt: 0,
+            lastRawProgress: 0,
+            lastAdjustedProgress: 0,
+            lastSampleAt: 0,
+            applySongChangeState() {
+                const uri = Spicetify.Player?.data?.item?.uri || "";
+                const rawProgress = clampPlayerProgress(Spicetify.Player?.getProgress?.());
+                const now = performance.now();
+
+                this.currentUri = uri;
+                this.songChangeAt = now;
+                this.correctionMs =
+                    rawProgress >= IVLYRICS_PROGRESS_CORRECTION_THRESHOLD_MS
+                        ? rawProgress
+                        : 0;
+                this.lastRawProgress = rawProgress;
+                this.lastAdjustedProgress = Math.max(0, rawProgress - this.correctionMs);
+                this.lastSampleAt = now;
+            },
+            ensureInitialized() {
+                if (this.initialized || typeof Spicetify.Player?.addEventListener !== "function") {
+                    return;
+                }
+
+                this.initialized = true;
+                Spicetify.Player.addEventListener("songchange", () => {
+                    this.applySongChangeState();
+                });
+                this.applySongChangeState();
+            },
+            clearCorrection() {
+                this.correctionMs = 0;
+            },
+            getAdjustedProgress() {
+                this.ensureInitialized();
+
+                const uri = Spicetify.Player?.data?.item?.uri || "";
+                const rawProgress = clampPlayerProgress(Spicetify.Player?.getProgress?.());
+                const now = performance.now();
+
+                if (uri !== this.currentUri) {
+                    this.currentUri = uri;
+                    this.songChangeAt = now;
+                    this.correctionMs = 0;
+                    this.lastRawProgress = rawProgress;
+                    this.lastAdjustedProgress = rawProgress;
+                    this.lastSampleAt = now;
+                    return rawProgress;
+                }
+
+                if (this.lastSampleAt > 0) {
+                    const elapsedMs = Math.max(0, now - this.lastSampleAt);
+                    const driftMs = rawProgress - this.lastRawProgress - elapsedMs;
+                    if (Math.abs(driftMs) >= IVLYRICS_PROGRESS_DISCONTINUITY_THRESHOLD_MS) {
+                        this.clearCorrection();
+                    }
+                }
+
+                const adjustedProgress = Math.max(0, rawProgress - this.correctionMs);
+                this.lastRawProgress = rawProgress;
+                this.lastAdjustedProgress = adjustedProgress;
+                this.lastSampleAt = now;
+                return adjustedProgress;
+            }
+        };
+
+        window[IVLYRICS_PROGRESS_GUARD_KEY] = guard;
+        return guard;
+    };
+
     const Utils = {
         _langDetectCache: new Map(),
         _maxLangCacheSize: 500,
@@ -166,6 +254,14 @@
                 this._langDetectCache.delete(firstKey);
             }
             this._langDetectCache.set(cacheKey, result);
+        },
+
+        getSafePlayerProgress() {
+            return ensurePlaybackProgressGuard().getAdjustedProgress();
+        },
+
+        clearSafePlayerProgressCorrection() {
+            ensurePlaybackProgressGuard().clearCorrection();
         },
 
         detectLanguage(lyrics) {
@@ -4565,7 +4661,7 @@
 
                 this._isSendingProgress = true;
                 try {
-                    const position = Spicetify.Player.getProgress() || 0;
+                    const position = Utils.getSafePlayerProgress() || 0;
                     const duration = Spicetify.Player.getDuration() || 0;
                     const remaining = (duration - position) / 1000;
 
@@ -5142,7 +5238,7 @@
 
                     this._isSendingProgress = true;
                     try {
-                        const position = Spicetify.Player.getProgress() || 0;
+                        const position = Utils.getSafePlayerProgress() || 0;
                         const duration = Spicetify.Player.getDuration() || 0;
                         const remaining = (duration - position) / 1000;
 

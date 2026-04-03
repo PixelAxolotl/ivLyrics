@@ -1381,7 +1381,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     return;
                 }
 
-                const position = Spicetify.Player.getProgress();
+                const position = window.Utils?.getSafePlayerProgress?.()
+                    ?? (Spicetify.Player.getProgress?.() || 0);
 
                 // 곡별 딜레이: 트랙 변경 시에만 캐시 갱신
                 const currentTrackUri = Spicetify.Player.data?.item?.uri;

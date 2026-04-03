@@ -1116,7 +1116,8 @@ const useLyricsPlaybackPosition = () => {
 	const trackOffset = useTrackOffsetState();
 
 	useTrackPosition(() => {
-		const newPos = Spicetify.Player.getProgress();
+		const newPos = window.Utils?.getSafePlayerProgress?.()
+			?? (Spicetify.Player.getProgress?.() || 0);
 		const delay = CONFIG.visual.delay + trackOffset;
 		setPosition(newPos + delay);
 	});
@@ -1534,6 +1535,7 @@ const LyricsLineBlock = react.memo(({
 
 	const handleClick = useCallback(() => {
 		if (Number.isFinite(seekTime)) {
+			window.Utils?.clearSafePlayerProgressCorrection?.();
 			Spicetify.Player.seek(seekTime);
 		}
 	}, [seekTime]);

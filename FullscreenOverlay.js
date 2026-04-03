@@ -242,7 +242,8 @@ const FullscreenOverlay = (() => {
                     }
 
                     const duration = Spicetify.Player.getDuration();
-                    const position = Spicetify.Player.getProgress();
+                    const position = window.Utils?.getSafePlayerProgress?.()
+                        ?? (Spicetify.Player.getProgress?.() || 0);
                     const remaining = (duration - position) / 1000;
 
                     // Show when less than secondsBeforeEnd remaining
@@ -313,7 +314,8 @@ const FullscreenOverlay = (() => {
 
             const updateProgress = () => {
                 if (!isDragging.current) {
-                    setProgress(Spicetify.Player.getProgress() || 0);
+                    setProgress(window.Utils?.getSafePlayerProgress?.()
+                        ?? (Spicetify.Player.getProgress?.() || 0));
                 }
                 setDuration(Spicetify.Player.getDuration() || 0);
             };
@@ -331,6 +333,7 @@ const FullscreenOverlay = (() => {
             const rect = progressRef.current.getBoundingClientRect();
             const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
             const newProgress = percent * duration;
+            window.Utils?.clearSafePlayerProgressCorrection?.();
             Spicetify.Player.seek(newProgress);
             setProgress(newProgress);
         }, [duration]);
@@ -346,6 +349,7 @@ const FullscreenOverlay = (() => {
             if (isDragging.current && progressRef.current) {
                 const rect = progressRef.current.getBoundingClientRect();
                 const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                window.Utils?.clearSafePlayerProgressCorrection?.();
                 Spicetify.Player.seek(percent * duration);
             }
             isDragging.current = false;
@@ -1468,6 +1472,7 @@ const FullscreenOverlay = (() => {
                                 const clickX = e.clientX - rect.left;
                                 const percentage = clickX / rect.width;
                                 const seekPosition = Math.floor(duration * percentage);
+                                window.Utils?.clearSafePlayerProgressCorrection?.();
                                 Spicetify.Player.seek(seekPosition);
                             }
                         },

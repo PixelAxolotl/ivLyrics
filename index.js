@@ -2088,28 +2088,27 @@ const Prefetcher = {
       ivLyricsDebug(`[Prefetcher] Starting prefetch for: ${trackInfo.title}`);
 
       try {
-        // 1단계: 가사 먼저 프리페치 (필수)
-        const lyrics = await this._prefetchLyrics(trackInfo, mode);
-
-        if (!lyrics || (!lyrics.synced && !lyrics.unsynced && !lyrics.karaoke)) {
-          ivLyricsDebug(`[Prefetcher] No lyrics found for: ${trackInfo.title}`);
-          return;
-        }
-
-        // 2단계: 가사 로드 완료 후 병렬로 번역/발음 및 영상 배경 프리페치
+        // 영상 배경 프리페치는 가사 유무와 무관하게 독립적으로 시작
         const prefetchPromises = [];
-
-        // 발음/번역 프리페치 (Gemini)
-        if (CONFIG.visual["prefetch-enabled"] !== false) {
-          prefetchPromises.push(this._prefetchTranslations(trackInfo, lyrics));
-        }
-
-        // 영상 배경 프리페치
         if (CONFIG.visual["video-background"] && CONFIG.visual["prefetch-video-enabled"] !== false) {
           prefetchPromises.push(this._prefetchVideoBackground(trackInfo.uri));
         }
 
-        await Promise.allSettled(prefetchPromises);
+        // 1단계: 가사 먼저 프리페치
+        const lyrics = await this._prefetchLyrics(trackInfo, mode);
+
+        if (!lyrics || (!lyrics.synced && !lyrics.unsynced && !lyrics.karaoke)) {
+          ivLyricsDebug(`[Prefetcher] No lyrics found for: ${trackInfo.title}`);
+        } else {
+          // 2단계: 가사 로드 완료 후 번역/발음 프리페치
+          if (CONFIG.visual["prefetch-enabled"] !== false) {
+            prefetchPromises.push(this._prefetchTranslations(trackInfo, lyrics));
+          }
+        }
+
+        if (prefetchPromises.length > 0) {
+          await Promise.allSettled(prefetchPromises);
+        }
         ivLyricsDebug(`[Prefetcher] Completed all prefetch for: ${trackInfo.title}`);
       } catch (error) {
         console.warn(`[Prefetcher] Prefetch failed:`, error);

@@ -511,7 +511,7 @@ const AccountSection = () => {
       setLoading(true);
       setError(null);
       const data = await Utils.fetchAccountProfile();
-      if (data.linked && data.account) {
+      if (data.authenticated && data.linked && data.account) {
         setAccountInfo(data.account);
       } else {
         setAccountInfo(null);

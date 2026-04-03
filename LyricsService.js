@@ -1440,9 +1440,27 @@
 	        async function submitSyncData(trackId, provider, syncData, metadata = {}) {
 	            const userHash = getUserHash();
 	            const authToken = Spicetify.LocalStorage.get("ivLyrics:auth-token");
-                const title = typeof metadata?.title === "string" ? metadata.title.trim() : "";
-                const artist = typeof metadata?.artist === "string" ? metadata.artist.trim() : "";
+	                const title = typeof metadata?.title === "string" ? metadata.title.trim() : "";
+	                const artist = typeof metadata?.artist === "string" ? metadata.artist.trim() : "";
 
+	            const profileResponse = await fetch(`${API_BASE}/user/profile?userHash=${encodeURIComponent(userHash)}`, {
+	                cache: 'no-store',
+	                headers: {
+	                    "Cache-Control": "no-cache, no-store, must-revalidate",
+	                    Pragma: "no-cache",
+	                    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+	                },
+	            });
+	            const profile = await profileResponse.json();
+
+	            if (!profileResponse.ok) {
+	                throw new Error(profile.error || 'Failed to verify Discord login');
+	            }
+
+	            if (!profile?.authenticated || !profile?.linked || !profile?.account) {
+	                throw new Error('Discord login is required to save karaoke sync.');
+	            }
+	
 	            const response = await fetch(`${API_BASE}/lyrics/sync-data`, {
 	                method: 'POST',
 	                headers: {
@@ -1452,15 +1470,14 @@
 	                },
 	                body: JSON.stringify({
 	                    trackId,
-                    provider,
-                    syncData,
-                    userHash,
-                    ...(title ? { title } : {}),
-                    ...(artist ? { artist } : {})
-                })
+	                    provider,
+	                    syncData,
+	                    ...(title ? { title } : {}),
+	                    ...(artist ? { artist } : {})
+	                })
             });
 
-            const result = await response.json();
+	            const result = await response.json();
 
             if (!response.ok) {
                 throw new Error(result.error || 'Failed to submit sync data');

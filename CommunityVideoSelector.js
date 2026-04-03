@@ -765,18 +765,18 @@ const CommunityVideoSelector = ({
   };
 
   // 영상 등록 처리
-  const handleSubmit = async () => {
-    const videoId = editingVideo?.youtubeVideoId || Utils.extractYouTubeVideoId(submitUrl);
-    if (!videoId) {
-      Toast.error(I18n.t("communityVideo.invalidUrl"));
-      return;
-    }
+	  const handleSubmit = async () => {
+	    const videoId = editingVideo?.youtubeVideoId || Utils.extractYouTubeVideoId(submitUrl);
+	    if (!videoId) {
+	      Toast.error(I18n.t("communityVideo.invalidUrl"));
+	      return;
+	    }
 
-    setIsSubmitting(true);
+	    setIsSubmitting(true);
 
-    try {
-      // YouTube 영상 유효성 검사 (실제로 존재하고 재생 가능한지 확인)
-      const validation = await Utils.validateYouTubeVideo(videoId);
+	    try {
+	      // YouTube 영상 유효성 검사 (실제로 존재하고 재생 가능한지 확인)
+	      const validation = await Utils.validateYouTubeVideo(videoId);
 
       if (!validation.valid) {
         // 에러 유형에 따른 메시지
@@ -818,13 +818,13 @@ const CommunityVideoSelector = ({
         resetSubmitForm();
         // 캐시를 우회하여 새 데이터 가져오기
         loadVideos(true);
-      }
-    } catch (e) {
-      Toast.error(I18n.t("communityVideo.submitError"));
-    }
+	      }
+	    } catch (e) {
+	      Toast.error(e?.message || I18n.t("communityVideo.submitError"));
+	    }
 
-    setIsSubmitting(false);
-  };
+	    setIsSubmitting(false);
+	  };
 
   // 영상 적용 처리 (모달 닫지 않음)
   const handleEdit = (video, e) => {

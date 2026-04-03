@@ -1227,6 +1227,19 @@ const Utils = {
     return data;
   },
 
+  async requireDiscordAuth(message) {
+    const profile = await this.fetchAccountProfile();
+    if (!profile?.authenticated || !profile?.linked || !profile?.account) {
+      throw new Error(
+        message ||
+          I18n.t("settingsAdvanced.aboutTab.account.loginButton") ||
+          "Discord login is required."
+      );
+    }
+
+    return profile;
+  },
+
   async startDiscordLogin() {
     const currentUserHash = this.getUserHash();
     const response = await fetch(`${this.getAccountApiBase()}/discord/start`, {
@@ -1569,7 +1582,10 @@ const Utils = {
     const trackId = this.extractTrackId(trackUri);
     if (!trackId) return null;
 
-    const userHash = this.getUserHash();
+    await this.requireDiscordAuth(
+      I18n.t("communityVideo.loginRequired") ||
+        "Discord login is required to register community videos."
+    );
 
     try {
       const response = await fetch('https://lyrics.api.ivl.is/lyrics/youtube/community', {
@@ -1580,20 +1596,20 @@ const Utils = {
           trackId,
           videoId,
           videoTitle,
-          startTime,
-          submitterId: userHash
+          startTime
         })
       });
       const data = await response.json();
 
-      if (data.success) {
-        window.__ivLyricsDebugLog?.(`[ivLyrics] Community video submitted: ${videoId}`);
-        return data;
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to submit community video');
       }
-      return null;
+
+      window.__ivLyricsDebugLog?.(`[ivLyrics] Community video submitted: ${videoId}`);
+      return data;
     } catch (error) {
       console.error("[ivLyrics] Failed to submit community video:", error);
-      return null;
+      throw error;
     }
   },
 

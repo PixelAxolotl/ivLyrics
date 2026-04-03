@@ -1875,11 +1875,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					Toast.error(I18n.t('syncCreator.submitError'));
 				}
 			} else {
-					const userHash = Utils.getCurrentUserHash();
 					const response = await fetch('https://lyrics.api.ivl.is/lyrics/sync-data', {
 						method: 'POST',
 						headers: Utils.getApiHeaders({ 'Content-Type': 'application/json' }),
-						body: JSON.stringify({ trackId, provider, syncData, userHash, ...submitMetadata })
+						body: JSON.stringify({ trackId, provider, syncData, ...submitMetadata })
 					});
 
 				if (response.ok) {
@@ -1901,7 +1900,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			}
 		} catch (e) {
 			console.error('[SyncDataCreator] Submit error:', e);
-			Toast.error(`${I18n.t('syncCreator.submitError')}: ${e.message}`);
+			Toast.error(e?.message || I18n.t('syncCreator.submitError'));
 		}
 
 		setIsSubmitting(false);

@@ -280,12 +280,23 @@ OUTPUT (${lineCount} lines of pronunciation only):`;
 
         return `You are a music knowledge expert. Generate interesting facts and trivia about the song "${title}" by "${artist}".
 
-IMPORTANT: The output MUST be in ${langInfo.name} (${langInfo.native}).
-Even if the song is English, the description and trivia MUST be written in ${langInfo.native}.
+LANGUAGE REQUIREMENT - FOLLOW STRICTLY:
+- Write ALL human-readable content in ${langInfo.name} (${langInfo.native})
+- This includes track.description and every string inside track.trivia
+- Do NOT write explanatory sentences in English unless the target language itself is English
+- Even if the song title, artist name, album, or source pages are English, your explanation sentences must still be in ${langInfo.native}
+- The only text that may remain non-${langInfo.native} is:
+  1. JSON keys
+  2. URLs
+  3. Proper nouns, official song titles, artist names, album names, and short quoted lyric fragments
+  4. reliability.confidence enum values: "very_high", "high", "medium", "low", "none"
 
-**Output conditions**:
-1. Language: STRICTLY ${langInfo.name} (${langInfo.native})
-2. Format: JSON
+Before returning, silently verify:
+- track.description is fully written in ${langInfo.native}
+- every item in track.trivia is fully written in ${langInfo.native}
+- if any sentence is mostly English, rewrite it into natural ${langInfo.native} before returning
+
+Return ONLY valid JSON. Do not add any text before or after the JSON.
 
 **Output JSON Structure**:
 {
@@ -312,10 +323,12 @@ Even if the song is English, the description and trivia MUST be written in ${lan
 }
 
 **Rules**:
-1. Write in ${langInfo.native}
-2. Include 3-5 interesting facts in the trivia array
-3. Be accurate - if you're not sure about a fact, mark confidence as "low"
-4. Do NOT use markdown code blocks`;
+1. description: write 2-3 natural sentences in ${langInfo.native}
+2. trivia: include 3-5 concise facts, each written in ${langInfo.native}
+3. Prefer natural ${langInfo.native} wording, not mixed-language fragments
+4. Be accurate - if you're not sure about a fact, mark confidence as "low"
+5. Do NOT use markdown code blocks
+6. Do NOT add any explanation outside the JSON`;
     }
 
     // ============================================

@@ -24,8 +24,10 @@ const SongInfoTMI = (() => {
 
     // Fetch song info from backend (via LyricsService)
     async function fetchSongInfo(trackId, regenerate = false) {
-        // translation-language 우선, language 폴백
-        const lang = CONFIG.visual["translation-language"] || CONFIG.visual["language"];
+        const configuredTargetLang = CONFIG.visual["translate:target-language"];
+        const lang = configuredTargetLang && configuredTargetLang !== "auto"
+            ? configuredTargetLang
+            : (window.I18n?.getCurrentLanguage?.() || CONFIG.visual["language"] || Spicetify.Locale?.getLocale()?.split('-')[0] || 'en');
         const cacheKey = `${trackId}:${lang || 'auto'}`;
 
         // Check memory cache first (skip if regenerating)

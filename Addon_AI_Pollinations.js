@@ -3,7 +3,7 @@
  * Pollinations.ai를 사용한 번역, 발음, TMI 생성 (무료 API)
  * 
  * @author ivLis STUDIO
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 (() => {
@@ -23,7 +23,7 @@
             ja: 'Pollinations.aiを使用した翻訳、発音、TMI生成（APIキー必要）',
             'zh-CN': '使用 Pollinations.ai 进行翻译、发音和 TMI 生成（需要 API 密钥）',
         },
-        version: '1.0.0',
+        version: '1.1.0',
         apiKeyUrl: 'https://enter.pollinations.ai',
         // 지원 기능
         supports: {
@@ -36,13 +36,25 @@
 
     // API 기본 URL
     const BASE_URL = 'https://gen.pollinations.ai';
+    const AUTH_BASE_URL = 'https://enter.pollinations.ai';
+
+    // Publishable Pollinations App Key (pk_...) for BYOP.
+    // Keep this empty for marketplace/user-added builds; it can be configured in the addon settings.
+    const DEFAULT_CLIENT_ID = 'pk_r7hWynUBrOgSV9SJ';
+    const DEFAULT_AUTH_SCOPE = 'generate';
+    const FIXED_MODEL = 'gemini-fast';
+    const DEFAULT_AUTH_BUDGET = 999;
+    const DEFAULT_AUTH_EXPIRY_DAYS = 365;
+    const DEVICE_POLL_INTERVAL_MS = 5000;
 
     /**
      * Pollinations.ai API에서 사용 가능한 모델 목록을 가져옴 (텍스트 생성용 모델만)
      */
-    async function fetchAvailableModels() {
+    async function fetchAvailableModels(apiKey = getPrimaryApiKey()) {
         try {
-            const response = await fetch(`${BASE_URL}/v1/models`);
+            const response = await fetch(`${BASE_URL}/v1/models`, {
+                headers: buildAuthHeaders(apiKey)
+            });
 
             if (!response.ok) {
                 window.__ivLyricsDebugLog?.('[Pollinations Addon] Failed to fetch models:', response.status);
@@ -95,7 +107,7 @@
      * 모델 목록 가져오기 (매번 API에서 로드)
      */
     async function getModels() {
-        return await fetchAvailableModels();
+        return await fetchAvailableModels(getPrimaryApiKey());
     }
 
     // ============================================
@@ -170,8 +182,134 @@
         }
     }
 
+    function getPrimaryApiKey() {
+        return getApiKeys()[0] || '';
+    }
+
+    function buildAuthHeaders(apiKey = getPrimaryApiKey()) {
+        return apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {};
+    }
+
+    function getClientId() {
+        return DEFAULT_CLIENT_ID;
+    }
+
+    function maskKey(key) {
+        if (!key) return '';
+        if (key.length <= 12) return 'configured';
+        return `${key.slice(0, 5)}...${key.slice(-4)}`;
+    }
+
+    function validateClientId() {
+        const clientId = getClientId();
+        if (clientId && !clientId.startsWith('pk_')) {
+            throw new Error('[Pollinations.ai] App Key must be a publishable pk_ key. Never use sk_ as client_id.');
+        }
+        return clientId;
+    }
+
+    function normalizePollinationsUrl(url) {
+        if (!url) return `${AUTH_BASE_URL}/device`;
+        if (/^https?:\/\//i.test(url)) return url;
+        return `${AUTH_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+    }
+
+    async function requestDeviceCode() {
+        const body = {
+            client_id: validateClientId()
+        };
+
+        const response = await fetch(`${AUTH_BASE_URL}/api/device/code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(`[Pollinations.ai] ${data.error_description || data.error || data.message || `HTTP ${response.status}`}`);
+        }
+
+        if (!data.device_code || !data.user_code) {
+            throw new Error('[Pollinations.ai] Device authorization response is missing a code.');
+        }
+
+        const verificationUrl = buildDeviceAuthorizeUrl(data.user_code);
+
+        return { ...data, verificationUrl };
+    }
+
+    function buildDeviceAuthorizeUrl(userCode) {
+        const appKey = validateClientId();
+        const params = new URLSearchParams({
+            user_code: userCode,
+            app_key: appKey,
+            scope: DEFAULT_AUTH_SCOPE,
+            models: FIXED_MODEL,
+            budget: String(DEFAULT_AUTH_BUDGET),
+            expiry: String(DEFAULT_AUTH_EXPIRY_DAYS)
+        });
+        return `${AUTH_BASE_URL}/authorize?${params.toString()}`;
+    }
+
+    async function pollDeviceToken(deviceCode) {
+        const response = await fetch(`${AUTH_BASE_URL}/api/device/token`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ device_code: deviceCode })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (data.error === 'authorization_pending' || data.error === 'slow_down') {
+            return { pending: true, slowDown: data.error === 'slow_down' };
+        }
+
+        if (!response.ok || data.error) {
+            throw new Error(`[Pollinations.ai] ${data.error_description || data.error || data.message || `HTTP ${response.status}`}`);
+        }
+
+        if (!data.access_token) {
+            throw new Error('[Pollinations.ai] Device authorization completed without an access token.');
+        }
+
+        return data;
+    }
+
+    function storePollinationsAccessToken(accessToken) {
+        setSetting('api-keys', accessToken);
+        setSetting('api-key', '');
+        setSetting('auth-status', 'Connected through Pollinations device login.');
+    }
+
+    function disconnectPollinationsAuth() {
+        setSetting('api-keys', '');
+        setSetting('api-key', '');
+        setSetting('auth-status', 'Disconnected.');
+    }
+
+    async function fetchApiKeyInfo(apiKey = getPrimaryApiKey()) {
+        if (!apiKey) return null;
+
+        const response = await fetch(`${BASE_URL}/account/key`, {
+            headers: buildAuthHeaders(apiKey)
+        });
+
+        if (!response.ok) {
+            let message = `HTTP ${response.status}`;
+            try {
+                const data = await response.json();
+                message = data.error?.message || data.message || message;
+            } catch (e) { }
+            throw new Error(`[Pollinations.ai] ${message}`);
+        }
+
+        return await response.json();
+    }
+
     function getSelectedModel() {
-        return getSetting('model', 'gemini-fast');
+        return FIXED_MODEL;
     }
 
     function getLangInfo(lang) {
@@ -350,10 +488,13 @@ Return ONLY valid JSON. Do not add any text before or after the JSON.
     async function callPollinationsAPIRaw(prompt, maxRetries = 3) {
         const model = getSelectedModel();
         const apiKeys = getApiKeys();
+        if (apiKeys.length === 0) {
+            throw new Error('[Pollinations.ai] Connect your Pollinations account in settings first.');
+        }
         let lastError = null;
 
         // API 키가 없으면 키 없이 시도
-        const keysToTry = apiKeys.length > 0 ? apiKeys : [null];
+        const keysToTry = apiKeys;
 
         for (let keyIndex = 0; keyIndex < keysToTry.length; keyIndex++) {
             const apiKey = keysToTry[keyIndex];
@@ -429,8 +570,11 @@ Return ONLY valid JSON. Do not add any text before or after the JSON.
     async function callPollinationsAPIStream(prompt, onLine, maxRetries = 3) {
         const model = getSelectedModel();
         const apiKeys = getApiKeys();
+        if (apiKeys.length === 0) {
+            throw new Error('[Pollinations.ai] Connect your Pollinations account in settings first.');
+        }
         let lastError = null;
-        const keysToTry = apiKeys.length > 0 ? apiKeys : [null];
+        const keysToTry = apiKeys;
 
         for (let keyIndex = 0; keyIndex < keysToTry.length; keyIndex++) {
             const apiKey = keysToTry[keyIndex];
@@ -564,106 +708,208 @@ Return ONLY valid JSON. Do not add any text before or after the JSON.
                 const [apiKeys, setApiKeys] = useState(
                     Array.isArray(initialApiKeys) ? JSON.stringify(initialApiKeys) : initialApiKeys
                 );
-                const [model, setModel] = useState(getSelectedModel());
+                const [authStatus, setAuthStatus] = useState(getSetting('auth-status', ''));
                 const [testStatus, setTestStatus] = useState('');
-                const [availableModels, setAvailableModels] = useState([]);
-                const [modelsLoading, setModelsLoading] = useState(false);
+                const [keyInfo, setKeyInfo] = useState(null);
+                const [keyInfoLoading, setKeyInfoLoading] = useState(false);
+                const [deviceAuth, setDeviceAuth] = useState(null);
+                const [isConnecting, setIsConnecting] = useState(false);
+                const [manualExpanded, setManualExpanded] = useState(false);
+                const hasApiKey = getApiKeys().length > 0;
 
                 // 모델 목록 로드
-                const loadModels = useCallback(async () => {
-                    setModelsLoading(true);
-                    try {
-                        const models = await getModels();
-                        setAvailableModels(models);
-                        ADDON_INFO.models = models;
-                    } catch (e) {
-                        window.__ivLyricsDebugLog?.('[Pollinations Addon] Failed to load models:', e);
-                        setAvailableModels([]);
-                    } finally {
-                        setModelsLoading(false);
+                const loadKeyInfo = useCallback(async () => {
+                    const apiKey = getPrimaryApiKey();
+                    if (!apiKey) {
+                        setKeyInfo(null);
+                        return;
                     }
-                }, []);
+
+                    setKeyInfoLoading(true);
+                    try {
+                        const info = await fetchApiKeyInfo(apiKey);
+                        setKeyInfo(info);
+                    } catch (e) {
+                        window.__ivLyricsDebugLog?.('[Pollinations Addon] Failed to load key info:', e.message);
+                        setKeyInfo(null);
+                    } finally {
+                        setKeyInfoLoading(false);
+                    }
+                }, [apiKeys]);
 
                 // 컴포넌트 마운트시 모델 목록 로드
                 useEffect(() => {
-                    loadModels();
-                }, []);
+                    loadKeyInfo();
+                }, [apiKeys]);
 
                 const handleApiKeyChange = useCallback((e) => {
-                    setApiKeys(e.target.value);
-                    setSetting('api-keys', e.target.value);
+                    const value = e.target.value;
+                    setApiKeys(value);
+                    setSetting('api-keys', value);
+                    setSetting('api-key', '');
+                    setAuthStatus(value ? 'Manual access key configured.' : 'Manual access key cleared.');
                 }, []);
 
-                const handleModelChange = useCallback((e) => {
-                    setModel(e.target.value);
-                    setSetting('model', e.target.value);
-                }, []);
+                const handleConnect = useCallback(async () => {
+                    let authWindow = null;
+                    try {
+                        setIsConnecting(true);
+                        setDeviceAuth(null);
+                        setAuthStatus('Requesting Pollinations login code...');
 
-                const handleRefreshModels = useCallback(() => {
-                    loadModels();
-                }, [loadModels]);
+                        try {
+                            authWindow = window.open('about:blank', '_blank');
+                        } catch (e) { }
+
+                        const device = await requestDeviceCode();
+                        const pollInterval = Math.max(
+                            DEVICE_POLL_INTERVAL_MS,
+                            Number(device.interval || 0) * 1000
+                        );
+                        const expiresAt = Date.now() + (Number(device.expires_in || 600) * 1000);
+
+                        setDeviceAuth(device);
+                        setAuthStatus(`Open Pollinations and enter code ${device.user_code}. Only ${FIXED_MODEL} is requested; clear Budget and Expiry there for unlimited access.`);
+
+                        if (authWindow) {
+                            authWindow.location.href = device.verificationUrl;
+                        } else {
+                            window.open(device.verificationUrl, '_blank');
+                        }
+
+                        while (Date.now() < expiresAt) {
+                            await new Promise(resolve => setTimeout(resolve, pollInterval));
+                            const tokenData = await pollDeviceToken(device.device_code);
+                            if (tokenData.pending) continue;
+
+                            storePollinationsAccessToken(tokenData.access_token);
+                            setApiKeys(tokenData.access_token);
+                            setAuthStatus('Connected through Pollinations login.');
+                            setDeviceAuth(null);
+                            await loadKeyInfo();
+                            return;
+                        }
+
+                        throw new Error('[Pollinations.ai] Login timed out. Please try again.');
+                    } catch (e) {
+                        if (authWindow && !authWindow.closed) {
+                            try { authWindow.close(); } catch (closeError) { }
+                        }
+                        setAuthStatus(e.message);
+                    } finally {
+                        setIsConnecting(false);
+                    }
+                }, [loadKeyInfo]);
+
+                const handleDisconnect = useCallback(() => {
+                    disconnectPollinationsAuth();
+                    setApiKeys('');
+                    setAuthStatus('Disconnected.');
+                    setKeyInfo(null);
+                    setTestStatus('');
+                }, []);
 
                 const handleTest = useCallback(async () => {
                     setTestStatus('Testing...');
                     try {
                         await callPollinationsAPIRaw('Reply with just "OK" if you receive this.');
-                        setTestStatus('✓ Connection successful!');
+                        setTestStatus('Connection successful.');
+                        loadKeyInfo();
                     } catch (e) {
-                        setTestStatus(`✗ Error: ${e.message}`);
+                        setTestStatus(`Error: ${e.message}`);
                     }
-                }, []);
+                }, [loadKeyInfo]);
 
 
 
-                // ... (existing code for models)
-
-                // ... (existing code for test)
+                const keyStatusText = hasApiKey
+                    ? `Connected key: ${maskKey(getPrimaryApiKey())}`
+                    : 'Not connected. Sign in to Pollinations to create a scoped user key.';
+                const keyInfoText = keyInfo
+                    ? `${keyInfo.valid ? 'Valid' : 'Invalid'} ${keyInfo.type || 'API'} key${keyInfo.expiresIn ? `, expires in ${Math.ceil(keyInfo.expiresIn / 86400)} day(s)` : ''}`
+                    : keyInfoLoading ? 'Checking key...' : '';
+                const baseButtonStyle = {
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    minHeight: '36px',
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    whiteSpace: 'nowrap',
+                    cursor: isConnecting ? 'default' : 'pointer',
+                    transition: 'transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease'
+                };
+                const primaryButtonStyle = {
+                    ...baseButtonStyle,
+                    border: '1px solid rgba(255,255,255,0.18)',
+                    background: isConnecting ? 'rgba(255,255,255,0.16)' : 'linear-gradient(135deg, #22c55e, #16a34a)',
+                    color: '#07130a',
+                    boxShadow: isConnecting ? 'none' : '0 8px 18px rgba(34,197,94,0.24)',
+                    opacity: isConnecting ? 0.7 : 1
+                };
+                const secondaryButtonStyle = {
+                    ...baseButtonStyle,
+                    border: '1px solid rgba(255,255,255,0.22)',
+                    background: 'rgba(255,255,255,0.08)',
+                    color: 'var(--spice-text, #fff)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)'
+                };
 
                 return React.createElement('div', { className: 'ai-addon-settings pollinations-settings' },
                     React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('label', null, 'API Key(s) (Optional)'),
-                        React.createElement('div', { className: 'ai-addon-input-group' },
-                            React.createElement('input', {
-                                type: 'text',
-                                value: apiKeys,
-                                onChange: handleApiKeyChange,
-                                placeholder: 'Optional (multiple: ["key1", "key2"])'
-                            }),
+                        React.createElement('label', null, 'Pollinations Account'),
+                        React.createElement('div', { className: 'ai-addon-input-group', style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '8px' } },
                             React.createElement('button', {
-                                onClick: () => window.open(ADDON_INFO.apiKeyUrl, '_blank'),
-                                className: 'ai-addon-btn-secondary'
-                            }, 'Get API Key')
+                                onClick: handleConnect,
+                                className: 'ai-addon-btn-primary',
+                                disabled: isConnecting,
+                                style: primaryButtonStyle
+                            }, isConnecting ? 'Waiting for Login...' : hasApiKey ? 'Reconnect Pollinations' : 'Connect Pollinations'),
+                            hasApiKey && React.createElement('button', {
+                                onClick: handleDisconnect,
+                                className: 'ai-addon-btn-secondary',
+                                disabled: isConnecting,
+                                style: secondaryButtonStyle
+                            }, 'Disconnect')
                         ),
-                        React.createElement('small', null, 'Free to use without API key. API key unlocks higher rate limits.')
+                        React.createElement('small', null, authStatus || keyStatusText),
+                        deviceAuth && React.createElement('div', { style: { marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' } },
+                            React.createElement('code', { style: { fontSize: '13px', padding: '7px 10px', borderRadius: '6px', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.16)' } }, deviceAuth.user_code),
+                            React.createElement('button', {
+                                onClick: () => window.open(deviceAuth.verificationUrl, '_blank'),
+                                className: 'ai-addon-btn-secondary',
+                                style: secondaryButtonStyle
+                            }, 'Open Login Page')
+                        ),
+                        keyInfoText && React.createElement('small', { style: { display: 'block', opacity: 0.65 } }, keyInfoText)
                     ),
                     React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('label', null, 'Model'),
-                        React.createElement('div', { className: 'ai-addon-input-group' },
-                            React.createElement('select', {
-                                value: model,
-                                onChange: handleModelChange,
-                                disabled: modelsLoading
-                            },
-                                modelsLoading
-                                    ? React.createElement('option', { value: '' }, 'Loading models...')
-                                    : availableModels.length > 0
-                                        ? availableModels.map(m => React.createElement('option', { key: m.id, value: m.id }, m.name))
-                                        : React.createElement('option', { value: 'gemini-fast' }, 'gemini-fast')
-                            ),
-                            React.createElement('button', {
-                                onClick: handleRefreshModels,
-                                className: 'ai-addon-btn-secondary',
-                                disabled: modelsLoading,
-                                title: 'Refresh model list'
-                            }, modelsLoading ? '...' : '↻')
+                        React.createElement('div', {
+                            style: { cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', userSelect: 'none' },
+                            onClick: () => setManualExpanded(!manualExpanded)
+                        },
+                            React.createElement('span', { style: { fontSize: '10px', transition: 'transform 0.2s', transform: manualExpanded ? 'rotate(90deg)' : 'rotate(0deg)', display: 'inline-block' } }, '>'),
+                            React.createElement('label', { style: { cursor: 'pointer', margin: 0 } }, 'Manual Access Key')
                         ),
-                        availableModels.length > 0 && React.createElement('small', null, `${availableModels.length} models available`)
+                        manualExpanded && React.createElement('div', { style: { marginTop: '8px' } },
+                            React.createElement('input', {
+                                type: 'password',
+                                value: apiKeys,
+                                onChange: handleApiKeyChange,
+                                placeholder: 'sk_... or ["sk_...", "sk_..."]',
+                                autoComplete: 'off'
+                            }),
+                            React.createElement('small', null, 'Fallback for legacy/manual keys. Pollinations login is preferred.')
+                        )
                     ),
                     React.createElement(AdvancedParamsSection),
                     React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('button', { onClick: handleTest, className: 'ai-addon-btn-primary' }, 'Test Connection'),
+                        React.createElement('button', { onClick: handleTest, className: 'ai-addon-btn-primary', style: primaryButtonStyle }, 'Test Connection'),
                         testStatus && React.createElement('span', {
-                            className: `ai-addon-test-status ${testStatus.startsWith('✓') ? 'success' : testStatus.startsWith('✗') ? 'error' : ''}`
+                            className: `ai-addon-test-status ${testStatus.startsWith('Connection successful') ? 'success' : testStatus.startsWith('Error') ? 'error' : ''}`
                         }, testStatus)
                     )
                 );

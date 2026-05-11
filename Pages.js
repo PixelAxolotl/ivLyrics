@@ -1597,24 +1597,34 @@ const buildKaraokeTextRunElements = (timedChars, position, isActive, isComplete,
 		}
 
 		const fillValue = getKaraokeSegmentFill(segment, position, isActive, isComplete);
-		const softEdge = 10;
-		const shouldFeather = fillValue > 0 && fillValue < 100;
-		const bounce = getKaraokeBounceValues(position, isActive, segment.startTime, segment.endTime);
 		const segmentDirection = getKaraokeTextDirection(segment.text) || textDirection;
 		const gradientDirection = segmentDirection === "rtl" ? "to left" : "to right";
-		const segmentStyle = {
-			"--karaoke-gradient-direction": gradientDirection,
-			"--karaoke-char-fill": `${fillValue}%`,
-			"--karaoke-char-fill-soft-start": `${shouldFeather ? Math.max(0, fillValue - softEdge) : fillValue}%`,
-			"--karaoke-char-fill-soft-end": `${shouldFeather ? Math.min(100, fillValue + softEdge) : fillValue}%`,
-			"--karaoke-bounce-y": `${bounce.offsetY}px`,
-			"--karaoke-bounce-scale": bounce.scale,
-		};
+		const segmentState = fillValue <= 0 ? "pending" : fillValue >= 100 ? "done" : "active";
+		const bounce = segmentState === "pending"
+			? { offsetY: 0, scale: 1 }
+			: getKaraokeBounceValues(position, isActive, segment.startTime, segment.endTime);
+		const segmentStyle = {};
+		if (segmentState === "active") {
+			const softEdge = 10;
+			segmentStyle["--karaoke-gradient-direction"] = gradientDirection;
+			segmentStyle["--karaoke-char-fill"] = `${fillValue}%`;
+			segmentStyle["--karaoke-char-fill-soft-start"] = `${Math.max(0, fillValue - softEdge)}%`;
+			segmentStyle["--karaoke-char-fill-soft-end"] = `${Math.min(100, fillValue + softEdge)}%`;
+		}
+		if (bounce.offsetY !== 0 || bounce.scale !== 1) {
+			segmentStyle["--karaoke-bounce-y"] = `${bounce.offsetY}px`;
+			segmentStyle["--karaoke-bounce-scale"] = bounce.scale;
+		}
+
+		let segmentClassName = `lyrics-karaoke-text-run-segment lyrics-karaoke-text-run-segment--${segmentState}`;
+		if (isComplete) {
+			segmentClassName += " is-complete";
+		}
 
 		return react.createElement(
 			"span",
 			{
-				className: `lyrics-karaoke-text-run-segment${isComplete ? " is-complete" : ""}`,
+				className: segmentClassName,
 				dir: segmentDirection,
 				style: segmentStyle,
 				key: `karaoke-text-run-segment-${segment.startIndex}`,
@@ -2506,31 +2516,37 @@ const KaraokeLine = react.memo(({ line, position, isActive, globalCharOffset = 0
 	const isComplete = isActive && position >= endTime;
 
 	const charElements = useTextRun ? [] : timedChars.map((charInfo, index) => {
-		const fillValue = Math.max(0, Math.min(100, getKaraokeCharFill(
-			position,
-			isActive,
-			charInfo.startTime,
-			charInfo.endTime
-		) * 100));
-		const softEdge = 16;
-		const fillPercent = `${fillValue}%`;
-		const shouldFeather = fillValue > 0 && fillValue < 100;
-		const fillSoftStart = `${shouldFeather ? Math.max(0, fillValue - softEdge) : fillValue}%`;
-		const fillSoftEnd = `${shouldFeather ? Math.min(100, fillValue + softEdge) : fillValue}%`;
-		const bounce = getKaraokeBounceValues(
+		const fillRatio = getKaraokeCharFill(
 			position,
 			isActive,
 			charInfo.startTime,
 			charInfo.endTime
 		);
-		const karaokeStyle = {
-			"--karaoke-char-fill": fillPercent,
-			"--karaoke-char-fill-soft-start": fillSoftStart,
-			"--karaoke-char-fill-soft-end": fillSoftEnd,
-			"--karaoke-bounce-y": `${bounce.offsetY}px`,
-			"--karaoke-bounce-scale": bounce.scale,
-		};
-		const className = `lyrics-karaoke-char${isComplete ? " is-complete" : ""}`;
+		const charState = fillRatio <= 0 ? "pending" : fillRatio >= 1 ? "done" : "active";
+		const bounce = charState === "pending"
+			? { offsetY: 0, scale: 1 }
+			: getKaraokeBounceValues(
+				position,
+				isActive,
+				charInfo.startTime,
+				charInfo.endTime
+			);
+		const karaokeStyle = {};
+		if (charState === "active") {
+			const fillValue = Math.max(0, Math.min(100, fillRatio * 100));
+			const softEdge = 16;
+			karaokeStyle["--karaoke-char-fill"] = `${fillValue}%`;
+			karaokeStyle["--karaoke-char-fill-soft-start"] = `${Math.max(0, fillValue - softEdge)}%`;
+			karaokeStyle["--karaoke-char-fill-soft-end"] = `${Math.min(100, fillValue + softEdge)}%`;
+		}
+		if (bounce.offsetY !== 0 || bounce.scale !== 1) {
+			karaokeStyle["--karaoke-bounce-y"] = `${bounce.offsetY}px`;
+			karaokeStyle["--karaoke-bounce-scale"] = bounce.scale;
+		}
+		let className = `lyrics-karaoke-char lyrics-karaoke-char--${charState}`;
+		if (isComplete) {
+			className += " is-complete";
+		}
 		const charNode = react.createElement(
 			"span",
 			{
@@ -2549,7 +2565,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, globalCharOffset = 0
 		return react.createElement(
 			"ruby",
 			{
-				className: "lyrics-karaoke-ruby",
+				className: `lyrics-karaoke-ruby lyrics-karaoke-ruby--${charState}`,
 				style: karaokeStyle,
 				key: `karaoke-ruby-${index}`,
 			},

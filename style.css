@@ -549,11 +549,11 @@ body.ivlyrics-page-active .main-topBar-container {
   transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   transition-duration: var(--line-shift-duration, calc(var(--animation-index) * var(--animation-tempo) + 0.3s));
   transition-delay: var(--line-shift-delay, 0s);
-  transition-property: transform, color, opacity, filter;
-  /* Ensure lyrics are visible */
+  /* Skip `filter` here: blur snaps to new value when --blur-index changes instead of
+     transitioning across every visible line in parallel (huge GPU spike during scroll). */
+  transition-property: transform, color, opacity;
   opacity: 1;
-  /* GPU acceleration for smooth performance */
-  will-change: transform, opacity;
+  will-change: transform;
 }
 
 .lyrics-lyricsContainer-SyncedLyrics .lyrics-lyricsContainer-LyricsLine:not(.lyrics-lyricsContainer-LyricsLine-active) {
@@ -962,6 +962,20 @@ div.lyrics-tabBar-headerItemLink {
 .lyrics-karaoke-text-run-segment {
   display: inline-block;
   white-space: pre;
+  color: var(--lyrics-color-inactive);
+  filter: var(--lyrics-text-drop-shadow, none);
+  text-shadow: none;
+  transform: translateY(var(--karaoke-bounce-y, 0)) scale(var(--karaoke-bounce-scale, 1));
+  transition: transform 0.38s cubic-bezier(0.2, 0.9, 0.28, 1);
+  vertical-align: baseline;
+  unicode-bidi: isolate;
+}
+
+.lyrics-karaoke-text-run-segment--done {
+  color: var(--lyrics-color-active);
+}
+
+.lyrics-karaoke-text-run-segment--active {
   color: transparent;
   background-image: linear-gradient(var(--karaoke-gradient-direction, to right),
       var(--lyrics-color-active) 0,
@@ -972,15 +986,6 @@ div.lyrics-tabBar-headerItemLink {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: none !important;
-  filter: var(--lyrics-text-drop-shadow, none);
-  transform: translateY(var(--karaoke-bounce-y, 0)) scale(var(--karaoke-bounce-scale, 1));
-  transition: filter 0.08s linear,
-    text-shadow 0.08s linear,
-    opacity 0.12s ease,
-    transform 0.38s cubic-bezier(0.2, 0.9, 0.28, 1);
-  vertical-align: baseline;
-  unicode-bidi: isolate;
 }
 
 .lyrics-karaoke-text-run-space {
@@ -992,9 +997,26 @@ div.lyrics-tabBar-headerItemLink {
   filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.08));
 }
 
+.lyrics-karaoke-line.is-active .lyrics-karaoke-text-run-segment--active {
+  will-change: transform;
+}
+
 .lyrics-karaoke-char {
   display: inline-block;
   white-space: pre-wrap;
+  color: var(--lyrics-color-inactive);
+  filter: var(--lyrics-text-drop-shadow, none);
+  text-shadow: none;
+  transform: translateY(var(--karaoke-bounce-y, 0)) scale(var(--karaoke-bounce-scale, 1));
+  transition: transform 0.38s cubic-bezier(0.2, 0.9, 0.28, 1);
+  vertical-align: baseline;
+}
+
+.lyrics-karaoke-char--done {
+  color: var(--lyrics-color-active);
+}
+
+.lyrics-karaoke-char--active {
   color: transparent;
   background-image: linear-gradient(var(--karaoke-gradient-direction, to right),
       var(--lyrics-color-active) 0,
@@ -1005,15 +1027,6 @@ div.lyrics-tabBar-headerItemLink {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: none !important;
-  filter: var(--lyrics-text-drop-shadow, none);
-  transform: translateY(var(--karaoke-bounce-y, 0)) scale(var(--karaoke-bounce-scale, 1));
-  transition: filter 0.08s linear,
-    text-shadow 0.08s linear,
-    opacity 0.12s ease,
-    transform 0.38s cubic-bezier(0.2, 0.9, 0.28, 1);
-  will-change: transform;
-  vertical-align: baseline;
 }
 
 .lyrics-karaoke-line.is-active .lyrics-karaoke-char {
@@ -1021,8 +1034,15 @@ div.lyrics-tabBar-headerItemLink {
   filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.08));
 }
 
-.lyrics-karaoke-line.is-complete .lyrics-karaoke-char {
-  --karaoke-char-fill: 100%;
+.lyrics-karaoke-line.is-active .lyrics-karaoke-char--active {
+  will-change: transform;
+}
+
+.lyrics-karaoke-line.is-complete .lyrics-karaoke-char,
+.lyrics-karaoke-line.is-complete .lyrics-karaoke-text-run-segment {
+  color: var(--lyrics-color-active);
+  background-image: none;
+  -webkit-text-fill-color: currentColor;
 }
 
 .lyrics-karaoke-ruby {
@@ -1030,10 +1050,19 @@ div.lyrics-tabBar-headerItemLink {
 }
 
 .lyrics-karaoke-ruby rt {
-  color: transparent;
+  color: var(--lyrics-color-inactive);
   opacity: 0.8;
   user-select: none;
   white-space: nowrap;
+  text-shadow: none;
+}
+
+.lyrics-karaoke-ruby--done rt {
+  color: var(--lyrics-color-active);
+}
+
+.lyrics-karaoke-ruby--active rt {
+  color: transparent;
   background-image: linear-gradient(to right,
       var(--lyrics-color-active) 0,
       var(--lyrics-color-active) var(--karaoke-char-fill-soft-start, var(--karaoke-char-fill, 0%)),
@@ -1043,9 +1072,6 @@ div.lyrics-tabBar-headerItemLink {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  text-shadow: none !important;
-  filter: var(--lyrics-text-drop-shadow, none);
-  text-shadow: none;
 }
 
 .lyrics-lyricsContainer-LyricsLine a {

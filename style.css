@@ -6083,9 +6083,15 @@ ruby rt {
   pointer-events: none;
   opacity: 0;
   animation: hint-fade-in-out 4s ease-in-out forwards;
-  z-index: 9999;
+  z-index: var(--iv-layer-modal);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
   border: 1px solid var(--spice-button);
+}
+
+.ivlyrics-sync-creator-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--iv-layer-modal);
 }
 
 .sync-creator-hint::after {

@@ -2237,7 +2237,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 	// 스타일
 	const s = {
-		overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--spice-main, #121212)', zIndex: 10000, display: 'flex', flexDirection: 'column' },
+		overlay: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'var(--spice-main, #121212)', zIndex: 'var(--iv-layer-modal, 2147483647)', display: 'flex', flexDirection: 'column' },
 		header: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '12px 20px', borderBottom: '1px solid var(--spice-misc)', flexShrink: 0 },
 		backBtn: { background: 'var(--spice-misc)', border: 'none', color: 'var(--spice-text)', cursor: 'pointer', padding: '8px 16px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '600' },
 		title: { fontSize: '16px', fontWeight: '700', margin: 0, color: 'var(--spice-text)' },
@@ -2306,7 +2306,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		loading: { display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '200px', color: 'var(--spice-subtext)' },
 		error: { textAlign: 'center', padding: '40px', color: '#e53935' },
 		// LRCLIB 발행 모달 스타일
-		lrcLibModal: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 10001, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+		lrcLibModal: { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', zIndex: 'var(--iv-layer-modal, 2147483647)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
 		lrcLibContent: { background: 'var(--spice-card)', borderRadius: '16px', padding: '24px', width: '90%', maxWidth: '600px', maxHeight: '80vh', display: 'flex', flexDirection: 'column', gap: '16px' },
 		lrcLibTitle: { fontSize: '18px', fontWeight: '700', color: 'var(--spice-text)', margin: 0 },
 		lrcLibDesc: { fontSize: '13px', color: 'var(--spice-subtext)', lineHeight: 1.5 },

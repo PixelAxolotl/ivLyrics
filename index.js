@@ -6578,7 +6578,18 @@ class LyricsContainer extends react.Component {
             if (el && this.state.isFullscreen) {
               // 전체화면에서 바깥 클릭 시 메뉴 닫기
               const handleClickOutside = (e) => {
-                if (!el.contains(e.target) && (this.state.isFloatingMenuOpen || this.state.isFloatingMenuClosing)) {
+                const target = e.target;
+                const isExternalMenuSurface = target?.closest?.([
+                  ".lyrics-sync-adjust-floating",
+                  "#ivLyrics-sync-creator-overlay",
+                  ".ivlyrics-fluent-overlay",
+                  ".community-video-overlay",
+                  "#ivLyrics-share-image-overlay",
+                  ".ivlyrics-cache-edit-overlay",
+                  ".lyrics-creator-profile-overlay",
+                ].join(","));
+
+                if (!el.contains(target) && !isExternalMenuSurface && (this.state.isFloatingMenuOpen || this.state.isFloatingMenuClosing)) {
                   this.closeFloatingMenu();
                 }
               };

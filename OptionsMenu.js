@@ -2310,6 +2310,8 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
         "div",
         {
           className: "lyrics-sync-adjust-floating",
+          onMouseDown: (event) => event.stopPropagation(),
+          onClick: (event) => event.stopPropagation(),
         },
         react.createElement(
           "div",
@@ -3773,6 +3775,7 @@ async function openSyncDataCreator(trackInfo, initialData = null) {
 
   const overlay = document.createElement("div");
   overlay.id = "ivLyrics-sync-creator-overlay";
+  overlay.className = "ivlyrics-sync-creator-overlay";
 
   // Render React component
   const dom = window.Spicetify?.ReactDOM ?? window.ReactDOM ?? null;

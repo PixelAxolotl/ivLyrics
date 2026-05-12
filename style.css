@@ -970,7 +970,10 @@ div.lyrics-tabBar-headerItemLink {
   color: var(--lyrics-color-inactive);
   filter: var(--lyrics-text-drop-shadow, none);
   text-shadow: none;
-  transform: translateY(var(--karaoke-bounce-y, 0)) scale(var(--karaoke-bounce-scale, 1));
+  /* translate3d forces a GPU layer so glyph rasterization stays stable when the
+     bounce animation lands at identity transform. Without the z component the
+     layer can be demoted at the end of the transition, causing sub-pixel reflow. */
+  transform: translate3d(0, var(--karaoke-bounce-y, 0), 0) scale(var(--karaoke-bounce-scale, 1));
   transition: transform 0.38s cubic-bezier(0.2, 0.9, 0.28, 1);
   vertical-align: baseline;
   unicode-bidi: isolate;
@@ -1016,7 +1019,6 @@ div.lyrics-tabBar-headerItemLink {
     --lyrics-karaoke-active-drop-shadow,
     drop-shadow(0 0 10px rgba(255, 255, 255, 0.08))
   );
-  will-change: transform;
 }
 
 .lyrics-karaoke-char {
@@ -1025,7 +1027,8 @@ div.lyrics-tabBar-headerItemLink {
   color: var(--lyrics-color-inactive);
   filter: var(--lyrics-text-drop-shadow, none);
   text-shadow: none;
-  transform: translateY(var(--karaoke-bounce-y, 0)) scale(var(--karaoke-bounce-scale, 1));
+  /* See the matching note on .lyrics-karaoke-text-run-segment for why translate3d. */
+  transform: translate3d(0, var(--karaoke-bounce-y, 0), 0) scale(var(--karaoke-bounce-scale, 1));
   transition: transform 0.38s cubic-bezier(0.2, 0.9, 0.28, 1);
   vertical-align: baseline;
 }
@@ -1063,14 +1066,32 @@ div.lyrics-tabBar-headerItemLink {
     --lyrics-karaoke-active-drop-shadow,
     drop-shadow(0 0 10px rgba(255, 255, 255, 0.08))
   );
+}
+
+/* Pin every char/segment in the active line to a GPU layer. The --active rules above
+   add a filter that promotes them, but when a char crosses into --done that filter
+   disappears and the layer demotes — at which point the glyph re-rasterizes on the
+   main thread with different sub-pixel positioning, looking like a 1px shift / AA
+   change right when the bounce settles. Holding will-change here keeps the layer
+   alive across the active→done transition. Scoped to .is-active so non-active
+   lines don't pay the GPU memory cost. */
+.lyrics-karaoke-line.is-active .lyrics-karaoke-char,
+.lyrics-karaoke-line.is-active .lyrics-karaoke-text-run-segment {
   will-change: transform;
 }
 
+/* Stay on the transparent + background-clip:text paint path even after the line
+   completes. Falling back to a solid color here would re-rasterize every glyph
+   in the line at once when is-complete is added, making the whole line visibly
+   thicken/snap. background-color is solid so there's no gradient cost. */
 .lyrics-karaoke-line.is-complete .lyrics-karaoke-char,
 .lyrics-karaoke-line.is-complete .lyrics-karaoke-text-run-segment {
-  color: var(--lyrics-color-active);
+  color: transparent;
   background-image: none;
-  -webkit-text-fill-color: currentColor;
+  background-color: var(--lyrics-color-active);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .lyrics-karaoke-ruby {

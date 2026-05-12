@@ -1032,6 +1032,10 @@ window.LANG_VI = {
         "label": "Hiệu ứng nảy chữ",
         "desc": "Áp dụng hoạt ảnh nảy lên cho các ký tự đang hát trong chế độ Karaoke"
       },
+      "lineTransition": {
+        "label": "Hoạt ảnh chuyển dòng",
+        "desc": "Khôi phục chuyển động của dòng khi dòng lời đang hoạt động thay đổi. Có thể tăng mức dùng GPU."
+      },
       "spotifyFakeKaraoke": {
         "label": "Karaoke ảo",
         "desc": "Khi lời bài hát chỉ cung cấp đồng bộ theo dòng, thời gian karaoke sẽ được tổng hợp từ Spotify audio analysis. Các dòng tiếng Hàn, tiếng Nhật và tiếng Trung sẽ được tách dày hơn khi độ tin cậy cao."

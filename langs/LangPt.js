@@ -1032,6 +1032,10 @@ window.LANG_PT = {
         "label": "Efeito Bounce na Letra",
         "desc": "Aplica animação de pulo na letra atual no modo karaokê"
       },
+      "lineTransition": {
+        "label": "Animação de transição de linha",
+        "desc": "Restaura o movimento da linha quando a letra ativa muda. Pode aumentar o uso da GPU."
+      },
       "spotifyFakeKaraoke": {
         "label": "Karaokê virtual",
         "desc": "Quando a letra fornece apenas sincronização por linha, o tempo de karaokê é sintetizado a partir da análise de áudio do Spotify. Linhas em coreano, japonês e chinês são divididas com mais detalhe quando a confiança é alta."

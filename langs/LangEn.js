@@ -1032,6 +1032,10 @@ window.LANG_EN = {
         "label": "Character Bounce Effect",
         "desc": "Apply a bounce animation to the current singing characters in Karaoke mode"
       },
+      "lineTransition": {
+        "label": "Line Transition Animation",
+        "desc": "Restore the line movement when the active lyric line changes. This can increase GPU usage."
+      },
       "spotifyFakeKaraoke": {
         "label": "Pseudo Karaoke",
         "desc": "When lyrics only provide line-synced timing, synthesize karaoke timing from Spotify audio analysis. Korean, Japanese, and Chinese lines are split more densely when confidence is high."

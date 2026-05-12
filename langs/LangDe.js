@@ -1032,6 +1032,10 @@ window.LANG_DE = {
         "label": "Text-Bounce-Effekt",
         "desc": "Animiert die aktuell gesungene Silbe mit einem Hüpf-Effekt"
       },
+      "lineTransition": {
+        "label": "Zeilenwechsel-Animation",
+        "desc": "Stellt die Bewegung beim Wechsel der aktiven Zeile wieder her. Dies kann die GPU-Auslastung erhöhen."
+      },
       "spotifyFakeKaraoke": {
         "label": "Pseudo-Karaoke",
         "desc": "Wenn Songtexte nur zeilensynchrones Timing liefern, wird aus der Spotify-Audioanalyse ein Karaoke-Timing erzeugt. Koreanische, japanische und chinesische Zeilen werden bei hoher Zuverlässigkeit feiner aufgeteilt."

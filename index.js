@@ -1555,6 +1555,10 @@ const CONFIG = {
       "ivLyrics:visual:karaoke-bounce",
       true
     ),
+    "karaoke-line-transition": StorageManager.get(
+      "ivLyrics:visual:karaoke-line-transition",
+      false
+    ),
     "karaoke-mode-enabled": StorageManager.get(
       "ivLyrics:visual:karaoke-mode-enabled",
       true

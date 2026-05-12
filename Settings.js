@@ -3968,6 +3968,14 @@ const ConfigModal = ({
       i18nKeys: ["tabs.performance", "settingsAdvanced.performance.rendering.title", "settingsAdvanced.performance.frameRate.label", "settingsAdvanced.performance.frameRate.desc"]
     },
     {
+      section: I18n.t("tabs.performance"),
+      sectionKey: "performance",
+      settingKey: "karaoke-line-transition",
+      name: I18n.t("settingsAdvanced.karaokeMode.lineTransition.label"),
+      desc: I18n.t("settingsAdvanced.karaokeMode.lineTransition.desc"),
+      i18nKeys: ["tabs.performance", "settingsAdvanced.performance.rendering.title", "settingsAdvanced.karaokeMode.lineTransition.label", "settingsAdvanced.karaokeMode.lineTransition.desc"]
+    },
+    {
       section: I18n.t("tabs.appearance"),
       sectionKey: "appearance",
       settingKey: "colorful",
@@ -10607,6 +10615,12 @@ const ConfigModal = ({
               key: "karaoke-bounce",
               type: ConfigSlider,
             },
+            {
+              desc: I18n.t("settingsAdvanced.karaokeMode.lineTransition.label"),
+              info: I18n.t("settingsAdvanced.karaokeMode.lineTransition.desc"),
+              key: "karaoke-line-transition",
+              type: ConfigSlider,
+            },
           ],
           onChange: handlePerformanceSettingChange,
         }),
@@ -10807,6 +10821,12 @@ const ConfigModal = ({
               desc: I18n.t("settingsAdvanced.karaokeMode.bounce.label"),
               info: I18n.t("settingsAdvanced.karaokeMode.bounce.desc"),
               key: "karaoke-bounce",
+              type: ConfigSlider,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.karaokeMode.lineTransition.label"),
+              info: I18n.t("settingsAdvanced.karaokeMode.lineTransition.desc"),
+              key: "karaoke-line-transition",
               type: ConfigSlider,
             },
             {

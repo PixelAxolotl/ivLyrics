@@ -1032,6 +1032,10 @@ window.LANG_ZH_CN = {
         "label": "文字弹跳效果",
         "desc": "在卡拉OK模式下，为当前演唱的文字应用弹跳动画"
       },
+      "lineTransition": {
+        "label": "行切换动画",
+        "desc": "恢复当前歌词行变化时的行移动效果。可能会增加 GPU 使用量。"
+      },
       "spotifyFakeKaraoke": {
         "label": "虚拟卡拉OK",
         "desc": "当歌词只提供逐行同步时间时，将基于 Spotify audio analysis 合成卡拉OK时间。置信度较高时，韩语、日语和中文行会被拆分得更细。"

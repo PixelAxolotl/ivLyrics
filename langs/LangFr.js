@@ -1032,6 +1032,10 @@ window.LANG_FR = {
         "label": "Effet rebond",
         "desc": "Animation de rebond sur les caractères chantés"
       },
+      "lineTransition": {
+        "label": "Animation de transition de ligne",
+        "desc": "Restaure le mouvement de ligne lors du changement de parole active. Cela peut augmenter l’utilisation du GPU."
+      },
       "spotifyFakeKaraoke": {
         "label": "Karaoké virtuel",
         "desc": "Lorsque les paroles ne fournissent qu’une synchronisation par ligne, un timing karaoké est synthétisé à partir de l’analyse audio Spotify. Les lignes coréennes, japonaises et chinoises sont découpées plus finement lorsque la confiance est élevée."

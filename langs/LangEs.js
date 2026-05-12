@@ -1032,6 +1032,10 @@ window.LANG_ES = {
         "label": "Efecto de rebote de texto",
         "desc": "Aplica una animación de rebote a la letra actual en modo Karaoke"
       },
+      "lineTransition": {
+        "label": "Animación de transición de línea",
+        "desc": "Restaura el movimiento de línea cuando cambia la letra activa. Puede aumentar el uso de GPU."
+      },
       "spotifyFakeKaraoke": {
         "label": "Karaoke virtual",
         "desc": "Cuando la letra solo ofrece sincronización por línea, se sintetiza un tiempo de karaoke a partir del análisis de audio de Spotify. Las líneas en coreano, japonés y chino se dividen con más detalle cuando la confianza es alta."

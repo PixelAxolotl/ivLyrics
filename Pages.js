@@ -1632,9 +1632,7 @@ const buildKaraokeTextRunElements = (timedChars, position, isActive, isComplete,
 		const segmentDirection = getKaraokeTextDirection(segment.text) || textDirection;
 		const gradientDirection = segmentDirection === "rtl" ? "to left" : "to right";
 		const segmentState = fillValue <= 0 ? "pending" : fillValue >= 100 ? "done" : "active";
-		const bounce = segmentState !== "pending"
-			? getKaraokeBounceValues(position, isActive, segment.startTime, segment.endTime)
-			: KARAOKE_BOUNCE_IDLE;
+		const bounce = getKaraokeBounceValues(position, isActive, segment.startTime, segment.endTime);
 		const segmentStyle = {};
 		if (segmentState === "active") {
 			const softEdge = 10;
@@ -2494,6 +2492,7 @@ const applyKaraokeWhitespaceCompensation = (timedChars) => {
 
 const KARAOKE_FILL_STEPS = 25;
 const KARAOKE_BOUNCE_IDLE = { offsetY: 0, scale: 1, active: false };
+const easeOutCubic = (value) => 1 - Math.pow(1 - Math.max(0, Math.min(1, value)), 3);
 
 const getKaraokeCharFill = (position, isActive, startTime, endTime) => {
 	if (!isActive) {
@@ -2518,26 +2517,30 @@ const getKaraokeBounceValues = (position, isActive, startTime, endTime) => {
 	}
 
 	const duration = Math.max(1, endTime - startTime);
-	const releaseDuration = Math.max(180, Math.min(420, duration * 1.35));
-	const totalWindow = duration + releaseDuration;
+	const preLeadDuration = Math.max(70, Math.min(160, duration * 0.45));
+	const riseDuration = Math.max(180, Math.min(280, duration * 0.9));
+	const releaseDuration = Math.max(420, Math.min(820, duration * 2.4));
+	const totalWindow = riseDuration + releaseDuration;
 	const elapsed = position - startTime;
 
-	if (elapsed < 0 || elapsed > totalWindow) {
+	if (elapsed < -preLeadDuration || elapsed > totalWindow) {
 		return KARAOKE_BOUNCE_IDLE;
 	}
 
-	const riseDuration = Math.max(52, Math.min(120, duration * 0.42));
 	let waveStrength;
 
-	if (elapsed <= riseDuration) {
+	if (elapsed < 0) {
+		const preProgress = (elapsed + preLeadDuration) / preLeadDuration;
+		waveStrength = easeOutCubic(preProgress) * 0.22;
+	} else if (elapsed <= riseDuration) {
 		const riseProgress = elapsed / riseDuration;
-		waveStrength = 1 - Math.pow(1 - riseProgress, 3);
+		waveStrength = 0.22 + (easeOutCubic(riseProgress) * 0.78);
 	} else {
 		const fallProgress = Math.min(1, (elapsed - riseDuration) / Math.max(1, totalWindow - riseDuration));
-		waveStrength = Math.pow(1 - fallProgress, 1.75);
+		waveStrength = Math.pow(1 - fallProgress, 1.28);
 	}
 
-	if (waveStrength < 0.03) {
+	if (waveStrength < 0.025) {
 		return KARAOKE_BOUNCE_IDLE;
 	}
 
@@ -2590,14 +2593,12 @@ const KaraokeLine = react.memo(({ line, position, isActive, globalCharOffset = 0
 			charInfo.endTime
 		);
 		const charState = fillRatio <= 0 ? "pending" : fillRatio >= 1 ? "done" : "active";
-		const bounce = charState !== "pending"
-			? getKaraokeBounceValues(
-				position,
-				isActive,
-				charInfo.startTime,
-				charInfo.endTime
-			)
-			: KARAOKE_BOUNCE_IDLE;
+		const bounce = getKaraokeBounceValues(
+			position,
+			isActive,
+			charInfo.startTime,
+			charInfo.endTime
+		);
 		const karaokeStyle = {};
 		if (charState === "active") {
 			const fillValue = Math.max(0, Math.min(100, fillRatio * 100));
@@ -2662,6 +2663,9 @@ const KaraokeLine = react.memo(({ line, position, isActive, globalCharOffset = 0
 const SyncedLyricsPage = react.memo(({ lyrics = [], provider, contributors, copyright, isKara, karaokeSource = null }) => {
 	const position = useLyricsPlaybackPosition();
 	const karaokePosition = isKara ? position + getPseudoKaraokeRenderAdvance(karaokeSource) : position;
+	const karaokeLineTransitionClass = isKara && CONFIG.visual["karaoke-line-transition"]
+		? " karaoke-line-transition-enabled"
+		: "";
 	const [containerReady, setContainerReady] = useState(false);
 	const compactActiveLineEle = useRef();
 	const lyricContainerEle = useRef();
@@ -2739,7 +2743,7 @@ const SyncedLyricsPage = react.memo(({ lyrics = [], provider, contributors, copy
 	return react.createElement(
 		"div",
 		{
-			className: `lyrics-lyricsContainer-SyncedLyricsPage${isKara ? " is-karaoke" : ""}${isScrolling ? " scrolling-active" : ""}`,
+			className: `lyrics-lyricsContainer-SyncedLyricsPage${isKara ? " is-karaoke" : ""}${karaokeLineTransitionClass}${isScrolling ? " scrolling-active" : ""}`,
 			ref: containerRefCallback,
 			onClick: handleContainerClick,
 		},
@@ -2992,6 +2996,9 @@ function isInViewport(element) {
 const SyncedExpandedLyricsPage = react.memo(({ lyrics = [], provider, contributors, copyright, isKara, karaokeSource = null }) => {
 	const position = useLyricsPlaybackPosition();
 	const karaokePosition = isKara ? position + getPseudoKaraokeRenderAdvance(karaokeSource) : position;
+	const karaokeLineTransitionClass = isKara && CONFIG.visual["karaoke-line-transition"]
+		? " karaoke-line-transition-enabled"
+		: "";
 	const activeLineRef = useRef(null);
 	const pageRef = useRef(null);
 	const lyricsId = useMemo(() => lyrics[0]?.text || "no-lyrics", [lyrics]);
@@ -3015,7 +3022,7 @@ const SyncedExpandedLyricsPage = react.memo(({ lyrics = [], provider, contributo
 	return react.createElement(
 		"div",
 		{
-			className: `lyrics-lyricsContainer-UnsyncedLyricsPage${isKara ? " is-karaoke" : ""}`,
+			className: `lyrics-lyricsContainer-UnsyncedLyricsPage${isKara ? " is-karaoke" : ""}${karaokeLineTransitionClass}`,
 			key: lyricsId,
 			ref: pageRef,
 			onClick: handleContainerClick,

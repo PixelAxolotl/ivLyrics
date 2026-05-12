@@ -1032,6 +1032,10 @@ window.LANG_SV = {
         "label": "Character Bounce Effect",
         "desc": "Tillämpa en studsanimation på de nuvarande sjungande karaktärerna i karaokeläge"
       },
+      "lineTransition": {
+        "label": "Radövergångsanimering",
+        "desc": "Återställer radens rörelse när den aktiva textraden ändras. Det kan öka GPU-användningen."
+      },
       "spotifyFakeKaraoke": {
         "label": "Pseudo karaoke",
         "desc": "När texter endast tillhandahåller linjesynkroniserad timing, syntetisera karaoke-timing från Spotify-ljudanalys. Koreanska, japanska och kinesiska linjer delas tätare när förtroendet är högt."

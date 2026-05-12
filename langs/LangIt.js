@@ -1032,6 +1032,10 @@ window.LANG_IT = {
         "label": "Effetto rimbalzo testo",
         "desc": "Applica un'animazione di rimbalzo al carattere corrente in modalità karaoke"
       },
+      "lineTransition": {
+        "label": "Animazione transizione riga",
+        "desc": "Ripristina il movimento della riga quando cambia il verso attivo. Può aumentare l’uso della GPU."
+      },
       "spotifyFakeKaraoke": {
         "label": "Karaoke virtuale",
         "desc": "Quando i testi forniscono solo la sincronizzazione a livello di riga, il timing karaoke viene sintetizzato dall’analisi audio di Spotify. Le righe in coreano, giapponese e cinese vengono suddivise più finemente quando l’affidabilità è alta."

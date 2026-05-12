@@ -1032,6 +1032,10 @@ window.LANG_ID = {
         "label": "Efek Pantulan Huruf",
         "desc": "Terapkan animasi memantul pada huruf yang sedang dinyanyikan di mode karaoke"
       },
+      "lineTransition": {
+        "label": "Animasi Transisi Baris",
+        "desc": "Mengembalikan gerakan baris saat lirik aktif berubah. Ini dapat meningkatkan penggunaan GPU."
+      },
       "spotifyFakeKaraoke": {
         "label": "Karaoke virtual",
         "desc": "Saat lirik hanya menyediakan sinkronisasi per baris, timing karaoke akan disintesis dari analisis audio Spotify. Baris berbahasa Korea, Jepang, dan Tionghoa akan dipecah lebih rapat saat tingkat keyakinannya tinggi."

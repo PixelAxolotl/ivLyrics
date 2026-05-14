@@ -1622,7 +1622,7 @@ window.LANG_ID = {
     "title": "Bagikan Gambar Lirik",
     "subtitle": "Buat gambar dari lirik favoritmu dan bagikan",
     "selectLyrics": "Pilih Lirik",
-    "selectLyricsHint": "Klik baris lirik yang ingin dimasukkan (Maks 6 baris)",
+    "selectLyricsHint": "Klik baris lirik yang ingin dimasukkan (Maks 10 baris)",
     "template": "Preset",
     "templates": {
       "cover": "Cover Blur",

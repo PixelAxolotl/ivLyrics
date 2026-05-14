@@ -1622,7 +1622,7 @@ window.LANG_ZH_CN = {
     "title": "分享歌词图片",
     "subtitle": "将喜欢的歌词制作为图片并分享",
     "selectLyrics": "选择歌词",
-    "selectLyricsHint": "点击图片中要包含的歌词行 (最多 6 行)",
+    "selectLyricsHint": "点击图片中要包含的歌词行 (最多 10 行)",
     "template": "预设",
     "templates": {
       "cover": "封面模糊",

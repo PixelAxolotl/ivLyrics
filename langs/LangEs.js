@@ -1622,7 +1622,7 @@ window.LANG_ES = {
     "title": "Compartir imagen de letras",
     "subtitle": "Crea y comparte imágenes de tus letras favoritas",
     "selectLyrics": "Seleccionar letras",
-    "selectLyricsHint": "Haz clic en las líneas para incluir (Máx 6 líneas)",
+    "selectLyricsHint": "Haz clic en las líneas para incluir (Máx 10 líneas)",
     "template": "Plantilla",
     "templates": {
       "cover": "Portada desenfocada",

@@ -1622,7 +1622,7 @@ window.LANG_VI = {
     "title": "Chia sẻ ảnh lời bài hát",
     "subtitle": "Tạo ảnh từ lời bài hát yêu thích để chia sẻ",
     "selectLyrics": "Chọn lời bài hát",
-    "selectLyricsHint": "Nhấn vào các dòng lời bài hát để đưa vào ảnh (Tối đa 6 dòng)",
+    "selectLyricsHint": "Nhấn vào các dòng lời bài hát để đưa vào ảnh (Tối đa 10 dòng)",
     "template": "Mẫu",
     "templates": {
       "cover": "Bìa mờ",

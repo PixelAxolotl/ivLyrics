@@ -1622,7 +1622,7 @@ window.LANG_FR = {
     "title": "Partager image paroles",
     "subtitle": "Créez une image de vos paroles préférées",
     "selectLyrics": "Sélection",
-    "selectLyricsHint": "Cliquez sur les lignes à inclure (Max 6)",
+    "selectLyricsHint": "Cliquez sur les lignes à inclure (Max 10)",
     "template": "Modèle",
     "templates": {
       "cover": "Flou Couv.",

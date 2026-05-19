@@ -1623,7 +1623,7 @@ window.LANG_DE = {
     "title": "Songtext-Bild teilen",
     "subtitle": "Erstellen Sie ein Bild Ihres Lieblingssongtextes",
     "selectLyrics": "Text auswählen",
-    "selectLyricsHint": "Klicken Sie auf Textzeilen für das Bild (max. 6)",
+    "selectLyricsHint": "Klicken Sie auf Textzeilen für das Bild (max. 10 Zeilen)",
     "template": "Vorlage",
     "templates": {
       "cover": "Cover-Blur",

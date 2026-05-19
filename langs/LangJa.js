@@ -1623,7 +1623,7 @@ window.LANG_JA = {
     "title": "歌詞画像を共有",
     "subtitle": "お気に入りの歌詞を画像にして共有しましょう",
     "selectLyrics": "歌詞を選択",
-    "selectLyricsHint": "画像に含める歌詞の行をクリックしてください (最大6行)",
+    "selectLyricsHint": "画像に含める歌詞の行をクリックしてください (最大10行)",
     "template": "プリセット",
     "templates": {
       "cover": "カバーブラー",

@@ -1623,7 +1623,7 @@ window.LANG_EN = {
     "title": "Share Lyrics Image",
     "subtitle": "Create and share images of your favorite lyrics",
     "selectLyrics": "Select Lyrics",
-    "selectLyricsHint": "Click lyrics lines to include (Max 6 lines)",
+    "selectLyricsHint": "Click lyrics lines to include (Max 10 lines)",
     "template": "Presets",
     "templates": {
       "cover": "Cover Blur",

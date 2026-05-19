@@ -1623,7 +1623,7 @@ window.LANG_SV = {
     "title": "Dela textbild",
     "subtitle": "Skapa och dela bilder av dina favorittexter",
     "selectLyrics": "Välj Lyrics",
-    "selectLyricsHint": "Klicka på textraderna för att inkludera (max 6 rader)",
+    "selectLyricsHint": "Klicka på textraderna för att inkludera (max 10 rader)",
     "template": "Förinställningar",
     "templates": {
       "cover": "Omslagsskärpa",

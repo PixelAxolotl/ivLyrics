@@ -1623,7 +1623,7 @@ window.LANG_KO = {
     "title": "가사 이미지 공유",
     "subtitle": "좋아하는 가사를 이미지로 만들어 공유하세요",
     "selectLyrics": "가사 선택",
-    "selectLyricsHint": "이미지에 포함할 가사 라인을 클릭하세요 (최대 6줄)",
+    "selectLyricsHint": "이미지에 포함할 가사 라인을 클릭하세요 (최대 10줄)",
     "template": "프리셋",
     "templates": {
       "cover": "커버 블러",

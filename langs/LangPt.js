@@ -1623,7 +1623,7 @@ window.LANG_PT = {
     "title": "Compartilhar Imagem da Letra",
     "subtitle": "Crie uma imagem com sua letra favorita e compartilhe",
     "selectLyrics": "Selecionar Letra",
-    "selectLyricsHint": "Clique nas linhas da letra para incluir na imagem (Máx 6 linhas)",
+    "selectLyricsHint": "Clique nas linhas da letra para incluir na imagem (Máx 10 linhas)",
     "template": "Preset",
     "templates": {
       "cover": "Capa Desfocada",

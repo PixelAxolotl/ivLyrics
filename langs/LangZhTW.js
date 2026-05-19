@@ -1623,7 +1623,7 @@ window.LANG_ZH_TW = {
     "title": "分享歌詞圖片",
     "subtitle": "將喜歡的歌詞製作成圖片分享",
     "selectLyrics": "選擇歌詞",
-    "selectLyricsHint": "點擊要包含在圖片中的歌詞行 (最多 6 行)",
+    "selectLyricsHint": "點擊要包含在圖片中的歌詞行 (最多 10 行)",
     "template": "預設樣式",
     "templates": {
       "cover": "封面模糊",

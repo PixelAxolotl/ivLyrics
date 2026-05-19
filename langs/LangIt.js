@@ -1623,7 +1623,7 @@ window.LANG_IT = {
     "title": "Condividi immagine testo",
     "subtitle": "Crea un'immagine con i tuoi testi preferiti e condividila",
     "selectLyrics": "Seleziona testo",
-    "selectLyricsHint": "Clicca sulle righe da includere (max 6)",
+    "selectLyricsHint": "Clicca sulle righe da includere (max 10)",
     "template": "Preset",
     "templates": {
       "cover": "Copertina sfocata",

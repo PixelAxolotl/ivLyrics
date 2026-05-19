@@ -262,32 +262,35 @@ OUTPUT (${lineCount} lines of pronunciation only):`;
 
     function buildCharacterPronunciationPrompt(lines, lang = 'ko', sourceLang = 'auto', unitMode = 'char') {
         const safeLines = (Array.isArray(lines) ? lines : []).map(line => String(line ?? ''));
-        const payload = safeLines.map((text, index) => ({
-            i: index,
-            t: text,
-            n: Array.from(text).length
-        }));
         const langInfo = getLangInfo(lang);
         const isWordMode = unitMode === 'word';
+        const payload = safeLines.map((text, index) => {
+            const chars = Array.from(text);
+            return isWordMode
+                ? { i: index, t: text, n: chars.length }
+                : { i: index, a: chars, n: chars.length };
+        });
         const outputRules = isWordMode
             ? `- Output compact JSON only: top key l; each line has i and u; each pronunciation item has s=start character index, e=end character index, and p=whole word pronunciation.
 - Split each line by whitespace into word/token ranges. Do not split alphabetic words into letters.
 - Omit whitespace and punctuation-only tokens from u to save tokens.
 - p must be one natural spoken pronunciation for the whole word/token in ${langInfo.native}.`
-            : `- Output compact JSON only: top key l; each line has i and c; each pronunciation item has i=character index and p=pronunciation.
-- Omit characters with empty pronunciation from c to save tokens. Spaces, punctuation, brackets, symbols, silent/helper letters should usually be omitted.
-- p must be short and readable in ${langInfo.native}.`;
+            : `- Output compact JSON only: top key l; each line has i and p.
+- p must be an array of exactly n strings, one per input character a[index].
+- If n is 12, p must contain exactly 12 strings. An array with 11 or 13 strings is invalid even if the pronunciation sounds correct.
+- Use an empty string for characters with no separate pronunciation. Do not omit array slots.
+- Each p[index] must be short and readable in ${langInfo.native}.`;
         const alignmentRules = isWordMode
             ? `- For alphabetic and whitespace-separated languages, convert each whole word to spoken pronunciation once. Do not assign syllables to individual letters.
 - Example: English "hello" should be one unit like {"s":0,"e":4,"p":"??"}, not h=?/e=?/l=?.
 - For contractions, liaison, vowel reduction, doubled consonants, and connected-speech effects, prefer natural sung pronunciation over literal spelling.`
-            : `- For alphabetic languages, do not spell letters one by one. Convert words to spoken pronunciation first, then distribute that sound across characters.
-- For digraphs or combined letters (sh, ch, th, ph, qu, ll, etc.), put the combined sound on the most natural character and leave helper characters empty if needed.
-- For silent letters, use an empty string.
+            : `- For alphabetic languages, do not spell letters one by one. Convert words to spoken pronunciation first, then place that sound into the matching source character slots.
+- For digraphs or combined letters (sh, ch, th, ph, qu, ll, etc.), put the combined sound in one source character slot and leave helper slots empty if needed.
+- For silent letters, use an empty string in that source character slot.
 - For contractions, liaison, vowel reduction, doubled consonants, and other connected-speech effects, prefer natural sung pronunciation over literal spelling.`;
         const outputShape = isWordMode
             ? '{"l":[{"i":0,"u":[{"s":0,"e":4,"p":"??"}]}]}'
-            : '{"l":[{"i":0,"c":[{"i":0,"p":"?"}]}]}';
+            : '{"l":[{"i":0,"p":["?"]}]}';
 
         return `You are a multilingual lyrics pronunciation aligner for karaoke sync editing.
 
@@ -298,21 +301,28 @@ Task:
 
 Rules:
 - Return ONLY valid JSON. No markdown, no code fences, no explanations.
+- The first response character must be { and the last response character must be }. Never wrap JSON in markdown fences.
 - Preserve every line index.
-- Input uses compact keys: i=line index, t=line text, n=character count. Split t into Unicode code points; positions are 0-based.
+- Input uses compact keys: i=line index and n=character count. In character mode, a is the exact source character array and output p must align to a by array position. In word mode, t is the line text.
+- In character mode, never output c or index-numbered pronunciation items. Output p as exactly n strings. p[k] is the pronunciation for source character a[k], and may contain multiple target syllables or be empty.
 ${outputRules}
 ${alignmentRules}
-- For syllabic scripts, align by natural syllable sound while still returning one item per character.
-- For logographic scripts such as hanzi/kanji/hanja, infer the common reading from the word and split it across characters as naturally as possible. If a character has no separate sound, use an empty string.
-- For Japanese specifically, handle small kana and sound changes naturally:
-  - small っ should be a geminated consonant or brief stop, not つ.
-  - small ゃ/ゅ/ょ should combine with the previous kana.
-  - ん should use the context-sensitive nasal sound instead of a fixed isolated "응".
+- For syllabic scripts, align by natural syllable sound while keeping exactly one p array slot per source character.
+- For logographic scripts such as hanzi/kanji/hanja, infer the common reading from the word and put each source character's reading in that character's p slot. If a character has no separate sound, use an empty string.
+- For mixed writing systems, keep pronounced suffix/helper characters aligned to their own source characters. Do not hide a following character's sound inside the previous base character.
+- For Japanese specifically, handle kanji, okurigana, small kana, and sound changes naturally:
+  - Never shift readings after small kana or ん. Each p array slot is tied to the exact original source character at the same array position.
+  - In character mode, keep timing alignment per source character. Do not merge ordinary kana/okurigana into the previous kanji.
+  - For okurigana, put its spoken sound on that kana. Example: 高く => 高=타카, く=쿠; 急ぎ => 急=이소, ぎ=기; 懐かしい => 懐=나츠, か=카, し=시, い=이.
+  - Do not compress several source characters into one p slot. Example for a=["耐","え","難","い"]: p=["타","에","가타","이"], not ["타에","","가","타이"].
+  - small っ should be a geminated consonant or brief stop, not つ. Example: のって => の=노, っ=ㅅ, て=데.
+  - small ゃ/ゅ/ょ should combine with the previous kana; leave the small kana itself empty/omitted unless the target writing system truly needs a separate mark.
+  - ん should use the context-sensitive nasal sound at the ん character itself. Do not put the next character's pronunciation on ん.
+  - Correct Korean-target p array example for a=["爺","ち","ゃ","ん","婆","ち","ゃ","ん","久","し","ぶ","り"]: p=["지이","챠","","안","바","챠","","안","히","사","부","리"].
   - long vowels and vowel sequences such as ー, おう, えい, ああ should preserve length naturally.
   - particles は, へ, を should use the particle pronunciation when clearly used as particles.
-
 Korean target examples:
-${isWordMode ? '- In word mode, return English examples as whole u items per word, never as letter-level c items.' : ''}
+${isWordMode ? '- In word mode, return English examples as whole u items per word, never as character-level p arrays.' : ''}
 - English "night" should sound like "나이트", not "엔 아이 지 에이치 티". Example split: n=나, i=이, t=트; omit silent g/h.
 - English "the" should sound like "더", not "티 에이치 이". Example split: t=더; omit helper h/e.
 - のって should be close to "노ㅅ데" or "노옷데", not "노 츠 테". Example split: の=노, っ=ㅅ, て=데.

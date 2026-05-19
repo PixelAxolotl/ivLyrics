@@ -6,6 +6,38 @@ const SYNC_CREATOR_RTL_STRONG_CHAR_REGEX = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\u
 const SYNC_CREATOR_LTR_STRONG_CHAR_REGEX = /[A-Za-z\u00C0-\u02AF\u0370-\u052F\u1E00-\u1EFF]/u;
 const SYNC_CREATOR_JAPANESE_KANA_REGEX = /[\u3040-\u30ff\uff66-\uff9f]/u;
 const SYNC_CREATOR_KANJI_REGEX = /[\u3400-\u4dbf\u4e00-\u9fff]/u;
+const SYNC_CREATOR_JAPANESE_ATTACH_KANA_REGEX = /^[\u3041\u3043\u3045\u3047\u3049\u3063\u3083\u3085\u3087\u308e\u3093\u3095\u3096\u30a1\u30a3\u30a5\u30a7\u30a9\u30c3\u30e3\u30e5\u30e7\u30ee\u30f3\u30f5\u30f6\u30fc\uff67-\uff70\uff9d]$/u;
+const SYNC_CREATOR_HANGUL_JAMO_ONLY_REGEX = /^[\u3131-\u3163\u1100-\u11ff]+$/u;
+const SYNC_CREATOR_HANGUL_CODA_BY_JAMO = new Map([
+	['ㄱ', 1], ['ㄲ', 2], ['ㄳ', 3], ['ㄴ', 4], ['ㄵ', 5], ['ㄶ', 6], ['ㄷ', 7], ['ㄹ', 8],
+	['ㄺ', 9], ['ㄻ', 10], ['ㄼ', 11], ['ㄽ', 12], ['ㄾ', 13], ['ㄿ', 14], ['ㅀ', 15], ['ㅁ', 16],
+	['ㅂ', 17], ['ㅄ', 18], ['ㅅ', 19], ['ㅆ', 20], ['ㅇ', 21], ['ㅈ', 22], ['ㅊ', 23], ['ㅋ', 24],
+	['ㅌ', 25], ['ㅍ', 26], ['ㅎ', 27]
+]);
+
+const mergeSyncCreatorPronunciationText = (base, addition) => {
+	const baseText = String(base || '');
+	let additionText = String(addition || '');
+	if (!baseText || !additionText) return baseText + additionText;
+
+	const firstAdditionChar = Array.from(additionText)[0] || '';
+	const codaIndex = SYNC_CREATOR_HANGUL_CODA_BY_JAMO.get(firstAdditionChar);
+	if (!codaIndex) {
+		return baseText + additionText;
+	}
+
+	const baseChars = Array.from(baseText);
+	const lastChar = baseChars[baseChars.length - 1] || '';
+	const lastCode = lastChar.charCodeAt(0);
+	const hangulOffset = lastCode - 0xac00;
+	if (hangulOffset < 0 || hangulOffset >= 11172 || hangulOffset % 28 !== 0) {
+		return baseText + additionText;
+	}
+
+	baseChars[baseChars.length - 1] = String.fromCharCode(lastCode + codaIndex);
+	additionText = additionText.slice(firstAdditionChar.length);
+	return baseChars.join('') + additionText;
+};
 
 const getSyncCreatorTextDirection = (text) => {
 	const normalizedText = typeof text === 'string' ? text : '';
@@ -73,7 +105,17 @@ const getSyncCreatorCharacterPronunciationProgressInfo = (progress) => {
 		return {
 			percent,
 			buttonLabel: total > 0 ? `${current}/${total} (${percent}%)` : (I18n.t('syncCreator.characterPronunciationGenerating') || 'Generating AI pronunciation...'),
-			label: I18n.t('syncCreator.characterPronunciationProgressRetry') || 'Response was truncated. Splitting this chunk smaller...'
+			label: progress.reason === 'format'
+				? (I18n.t('syncCreator.characterPronunciationProgressRetryFormat') || 'Invalid AI alignment. Retrying with smaller chunks...')
+				: (I18n.t('syncCreator.characterPronunciationProgressRetry') || 'Response was truncated. Splitting this chunk smaller...')
+		};
+	}
+
+	if (progress.phase === 'chunk-error' || progress.phase === 'provider-error') {
+		return {
+			percent,
+			buttonLabel: total > 0 ? `${current}/${total} (${percent}%)` : (I18n.t('syncCreator.characterPronunciationGenerating') || 'Generating AI pronunciation...'),
+			label: progress.error || I18n.t('syncCreator.characterPronunciationProgressError') || 'AI pronunciation generation failed. Trying fallback...'
 		};
 	}
 
@@ -99,6 +141,10 @@ const getSyncCreatorCharacterPronunciationProgressInfo = (progress) => {
 
 const normalizeSyncCreatorPronunciationUnits = (lineData, lineChars) => {
 	const chars = Array.isArray(lineChars) ? lineChars : [];
+	if (lineData?.unitMode && lineData.unitMode !== 'word') {
+		return [];
+	}
+
 	const rawUnits = Array.isArray(lineData?.units)
 		? lineData.units
 		: (Array.isArray(lineData?.u) ? lineData.u : []);
@@ -127,6 +173,59 @@ const normalizeSyncCreatorPronunciationUnits = (lineData, lineChars) => {
 		})
 		.filter(Boolean)
 		.sort((a, b) => a.start - b.start || a.end - b.end);
+};
+
+const buildSyncCreatorVisualPronunciationUnits = (lineChars, pronunciationMap) => {
+	const chars = Array.isArray(lineChars) ? lineChars : [];
+	if (!chars.length || !(pronunciationMap instanceof Map) || pronunciationMap.size === 0) {
+		return [];
+	}
+
+	const lineText = chars.join('');
+	if (!SYNC_CREATOR_JAPANESE_KANA_REGEX.test(lineText) && !SYNC_CREATOR_KANJI_REGEX.test(lineText)) {
+		return [];
+	}
+
+	const units = [];
+	const appendToPreviousUnit = (index, pronunciation = '') => {
+		const previous = units[units.length - 1];
+		if (!previous) return false;
+		previous.end = index;
+		previous.text += chars[index] || '';
+		if (pronunciation) {
+			previous.pronunciation = mergeSyncCreatorPronunciationText(previous.pronunciation, pronunciation);
+		}
+		return true;
+	};
+
+	for (let index = 0; index < chars.length; index++) {
+		const char = chars[index] || '';
+		const pronunciation = String(pronunciationMap.get(index) || '').trim();
+		if (/\s/u.test(char)) {
+			continue;
+		}
+
+		const shouldAttachToPrevious =
+			SYNC_CREATOR_JAPANESE_ATTACH_KANA_REGEX.test(char) ||
+			(SYNC_CREATOR_JAPANESE_KANA_REGEX.test(char) && SYNC_CREATOR_HANGUL_JAMO_ONLY_REGEX.test(pronunciation));
+
+		if (shouldAttachToPrevious && appendToPreviousUnit(index, pronunciation)) {
+			continue;
+		}
+
+		if (!pronunciation) {
+			continue;
+		}
+
+		units.push({
+			start: index,
+			end: index,
+			text: char,
+			pronunciation
+		});
+	}
+
+	return units.filter(unit => unit.pronunciation);
 };
 
 const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
@@ -746,20 +845,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		() => normalizeSyncCreatorPronunciationUnits(currentLineCharacterPronunciationData, currentLineChars),
 		[currentLineCharacterPronunciationData, currentLineChars]
 	);
-	const currentLinePronunciationUnitByStart = useMemo(() => {
-		const map = new Map();
-		currentLinePronunciationUnits.forEach(unit => map.set(unit.start, unit));
-		return map;
-	}, [currentLinePronunciationUnits]);
-	const currentLinePronunciationCoveredIndexes = useMemo(() => {
-		const set = new Set();
-		currentLinePronunciationUnits.forEach(unit => {
-			for (let i = unit.start + 1; i <= unit.end; i++) {
-				set.add(i);
-			}
-		});
-		return set;
-	}, [currentLinePronunciationUnits]);
 	const currentLineEffectiveSyllableSegments = useMemo(() => {
 		if (currentLinePronunciationUnits.length > 0) {
 			return currentLinePronunciationUnits.map(unit => ({
@@ -784,9 +869,36 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			}
 		});
 		return map;
-	}, [currentLineCharacterPronunciationData]);
+	}, [currentLineCharacterPronunciationData, currentLineChars]);
 	const hasCurrentLineCharacterPronunciation = currentLineCharacterPronunciationMap.size > 0 || currentLinePronunciationUnits.length > 0;
 	const usePrimaryCharacterPronunciation = isCharacterPronunciationPrimary && hasCurrentLineCharacterPronunciation;
+	const currentLineRenderedPronunciationUnits = useMemo(() => {
+		if (currentLinePronunciationUnits.length > 0) {
+			return currentLinePronunciationUnits;
+		}
+		return buildSyncCreatorVisualPronunciationUnits(currentLineChars, currentLineCharacterPronunciationMap);
+	}, [
+		currentLinePronunciationUnits,
+		currentLineChars,
+		currentLineCharacterPronunciationMap
+	]);
+	const currentLineRenderedPronunciationUnitByStart = useMemo(() => {
+		const map = new Map();
+		currentLineRenderedPronunciationUnits.forEach(unit => map.set(unit.start, unit));
+		return map;
+	}, [currentLineRenderedPronunciationUnits]);
+	const currentLineRenderedPronunciationCoveredIndexes = useMemo(() => {
+		const set = new Set();
+		currentLineRenderedPronunciationUnits.forEach(unit => {
+			for (let i = unit.start + 1; i <= unit.end; i++) {
+				set.add(i);
+			}
+		});
+		return set;
+	}, [currentLineRenderedPronunciationUnits]);
+	const useFixedPrimaryCharacterCells = usePrimaryCharacterPronunciation
+		&& currentLineRenderedPronunciationUnits.length === 0
+		&& /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uac00-\ud7af]/u.test(currentLineText);
 	const characterPronunciationProgressInfo = useMemo(
 		() => getSyncCreatorCharacterPronunciationProgressInfo(characterPronunciationProgress),
 		[characterPronunciationProgress]
@@ -2690,7 +2802,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		lyricsLine: { display: 'inline-flex', flexWrap: 'nowrap', gap: '0px', paddingLeft: '32px', paddingRight: '32px', justifyContent: 'center', alignItems: usePrimaryCharacterPronunciation ? 'flex-start' : 'stretch' },
 		rtlLyricsLine: { display: 'block', width: '100%', paddingLeft: '32px', paddingRight: '32px', textAlign: 'center', direction: 'rtl', unicodeBidi: 'plaintext' },
 		rtlTextRun: { display: 'inline-block', maxWidth: '100%', padding: '10px 1px', fontSize: '32px', fontWeight: '600', lineHeight: 1.45, letterSpacing: 0, whiteSpace: 'pre', cursor: mode === 'record' ? 'pointer' : 'default', color: 'transparent', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' },
-		charSpan: { padding: usePrimaryCharacterPronunciation ? '4px 4px 6px' : `${hasCurrentLineFurigana ? 18 : 10}px 1px ${(hasCurrentLineCharacterPronunciation && currentLinePronunciationUnits.length === 0) ? 26 : 10}px`, borderRadius: '4px', cursor: mode === 'record' ? 'pointer' : 'default', position: 'relative', fontSize: usePrimaryCharacterPronunciation ? '15px' : '32px', fontWeight: '600', minWidth: usePrimaryCharacterPronunciation ? '18px' : '6px', minHeight: usePrimaryCharacterPronunciation ? '68px' : undefined, boxSizing: 'border-box', textAlign: 'center', flexShrink: 0, color: 'var(--spice-text)', letterSpacing: usePrimaryCharacterPronunciation ? 0 : '-1px', lineHeight: usePrimaryCharacterPronunciation ? 1.05 : 1.15 },
+		charSpan: { padding: usePrimaryCharacterPronunciation ? '4px 4px 6px' : `${hasCurrentLineFurigana ? 18 : 10}px 1px ${(hasCurrentLineCharacterPronunciation && currentLineRenderedPronunciationUnits.length === 0) ? 26 : 10}px`, borderRadius: '4px', cursor: mode === 'record' ? 'pointer' : 'default', position: 'relative', fontSize: usePrimaryCharacterPronunciation ? '15px' : '32px', fontWeight: '600', minWidth: usePrimaryCharacterPronunciation ? '18px' : '6px', minHeight: usePrimaryCharacterPronunciation ? '68px' : undefined, boxSizing: 'border-box', textAlign: 'center', flexShrink: 0, color: 'var(--spice-text)', letterSpacing: 0, lineHeight: usePrimaryCharacterPronunciation ? 1.05 : 1.15 },
 		charSpanPronunciationPrimary: { display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: '2px' },
 		charWordGroup: { display: 'inline-flex', position: 'relative', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', flexShrink: 0, borderRadius: '4px', padding: '0 0 3px', boxSizing: 'border-box' },
 		charWordGroupPrimary: { flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', minHeight: '68px', padding: '2px 3px 6px', boxSizing: 'border-box' },
@@ -2700,11 +2812,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		charSpanInWordPrimary: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 'auto', width: 'auto', minHeight: '24px', padding: '4px 0 0', fontSize: '14px', lineHeight: 1, letterSpacing: 0 },
 		charWordPronunciation: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '13px', marginTop: '1px', fontSize: '10px', fontWeight: '700', color: 'var(--spice-subtext)', opacity: 0.9, lineHeight: 1, whiteSpace: 'nowrap', letterSpacing: 0, pointerEvents: 'none' },
 		charWordPronunciationPrimary: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '28px', fontSize: '24px', fontWeight: '700', color: 'inherit', lineHeight: 1.05, whiteSpace: 'nowrap', letterSpacing: 0, pointerEvents: 'none' },
-		charRuby: { rubyPosition: 'over', lineHeight: 1.15 },
-		charRubyText: { fontSize: `${Number(window.CONFIG?.visual?.["furigana-font-size"]) || 11}px`, fontWeight: window.CONFIG?.visual?.["furigana-font-weight"] || '500', color: 'inherit', opacity: (Number(window.CONFIG?.visual?.["furigana-opacity"]) || 80) / 100, lineHeight: 1, letterSpacing: 0 },
+		charFixedPrimaryCell: { width: '28px', minWidth: '28px', maxWidth: '28px', padding: '4px 0 6px', overflow: 'visible' },
+		charFuriganaWrap: { position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '1em', lineHeight: 'inherit' },
+		charFuriganaText: { position: 'absolute', left: '50%', bottom: '100%', transform: 'translateX(-50%)', marginBottom: '1px', fontSize: `${Number(window.CONFIG?.visual?.["furigana-font-size"]) || 11}px`, fontWeight: window.CONFIG?.visual?.["furigana-font-weight"] || '500', color: 'inherit', opacity: (Number(window.CONFIG?.visual?.["furigana-opacity"]) || 80) / 100, lineHeight: 1, letterSpacing: 0, whiteSpace: 'nowrap', pointerEvents: 'none' },
 		charPronunciation: { position: 'absolute', bottom: '7px', left: '50%', transform: 'translateX(-50%)', fontSize: '10px', fontWeight: '600', color: 'var(--spice-subtext)', opacity: 0.9, lineHeight: 1, whiteSpace: 'nowrap', letterSpacing: 0, pointerEvents: 'none' },
 		charOriginalSmall: { display: 'flex', alignItems: 'flex-end', justifyContent: 'center', height: '30px', minWidth: '100%', fontSize: '14px', fontWeight: '600', color: 'inherit', opacity: 0.82, lineHeight: 1, letterSpacing: 0 },
 		charPronunciationPrimary: { display: 'flex', alignItems: 'center', justifyContent: 'center', height: '26px', fontSize: '24px', fontWeight: '700', color: 'inherit', lineHeight: 1.05, whiteSpace: 'nowrap', letterSpacing: 0 },
+		charPronunciationPrimaryFixed: { position: 'absolute', left: '50%', bottom: '7px', transform: 'translateX(-50%)', width: 'max-content', minWidth: '100%', textAlign: 'center', pointerEvents: 'none' },
 		charSynced: { background: 'rgba(var(--spice-rgb-button), 0.2)' },
 		charPlayed: { background: 'var(--spice-button)', color: 'var(--spice-button-text, #000)' },
 		charRecording: { background: 'rgba(255, 152, 0, 0.6)' },
@@ -2766,16 +2880,18 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const furigana = currentLineFuriganaMap.get(i);
 		const characterPronunciation = options.hidePronunciation ? '' : currentLineCharacterPronunciationMap.get(i);
 		const usePrimaryLayout = usePrimaryCharacterPronunciation && !options.suppressPrimaryPronunciation;
-		const shouldShowCharTime = !options.hideTime && currentLinePronunciationUnits.length === 0;
+		const useFixedPrimaryLayout = usePrimaryLayout && useFixedPrimaryCharacterCells;
+		const shouldShowCharTime = !options.hideTime && currentLineRenderedPronunciationUnits.length === 0;
 		const originalContent = furigana
-			? react.createElement('ruby', { style: s.charRuby },
+			? react.createElement('span', { style: s.charFuriganaWrap },
 				char === ' ' ? '\u00A0' : char,
-				react.createElement('rt', { style: s.charRubyText }, furigana)
+				react.createElement('span', { style: s.charFuriganaText }, furigana)
 			)
 			: (char === ' ' ? '\u00A0' : char);
 
 		let style = { ...s.charSpan };
 		if (usePrimaryLayout) style = { ...style, ...s.charSpanPronunciationPrimary };
+		if (useFixedPrimaryLayout) style = { ...style, ...s.charFixedPrimaryCell };
 		if (options.wordSpacer) style = { ...style, ...s.charWordSpace };
 		if (options.inWordUnit) style = { ...style, ...s.charSpanInWord };
 		if (options.inWordPrimary) style = { ...style, ...s.charSpanInWordPrimary };
@@ -2787,6 +2903,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const pronunciationStyle = usePrimaryLayout
 			? {
 				...s.charPronunciationPrimary,
+				...(useFixedPrimaryLayout ? s.charPronunciationPrimaryFixed : null),
 				visibility: characterPronunciation ? 'visible' : 'hidden',
 				color: isPlayed ? 'var(--spice-button-text, #000)' : s.charPronunciationPrimary.color
 			}
@@ -3080,14 +3197,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 								'data-rtl-text-run': 'true'
 							}, currentLineText)
 							: currentLineChars.map((char, i) => {
-							const pronunciationUnit = currentLinePronunciationUnitByStart.get(i);
+							const pronunciationUnit = currentLineRenderedPronunciationUnitByStart.get(i);
 							if (pronunciationUnit) {
 								return renderPronunciationUnit(pronunciationUnit);
 							}
-							if (currentLinePronunciationCoveredIndexes.has(i)) {
+							if (currentLineRenderedPronunciationCoveredIndexes.has(i)) {
 								return null;
 							}
-							if (currentLinePronunciationUnits.length > 0 && /\s/u.test(char)) {
+							if (currentLineRenderedPronunciationUnits.length > 0 && /\s/u.test(char)) {
 								return renderCharacterSpan(char, i, {
 									key: `word-space-${i}`,
 									hidePronunciation: true,

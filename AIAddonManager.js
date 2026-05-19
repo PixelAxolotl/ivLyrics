@@ -715,16 +715,51 @@
                     const resultChars = Array.isArray(resultLine?.c)
                         ? resultLine.c
                         : (Array.isArray(resultLine?.chars) ? resultLine.chars : []);
+                    const hasResultPronunciationArray = Array.isArray(resultLine?.p) || Array.isArray(resultLine?.pronunciations);
+                    const resultPronunciations = Array.isArray(resultLine?.p)
+                        ? resultLine.p
+                        : (Array.isArray(resultLine?.pronunciations) ? resultLine.pronunciations : []);
                     const resultUnits = Array.isArray(resultLine?.u)
                         ? resultLine.u
                         : (Array.isArray(resultLine?.units) ? resultLine.units : []);
                     const byIndex = new Map();
 
-                    resultChars.forEach((item, fallbackIndex) => {
-                        const index = Number.isInteger(Number(item?.i)) ? Number(item.i) : fallbackIndex;
-                        if (index < 0 || index >= sourceChars.length) return;
-                        byIndex.set(index, item);
-                    });
+                    if (unitMode === 'char' && hasResultPronunciationArray) {
+                        if (resultPronunciations.length !== sourceChars.length) {
+                            throw new Error(`Character pronunciation response line ${lineIndex} returned ${resultPronunciations.length} slots, expected ${sourceChars.length}.`);
+                        }
+
+                        resultPronunciations.forEach((value, index) => {
+                            const pronunciation = typeof value === 'string' ? value.trim() : '';
+                            if (pronunciation) {
+                                byIndex.set(index, { p: pronunciation });
+                            }
+                        });
+                    } else {
+                        if (unitMode === 'char') {
+                            throw new Error(`Character pronunciation response line ${lineIndex} missing p array.`);
+                        }
+                        resultChars.forEach((item, fallbackIndex) => {
+                            const index = Number.isInteger(Number(item?.i)) ? Number(item.i) : fallbackIndex;
+                            const rawPronunciation = item?.p ?? item?.pronunciation;
+                            const pronunciation = typeof rawPronunciation === 'string' ? rawPronunciation.trim() : '';
+                            if (index < 0 || index >= sourceChars.length) {
+                                if (unitMode === 'char' && pronunciation) {
+                                    throw new Error(`Character pronunciation response used index ${index} outside line ${lineIndex} length ${sourceChars.length}.`);
+                                }
+                                return;
+                            }
+                            if (unitMode === 'char' && byIndex.has(index)) {
+                                const existingPronunciation = byIndex.get(index)?.p ?? byIndex.get(index)?.pronunciation;
+                                const existingText = typeof existingPronunciation === 'string' ? existingPronunciation.trim() : '';
+                                if (pronunciation && existingText) {
+                                    throw new Error(`Character pronunciation response duplicated index ${index} on line ${lineIndex}.`);
+                                }
+                                if (!pronunciation && existingText) return;
+                            }
+                            byIndex.set(index, item);
+                        });
+                    }
 
                     const sourceUnits = unitMode === 'word'
                         ? this._buildWordPronunciationUnits(text)
@@ -753,7 +788,6 @@
                                 pronunciation
                             });
                         });
-
                         if (!normalizedUnits.length && byIndex.size > 0) {
                             sourceUnits.forEach(unit => {
                                 const pronunciation = [];
@@ -802,6 +836,14 @@
             return /JSON response was truncated|output token limit|Unexpected end|unterminated/i.test(error?.message || '');
         }
 
+        _isCharacterPronunciationFormatError(error) {
+            return /Character pronunciation response .*returned \d+ slots, expected|Character pronunciation response .*outside line|Character pronunciation response duplicated index|Character pronunciation response .*missing p array/i.test(error?.message || '');
+        }
+
+        _isCharacterPronunciationRetryableError(error) {
+            return this._isCharacterPronunciationTruncationError(error) || this._isCharacterPronunciationFormatError(error);
+        }
+
         _notifyCharacterPronunciationProgress(params, progress) {
             if (typeof params?.onProgress !== 'function') return;
             try {
@@ -813,11 +855,15 @@
 
         _buildCharacterPronunciationChunks(lines, options = {}) {
             options = options || {};
+            const unitMode = options.unitMode === 'word' ? 'word' : 'char';
             const sourceLines = (Array.isArray(lines) ? lines : [])
                 .map(line => String(line ?? ''));
-            const maxChunkLines = Math.max(1, Number(options.maxLines) || 8);
-            const maxChunkChars = Math.max(160, Number(options.maxChars) || 520);
-            const maxSegmentChars = Math.max(80, Number(options.maxSegmentChars) || 320);
+            const defaultMaxLines = unitMode === 'char' ? 4 : 16;
+            const defaultMaxChars = unitMode === 'char' ? 240 : 1040;
+            const defaultMaxSegmentChars = unitMode === 'char' ? 240 : 640;
+            const maxChunkLines = Math.max(1, Number(options.maxLines) || defaultMaxLines);
+            const maxChunkChars = Math.max(unitMode === 'char' ? 40 : 320, Number(options.maxChars) || defaultMaxChars);
+            const maxSegmentChars = Math.max(unitMode === 'char' ? 40 : 160, Number(options.maxSegmentChars) || defaultMaxSegmentChars);
             const segments = [];
 
             sourceLines.forEach((text, sourceLineIndex) => {
@@ -880,14 +926,17 @@
                     line
                 }));
             } catch (error) {
-                if (!this._isCharacterPronunciationTruncationError(error)) {
+                if (!this._isCharacterPronunciationRetryableError(error)) {
                     throw error;
                 }
 
                 this._notifyCharacterPronunciationProgress(params, {
                     ...(params?._characterPronunciationProgress || {}),
                     phase: 'retry-split',
-                    retry: true
+                    retry: true,
+                    reason: this._isCharacterPronunciationFormatError(error) ? 'format' : 'truncation',
+                    error: error?.message || String(error),
+                    percent: Math.max(1, Number(params?._characterPronunciationProgress?.percent) || 0)
                 });
 
                 if (chunk.segments.length > 1) {
@@ -907,7 +956,8 @@
 
                 const [segment] = chunk.segments;
                 const chars = Array.from(segment?.text || '');
-                if (chars.length > 80) {
+                const splitThreshold = this._isCharacterPronunciationFormatError(error) ? 40 : 160;
+                if (chars.length > splitThreshold) {
                     const mid = Math.ceil(chars.length / 2);
                     const leftSegment = {
                         sourceLineIndex: segment.sourceLineIndex,
@@ -928,6 +978,124 @@
                 }
 
                 throw error;
+            }
+        }
+
+        _mergeCharacterPronunciationChunkResult(mergedLines, chunkResult, unitMode) {
+            chunkResult.forEach(({ segment, line }) => {
+                if (!segment || !line || !Array.isArray(line.chars)) return;
+                const targetLine = mergedLines[segment.sourceLineIndex];
+                if (!targetLine) return;
+
+                if (unitMode === 'word' && Array.isArray(line.units)) {
+                    line.units.forEach(unit => {
+                        const pronunciation = typeof unit?.pronunciation === 'string' ? unit.pronunciation.trim() : '';
+                        if (!pronunciation) return;
+
+                        const start = segment.charOffset + Number(unit.start);
+                        const end = segment.charOffset + Number(unit.end);
+                        if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || end >= targetLine.chars.length) return;
+
+                        const existingUnit = targetLine.units.find(item => item.start === start && item.end === end);
+                        if (existingUnit) {
+                            existingUnit.pronunciation = pronunciation;
+                        } else {
+                            targetLine.units.push({
+                                start,
+                                end,
+                                text: targetLine.chars.slice(start, end + 1).map(item => item.char).join(''),
+                                pronunciation
+                            });
+                        }
+                    });
+                    return;
+                }
+
+                line.chars.forEach(item => {
+                    if (!item?.pronunciation) return;
+                    const itemIndex = Number(item.i ?? 0);
+                    if (!Number.isInteger(itemIndex)) return;
+                    const targetIndex = segment.charOffset + itemIndex;
+                    if (targetIndex < 0 || targetIndex >= targetLine.chars.length) return;
+                    targetLine.chars[targetIndex].pronunciation = item.pronunciation;
+                });
+            });
+        }
+
+        async _generateCharacterPronunciationChunks(addon, params, chunks, unitMode, mergedLines, progressContext = {}) {
+            const total = chunks.length;
+            const concurrency = Math.min(
+                Math.max(1, total || 1),
+                Math.max(1, Math.min(6, Number(progressContext.concurrency) || 3))
+            );
+            let nextChunkIndex = 0;
+            let completedChunks = 0;
+            let fatalChunkError = null;
+
+            const createProgressBase = (chunkIndex) => ({
+                provider: progressContext.provider,
+                providerIndex: progressContext.providerIndex,
+                providerTotal: progressContext.providerTotal,
+                total,
+                current: total > 0 ? Math.max(1, Math.min(total, completedChunks + 1)) : 0,
+                completed: completedChunks,
+                remaining: Math.max(0, total - completedChunks),
+                percent: total > 0 ? Math.round((completedChunks / total) * 100) : 0,
+                concurrency,
+                chunkIndex: chunkIndex + 1
+            });
+
+            const runChunkWorker = async () => {
+                while (!fatalChunkError) {
+                    const chunkIndex = nextChunkIndex++;
+                    if (chunkIndex >= total) {
+                        return;
+                    }
+
+                    window.__ivLyricsDebugLog?.(`[AIAddonManager] Character pronunciation chunk ${chunkIndex + 1}/${total} via ${addon.id}`);
+                    const progressBase = createProgressBase(chunkIndex);
+                    this._notifyCharacterPronunciationProgress(params, {
+                        ...progressBase,
+                        phase: 'chunk-start',
+                        percent: total > 0 ? Math.max(1, progressBase.percent) : progressBase.percent
+                    });
+
+                    try {
+                        const chunkResult = await this._generateCharacterPronunciationChunk(addon, {
+                            ...params,
+                            unitMode,
+                            _characterPronunciationProgress: progressBase
+                        }, chunks[chunkIndex]);
+                        this._mergeCharacterPronunciationChunkResult(mergedLines, chunkResult, unitMode);
+                        completedChunks++;
+                        this._notifyCharacterPronunciationProgress(params, {
+                            ...createProgressBase(chunkIndex),
+                            phase: 'chunk-complete',
+                            current: completedChunks,
+                            completed: completedChunks,
+                            remaining: Math.max(0, total - completedChunks),
+                            percent: total > 0 ? Math.round((completedChunks / total) * 100) : 100
+                        });
+                    } catch (error) {
+                        this._notifyCharacterPronunciationProgress(params, {
+                            ...createProgressBase(chunkIndex),
+                            phase: 'chunk-error',
+                            error: error?.message || String(error),
+                            percent: total > 0 ? Math.max(1, Math.round((completedChunks / total) * 100)) : 0
+                        });
+                        fatalChunkError = error;
+                        return;
+                    }
+                }
+            };
+
+            const workers = Array.from(
+                { length: Math.min(concurrency, total) },
+                () => runChunkWorker()
+            );
+            await Promise.all(workers);
+            if (fatalChunkError) {
+                throw fatalChunkError;
             }
         }
 
@@ -956,7 +1124,14 @@
             const sourceLines = (Array.isArray(params?.lines) ? params.lines : [])
                 .map(line => String(line ?? ''));
             const unitMode = this._getCharacterPronunciationUnitMode(params, sourceLines);
-            const chunks = this._buildCharacterPronunciationChunks(sourceLines, params?.chunking || params?.characterPronunciationChunking);
+            const chunkingOptions = params?.chunking || params?.characterPronunciationChunking || {};
+            const effectiveChunkingOptions = { ...chunkingOptions, unitMode };
+            const chunks = this._buildCharacterPronunciationChunks(sourceLines, effectiveChunkingOptions);
+            const defaultChunkConcurrency = unitMode === 'char' ? 4 : 3;
+            const chunkConcurrency = Math.min(
+                Math.max(1, chunks.length || 1),
+                Math.max(1, Math.min(6, Number(chunkingOptions.concurrency) || defaultChunkConcurrency))
+            );
 
             this._notifyCharacterPronunciationProgress(params, {
                 phase: 'prepared',
@@ -974,7 +1149,7 @@
 
                 try {
                     window.__ivLyricsDebugLog?.(`[AIAddonManager] Trying character pronunciation provider: ${addon.id}`);
-                    window.__ivLyricsDebugLog?.(`[AIAddonManager] Character pronunciation chunks: ${chunks.length}`);
+                    window.__ivLyricsDebugLog?.(`[AIAddonManager] Character pronunciation chunks: ${chunks.length}, concurrency: ${chunkConcurrency}`);
                     this._notifyCharacterPronunciationProgress(params, {
                         phase: 'provider-start',
                         provider: addon.id,
@@ -1000,73 +1175,12 @@
                         }))
                     }));
 
-                    for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
-                        window.__ivLyricsDebugLog?.(`[AIAddonManager] Character pronunciation chunk ${chunkIndex + 1}/${chunks.length} via ${addon.id}`);
-                        const progressBase = {
-                            provider: addon.id,
-                            providerIndex: providerIndex + 1,
-                            providerTotal: providers.length,
-                            total: chunks.length,
-                            current: chunkIndex + 1,
-                            completed: chunkIndex,
-                            remaining: Math.max(0, chunks.length - chunkIndex - 1),
-                            percent: chunks.length > 0 ? Math.round((chunkIndex / chunks.length) * 100) : 0
-                        };
-                        this._notifyCharacterPronunciationProgress(params, {
-                            ...progressBase,
-                            phase: 'chunk-start'
-                        });
-
-                        const chunkResult = await this._generateCharacterPronunciationChunk(addon, {
-                            ...params,
-                            unitMode,
-                            _characterPronunciationProgress: progressBase
-                        }, chunks[chunkIndex]);
-                        chunkResult.forEach(({ segment, line }) => {
-                            if (!segment || !line || !Array.isArray(line.chars)) return;
-                            const targetLine = mergedLines[segment.sourceLineIndex];
-                            if (!targetLine) return;
-
-                            if (unitMode === 'word' && Array.isArray(line.units)) {
-                                line.units.forEach(unit => {
-                                    const pronunciation = typeof unit?.pronunciation === 'string' ? unit.pronunciation.trim() : '';
-                                    if (!pronunciation) return;
-
-                                    const start = segment.charOffset + Number(unit.start);
-                                    const end = segment.charOffset + Number(unit.end);
-                                    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || end >= targetLine.chars.length) return;
-
-                                    const existingUnit = targetLine.units.find(item => item.start === start && item.end === end);
-                                    if (existingUnit) {
-                                        existingUnit.pronunciation = pronunciation;
-                                    } else {
-                                        targetLine.units.push({
-                                            start,
-                                            end,
-                                            text: targetLine.chars.slice(start, end + 1).map(item => item.char).join(''),
-                                            pronunciation
-                                        });
-                                    }
-                                });
-                                return;
-                            }
-
-                            line.chars.forEach(item => {
-                                if (!item?.pronunciation) return;
-                                const targetIndex = segment.charOffset + Number(item.i || 0);
-                                if (targetIndex < 0 || targetIndex >= targetLine.chars.length) return;
-                                targetLine.chars[targetIndex].pronunciation = item.pronunciation;
-                            });
-                        });
-
-                        this._notifyCharacterPronunciationProgress(params, {
-                            ...progressBase,
-                            phase: 'chunk-complete',
-                            completed: chunkIndex + 1,
-                            remaining: chunks.length - chunkIndex - 1,
-                            percent: chunks.length > 0 ? Math.round(((chunkIndex + 1) / chunks.length) * 100) : 100
-                        });
-                    }
+                    await this._generateCharacterPronunciationChunks(addon, params, chunks, unitMode, mergedLines, {
+                        provider: addon.id,
+                        providerIndex: providerIndex + 1,
+                        providerTotal: providers.length,
+                        concurrency: chunkConcurrency
+                    });
 
                     this._notifyCharacterPronunciationProgress(params, {
                         phase: 'complete',

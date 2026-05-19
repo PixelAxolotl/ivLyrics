@@ -2395,6 +2395,7 @@ const Toast = {
    */
   _ensureContainer() {
     if (this._container && document.body.contains(this._container)) {
+      document.body.appendChild(this._container);
       return this._container;
     }
 
@@ -2656,6 +2657,13 @@ const Toast = {
    */
   error(message, duration = 3000) {
     return this.show(message, true, duration);
+  },
+
+  /**
+   * Warning toast shorthand
+   */
+  warning(message, duration = 3000) {
+    return this.show(message, false, duration);
   }
 };
 

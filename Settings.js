@@ -1005,6 +1005,9 @@ const AddonSettingsCard = ({ addon, isEnabled, onToggle, isExpanded, onExpandTog
     if (addon.supports?.tmi) {
       badges.push(react.createElement("span", { key: "tmi", className: "support-badge unsynced" }, I18n.t("settings.aiProviders.supports.tmi") || "TMI"));
     }
+    if (addon.supports?.characterPronunciation) {
+      badges.push(react.createElement("span", { key: "characterPronunciation", className: "support-badge karaoke" }, I18n.t("settings.aiProviders.supports.characterPronunciation") || "글자 발음"));
+    }
     return badges;
   };
 

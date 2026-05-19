@@ -19,11 +19,15 @@
     const AI_CAPABILITIES = {
         TRANSLATE: 'translate',    // 가사 번역/발음
         METADATA: 'metadata',      // 메타데이터 번역
-        TMI: 'tmi'                 // TMI 생성
+        TMI: 'tmi',                // TMI 생성
+        CHARACTER_PRONUNCIATION: 'characterPronunciation' // 문자별 발음
     };
 
     // 기본 활성화 Addon (모든 AI Addon은 API 키 설정 후 활성화 권장)
     const DEFAULT_ENABLED_ADDONS = [];
+    const CHARACTER_PRONUNCIATION_CJK_LANG_RE = /^(ja|jp|ko|kr|zh|zh-cn|zh-tw|cn|tw|yue|cmn)$/i;
+    const CHARACTER_PRONUNCIATION_CJK_SCRIPT_RE = /[\u3040-\u30ff\uff66-\uff9f\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af\u1100-\u11ff\u3130-\u318f]/u;
+    const CHARACTER_PRONUNCIATION_WORD_TEXT_RE = /[\p{L}\p{N}]/u;
 
     // ============================================
     // AIAddonManager Class
@@ -163,7 +167,7 @@
          * - author: string (제작자)
          * - description: string | { en: string, ko: string, ... } (설명)
          * - version: string (버전)
-         * - supports: { translate: boolean, metadata: boolean, tmi: boolean } (지원 기능)
+         * - supports: { translate: boolean, metadata: boolean, tmi: boolean, characterPronunciation: boolean } (지원 기능)
          * 
          * 필수 메서드:
          * - getSettingsUI(): React.Component (설정 UI)
@@ -172,6 +176,7 @@
          * - translateLyrics(params): Promise<Object> (supports.translate = true인 경우)
          * - translateMetadata(params): Promise<Object> (supports.metadata = true인 경우)
          * - generateTMI(params): Promise<Object> (supports.tmi = true인 경우)
+         * - generateCharacterPronunciation(params): Promise<Object> (supports.characterPronunciation = true인 경우)
          */
         register(addon) {
             if (!addon || !addon.id) {
@@ -193,7 +198,8 @@
                 addon.supports = {
                     translate: typeof addon.translateLyrics === 'function',
                     metadata: typeof addon.translateMetadata === 'function',
-                    tmi: typeof addon.generateTMI === 'function'
+                    tmi: typeof addon.generateTMI === 'function',
+                    characterPronunciation: typeof addon.generateCharacterPronunciation === 'function'
                 };
             }
 
@@ -208,7 +214,7 @@
 
             this._addons.set(addon.id, addon);
             window.__ivLyricsDebugLog?.(`[AIAddonManager] Registered addon: ${addon.id} (${addon.name})`);
-            window.__ivLyricsDebugLog?.(`[AIAddonManager] Supports: translate=${addon.supports.translate}, metadata=${addon.supports.metadata}, tmi=${addon.supports.tmi}`);
+            window.__ivLyricsDebugLog?.(`[AIAddonManager] Supports: translate=${addon.supports.translate}, metadata=${addon.supports.metadata}, tmi=${addon.supports.tmi}, characterPronunciation=${addon.supports.characterPronunciation}`);
 
             // 이미 초기화 완료된 경우, 새 Addon도 초기화
             if (this._initialized && typeof addon.init === 'function') {
@@ -250,7 +256,7 @@
             }
 
             // 기능 메서드 중 최소 하나는 있어야 함
-            const featureMethods = ['translateLyrics', 'translateMetadata', 'generateTMI'];
+            const featureMethods = ['translateLyrics', 'translateMetadata', 'generateTMI', 'generateCharacterPronunciation'];
             const hasAnyFeature = featureMethods.some(m => typeof addon[m] === 'function');
             if (!hasAnyFeature) {
                 errors.push(`Must implement at least one of: ${featureMethods.join(', ')}`);
@@ -416,7 +422,7 @@
 
         /**
          * 특정 기능을 지원하는 활성화된 Provider 목록 (순서대로)
-         * @param {'translate'|'metadata'|'tmi'} capability - 기능 유형
+         * @param {'translate'|'metadata'|'tmi'|'characterPronunciation'} capability - 기능 유형
          * @returns {Object[]}
          */
         getEnabledProvidersFor(capability) {
@@ -651,6 +657,450 @@
 
             const errorMsg = lastError?.message || this._t('aiProviders.allProvidersFailed', 'All AI providers failed to process the request.');
             this.emit('ai:request:error', { type: 'translate', error: errorMsg });
+            throw new Error(errorMsg);
+        }
+
+        _getCharacterPronunciationUnitMode(params, lines) {
+            const requested = params?.unitMode || params?.characterPronunciationUnitMode;
+            if (requested === 'word' || requested === 'char') {
+                return requested;
+            }
+
+            const sourceLang = String(params?.sourceLang || '').toLowerCase();
+            if (CHARACTER_PRONUNCIATION_CJK_LANG_RE.test(sourceLang)) {
+                return 'char';
+            }
+
+            const joinedLines = (Array.isArray(lines) ? lines : []).join('\n');
+            return CHARACTER_PRONUNCIATION_CJK_SCRIPT_RE.test(joinedLines) ? 'char' : 'word';
+        }
+
+        _buildWordPronunciationUnits(text) {
+            const chars = Array.from(String(text ?? ''));
+            const units = [];
+            let index = 0;
+
+            while (index < chars.length) {
+                while (index < chars.length && /\s/u.test(chars[index])) {
+                    index++;
+                }
+                if (index >= chars.length) break;
+
+                const start = index;
+                while (index < chars.length && !/\s/u.test(chars[index])) {
+                    index++;
+                }
+                const end = index - 1;
+                const token = chars.slice(start, end + 1).join('');
+                if (CHARACTER_PRONUNCIATION_WORD_TEXT_RE.test(token)) {
+                    units.push({ start, end, text: token, pronunciation: '' });
+                }
+            }
+
+            return units;
+        }
+
+        _normalizeCharacterPronunciationResult(result, lines, options = {}) {
+            const sourceLines = (Array.isArray(lines) ? lines : [])
+                .map(line => String(line ?? ''));
+            const unitMode = options.unitMode === 'word' ? 'word' : 'char';
+            const resultLines = Array.isArray(result?.l)
+                ? result.l
+                : (Array.isArray(result?.lines) ? result.lines : []);
+
+            return {
+                lines: sourceLines.map((text, lineIndex) => {
+                    const sourceChars = Array.from(text);
+                    const resultLine = resultLines.find(line => Number(line?.i ?? line?.index) === lineIndex) || resultLines[lineIndex] || {};
+                    const resultChars = Array.isArray(resultLine?.c)
+                        ? resultLine.c
+                        : (Array.isArray(resultLine?.chars) ? resultLine.chars : []);
+                    const resultUnits = Array.isArray(resultLine?.u)
+                        ? resultLine.u
+                        : (Array.isArray(resultLine?.units) ? resultLine.units : []);
+                    const byIndex = new Map();
+
+                    resultChars.forEach((item, fallbackIndex) => {
+                        const index = Number.isInteger(Number(item?.i)) ? Number(item.i) : fallbackIndex;
+                        if (index < 0 || index >= sourceChars.length) return;
+                        byIndex.set(index, item);
+                    });
+
+                    const sourceUnits = unitMode === 'word'
+                        ? this._buildWordPronunciationUnits(text)
+                        : [];
+                    const normalizedUnits = [];
+                    if (unitMode === 'word') {
+                        resultUnits.forEach((item, fallbackIndex) => {
+                            const unitIndex = Number.isInteger(Number(item?.i)) ? Number(item.i) : fallbackIndex;
+                            const sourceUnit = sourceUnits[unitIndex] || null;
+                            const start = Number.isInteger(Number(item?.s ?? item?.start))
+                                ? Number(item?.s ?? item?.start)
+                                : sourceUnit?.start;
+                            const end = Number.isInteger(Number(item?.e ?? item?.end))
+                                ? Number(item?.e ?? item?.end)
+                                : sourceUnit?.end;
+                            const pronunciation = typeof (item?.p ?? item?.pronunciation) === 'string'
+                                ? (item.p ?? item.pronunciation).trim()
+                                : '';
+
+                            if (!pronunciation || !Number.isInteger(start) || !Number.isInteger(end)) return;
+                            if (start < 0 || end < start || end >= sourceChars.length) return;
+                            normalizedUnits.push({
+                                start,
+                                end,
+                                text: sourceChars.slice(start, end + 1).join(''),
+                                pronunciation
+                            });
+                        });
+
+                        if (!normalizedUnits.length && byIndex.size > 0) {
+                            sourceUnits.forEach(unit => {
+                                const pronunciation = [];
+                                for (let i = unit.start; i <= unit.end; i++) {
+                                    const item = byIndex.get(i);
+                                    const rawPronunciation = item?.p ?? item?.pronunciation;
+                                    if (typeof rawPronunciation === 'string' && rawPronunciation.trim()) {
+                                        pronunciation.push(rawPronunciation.trim());
+                                    }
+                                }
+                                if (pronunciation.length) {
+                                    normalizedUnits.push({
+                                        ...unit,
+                                        pronunciation: pronunciation.join('')
+                                    });
+                                }
+                            });
+                        }
+                    }
+
+                    return {
+                        index: lineIndex,
+                        unitMode,
+                        units: normalizedUnits,
+                        chars: sourceChars.map((char, charIndex) => {
+                            const item = byIndex.get(charIndex) || {};
+                            const rawPronunciation = item.p ?? item.pronunciation;
+                            const pronunciation = unitMode === 'word'
+                                ? ''
+                                : (typeof rawPronunciation === 'string'
+                                ? rawPronunciation.trim()
+                                : '');
+
+                            return {
+                                i: charIndex,
+                                char,
+                                pronunciation
+                            };
+                        })
+                    };
+                })
+            };
+        }
+
+        _isCharacterPronunciationTruncationError(error) {
+            return /JSON response was truncated|output token limit|Unexpected end|unterminated/i.test(error?.message || '');
+        }
+
+        _notifyCharacterPronunciationProgress(params, progress) {
+            if (typeof params?.onProgress !== 'function') return;
+            try {
+                params.onProgress(progress);
+            } catch (e) {
+                console.warn('[AIAddonManager] Character pronunciation progress callback failed:', e);
+            }
+        }
+
+        _buildCharacterPronunciationChunks(lines, options = {}) {
+            options = options || {};
+            const sourceLines = (Array.isArray(lines) ? lines : [])
+                .map(line => String(line ?? ''));
+            const maxChunkLines = Math.max(1, Number(options.maxLines) || 8);
+            const maxChunkChars = Math.max(160, Number(options.maxChars) || 520);
+            const maxSegmentChars = Math.max(80, Number(options.maxSegmentChars) || 320);
+            const segments = [];
+
+            sourceLines.forEach((text, sourceLineIndex) => {
+                const chars = Array.from(text);
+                if (chars.length <= maxSegmentChars) {
+                    segments.push({ sourceLineIndex, charOffset: 0, text, charCount: chars.length });
+                    return;
+                }
+
+                for (let offset = 0; offset < chars.length; offset += maxSegmentChars) {
+                    const part = chars.slice(offset, offset + maxSegmentChars).join('');
+                    segments.push({ sourceLineIndex, charOffset: offset, text: part, charCount: Array.from(part).length });
+                }
+            });
+
+            const chunks = [];
+            let current = { segments: [], charCount: 0 };
+            const pushCurrent = () => {
+                if (!current.segments.length) return;
+                chunks.push(current);
+                current = { segments: [], charCount: 0 };
+            };
+
+            segments.forEach(segment => {
+                const wouldExceedLines = current.segments.length >= maxChunkLines;
+                const wouldExceedChars = current.segments.length > 0 && current.charCount + segment.charCount > maxChunkChars;
+                if (wouldExceedLines || wouldExceedChars) {
+                    pushCurrent();
+                }
+                current.segments.push(segment);
+                current.charCount += segment.charCount;
+            });
+            pushCurrent();
+
+            return chunks;
+        }
+
+        async _generateCharacterPronunciationChunk(addon, params, chunk) {
+            try {
+                const chunkLines = chunk.segments.map(segment => segment.text);
+                const {
+                    onProgress,
+                    _characterPronunciationProgress,
+                    chunking,
+                    characterPronunciationChunking,
+                    characterPronunciationUnitMode,
+                    unitMode,
+                    ...providerParams
+                } = params || {};
+                const result = await addon.generateCharacterPronunciation({
+                    ...providerParams,
+                    unitMode: unitMode || characterPronunciationUnitMode || 'char',
+                    lines: chunkLines
+                });
+                const normalized = this._normalizeCharacterPronunciationResult(result, chunkLines, {
+                    unitMode: unitMode || characterPronunciationUnitMode || 'char'
+                });
+                return normalized.lines.map((line, index) => ({
+                    segment: chunk.segments[index],
+                    line
+                }));
+            } catch (error) {
+                if (!this._isCharacterPronunciationTruncationError(error)) {
+                    throw error;
+                }
+
+                this._notifyCharacterPronunciationProgress(params, {
+                    ...(params?._characterPronunciationProgress || {}),
+                    phase: 'retry-split',
+                    retry: true
+                });
+
+                if (chunk.segments.length > 1) {
+                    const mid = Math.ceil(chunk.segments.length / 2);
+                    const left = {
+                        segments: chunk.segments.slice(0, mid),
+                        charCount: chunk.segments.slice(0, mid).reduce((sum, segment) => sum + segment.charCount, 0)
+                    };
+                    const right = {
+                        segments: chunk.segments.slice(mid),
+                        charCount: chunk.segments.slice(mid).reduce((sum, segment) => sum + segment.charCount, 0)
+                    };
+                    const leftResult = await this._generateCharacterPronunciationChunk(addon, params, left);
+                    const rightResult = await this._generateCharacterPronunciationChunk(addon, params, right);
+                    return [...leftResult, ...rightResult];
+                }
+
+                const [segment] = chunk.segments;
+                const chars = Array.from(segment?.text || '');
+                if (chars.length > 80) {
+                    const mid = Math.ceil(chars.length / 2);
+                    const leftSegment = {
+                        sourceLineIndex: segment.sourceLineIndex,
+                        charOffset: segment.charOffset,
+                        text: chars.slice(0, mid).join(''),
+                        charCount: mid
+                    };
+                    const rightText = chars.slice(mid).join('');
+                    const rightSegment = {
+                        sourceLineIndex: segment.sourceLineIndex,
+                        charOffset: segment.charOffset + mid,
+                        text: rightText,
+                        charCount: Array.from(rightText).length
+                    };
+                    const leftResult = await this._generateCharacterPronunciationChunk(addon, params, { segments: [leftSegment], charCount: leftSegment.charCount });
+                    const rightResult = await this._generateCharacterPronunciationChunk(addon, params, { segments: [rightSegment], charCount: rightSegment.charCount });
+                    return [...leftResult, ...rightResult];
+                }
+
+                throw error;
+            }
+        }
+
+        async generateCharacterPronunciation(params) {
+            const providers = this.getEnabledProvidersFor('characterPronunciation');
+
+            if (providers.length === 0) {
+                console.warn('[AIAddonManager] No character pronunciation providers enabled');
+                throw new Error(this._t('aiProviders.noEnabledProviders', 'No AI providers enabled. Please enable at least one provider in settings.'));
+            }
+
+            const {
+                onProgress,
+                _characterPronunciationProgress,
+                ...eventParams
+            } = params || {};
+
+            this.emit('ai:request:start', {
+                type: 'characterPronunciation',
+                providers: providers.map(p => p.id),
+                params: { ...eventParams, lines: '[...]' }
+            });
+
+            let lastError = null;
+            let truncationError = null;
+            const sourceLines = (Array.isArray(params?.lines) ? params.lines : [])
+                .map(line => String(line ?? ''));
+            const unitMode = this._getCharacterPronunciationUnitMode(params, sourceLines);
+            const chunks = this._buildCharacterPronunciationChunks(sourceLines, params?.chunking || params?.characterPronunciationChunking);
+
+            this._notifyCharacterPronunciationProgress(params, {
+                phase: 'prepared',
+                providerTotal: providers.length,
+                total: chunks.length,
+                current: 0,
+                completed: 0,
+                remaining: chunks.length,
+                percent: 0
+            });
+
+            for (let providerIndex = 0; providerIndex < providers.length; providerIndex++) {
+                const addon = providers[providerIndex];
+                if (typeof addon.generateCharacterPronunciation !== 'function') continue;
+
+                try {
+                    window.__ivLyricsDebugLog?.(`[AIAddonManager] Trying character pronunciation provider: ${addon.id}`);
+                    window.__ivLyricsDebugLog?.(`[AIAddonManager] Character pronunciation chunks: ${chunks.length}`);
+                    this._notifyCharacterPronunciationProgress(params, {
+                        phase: 'provider-start',
+                        provider: addon.id,
+                        providerIndex: providerIndex + 1,
+                        providerTotal: providers.length,
+                        total: chunks.length,
+                        current: 0,
+                        completed: 0,
+                        remaining: chunks.length,
+                        percent: 0
+                    });
+
+                    const mergedLines = sourceLines.map((text, lineIndex) => ({
+                        index: lineIndex,
+                        unitMode,
+                        units: unitMode === 'word'
+                            ? this._buildWordPronunciationUnits(text)
+                            : [],
+                        chars: Array.from(text).map((char, charIndex) => ({
+                            i: charIndex,
+                            char,
+                            pronunciation: ''
+                        }))
+                    }));
+
+                    for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
+                        window.__ivLyricsDebugLog?.(`[AIAddonManager] Character pronunciation chunk ${chunkIndex + 1}/${chunks.length} via ${addon.id}`);
+                        const progressBase = {
+                            provider: addon.id,
+                            providerIndex: providerIndex + 1,
+                            providerTotal: providers.length,
+                            total: chunks.length,
+                            current: chunkIndex + 1,
+                            completed: chunkIndex,
+                            remaining: Math.max(0, chunks.length - chunkIndex - 1),
+                            percent: chunks.length > 0 ? Math.round((chunkIndex / chunks.length) * 100) : 0
+                        };
+                        this._notifyCharacterPronunciationProgress(params, {
+                            ...progressBase,
+                            phase: 'chunk-start'
+                        });
+
+                        const chunkResult = await this._generateCharacterPronunciationChunk(addon, {
+                            ...params,
+                            unitMode,
+                            _characterPronunciationProgress: progressBase
+                        }, chunks[chunkIndex]);
+                        chunkResult.forEach(({ segment, line }) => {
+                            if (!segment || !line || !Array.isArray(line.chars)) return;
+                            const targetLine = mergedLines[segment.sourceLineIndex];
+                            if (!targetLine) return;
+
+                            if (unitMode === 'word' && Array.isArray(line.units)) {
+                                line.units.forEach(unit => {
+                                    const pronunciation = typeof unit?.pronunciation === 'string' ? unit.pronunciation.trim() : '';
+                                    if (!pronunciation) return;
+
+                                    const start = segment.charOffset + Number(unit.start);
+                                    const end = segment.charOffset + Number(unit.end);
+                                    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end < start || end >= targetLine.chars.length) return;
+
+                                    const existingUnit = targetLine.units.find(item => item.start === start && item.end === end);
+                                    if (existingUnit) {
+                                        existingUnit.pronunciation = pronunciation;
+                                    } else {
+                                        targetLine.units.push({
+                                            start,
+                                            end,
+                                            text: targetLine.chars.slice(start, end + 1).map(item => item.char).join(''),
+                                            pronunciation
+                                        });
+                                    }
+                                });
+                                return;
+                            }
+
+                            line.chars.forEach(item => {
+                                if (!item?.pronunciation) return;
+                                const targetIndex = segment.charOffset + Number(item.i || 0);
+                                if (targetIndex < 0 || targetIndex >= targetLine.chars.length) return;
+                                targetLine.chars[targetIndex].pronunciation = item.pronunciation;
+                            });
+                        });
+
+                        this._notifyCharacterPronunciationProgress(params, {
+                            ...progressBase,
+                            phase: 'chunk-complete',
+                            completed: chunkIndex + 1,
+                            remaining: chunks.length - chunkIndex - 1,
+                            percent: chunks.length > 0 ? Math.round(((chunkIndex + 1) / chunks.length) * 100) : 100
+                        });
+                    }
+
+                    this._notifyCharacterPronunciationProgress(params, {
+                        phase: 'complete',
+                        provider: addon.id,
+                        providerIndex: providerIndex + 1,
+                        providerTotal: providers.length,
+                        total: chunks.length,
+                        current: chunks.length,
+                        completed: chunks.length,
+                        remaining: 0,
+                        percent: 100
+                    });
+                    this.emit('ai:request:success', { type: 'characterPronunciation', provider: addon.id });
+                    return { lines: mergedLines, provider: addon.id };
+                } catch (e) {
+                    console.warn(`[AIAddonManager] Provider ${addon.id} failed for generateCharacterPronunciation:`, e.message);
+                    this._notifyCharacterPronunciationProgress(params, {
+                        phase: 'provider-error',
+                        provider: addon.id,
+                        providerIndex: providerIndex + 1,
+                        providerTotal: providers.length,
+                        total: chunks.length,
+                        error: e?.message || String(e)
+                    });
+                    lastError = e;
+                    if (!truncationError && this._isCharacterPronunciationTruncationError(e)) {
+                        truncationError = e;
+                    }
+                    continue;
+                }
+            }
+
+            const errorMsg = truncationError?.message || lastError?.message || this._t('aiProviders.allProvidersFailed', 'All AI providers failed to process the request.');
+            this.emit('ai:request:error', { type: 'characterPronunciation', error: errorMsg });
             throw new Error(errorMsg);
         }
 

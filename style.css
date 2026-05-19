@@ -29,6 +29,7 @@
   --iv-layer-internal-dialog: 1200;
   --iv-layer-fullscreen: 2147483600;
   --iv-layer-modal: 2147483647;
+  --iv-layer-toast: 2147483647;
 }
 
 .ivlyrics-settings-overlay.motion-reduced,
@@ -5705,7 +5706,7 @@ ruby rt {
   position: fixed;
   top: 80px;
   right: 24px;
-  z-index: var(--iv-layer-modal);
+  z-index: var(--iv-layer-toast);
   display: flex;
   flex-direction: column;
   gap: 10px;

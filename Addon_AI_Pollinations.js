@@ -29,7 +29,8 @@
         supports: {
             translate: true,    // 가사 번역/발음
             metadata: true,     // 메타데이터 번역
-            tmi: true           // TMI 생성
+            tmi: true,
+            characterPronunciation: true
         },
         models: [] // API에서 동적으로 로드
     };
@@ -404,6 +405,73 @@ ${text}
 OUTPUT (${lineCount} lines of pronunciation only):`;
     }
 
+    function buildCharacterPronunciationPrompt(lines, lang = 'ko', sourceLang = 'auto', unitMode = 'char') {
+        const safeLines = (Array.isArray(lines) ? lines : []).map(line => String(line ?? ''));
+        const payload = safeLines.map((text, index) => ({
+            i: index,
+            t: text,
+            n: Array.from(text).length
+        }));
+        const langInfo = getLangInfo(lang);
+        const isWordMode = unitMode === 'word';
+        const outputRules = isWordMode
+            ? `- Output compact JSON only: top key l; each line has i and u; each pronunciation item has s=start character index, e=end character index, and p=whole word pronunciation.
+- Split each line by whitespace into word/token ranges. Do not split alphabetic words into letters.
+- Omit whitespace and punctuation-only tokens from u to save tokens.
+- p must be one natural spoken pronunciation for the whole word/token in ${langInfo.native}.`
+            : `- Output compact JSON only: top key l; each line has i and c; each pronunciation item has i=character index and p=pronunciation.
+- Omit characters with empty pronunciation from c to save tokens. Spaces, punctuation, brackets, symbols, silent/helper letters should usually be omitted.
+- p must be short and readable in ${langInfo.native}.`;
+        const alignmentRules = isWordMode
+            ? `- For alphabetic and whitespace-separated languages, convert each whole word to spoken pronunciation once. Do not assign syllables to individual letters.
+- Example: English "hello" should be one unit like {"s":0,"e":4,"p":"??"}, not h=?/e=?/l=?.
+- For contractions, liaison, vowel reduction, doubled consonants, and connected-speech effects, prefer natural sung pronunciation over literal spelling.`
+            : `- For alphabetic languages, do not spell letters one by one. Convert words to spoken pronunciation first, then distribute that sound across characters.
+- For digraphs or combined letters (sh, ch, th, ph, qu, ll, etc.), put the combined sound on the most natural character and leave helper characters empty if needed.
+- For silent letters, use an empty string.
+- For contractions, liaison, vowel reduction, doubled consonants, and other connected-speech effects, prefer natural sung pronunciation over literal spelling.`;
+        const outputShape = isWordMode
+            ? '{"l":[{"i":0,"u":[{"s":0,"e":4,"p":"??"}]}]}'
+            : '{"l":[{"i":0,"c":[{"i":0,"p":"?"}]}]}';
+
+        return `You are a multilingual lyrics pronunciation aligner for karaoke sync editing.
+
+Task:
+- Read each full lyric line first, infer the natural pronunciation in context for the input source language (${sourceLang}), then align that sound back onto the original lyric text for karaoke timing.
+- Return ${isWordMode ? 'word-level' : 'character-level'} pronunciation hints in ${langInfo.name} (${langInfo.native}), not a meaning translation.
+- Do NOT pronounce each character in isolation. The output must sound natural when the character hints are read in sequence.
+
+Rules:
+- Return ONLY valid JSON. No markdown, no code fences, no explanations.
+- Preserve every line index.
+- Input uses compact keys: i=line index, t=line text, n=character count. Split t into Unicode code points; positions are 0-based.
+${outputRules}
+${alignmentRules}
+- For syllabic scripts, align by natural syllable sound while still returning one item per character.
+- For logographic scripts such as hanzi/kanji/hanja, infer the common reading from the word and split it across characters as naturally as possible. If a character has no separate sound, use an empty string.
+- For Japanese specifically, handle small kana and sound changes naturally:
+  - small っ should be a geminated consonant or brief stop, not つ.
+  - small ゃ/ゅ/ょ should combine with the previous kana.
+  - ん should use the context-sensitive nasal sound instead of a fixed isolated "응".
+  - long vowels and vowel sequences such as ー, おう, えい, ああ should preserve length naturally.
+  - particles は, へ, を should use the particle pronunciation when clearly used as particles.
+
+Korean target examples:
+${isWordMode ? '- In word mode, return English examples as whole u items per word, never as letter-level c items.' : ''}
+- English "night" should sound like "나이트", not "엔 아이 지 에이치 티". Example split: n=나, i=이, t=트; omit silent g/h.
+- English "the" should sound like "더", not "티 에이치 이". Example split: t=더; omit helper h/e.
+- のって should be close to "노ㅅ데" or "노옷데", not "노 츠 테". Example split: の=노, っ=ㅅ, て=데.
+- 爺ちゃん should be close to "지이챠안", not "지 치 야 응". Example split: 爺=지이, ち=챠, ん=안; omit helper ゃ.
+
+Return this compact JSON shape:
+${outputShape}
+
+Input source language: ${sourceLang}
+Pronunciation unit mode: ${unitMode}
+Input lines:
+${JSON.stringify(payload)}`;
+    }
+
     function buildMetadataPrompt(title, artist, lang) {
         const langInfo = getLangInfo(lang);
 
@@ -661,22 +729,28 @@ Return ONLY valid JSON. Do not add any text before or after the JSON.
     }
 
     function extractJSON(text) {
-        // Remove markdown code blocks
+        const truncatedMessage = 'AI JSON response was truncated. The provider or model likely hit its output token limit. Try a higher max output token setting, a different provider, or shorter lyrics.';
+        const isProbablyTruncatedJSON = (value, error) => {
+            const trimmed = String(value || '').trim();
+            if (/Unexpected end|unterminated/i.test(error?.message || '')) return true;
+            if (!trimmed.includes('{')) return false;
+            return !trimmed.endsWith('}') || trimmed.lastIndexOf('}') < trimmed.lastIndexOf('{');
+        };
         let cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
 
-        // Try direct parse
         try {
             return JSON.parse(cleaned);
-        } catch {
-            // Find JSON object in text
+        } catch (directError) {
             const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 try {
                     return JSON.parse(jsonMatch[0]);
-                } catch {
+                } catch (matchError) {
+                    if (isProbablyTruncatedJSON(cleaned, matchError)) throw new Error(truncatedMessage);
                     throw new Error('Failed to parse JSON response');
                 }
             }
+            if (isProbablyTruncatedJSON(cleaned, directError)) throw new Error(truncatedMessage);
             throw new Error('No valid JSON found in response');
         }
     }
@@ -975,6 +1049,19 @@ Return ONLY valid JSON. Do not add any text before or after the JSON.
             } else {
                 return { translation: lines };
             }
+        },
+
+        async generateCharacterPronunciation({ lines, lang = 'ko', sourceLang = 'auto', unitMode = 'char' }) {
+            if (!Array.isArray(lines) || lines.length === 0) {
+                throw new Error('No lines provided');
+            }
+
+            const prompt = buildCharacterPronunciationPrompt(lines, lang, sourceLang, unitMode);
+            const result = await callPollinationsAPI(prompt);
+            if (!result || !(Array.isArray(result.l) || Array.isArray(result.lines))) {
+                throw new Error('Invalid character pronunciation response');
+            }
+            return result;
         },
 
         async translateMetadata({ title, artist, lang }) {

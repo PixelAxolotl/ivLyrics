@@ -81,6 +81,56 @@ const FullscreenOverlay = (() => {
         return true;
     };
 
+    const SHARE_ICON_PATH = '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.7 10.7 15.3 6.3"/><path d="M8.7 13.3 15.3 17.7"/>';
+
+    const getFirstSpotifyUri = (...values) => {
+        for (const value of values) {
+            if (!value) continue;
+
+            if (Array.isArray(value)) {
+                const nestedUri = getFirstSpotifyUri(...value);
+                if (nestedUri) return nestedUri;
+                continue;
+            }
+
+            if (typeof value === "object") {
+                const nestedUri = getFirstSpotifyUri(value.uri, value.link);
+                if (nestedUri) return nestedUri;
+                continue;
+            }
+
+            const match = String(value).match(/spotify:(track|artist|album):[A-Za-z0-9]+/);
+            if (match) return match[0];
+        }
+
+        return "";
+    };
+
+    const spotifyUriToPath = (uri) => {
+        const match = String(uri || "").match(/^spotify:(track|artist|album):([A-Za-z0-9]+)$/);
+        return match ? `/${match[1]}/${match[2]}` : "";
+    };
+
+    const getCurrentAlbumUri = () => {
+        const item = Spicetify.Player.data?.item;
+        const metadata = item?.metadata || {};
+        return getFirstSpotifyUri(
+            item?.album?.uri,
+            metadata.album_uri,
+            metadata.album?.uri
+        );
+    };
+
+    const getCurrentArtistUri = () => {
+        const item = Spicetify.Player.data?.item;
+        const metadata = item?.metadata || {};
+        return getFirstSpotifyUri(
+            item?.artists,
+            metadata.artist_uri,
+            metadata.artist_uris
+        );
+    };
+
     // Clock Component
     const Clock = ({ show, showSeconds = false, size = 48 }) => {
         const [time, setTime] = useState(new Date());
@@ -642,9 +692,13 @@ const FullscreenOverlay = (() => {
                     title: I18n.t("fullscreen.controls.share")
                 },
                     react.createElement("svg", {
-                        viewBox: "0 0 16 16",
-                        fill: "currentColor",
-                        dangerouslySetInnerHTML: { __html: Spicetify.SVGIcons["share"] || '<path d="M13.5 1a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM11 2.5a2.5 2.5 0 1 1 .603 1.628l-6.718 3.12a2.499 2.499 0 0 1 0 1.504l6.718 3.12a2.5 2.5 0 1 1-.488.876l-6.718-3.12a2.5 2.5 0 1 1 0-3.256l6.718-3.12A2.5 2.5 0 0 1 11 2.5zm-8.5 4a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm11 5.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z"/>' }
+                        viewBox: "0 0 24 24",
+                        fill: "none",
+                        stroke: "currentColor",
+                        strokeWidth: "2",
+                        strokeLinecap: "round",
+                        strokeLinejoin: "round",
+                        dangerouslySetInnerHTML: { __html: SHARE_ICON_PATH }
                     })
                 )
             ),
@@ -1004,7 +1058,8 @@ const FullscreenOverlay = (() => {
         currentLyricIndex = 0,
         totalLyrics = 0,
         translatedMetadata = null,
-        trackUri = null
+        trackUri = null,
+        onExitFullscreen = null
     }) => {
         const [uiVisible, setUiVisible] = useState(true);
         const [tmiMode, setTmiMode] = useState(false);
@@ -1021,6 +1076,41 @@ const FullscreenOverlay = (() => {
         });
         const hideTimerRef = useRef(null);
         const uiVisibleRef = useRef(true);
+
+        const navigateSpotifyUri = useCallback((uri) => {
+            const path = spotifyUriToPath(uri);
+            if (!path) return;
+
+            onExitFullscreen?.();
+            setTimeout(() => {
+                Spicetify.Platform?.History?.push?.(path);
+            }, 0);
+        }, [onExitFullscreen]);
+
+        const createNavigationProps = useCallback((uri, className) => {
+            const path = spotifyUriToPath(uri);
+            if (!path) {
+                return { className };
+            }
+
+            const handleNavigate = (event) => {
+                event?.preventDefault?.();
+                event?.stopPropagation?.();
+                navigateSpotifyUri(uri);
+            };
+
+            return {
+                className: `${className} fullscreen-navigation-link`,
+                role: "link",
+                tabIndex: 0,
+                onClick: handleNavigate,
+                onKeyDown: (event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                        handleNavigate(event);
+                    }
+                }
+            };
+        }, [navigateSpotifyUri]);
 
         // Track playback state for TV mode controls
         useEffect(() => {
@@ -1230,6 +1320,10 @@ const FullscreenOverlay = (() => {
             }
         }, [trackUri]);
 
+        const currentTrackUri = getFirstSpotifyUri(trackUri, Spicetify.Player.data?.item?.uri);
+        const currentArtistUri = getCurrentArtistUri();
+        const currentAlbumUri = getCurrentAlbumUri();
+
         if (!isFullscreen) return null;
 
         const isPortraitFullscreen = isFullscreen && isPortraitViewport && !tvModeEnabled;
@@ -1337,7 +1431,7 @@ const FullscreenOverlay = (() => {
                 react.createElement("div", { className: "fullscreen-tv-track-info" },
                     // Title (based on display mode - TV mode shows single line with best available)
                     react.createElement("div", {
-                        className: "fullscreen-tv-title",
+                        ...createNavigationProps(currentTrackUri, "fullscreen-tv-title"),
                         style: { fontSize: `${Math.round(tvAlbumSize * 0.26)}px` }
                     },
                         (() => {
@@ -1368,7 +1462,7 @@ const FullscreenOverlay = (() => {
                     ),
                     // Artist (based on display mode - TV mode shows single line with best available)
                     react.createElement("div", {
-                        className: "fullscreen-tv-artist",
+                        ...createNavigationProps(currentArtistUri, "fullscreen-tv-artist"),
                         style: { fontSize: `${Math.round(tvAlbumSize * 0.16)}px` }
                     },
                         (() => {
@@ -1398,7 +1492,7 @@ const FullscreenOverlay = (() => {
                         })()
                     ),
                     // Album name (from context)
-                    tvShowAlbumName && react.createElement("div", { className: "fullscreen-tv-album-name" },
+                    tvShowAlbumName && react.createElement("div", createNavigationProps(currentAlbumUri, "fullscreen-tv-album-name"),
                         (() => {
                             try {
                                 const albumName = Spicetify.Player.data?.item?.metadata?.album_title;
@@ -1551,47 +1645,47 @@ const FullscreenOverlay = (() => {
                             switch (mode) {
                                 case "translated":
                                     elements.push(react.createElement("div", {
-                                        key: "pt-title", className: "portrait-track-title"
+                                        key: "pt-title", ...createNavigationProps(currentTrackUri, "portrait-track-title")
                                     }, applyTrim(translatedTitle || originalTitle)));
                                     break;
                                 case "romanized":
                                     elements.push(react.createElement("div", {
-                                        key: "pt-title", className: "portrait-track-title"
+                                        key: "pt-title", ...createNavigationProps(currentTrackUri, "portrait-track-title")
                                     }, applyTrim(romanizedTitle || originalTitle)));
                                     break;
                                 case "original-translated":
                                     elements.push(react.createElement("div", {
-                                        key: "pt-title", className: "portrait-track-title"
+                                        key: "pt-title", ...createNavigationProps(currentTrackUri, "portrait-track-title")
                                     }, applyTrim(originalTitle)));
                                     if (translatedTitle && translatedTitle !== originalTitle) {
                                         elements.push(react.createElement("div", {
-                                            key: "pt-title-sub", className: "portrait-track-title-sub"
+                                            key: "pt-title-sub", ...createNavigationProps(currentTrackUri, "portrait-track-title-sub")
                                         }, applyTrim(translatedTitle)));
                                     }
                                     break;
                                 case "original-romanized":
                                     elements.push(react.createElement("div", {
-                                        key: "pt-title", className: "portrait-track-title"
+                                        key: "pt-title", ...createNavigationProps(currentTrackUri, "portrait-track-title")
                                     }, applyTrim(originalTitle)));
                                     if (romanizedTitle && romanizedTitle !== originalTitle) {
                                         elements.push(react.createElement("div", {
-                                            key: "pt-title-sub", className: "portrait-track-title-sub"
+                                            key: "pt-title-sub", ...createNavigationProps(currentTrackUri, "portrait-track-title-sub")
                                         }, applyTrim(romanizedTitle)));
                                     }
                                     break;
                                 case "all":
                                 default:
                                     elements.push(react.createElement("div", {
-                                        key: "pt-title", className: "portrait-track-title"
+                                        key: "pt-title", ...createNavigationProps(currentTrackUri, "portrait-track-title")
                                     }, applyTrim(originalTitle)));
                                     if (translatedTitle && translatedTitle !== originalTitle) {
                                         elements.push(react.createElement("div", {
-                                            key: "pt-title-trans", className: "portrait-track-title-sub"
+                                            key: "pt-title-trans", ...createNavigationProps(currentTrackUri, "portrait-track-title-sub")
                                         }, applyTrim(translatedTitle)));
                                     }
                                     if (romanizedTitle && romanizedTitle !== originalTitle && romanizedTitle !== translatedTitle) {
                                         elements.push(react.createElement("div", {
-                                            key: "pt-title-rom", className: "portrait-track-title-sub"
+                                            key: "pt-title-rom", ...createNavigationProps(currentTrackUri, "portrait-track-title-sub")
                                         }, applyTrim(romanizedTitle)));
                                     }
                                     break;
@@ -1610,42 +1704,42 @@ const FullscreenOverlay = (() => {
                             switch (mode) {
                                 case "translated":
                                     elements.push(react.createElement("div", {
-                                        key: "pt-artist", className: "portrait-track-artist"
+                                        key: "pt-artist", ...createNavigationProps(currentArtistUri, "portrait-track-artist")
                                     }, applyTrim(translatedArtist || originalArtist)));
                                     break;
                                 case "romanized":
                                     elements.push(react.createElement("div", {
-                                        key: "pt-artist", className: "portrait-track-artist"
+                                        key: "pt-artist", ...createNavigationProps(currentArtistUri, "portrait-track-artist")
                                     }, applyTrim(romanizedArtist || originalArtist)));
                                     break;
                                 case "original-translated":
                                     elements.push(react.createElement("div", {
-                                        key: "pt-artist", className: "portrait-track-artist"
+                                        key: "pt-artist", ...createNavigationProps(currentArtistUri, "portrait-track-artist")
                                     }, applyTrim(originalArtist)));
                                     if (translatedArtist && translatedArtist !== originalArtist) {
                                         elements.push(react.createElement("div", {
-                                            key: "pt-artist-sub", className: "portrait-track-artist-sub"
+                                            key: "pt-artist-sub", ...createNavigationProps(currentArtistUri, "portrait-track-artist-sub")
                                         }, applyTrim(translatedArtist)));
                                     }
                                     break;
                                 case "original-romanized":
                                     elements.push(react.createElement("div", {
-                                        key: "pt-artist", className: "portrait-track-artist"
+                                        key: "pt-artist", ...createNavigationProps(currentArtistUri, "portrait-track-artist")
                                     }, applyTrim(originalArtist)));
                                     if (romanizedArtist && romanizedArtist !== originalArtist) {
                                         elements.push(react.createElement("div", {
-                                            key: "pt-artist-sub", className: "portrait-track-artist-sub"
+                                            key: "pt-artist-sub", ...createNavigationProps(currentArtistUri, "portrait-track-artist-sub")
                                         }, applyTrim(romanizedArtist)));
                                     }
                                     break;
                                 case "all":
                                 default:
                                     elements.push(react.createElement("div", {
-                                        key: "pt-artist", className: "portrait-track-artist"
+                                        key: "pt-artist", ...createNavigationProps(currentArtistUri, "portrait-track-artist")
                                     }, applyTrim(originalArtist)));
                                     if (translatedArtist && translatedArtist !== originalArtist) {
                                         elements.push(react.createElement("div", {
-                                            key: "pt-artist-trans", className: "portrait-track-artist-sub"
+                                            key: "pt-artist-trans", ...createNavigationProps(currentArtistUri, "portrait-track-artist-sub")
                                         }, applyTrim(translatedArtist)));
                                     }
                                     break;
@@ -1654,7 +1748,7 @@ const FullscreenOverlay = (() => {
                         })(),
                         // 앨범명 (옵션)
                         normalShowAlbumName && react.createElement("div", {
-                            className: "portrait-track-album-name"
+                            ...createNavigationProps(currentAlbumUri, "portrait-track-album-name")
                         }, (() => {
                             try {
                                 return Spicetify.Player.data?.item?.metadata?.album_title || '';
@@ -1767,7 +1861,7 @@ const FullscreenOverlay = (() => {
                         // Track info with translated metadata support
                         showInfoInOverlay && react.createElement("div", { className: "lyrics-fullscreen-track-info" },
                             // Title (based on display mode)
-                            react.createElement("div", { className: "lyrics-fullscreen-title-container" },
+                            react.createElement("div", createNavigationProps(currentTrackUri, "lyrics-fullscreen-title-container"),
                                 (() => {
                                     const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
                                     const originalTitle = title || Spicetify.Player.data?.item?.metadata?.title;
@@ -1858,7 +1952,7 @@ const FullscreenOverlay = (() => {
                                 })()
                             ),
                             // Artist (based on display mode)
-                            react.createElement("div", { className: "lyrics-fullscreen-artist-container" },
+                            react.createElement("div", createNavigationProps(currentArtistUri, "lyrics-fullscreen-artist-container"),
                                 (() => {
                                     const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
                                     const originalArtist = artist || Spicetify.Player.data?.item?.metadata?.artist_name;
@@ -1938,7 +2032,7 @@ const FullscreenOverlay = (() => {
                             ),
                             // Album name (optional)
                             normalShowAlbumNameInOverlay && react.createElement("div", {
-                                className: "lyrics-fullscreen-album-name",
+                                ...createNavigationProps(currentAlbumUri, "lyrics-fullscreen-album-name"),
                                 style: { fontSize: `${Math.round(artistSize * 0.85)}px` }
                             },
                                 (() => {

@@ -3515,6 +3515,24 @@ ruby rt {
     opacity var(--iv-motion-duration-medium) var(--iv-motion-ease-standard);
 }
 
+.fullscreen-navigation-link {
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.fullscreen-navigation-link:hover {
+  color: var(--spice-text);
+  opacity: 1;
+  text-decoration: underline;
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.14em;
+}
+
+.fullscreen-navigation-link:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.48);
+  outline-offset: 4px;
+}
+
 /* Right Panel (Lyrics) Adjustments */
 .lyrics-lyricsContainer-LyricsContainer.fullscreen-active .lyrics-lyricsContainer-SyncedLyricsPage {
   grid-area: auto;

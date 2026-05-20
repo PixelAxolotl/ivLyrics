@@ -6415,7 +6415,8 @@ class LyricsContainer extends react.Component {
         currentLyricIndex: this.state.currentLyricIndex || 0,
         totalLyrics: Array.isArray(this.state.currentLyrics) ? this.state.currentLyrics.length : 0,
         translatedMetadata: this.state.translatedMetadata,
-        trackUri: this.state.uri
+        trackUri: this.state.uri,
+        onExitFullscreen: this.toggleFullscreen
       }),
       // Tab bar for mode switching
       topBarContent,

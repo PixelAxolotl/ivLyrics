@@ -371,7 +371,11 @@
             const latinWords = normalizedLatinLyrics.match(latinWordRegex) || [];
 
             const detectLatinLanguageByScore = () => {
-                if (latinWords.length < 4) return null;
+                if (latinWords.length < 4) {
+                    if (/\b(aku cinta kamu|aku sayang kamu|cinta kamu)\b/u.test(normalizedLatinLyrics)) return "id";
+                    if (/\b(aku sayang awak|saya sayang awak|cinta awak)\b/u.test(normalizedLatinLyrics)) return "ms";
+                    return null;
+                }
 
                 const languageHints = {
                     de: {
@@ -413,6 +417,14 @@
                     nl: {
                         strong: ["ik", "jij", "je", "wij", "niet", "ben", "bent", "is", "zijn", "met", "voor", "mijn", "jouw", "liefde", "hart", "nacht"],
                         weak: ["de", "het", "een", "en", "of", "maar", "dat", "dit", "in", "op", "als"]
+                    },
+                    id: {
+                        strong: ["aku", "kamu", "kau", "tidak", "tak", "bisa", "ingin", "karena", "denganmu", "bersamamu", "dirimu", "cinta", "hati", "hatiku", "rindu", "malam", "sendiri", "selalu", "pernah"],
+                        weak: ["yang", "dan", "di", "ke", "dari", "untuk", "dengan", "ini", "itu", "ada", "akan", "bukan", "hanya", "jangan", "semua", "tanpa", "membuat", "percaya"]
+                    },
+                    ms: {
+                        strong: ["aku", "saya", "awak", "kau", "tidak", "tak", "mahu", "boleh", "kerana", "denganmu", "bersamamu", "dirimu", "cinta", "hati", "hatiku", "rindu", "malam", "sendiri", "selalu", "pernah"],
+                        weak: ["yang", "dan", "di", "ke", "dari", "untuk", "dengan", "ini", "itu", "ada", "akan", "bukan", "hanya", "jangan", "semua", "tanpa", "percaya"]
                     }
                 };
 
@@ -454,6 +466,12 @@
                 }
                 if (/\b(yo soy|estoy aquí|estoy aqui|contigo|mi corazón|mi corazon)\b/u.test(normalizedLatinLyrics)) {
                     scores.es += 4;
+                }
+                if (/\b(aku (ingin|bisa|tak bisa|tidak bisa)|kau dan aku|karena (aku|kamu)|bersamamu|denganmu|cinta ini)\b/u.test(normalizedLatinLyrics)) {
+                    scores.id += 4;
+                }
+                if (/\b(aku (mahu|boleh)|kau dan aku|kerana (aku|awak|kau)|bersamamu|denganmu|cinta ini)\b/u.test(normalizedLatinLyrics)) {
+                    scores.ms += 4;
                 }
 
                 const sorted = Object.entries(scores).sort((left, right) => right[1] - left[1]);
@@ -4159,7 +4177,7 @@
                 ja: false, ko: false, zh: false, ru: false, vi: false,
                 de: false, en: false, es: false, fr: false, it: false,
                 pt: false, nl: false, pl: false, tr: false, ar: false,
-                hi: false, th: false, id: false,
+                hi: false, th: false, id: false, ms: false,
             };
             this.isUsingNetease = isUsingNetease;
             this.initializationPromise = null;
@@ -4323,6 +4341,7 @@
                     case "hi":
                     case "th":
                     case "id":
+                    case "ms":
                         this.finished[langCode] = true;
                         break;
                 }
@@ -4395,6 +4414,7 @@
                 case "hi":
                 case "th":
                 case "id":
+                case "ms":
                     this.finished[langCode] = true;
                     break;
             }

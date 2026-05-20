@@ -1464,6 +1464,9 @@ const CONFIG = {
       StorageManager.getItem(
         "ivLyrics:visual:translation-mode:indonesian"
       ) || "none",
+    "translation-mode:malay":
+      StorageManager.getItem("ivLyrics:visual:translation-mode:malay") ||
+      "none",
     "translation-mode:gemini":
       StorageManager.getItem("ivLyrics:visual:translation-mode:gemini") ||
       "none",
@@ -1528,6 +1531,9 @@ const CONFIG = {
       StorageManager.getItem(
         "ivLyrics:visual:translation-mode-2:indonesian"
       ) || "none",
+    "translation-mode-2:malay":
+      StorageManager.getItem("ivLyrics:visual:translation-mode-2:malay") ||
+      "none",
     "translation-mode-2:gemini":
       StorageManager.getItem("ivLyrics:visual:translation-mode-2:gemini") ||
       "none",

@@ -1854,6 +1854,10 @@ const getStaticOptions = () => ({
       gemini_romaji: I18n.t("translationMenu.romajiGemini"),
       gemini_ko: I18n.t("translationMenu.koGemini"),
     },
+    malay: {
+      gemini_romaji: I18n.t("translationMenu.romajiGemini"),
+      gemini_ko: I18n.t("translationMenu.koGemini"),
+    },
   },
 });
 
@@ -1940,6 +1944,8 @@ const TranslationMenu = react.memo(({ friendlyLanguage, hasTranslation }) => {
       { key: "ar", value: getDisplayLanguageName("ar") },
       { key: "th", value: getDisplayLanguageName("th") },
       { key: "hi", value: getDisplayLanguageName("hi") },
+      { key: "id", value: getDisplayLanguageName("id") },
+      { key: "ms", value: getDisplayLanguageName("ms") },
     ];
 
     // 현재 트랙의 언어 오버라이드 상태 (비동기로 로드)

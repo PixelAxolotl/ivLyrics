@@ -119,7 +119,8 @@
         'it': { name: 'Italian', native: 'Italiano' },
         'th': { name: 'Thai', native: 'ไทย' },
         'vi': { name: 'Vietnamese', native: 'Tiếng Việt' },
-        'id': { name: 'Indonesian', native: 'Bahasa Indonesia' }
+        'id': { name: 'Indonesian', native: 'Bahasa Indonesia' },
+        'ms': { name: 'Malay', native: 'Bahasa Melayu' }
     };
 
     // ============================================

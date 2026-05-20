@@ -972,7 +972,7 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 });
 window.CreditFooter = CreditFooter;
 
-const IdlingIndicator = react.memo(({ isActive = false, delay = 0, durationMs = 0, settingsRevision = 0 }) => {
+const IdlingIndicator = react.memo(({ isActive = false, delay = 0, durationMs = 0, settingsRevision = 0, lineRef = null }) => {
 	const className = useMemo(() =>
 		`lyrics-idling-indicator ${!isActive ? "lyrics-idling-indicator-hidden" : ""} lyrics-lyricsContainer-LyricsLine ${isActive ? "lyrics-lyricsContainer-LyricsLine-active" : ""} lyrics-lyricsContainer-LyricsLine-interlude`,
 		[isActive]
@@ -990,7 +990,7 @@ const IdlingIndicator = react.memo(({ isActive = false, delay = 0, durationMs = 
 
 	return react.createElement(
 		"div",
-		{ className, style },
+		{ className, style, ref: lineRef },
 		react.createElement(
 			"p",
 			{ className: "lyrics-lyricsContainer-LyricsLine-interludeMain" },
@@ -1601,7 +1601,7 @@ const getInterludeInfo = (line, nextLine = null, lineIndex = -1, lineCount = 0) 
 	return {
 		isInterlude: durationMs > INTERLUDE_MIN_DURATION_MS,
 		durationMs,
-		kind: lineIndex >= Math.max(0, lineCount - 1) ? "postlude" : "break",
+		kind: getInstrumentalBreakKind(lineIndex, lineCount),
 	};
 };
 
@@ -1620,7 +1620,7 @@ const getTrailingKaraokeInterludeInfo = (line, nextLine = null, lineIndex = -1, 
 		durationMs,
 		startTime,
 		endTime,
-		kind: getInstrumentalBreakKind(lineIndex, lineCount),
+		kind: lineIndex >= Math.max(0, lineCount - 1) ? "postlude" : "break",
 		source: "karaoke-trailing-gap",
 	};
 };
@@ -2264,6 +2264,7 @@ const renderLyricsItems = ({ items, isKara, position = 0, activeLineRef = null, 
 				delay: item.delay,
 				durationMs: item.durationMs,
 				settingsRevision,
+				lineRef: item.isActive ? activeLineRef : null,
 			});
 		}
 
@@ -2479,6 +2480,24 @@ const useSyncedLyricsEngine = ({
 		return buildGlobalCharState(lyrics, position);
 	}, [lyrics, position, isKara]);
 
+	const activeSourceLineIndex = activeLineIndex - leadingEmptyLines;
+	const activeTrailingInterludeLine = useMemo(() => (
+		activeSourceLineIndex >= 0
+			? createActiveTrailingKaraokeInterludeLine({
+				line: preparedLyrics[activeSourceLineIndex],
+				nextLine: preparedLyrics[activeSourceLineIndex + 1],
+				lineIndex: activeSourceLineIndex,
+				lineCount: preparedLyrics.length,
+				position,
+				isActiveLine: true,
+				isKara,
+			})
+			: null
+	), [activeSourceLineIndex, preparedLyrics, position, isKara]);
+	const activeTrailingInterludeKey = activeTrailingInterludeLine
+		? `${activeTrailingInterludeLine.startTime}:${activeTrailingInterludeLine.endTime}`
+		: "";
+
 	// Was invoked inline on every render — and position updates trigger a render every
 	// frame, so this layout read fired 60 times/sec and forced a synchronous reflow
 	// each time. Now scoped to the events that can actually change the offset:
@@ -2490,7 +2509,7 @@ const useSyncedLyricsEngine = ({
 			return;
 		}
 		setCompactOffset(getCompactSyncedOffset(containerRef.current, activeLineRef.current, isScrolling));
-	}, [compact, activeLineIndex, isScrolling]);
+	}, [compact, activeLineIndex, isScrolling, activeTrailingInterludeKey]);
 
 	useEffect(() => {
 		const actualIndex = Math.max(0, activeLineIndex - leadingEmptyLines);
@@ -2521,7 +2540,7 @@ const useSyncedLyricsEngine = ({
 		}
 
 		return undefined;
-	}, [compact, activeLineIndex, isScrolling, containerRef, activeLineRef]);
+	}, [compact, activeLineIndex, isScrolling, containerRef, activeLineRef, activeTrailingInterludeKey]);
 
 	useEffect(() => {
 		if (compact || !isScrolling || !activeLineRef.current) {
@@ -2533,7 +2552,7 @@ const useSyncedLyricsEngine = ({
 		}, 0);
 
 		return () => clearTimeout(timeoutId);
-	}, [compact, activeLineIndex, isScrolling, containerRef, activeLineRef]);
+	}, [compact, activeLineIndex, isScrolling, containerRef, activeLineRef, activeTrailingInterludeKey]);
 
 	const renderItems = useMemo(() => {
 		if (compact && isScrolling) {
@@ -2603,19 +2622,6 @@ const useSyncedLyricsEngine = ({
 					];
 				});
 		}
-
-		const activeSourceLineIndex = activeLineIndex - leadingEmptyLines;
-		const activeTrailingInterludeLine = activeSourceLineIndex >= 0
-			? createActiveTrailingKaraokeInterludeLine({
-				line: preparedLyrics[activeSourceLineIndex],
-				nextLine: preparedLyrics[activeSourceLineIndex + 1],
-				lineIndex: activeSourceLineIndex,
-				lineCount: preparedLyrics.length,
-				position,
-				isActiveLine: true,
-				isKara,
-			})
-			: null;
 
 		return linesToRender.flatMap((line, visibleIndex) => {
 			const {

@@ -91,6 +91,55 @@
             console.log(...args);
         }
     };
+    const getTranslationPartText = (part) => {
+        const directText = typeof part?.text === "string" ? part.text.trim() : "";
+        if (directText) {
+            return directText;
+        }
+
+        if (Array.isArray(part?.syllables)) {
+            return part.syllables.map(syllable => syllable?.text || "").join("").trim();
+        }
+
+        return "";
+    };
+
+    const getDisplayedVocalPartTexts = (line) => {
+        if (!Array.isArray(line?.vocals?.lead?.syllables) || line.vocals.lead.syllables.length === 0) {
+            return null;
+        }
+
+        const partTexts = [];
+        const leadText = getTranslationPartText(line.vocals.lead);
+        if (leadText) {
+            partTexts.push(leadText);
+        }
+
+        if (Array.isArray(line.vocals.background)) {
+            line.vocals.background.forEach((part) => {
+                if (!Array.isArray(part?.syllables) || part.syllables.length === 0) {
+                    return;
+                }
+
+                const text = getTranslationPartText(part);
+                if (text) {
+                    partTexts.push(text);
+                }
+            });
+        }
+
+        return partTexts.length > 1 ? partTexts : null;
+    };
+
+    const getTranslationRequestLineText = (line) => {
+        const vocalPartTexts = getDisplayedVocalPartTexts(line);
+        if (vocalPartTexts) {
+            return vocalPartTexts.join(" / ");
+        }
+
+        return (line?.originalText || line?.text || "").trim();
+    };
+
     const getLyricsTextCacheHash = (text) => {
         const value = String(text || '').normalize('NFC');
         let hash = 2166136261;
@@ -3967,7 +4016,7 @@
 
                     try {
                         // Gemini API를 통한 발음/번역 요청
-                        const lyricsText = lyrics.map(l => l.text || '').join('\n');
+                        const lyricsText = lyrics.map(getTranslationRequestLineText).join('\n');
 
                         // 발음 요청 (mode1 = gemini_romaji)
                         let pronResult = null;

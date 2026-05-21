@@ -206,6 +206,7 @@ CRITICAL RULES:
 - Never merge multiple input lines into a single output line
 - Never split a single input line into multiple output lines
 - Line N in the output must translate only line N from the input
+- If an input line contains " / " between simultaneous vocal parts, preserve " / " and translate each part separately
 - Keep empty lines as empty
 - Keep ♪ symbols and markers like [Chorus], (Yeah) as-is
 - Do NOT add line numbers, prefixes, or explanations
@@ -247,6 +248,7 @@ CRITICAL RULES:
 - Do NOT translate the meaning of the lyrics
 - Do NOT output the original lyrics unchanged
 - Output EXACTLY ${lineCount} lines, one pronunciation per line
+- If an input line contains " / " between simultaneous vocal parts, preserve " / " and convert each part separately
 - Keep empty lines as empty
 - Keep ♪ symbols and markers like [Chorus], (Yeah) as-is
 - Do NOT add line numbers, prefixes, or explanations

@@ -1694,6 +1694,99 @@ const splitLineByParallelShape = (text, rowCount) => {
 	return [];
 };
 
+const isKaraokeParenthesisOpen = (char) => char === "(" || char === "\uFF08";
+const isKaraokeParenthesisClose = (char) => char === ")" || char === "\uFF09";
+
+const isStandaloneParentheticalText = (text) => {
+	const chars = Array.from(String(text || "").trim());
+	if (chars.length < 2 || !isKaraokeParenthesisOpen(chars[0])) return false;
+
+	let depth = 0;
+	for (let index = 0; index < chars.length; index++) {
+		const char = chars[index];
+		if (isKaraokeParenthesisOpen(char)) {
+			depth++;
+			continue;
+		}
+		if (isKaraokeParenthesisClose(char)) {
+			depth--;
+			if (depth === 0 && index !== chars.length - 1) return false;
+			if (depth < 0) return false;
+		}
+	}
+	return depth === 0 && isKaraokeParenthesisClose(chars[chars.length - 1]);
+};
+
+const stripStandaloneParentheticalText = (text) => {
+	let value = String(text || "").trim();
+	while (isStandaloneParentheticalText(value)) {
+		value = Array.from(value).slice(1, -1).join("").trim();
+	}
+	return value;
+};
+
+const splitLineByVocalRowShape = (text, rows) => {
+	const value = typeof text === "string" ? text.trim() : "";
+	const rowCount = Array.isArray(rows) ? rows.length : 0;
+	if (!value || rowCount <= 1) return [];
+
+	const simpleParts = splitLineByParallelShape(value, rowCount);
+	if (simpleParts.length === rowCount) return simpleParts;
+
+	const segments = [];
+	let buffer = [];
+	let depth = 0;
+	let parenthetical = false;
+	const flush = () => {
+		const segmentText = buffer.join("").trim();
+		if (segmentText) {
+			segments.push({
+				parenthetical,
+				text: parenthetical ? stripStandaloneParentheticalText(segmentText) : segmentText
+			});
+		}
+		buffer = [];
+		parenthetical = depth > 0;
+	};
+
+	Array.from(value).forEach((char) => {
+		if (isKaraokeParenthesisOpen(char)) {
+			if (depth === 0) {
+				flush();
+				parenthetical = true;
+			}
+			depth++;
+			buffer.push(char);
+			return;
+		}
+
+		if (isKaraokeParenthesisClose(char)) {
+			buffer.push(char);
+			if (depth > 0) depth--;
+			if (depth === 0 && parenthetical) flush();
+			return;
+		}
+
+		buffer.push(char);
+	});
+	flush();
+
+	if (segments.length === rowCount) {
+		return segments.map(segment => segment.text);
+	}
+
+	const remaining = [...segments];
+	const rowShapeParts = rows.map((row) => {
+		const rowIsParenthetical = isStandaloneParentheticalText(row?.text);
+		const segmentIndex = remaining.findIndex(segment => segment.parenthetical === rowIsParenthetical);
+		if (segmentIndex < 0) return "";
+		const [segment] = remaining.splice(segmentIndex, 1);
+		return segment.text;
+	});
+
+	return rowShapeParts.every(Boolean) && remaining.length === 0 ? rowShapeParts : [];
+};
+
 const getLastSyllableEndTime = (line) => {
 	let lastEndTime = null;
 	const lineEndTime = toFiniteTime(line?.endTime);
@@ -3343,8 +3436,8 @@ const KaraokeLine = react.memo(({ line, position, isActive, globalCharOffset = 0
 
 	const vocalRows = getKaraokeVocalRows(line);
 	if (vocalRows) {
-		const rowPhonetics = splitLineByParallelShape(phonetic, vocalRows.length);
-		const rowTranslations = splitLineByParallelShape(translation, vocalRows.length);
+		const rowPhonetics = splitLineByVocalRowShape(phonetic, vocalRows);
+		const rowTranslations = splitLineByVocalRowShape(translation, vocalRows);
 		const hasRowPhoneticSubline = vocalRows.some((row, rowIndex) => row.phonetic || rowPhonetics[rowIndex]);
 		const hasRowTranslationSubline = vocalRows.some((row, rowIndex) => row.translation || rowTranslations[rowIndex]);
 		const stackPhonetic = !hasRowPhoneticSubline && typeof phonetic === "string" ? phonetic.trim() : "";

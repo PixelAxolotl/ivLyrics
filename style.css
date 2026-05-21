@@ -1287,6 +1287,184 @@ div.lyrics-tabBar-headerItemLink {
   50% { translate: 0 -1.5px; }
 }
 
+@keyframes ivlyrics-kind-pulse {
+  0%, 100% {
+    scale: 1;
+    filter: brightness(1);
+  }
+  45% {
+    scale: 1.025;
+    filter: brightness(1.12);
+  }
+}
+
+@keyframes ivlyrics-kind-wave {
+  0%, 100% { translate: 0 0; }
+  35% { translate: 0 -0.11em; }
+  70% { translate: 0 0.03em; }
+}
+
+@keyframes ivlyrics-kind-sparkle {
+  0%, 100% {
+    filter: brightness(1);
+    text-shadow: 0 0 0 rgba(255, 255, 255, 0);
+  }
+  42% {
+    filter: brightness(1.22);
+    text-shadow: 0 0 0.18em rgba(255, 255, 255, 0.34), 0 0 0.42em currentColor;
+  }
+  58% {
+    filter: brightness(0.96);
+    text-shadow: 0 0 0.08em rgba(255, 255, 255, 0.16);
+  }
+}
+
+@keyframes ivlyrics-kind-echo {
+  0%, 100% {
+    text-shadow: 0 0 0 rgba(255, 255, 255, 0);
+  }
+  50% {
+    text-shadow:
+      0.07em 0.04em 0 rgba(255, 255, 255, 0.18),
+      0.14em 0.08em 0.22em color-mix(in srgb, var(--lyrics-color-active, #fff) 36%, transparent);
+  }
+}
+
+@keyframes ivlyrics-kind-whisper {
+  0%, 100% {
+    opacity: 0.86;
+    filter: blur(0);
+    translate: 0 0;
+  }
+  45% {
+    opacity: 0.72;
+    filter: blur(0.55px);
+    translate: 0.04em -0.02em;
+  }
+}
+
+@keyframes ivlyrics-kind-bounce {
+  0%, 100% { translate: 0 0; }
+  32% { translate: 0 -0.16em; }
+  58% { translate: 0 0.035em; }
+  76% { translate: 0 -0.045em; }
+}
+
+@keyframes ivlyrics-kind-sway {
+  0%, 100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  30% {
+    translate: -0.035em 0;
+    rotate: -1.2deg;
+  }
+  70% {
+    translate: 0.035em 0;
+    rotate: 1.2deg;
+  }
+}
+
+@keyframes ivlyrics-kind-glow {
+  0%, 100% {
+    filter: brightness(1);
+    text-shadow: 0 0 0 rgba(255, 255, 255, 0);
+  }
+  50% {
+    filter: brightness(1.14);
+    text-shadow:
+      0 0 0.12em rgba(255, 255, 255, 0.3),
+      0 0 0.48em color-mix(in srgb, var(--lyrics-color-active, #fff) 42%, transparent);
+  }
+}
+
+@keyframes ivlyrics-kind-glitch {
+  0%, 100% {
+    translate: 0 0;
+    text-shadow: 0 0 0 transparent;
+  }
+  16% {
+    translate: -0.035em 0.01em;
+    text-shadow: 0.045em 0 rgba(111, 211, 255, 0.34), -0.045em 0 rgba(255, 116, 172, 0.3);
+  }
+  18% {
+    translate: 0.03em -0.01em;
+    text-shadow: -0.04em 0 rgba(111, 211, 255, 0.26), 0.04em 0 rgba(255, 116, 172, 0.28);
+  }
+  20%, 64% {
+    translate: 0 0;
+    text-shadow: 0 0 0 transparent;
+  }
+  66% {
+    translate: 0.025em 0;
+    text-shadow: 0.035em 0 rgba(111, 211, 255, 0.24), -0.035em 0 rgba(255, 116, 172, 0.24);
+  }
+  68% {
+    translate: 0 0;
+    text-shadow: 0 0 0 transparent;
+  }
+}
+
+@keyframes ivlyrics-kind-flicker {
+  0%, 100% {
+    opacity: 1;
+    filter: brightness(1);
+  }
+  12% {
+    opacity: 0.76;
+    filter: brightness(0.92);
+  }
+  15%, 48% {
+    opacity: 1;
+    filter: brightness(1.08);
+  }
+  52% {
+    opacity: 0.82;
+    filter: brightness(0.96);
+  }
+  56% {
+    opacity: 1;
+    filter: brightness(1.06);
+  }
+}
+
+@keyframes ivlyrics-kind-float {
+  0%, 100% {
+    translate: 0 0;
+    rotate: 0deg;
+  }
+  50% {
+    translate: 0 -0.09em;
+    rotate: 0.45deg;
+  }
+}
+
+@keyframes ivlyrics-kind-blur {
+  0%, 100% {
+    filter: blur(0) brightness(1);
+    opacity: 0.98;
+  }
+  50% {
+    filter: blur(0.65px) brightness(1.08);
+    opacity: 0.9;
+  }
+}
+
+@keyframes ivlyrics-kind-pop {
+  0%, 100% {
+    scale: 1;
+    filter: brightness(1);
+  }
+  18% {
+    scale: 1.055;
+    filter: brightness(1.12);
+  }
+  34% {
+    scale: 0.992;
+    filter: brightness(1);
+  }
+}
+
 .lyrics-karaoke-part.effect .lyrics-karaoke-line.is-active,
 .lyrics-lyricsContainer-LyricsLine.effect.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line,
 .lyrics-lyricsContainer-LyricsLine.effect.lyrics-lyricsContainer-LyricsLine-active > p {
@@ -1299,6 +1477,118 @@ div.lyrics-tabBar-headerItemLink {
 .lyrics-lyricsContainer-LyricsLine.adlib.lyrics-lyricsContainer-LyricsLine-active > p {
   animation: ivlyrics-kind-adlib-float 1.05s ease-in-out infinite;
   will-change: translate;
+}
+
+.lyrics-karaoke-part.pulse .lyrics-karaoke-line.is-active,
+.lyrics-lyricsContainer-LyricsLine.pulse.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line {
+  animation: ivlyrics-kind-pulse 940ms ease-in-out infinite;
+  transform-origin: center;
+  will-change: scale, filter;
+}
+
+.lyrics-karaoke-part.wave .lyrics-karaoke-line.is-active .lyrics-karaoke-char,
+.lyrics-karaoke-part.wave .lyrics-karaoke-line.is-active .lyrics-karaoke-text-run-segment,
+.lyrics-lyricsContainer-LyricsLine.wave.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line .lyrics-karaoke-char,
+.lyrics-lyricsContainer-LyricsLine.wave.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line .lyrics-karaoke-text-run-segment {
+  animation: ivlyrics-kind-wave 920ms ease-in-out infinite;
+  will-change: translate;
+}
+
+.lyrics-karaoke-part.wave .lyrics-karaoke-line.is-active .lyrics-karaoke-char:nth-child(2n),
+.lyrics-karaoke-part.wave .lyrics-karaoke-line.is-active .lyrics-karaoke-text-run-segment:nth-child(2n),
+.lyrics-lyricsContainer-LyricsLine.wave.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line .lyrics-karaoke-char:nth-child(2n),
+.lyrics-lyricsContainer-LyricsLine.wave.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line .lyrics-karaoke-text-run-segment:nth-child(2n) {
+  animation-delay: -120ms;
+}
+
+.lyrics-karaoke-part.wave .lyrics-karaoke-line.is-active .lyrics-karaoke-char:nth-child(3n),
+.lyrics-karaoke-part.wave .lyrics-karaoke-line.is-active .lyrics-karaoke-text-run-segment:nth-child(3n),
+.lyrics-lyricsContainer-LyricsLine.wave.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line .lyrics-karaoke-char:nth-child(3n),
+.lyrics-lyricsContainer-LyricsLine.wave.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line .lyrics-karaoke-text-run-segment:nth-child(3n) {
+  animation-delay: -240ms;
+}
+
+.lyrics-karaoke-part.sparkle .lyrics-karaoke-line.is-active .lyrics-karaoke-char,
+.lyrics-karaoke-part.sparkle .lyrics-karaoke-line.is-active .lyrics-karaoke-text-run-segment,
+.lyrics-lyricsContainer-LyricsLine.sparkle.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line .lyrics-karaoke-char,
+.lyrics-lyricsContainer-LyricsLine.sparkle.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line .lyrics-karaoke-text-run-segment {
+  animation: ivlyrics-kind-sparkle 1.18s ease-in-out infinite;
+  will-change: filter, text-shadow;
+}
+
+.lyrics-karaoke-part.echo .lyrics-karaoke-line.is-active .lyrics-karaoke-char,
+.lyrics-karaoke-part.echo .lyrics-karaoke-line.is-active .lyrics-karaoke-text-run-segment,
+.lyrics-lyricsContainer-LyricsLine.echo.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line .lyrics-karaoke-char,
+.lyrics-lyricsContainer-LyricsLine.echo.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line .lyrics-karaoke-text-run-segment {
+  animation: ivlyrics-kind-echo 1.28s ease-in-out infinite;
+  will-change: text-shadow;
+}
+
+.lyrics-karaoke-part.whisper .lyrics-karaoke-line.is-active,
+.lyrics-lyricsContainer-LyricsLine.whisper.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line {
+  animation: ivlyrics-kind-whisper 1.45s ease-in-out infinite;
+  will-change: opacity, filter, translate;
+}
+
+.lyrics-karaoke-part.bounce .lyrics-karaoke-line.is-active,
+.lyrics-lyricsContainer-LyricsLine.bounce.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line,
+.lyrics-lyricsContainer-LyricsLine.bounce.lyrics-lyricsContainer-LyricsLine-active > p {
+  animation: ivlyrics-kind-bounce 780ms cubic-bezier(0.2, 0.85, 0.24, 1) infinite;
+  will-change: translate;
+}
+
+.lyrics-karaoke-part.sway .lyrics-karaoke-line.is-active,
+.lyrics-lyricsContainer-LyricsLine.sway.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line,
+.lyrics-lyricsContainer-LyricsLine.sway.lyrics-lyricsContainer-LyricsLine-active > p {
+  animation: ivlyrics-kind-sway 1.35s ease-in-out infinite;
+  transform-origin: center bottom;
+  will-change: translate, rotate;
+}
+
+.lyrics-karaoke-part.float .lyrics-karaoke-line.is-active,
+.lyrics-lyricsContainer-LyricsLine.float.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line,
+.lyrics-lyricsContainer-LyricsLine.float.lyrics-lyricsContainer-LyricsLine-active > p {
+  animation: ivlyrics-kind-float 1.65s ease-in-out infinite;
+  transform-origin: center;
+  will-change: translate, rotate;
+}
+
+.lyrics-karaoke-part.blur .lyrics-karaoke-line.is-active,
+.lyrics-lyricsContainer-LyricsLine.blur.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line,
+.lyrics-lyricsContainer-LyricsLine.blur.lyrics-lyricsContainer-LyricsLine-active > p {
+  animation: ivlyrics-kind-blur 1.5s ease-in-out infinite;
+  will-change: filter, opacity;
+}
+
+.lyrics-karaoke-part.pop .lyrics-karaoke-line.is-active,
+.lyrics-lyricsContainer-LyricsLine.pop.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line,
+.lyrics-lyricsContainer-LyricsLine.pop.lyrics-lyricsContainer-LyricsLine-active > p {
+  animation: ivlyrics-kind-pop 1.08s cubic-bezier(0.18, 0.9, 0.36, 1) infinite;
+  transform-origin: center;
+  will-change: scale, filter;
+}
+
+.lyrics-karaoke-part.glow .lyrics-karaoke-line.is-active .lyrics-karaoke-char,
+.lyrics-karaoke-part.glow .lyrics-karaoke-line.is-active .lyrics-karaoke-text-run-segment,
+.lyrics-lyricsContainer-LyricsLine.glow.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line .lyrics-karaoke-char,
+.lyrics-lyricsContainer-LyricsLine.glow.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line .lyrics-karaoke-text-run-segment,
+.lyrics-lyricsContainer-LyricsLine.glow.lyrics-lyricsContainer-LyricsLine-active > p {
+  animation: ivlyrics-kind-glow 1.35s ease-in-out infinite;
+  will-change: filter, text-shadow;
+}
+
+.lyrics-karaoke-part.glitch .lyrics-karaoke-line.is-active,
+.lyrics-lyricsContainer-LyricsLine.glitch.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line,
+.lyrics-lyricsContainer-LyricsLine.glitch.lyrics-lyricsContainer-LyricsLine-active > p {
+  animation: ivlyrics-kind-glitch 1.12s steps(1, end) infinite;
+  will-change: translate, text-shadow;
+}
+
+.lyrics-karaoke-part.flicker .lyrics-karaoke-line.is-active,
+.lyrics-lyricsContainer-LyricsLine.flicker.lyrics-lyricsContainer-LyricsLine-active .lyrics-karaoke-line,
+.lyrics-lyricsContainer-LyricsLine.flicker.lyrics-lyricsContainer-LyricsLine-active > p {
+  animation: ivlyrics-kind-flicker 1.22s steps(1, end) infinite;
+  will-change: opacity, filter;
 }
 
 .lyrics-karaoke-word {

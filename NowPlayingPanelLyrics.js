@@ -585,6 +585,84 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
   50% { translate: 0 -1.5px; }
 }
 
+@keyframes ivlyrics-panel-pulse {
+  0%, 100% { scale: 1; filter: brightness(1); }
+  45% { scale: 1.025; filter: brightness(1.12); }
+}
+
+@keyframes ivlyrics-panel-wave {
+  0%, 100% { translate: 0 0; }
+  35% { translate: 0 -0.11em; }
+  70% { translate: 0 0.03em; }
+}
+
+@keyframes ivlyrics-panel-sparkle {
+  0%, 100% { filter: brightness(1); text-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+  42% { filter: brightness(1.22); text-shadow: 0 0 0.18em rgba(255, 255, 255, 0.34), 0 0 0.42em currentColor; }
+  58% { filter: brightness(0.96); text-shadow: 0 0 0.08em rgba(255, 255, 255, 0.16); }
+}
+
+@keyframes ivlyrics-panel-echo {
+  0%, 100% { text-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+  50% { text-shadow: 0.07em 0.04em 0 rgba(255, 255, 255, 0.18), 0.14em 0.08em 0.22em rgba(248, 251, 255, 0.28); }
+}
+
+@keyframes ivlyrics-panel-whisper {
+  0%, 100% { opacity: 0.86; filter: blur(0); translate: 0 0; }
+  45% { opacity: 0.72; filter: blur(0.55px); translate: 0.04em -0.02em; }
+}
+
+@keyframes ivlyrics-panel-bounce {
+  0%, 100% { translate: 0 0; }
+  32% { translate: 0 -0.16em; }
+  58% { translate: 0 0.035em; }
+  76% { translate: 0 -0.045em; }
+}
+
+@keyframes ivlyrics-panel-sway {
+  0%, 100% { translate: 0 0; rotate: 0deg; }
+  30% { translate: -0.035em 0; rotate: -1.2deg; }
+  70% { translate: 0.035em 0; rotate: 1.2deg; }
+}
+
+@keyframes ivlyrics-panel-glow {
+  0%, 100% { filter: brightness(1); text-shadow: 0 0 0 rgba(255, 255, 255, 0); }
+  50% { filter: brightness(1.14); text-shadow: 0 0 0.12em rgba(255, 255, 255, 0.3), 0 0 0.48em rgba(248, 251, 255, 0.26); }
+}
+
+@keyframes ivlyrics-panel-glitch {
+  0%, 100% { translate: 0 0; text-shadow: 0 0 0 transparent; }
+  16% { translate: -0.035em 0.01em; text-shadow: 0.045em 0 rgba(111, 211, 255, 0.34), -0.045em 0 rgba(255, 116, 172, 0.3); }
+  18% { translate: 0.03em -0.01em; text-shadow: -0.04em 0 rgba(111, 211, 255, 0.26), 0.04em 0 rgba(255, 116, 172, 0.28); }
+  20%, 64% { translate: 0 0; text-shadow: 0 0 0 transparent; }
+  66% { translate: 0.025em 0; text-shadow: 0.035em 0 rgba(111, 211, 255, 0.24), -0.035em 0 rgba(255, 116, 172, 0.24); }
+  68% { translate: 0 0; text-shadow: 0 0 0 transparent; }
+}
+
+@keyframes ivlyrics-panel-flicker {
+  0%, 100% { opacity: 1; filter: brightness(1); }
+  12% { opacity: 0.76; filter: brightness(0.92); }
+  15%, 48% { opacity: 1; filter: brightness(1.08); }
+  52% { opacity: 0.82; filter: brightness(0.96); }
+  56% { opacity: 1; filter: brightness(1.06); }
+}
+
+@keyframes ivlyrics-panel-float {
+  0%, 100% { translate: 0 0; rotate: 0deg; }
+  50% { translate: 0 -0.09em; rotate: 0.45deg; }
+}
+
+@keyframes ivlyrics-panel-blur {
+  0%, 100% { filter: blur(0) brightness(1); opacity: 0.98; }
+  50% { filter: blur(0.65px) brightness(1.08); opacity: 0.9; }
+}
+
+@keyframes ivlyrics-panel-pop {
+  0%, 100% { scale: 1; filter: brightness(1); }
+  18% { scale: 1.055; filter: brightness(1.12); }
+  34% { scale: 0.992; filter: brightness(1); }
+}
+
 .ivlyrics-panel-line.active .ivlyrics-panel-line-karaoke-row.effect,
 .ivlyrics-panel-line.effect.active .ivlyrics-panel-line-text {
   animation: ivlyrics-panel-effect-tremble 180ms steps(2, end) infinite !important;
@@ -593,6 +671,75 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 .ivlyrics-panel-line.active .ivlyrics-panel-line-karaoke-row.adlib,
 .ivlyrics-panel-line.adlib.active .ivlyrics-panel-line-text {
   animation: ivlyrics-panel-adlib-float 1.05s ease-in-out infinite !important;
+}
+
+.ivlyrics-panel-line.active .ivlyrics-panel-line-karaoke-row.pulse,
+.ivlyrics-panel-line.pulse.active .ivlyrics-panel-line-text {
+  animation: ivlyrics-panel-pulse 940ms ease-in-out infinite !important;
+  transform-origin: center !important;
+}
+
+.ivlyrics-panel-line.active .ivlyrics-panel-line-karaoke-row.wave,
+.ivlyrics-panel-line.wave.active .ivlyrics-panel-line-text {
+  animation: ivlyrics-panel-wave 920ms ease-in-out infinite !important;
+}
+
+.ivlyrics-panel-line.active .ivlyrics-panel-line-karaoke-row.sparkle,
+.ivlyrics-panel-line.sparkle.active .ivlyrics-panel-line-text {
+  animation: ivlyrics-panel-sparkle 1.18s ease-in-out infinite !important;
+}
+
+.ivlyrics-panel-line.active .ivlyrics-panel-line-karaoke-row.echo,
+.ivlyrics-panel-line.echo.active .ivlyrics-panel-line-text {
+  animation: ivlyrics-panel-echo 1.28s ease-in-out infinite !important;
+}
+
+.ivlyrics-panel-line.active .ivlyrics-panel-line-karaoke-row.whisper,
+.ivlyrics-panel-line.whisper.active .ivlyrics-panel-line-text {
+  animation: ivlyrics-panel-whisper 1.45s ease-in-out infinite !important;
+}
+
+.ivlyrics-panel-line.active .ivlyrics-panel-line-karaoke-row.bounce,
+.ivlyrics-panel-line.bounce.active .ivlyrics-panel-line-text {
+  animation: ivlyrics-panel-bounce 780ms cubic-bezier(0.2, 0.85, 0.24, 1) infinite !important;
+}
+
+.ivlyrics-panel-line.active .ivlyrics-panel-line-karaoke-row.sway,
+.ivlyrics-panel-line.sway.active .ivlyrics-panel-line-text {
+  animation: ivlyrics-panel-sway 1.35s ease-in-out infinite !important;
+  transform-origin: center bottom !important;
+}
+
+.ivlyrics-panel-line.active .ivlyrics-panel-line-karaoke-row.glow,
+.ivlyrics-panel-line.glow.active .ivlyrics-panel-line-text {
+  animation: ivlyrics-panel-glow 1.35s ease-in-out infinite !important;
+}
+
+.ivlyrics-panel-line.active .ivlyrics-panel-line-karaoke-row.glitch,
+.ivlyrics-panel-line.glitch.active .ivlyrics-panel-line-text {
+  animation: ivlyrics-panel-glitch 1.12s steps(1, end) infinite !important;
+}
+
+.ivlyrics-panel-line.active .ivlyrics-panel-line-karaoke-row.flicker,
+.ivlyrics-panel-line.flicker.active .ivlyrics-panel-line-text {
+  animation: ivlyrics-panel-flicker 1.22s steps(1, end) infinite !important;
+}
+
+.ivlyrics-panel-line.active .ivlyrics-panel-line-karaoke-row.float,
+.ivlyrics-panel-line.float.active .ivlyrics-panel-line-text {
+  animation: ivlyrics-panel-float 1.65s ease-in-out infinite !important;
+  transform-origin: center !important;
+}
+
+.ivlyrics-panel-line.active .ivlyrics-panel-line-karaoke-row.blur,
+.ivlyrics-panel-line.blur.active .ivlyrics-panel-line-text {
+  animation: ivlyrics-panel-blur 1.5s ease-in-out infinite !important;
+}
+
+.ivlyrics-panel-line.active .ivlyrics-panel-line-karaoke-row.pop,
+.ivlyrics-panel-line.pop.active .ivlyrics-panel-line-text {
+  animation: ivlyrics-panel-pop 1.08s cubic-bezier(0.18, 0.9, 0.36, 1) infinite !important;
+  transform-origin: center !important;
 }
 
 .ivlyrics-panel-karaoke-space {

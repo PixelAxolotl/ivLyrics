@@ -19,7 +19,20 @@ const SYNC_CREATOR_MAX_MERGED_LINES = 5;
 const SYNC_CREATOR_KIND_OPTIONS = [
 	['vocal', 'syncCreator.kindVocal'],
 	['effect', 'syncCreator.kindEffect'],
-	['adlib', 'syncCreator.kindAdlib']
+	['adlib', 'syncCreator.kindAdlib'],
+	['pulse', 'syncCreator.kindPulse'],
+	['wave', 'syncCreator.kindWave'],
+	['sparkle', 'syncCreator.kindSparkle'],
+	['echo', 'syncCreator.kindEcho'],
+	['whisper', 'syncCreator.kindWhisper'],
+	['bounce', 'syncCreator.kindBounce'],
+	['sway', 'syncCreator.kindSway'],
+	['glow', 'syncCreator.kindGlow'],
+	['glitch', 'syncCreator.kindGlitch'],
+	['flicker', 'syncCreator.kindFlicker'],
+	['float', 'syncCreator.kindFloat'],
+	['blur', 'syncCreator.kindBlur'],
+	['pop', 'syncCreator.kindPop']
 ];
 const SYNC_CREATOR_KIND_LABELS = new Map(SYNC_CREATOR_KIND_OPTIONS);
 const SYNC_CREATOR_PARALLEL_HINT_REGEX = /[()（）\/|／｜]/u;
@@ -1512,7 +1525,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		return !!(normalizeSyncCreatorSpeaker(currentLineMeta.speaker) && normalizeSyncCreatorKind(currentLineMeta.kind));
 	}, [multiVocalMode, hasCurrentParallelParts, activeParallelPart, currentParallelParts, currentLineMeta]);
 	const showMissingMetaToast = useCallback(() => {
-		Toast.error(I18n.t('syncCreator.multiVocalMetaRequired') || 'Select SPEAKER and TYPE for the current vocal first.');
+		Toast.error(I18n.t('syncCreator.multiVocalMetaRequired') || 'Select SPEAKER and text effect for the current vocal first.');
 	}, []);
 	const advanceAfterCompletedTarget = useCallback((lineData) => {
 		const nextPartId = getIncompleteParallelPartId(lineData);
@@ -3875,12 +3888,12 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							return;
 						}
 						if (!(normalizeSyncCreatorSpeaker(existingPart.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER) || !(normalizeSyncCreatorKind(existingPart.kind) || SYNC_CREATOR_DEFAULT_KIND)) {
-							Toast.error(I18n.t('syncCreator.linePartMetaRequired', { line: index + 1 }) || `Select SPEAKER and TYPE for every vocal part on line ${index + 1}.`);
+							Toast.error(I18n.t('syncCreator.linePartMetaRequired', { line: index + 1 }) || `Select SPEAKER and text effect for every vocal part on line ${index + 1}.`);
 							return;
 						}
 					}
 				} else if (!(normalizeSyncCreatorSpeaker(lineData.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER) || !(normalizeSyncCreatorKind(lineData.kind) || SYNC_CREATOR_DEFAULT_KIND)) {
-					Toast.error(I18n.t('syncCreator.lineMetaRequired', { line: index + 1 }) || `Select SPEAKER and TYPE for line ${index + 1}.`);
+					Toast.error(I18n.t('syncCreator.lineMetaRequired', { line: index + 1 }) || `Select SPEAKER and text effect for line ${index + 1}.`);
 					return;
 				}
 			}
@@ -5374,7 +5387,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				multiVocalMode && react.createElement('div', { style: s.multiVocalBanner },
 					hasCurrentParallelParts
 						? (I18n.t('syncCreator.multiVocalBannerParts') || 'Multiple vocal mode: sync each vocal part separately.')
-						: (I18n.t('syncCreator.multiVocalBannerLine') || 'Multiple vocal mode: choose SPEAKER and TYPE for this line.')
+						: (I18n.t('syncCreator.multiVocalBannerLine') || 'Multiple vocal mode: choose SPEAKER and text effect for this line.')
 				),
 
 				multiVocalMode && currentFullLineChars.length > 1 && react.createElement('div', { style: s.parallelSplitEditor },
@@ -5419,7 +5432,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				false && hasCurrentParallelParts && react.createElement('div', { style: s.parallelPartRow },
 					currentParallelParts.map((part, index) => {
 						const speakerLabel = part.speaker || `VOCAL ${index + 1}`;
-						const kindLabel = getSyncCreatorKindLabel(part.kind) || I18n.t('syncCreator.unselectedType') || 'Type not selected';
+						const kindLabel = getSyncCreatorKindLabel(part.kind) || I18n.t('syncCreator.unselectedType') || 'Text effect not selected';
 						return react.createElement('button', {
 							key: part.id,
 							type: 'button',
@@ -5456,7 +5469,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							}, value)
 						)
 					),
-					react.createElement('span', { style: s.parallelMetaLabel }, I18n.t('syncCreator.typeLabel') || 'TYPE'),
+					react.createElement('span', { style: s.parallelMetaLabel }, I18n.t('syncCreator.typeLabel') || 'Text effect'),
 					react.createElement('select', {
 						style: s.parallelMetaSelect,
 						value: activeParallelPart.kind || '',
@@ -5488,7 +5501,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							}, value)
 						)
 					),
-					react.createElement('span', { style: s.parallelMetaLabel }, I18n.t('syncCreator.typeLabel') || 'TYPE'),
+					react.createElement('span', { style: s.parallelMetaLabel }, I18n.t('syncCreator.typeLabel') || 'Text effect'),
 					react.createElement('select', {
 						style: s.parallelMetaSelect,
 						value: currentLineMeta.kind || '',
@@ -5506,7 +5519,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							{ id: 'full', label: I18n.t('syncCreator.allLine') || 'Full line', count: currentFullLineChars.length },
 							...currentParallelParts.map(part => ({
 								id: part.id,
-								label: `${part.speaker || (part.role === 'background' ? 'B' : 'A')} ${part.kind === 'effect' ? (I18n.t('syncCreator.kindEffect') || 'Sound effect') : (I18n.t('syncCreator.kindVocal') || 'Vocal')}`,
+								label: `${part.speaker || (part.role === 'background' ? 'B' : 'A')} ${getSyncCreatorKindLabel(part.kind) || (I18n.t('syncCreator.kindVocal') || 'No effect')}`,
 								count: countRangeChars(part.ranges)
 							}))
 					].map(part => react.createElement('button', {
@@ -5534,7 +5547,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						}, ['A', 'B', 'C', 'D', 'SFX'].map(value =>
 							react.createElement('option', { key: value, value }, value)
 						)),
-						react.createElement('span', { style: s.parallelMetaLabel }, 'Type'),
+						react.createElement('span', { style: s.parallelMetaLabel }, I18n.t('syncCreator.typeLabel') || 'Text effect'),
 						react.createElement('select', {
 							style: s.parallelMetaSelect,
 							value: activeParallelPart.kind || 'vocal',
@@ -5553,7 +5566,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						}, ['A', 'B', 'C', 'D', 'SFX'].map(value =>
 							react.createElement('option', { key: value, value }, value)
 						)),
-						react.createElement('span', { style: s.parallelMetaLabel }, 'Type'),
+						react.createElement('span', { style: s.parallelMetaLabel }, I18n.t('syncCreator.typeLabel') || 'Text effect'),
 						react.createElement('select', {
 							style: s.parallelMetaSelect,
 							value: currentLineMeta.kind || 'vocal',

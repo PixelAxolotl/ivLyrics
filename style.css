@@ -466,6 +466,131 @@ body.ivlyrics-page-active .main-topBar-container {
   position: relative;
 }
 
+.lyrics-lyricsContainer-LyricsUnavailableMessage--motion {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  letter-spacing: 0;
+}
+
+.lyrics-noLyricsMotion {
+  width: clamp(180px, 28vw, 360px);
+  max-width: min(72vw, 420px);
+  height: auto;
+  overflow: visible;
+  color: currentColor;
+  opacity: 0.88;
+}
+
+.lyrics-noLyricsMotion-staff {
+  opacity: 0.13;
+}
+
+.lyrics-noLyricsMotion-wave,
+.lyrics-noLyricsMotion-note,
+.lyrics-noLyricsMotion-particle {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.lyrics-noLyricsMotion-wave-soft {
+  opacity: 0.22;
+  animation: lyricsNoLyricsWaveFloat 7s ease-in-out infinite;
+}
+
+.lyrics-noLyricsMotion-wave-main {
+  opacity: 0.55;
+  stroke-dasharray: 76 28;
+  animation:
+    lyricsNoLyricsWaveFlow 5.2s linear infinite,
+    lyricsNoLyricsWaveFloat 7s ease-in-out infinite;
+}
+
+.lyrics-noLyricsMotion-particle {
+  opacity: 0;
+  animation: lyricsNoLyricsParticleFloat var(--particle-duration, 8s) ease-in-out infinite;
+  animation-delay: var(--particle-delay, 0s);
+}
+
+.lyrics-noLyricsMotion-note {
+  opacity: 0.2;
+  animation: lyricsNoLyricsNoteFloat 4.8s ease-in-out infinite;
+}
+
+.lyrics-noLyricsMotion-note-2 {
+  animation-delay: -2.4s;
+}
+
+.lyrics-lyricsContainer-LyricsContainer.playback-paused .lyrics-noLyricsMotion *,
+.lyrics-lyricsContainer-LyricsContainer.motion-reduced .lyrics-noLyricsMotion * {
+  animation-play-state: paused;
+}
+
+.lyrics-lyricsContainer-LyricsContainer.motion-reduced .lyrics-noLyricsMotion * {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lyrics-noLyricsMotion * {
+    animation: none !important;
+  }
+}
+
+@keyframes lyricsNoLyricsWaveFlow {
+  from {
+    stroke-dashoffset: 0;
+  }
+
+  to {
+    stroke-dashoffset: -104;
+  }
+}
+
+@keyframes lyricsNoLyricsWaveFloat {
+  0%,
+  100% {
+    transform: translateY(-6px);
+  }
+
+  50% {
+    transform: translateY(7px);
+  }
+}
+
+@keyframes lyricsNoLyricsParticleFloat {
+  0% {
+    transform: translate(0, 0) scale(0.72);
+    opacity: 0;
+  }
+
+  14% {
+    opacity: var(--particle-opacity, 0.7);
+  }
+
+  74% {
+    opacity: var(--particle-opacity, 0.7);
+  }
+
+  100% {
+    transform: translate(var(--particle-x, 0), -150px) scale(1.18);
+    opacity: 0;
+  }
+}
+
+@keyframes lyricsNoLyricsNoteFloat {
+  0%,
+  100% {
+    transform: translateY(8px) rotate(-4deg);
+    opacity: 0.12;
+  }
+
+  50% {
+    transform: translateY(-10px) rotate(4deg);
+    opacity: 0.36;
+  }
+}
+
 .lyrics-lyricsContainer-UnsyncedLyricsPage {
   grid-area: 1 / 1 / -1 / -1;
   grid-template-rows: 1fr 20px;

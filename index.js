@@ -6255,19 +6255,34 @@ class LyricsContainer extends react.Component {
         onCloseMarketplace: () => this.setState({ showMarketplace: false }),
         reRenderLyricsPage: this.reRenderLyricsPage,
       })
-      : react.createElement(
-        "div",
-        {
-          className: "lyrics-lyricsContainer-LyricsUnavailablePage",
-        },
-        react.createElement(
-          "span",
+      : (() => {
+        const NoLyricsAnimationComponent = window.ivLyricsNoLyricsAnimation;
+        const unavailableMessage = this.state.isLoading
+          ? LoadingIcon
+          : NoLyricsAnimationComponent
+            ? react.createElement(NoLyricsAnimationComponent, null)
+            : "(• _ • )";
+        const unavailableMessageClass = [
+          "lyrics-lyricsContainer-LyricsUnavailableMessage",
+          !this.state.isLoading && NoLyricsAnimationComponent
+            ? "lyrics-lyricsContainer-LyricsUnavailableMessage--motion"
+            : "",
+        ].filter(Boolean).join(" ");
+
+        return react.createElement(
+          "div",
           {
-            className: "lyrics-lyricsContainer-LyricsUnavailableMessage",
+            className: "lyrics-lyricsContainer-LyricsUnavailablePage",
           },
-          this.state.isLoading ? LoadingIcon : "(• _ • )"
-        )
-      );
+          react.createElement(
+            "span",
+            {
+              className: unavailableMessageClass,
+            },
+            unavailableMessage
+          )
+        );
+      })();
 
     // Tab bar removed - modes are now auto-detected
     const topBarContent = null;

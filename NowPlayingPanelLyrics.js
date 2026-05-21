@@ -459,13 +459,19 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 .ivlyrics-panel-line-karaoke-stack {
   display: flex !important;
   flex-direction: column !important;
-  gap: 2px !important;
+  gap: 8px !important;
 }
 
 .ivlyrics-panel-line-karaoke-row {
   display: flex !important;
   flex-wrap: wrap !important;
   gap: 0px !important;
+}
+
+.ivlyrics-panel-line-karaoke-part {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 1px !important;
 }
 
 .ivlyrics-panel-line-karaoke-row.background {
@@ -485,7 +491,17 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
   color: #9fd8ff !important;
 }
 
+.ivlyrics-panel-line.speaker-b .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-b.active .ivlyrics-panel-line-text {
+  color: #9fd8ff !important;
+}
+
 .ivlyrics-panel-line-karaoke-row.speaker-c .ivlyrics-panel-karaoke-word.sung {
+  color: #ffd18a !important;
+}
+
+.ivlyrics-panel-line.speaker-c .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-c.active .ivlyrics-panel-line-text {
   color: #ffd18a !important;
 }
 
@@ -493,8 +509,20 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
   color: #d7b8ff !important;
 }
 
+.ivlyrics-panel-line.speaker-d .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-d.active .ivlyrics-panel-line-text {
+  color: #d7b8ff !important;
+}
+
 .ivlyrics-panel-line-karaoke-row.speaker-sfx .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line-karaoke-row.effect .ivlyrics-panel-karaoke-word.sung {
+  color: #9ff2c5 !important;
+}
+
+.ivlyrics-panel-line.speaker-sfx .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.effect .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-sfx.active .ivlyrics-panel-line-text,
+.ivlyrics-panel-line.effect.active .ivlyrics-panel-line-text {
   color: #9ff2c5 !important;
 }
 
@@ -844,6 +872,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             speaker: line.vocals.lead.speaker || '',
             kind: line.vocals.lead.kind || 'vocal',
             speakerClass: normalizeSpeakerClass(line.vocals.lead.speaker),
+            phonetic: line.vocals.lead.phonetic || '',
+            translation: line.vocals.lead.translation || '',
             syllables: splitRenderableSyllables(line.vocals.lead.syllables)
         }];
 
@@ -856,6 +886,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                         speaker: part.speaker || '',
                         kind: part.kind || 'vocal',
                         speakerClass: normalizeSpeakerClass(part.speaker),
+                        phonetic: part.phonetic || '',
+                        translation: part.translation || '',
                         syllables: splitRenderableSyllables(part.syllables)
                     });
                 }
@@ -863,6 +895,42 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         }
 
         return rows.length > 1 ? rows : null;
+    };
+
+    const splitLineByParallelShape = (text, rowCount) => {
+        const value = typeof text === 'string' ? text.trim() : '';
+        if (!value || rowCount <= 1) return [];
+
+        const separatorParts = value.split(/\s*[\/|]\s*/).filter(Boolean);
+        if (separatorParts.length === rowCount) {
+            return separatorParts;
+        }
+
+        const chars = Array.from(value);
+        const lead = [];
+        const background = [];
+        let depth = 0;
+        chars.forEach((char) => {
+            if (char === '(') {
+                depth++;
+                return;
+            }
+            if (char === ')') {
+                depth = Math.max(0, depth - 1);
+                return;
+            }
+            if (depth > 0) {
+                background.push(char);
+            } else {
+                lead.push(char);
+            }
+        });
+
+        if (rowCount === 2 && background.join('').trim()) {
+            return [lead.join('').trim(), background.join('').trim()];
+        }
+
+        return [];
     };
 
     const INTERLUDE_MIN_DURATION_MS = 500;
@@ -1129,21 +1197,33 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     // 노래방 라인 컴포넌트 (syllables 포함)
     // ============================================
     const KaraokeLine = memo(({ syllables, vocalRows, isActive, isPast, phonetic, translation, lineClass }) => {
+        const rowPhonetics = splitLineByParallelShape(phonetic, Array.isArray(vocalRows) ? vocalRows.length : 0);
+        const rowTranslations = splitLineByParallelShape(translation, Array.isArray(vocalRows) ? vocalRows.length : 0);
         const karaokeContent = Array.isArray(vocalRows) && vocalRows.length > 1
             ? react.createElement("div", { className: "ivlyrics-panel-line-karaoke ivlyrics-panel-line-karaoke-stack" },
                 vocalRows.map((row) =>
-	                    react.createElement("div", {
-	                        key: row.key,
-	                        className: `ivlyrics-panel-line-karaoke-row ${row.role || ''} ${row.kind || ''} ${row.speakerClass ? `speaker-${row.speakerClass}` : ''}`
-	                    },
-                        row.syllables.map((syllable, idx) =>
-                            react.createElement(KaraokeWord, {
-                                key: `${row.key}-${idx}`,
-                                syllable,
-                                idx,
-                                isLinePast: isPast
-                            })
-                        )
+                    react.createElement("div", {
+                        key: row.key,
+                        className: `ivlyrics-panel-line-karaoke-part ${row.role || ''} ${row.kind || ''} ${row.speakerClass ? `speaker-${row.speakerClass}` : ''}`
+                    },
+                        react.createElement("div", {
+                            className: `ivlyrics-panel-line-karaoke-row ${row.role || ''} ${row.kind || ''} ${row.speakerClass ? `speaker-${row.speakerClass}` : ''}`
+                        },
+                            row.syllables.map((syllable, idx) =>
+                                react.createElement(KaraokeWord, {
+                                    key: `${row.key}-${idx}`,
+                                    syllable,
+                                    idx,
+                                    isLinePast: isPast
+                                })
+                            )
+                        ),
+                        (row.phonetic || rowPhonetics[vocalRows.indexOf(row)]) && react.createElement("div", {
+                            className: "ivlyrics-panel-line-phonetic"
+                        }, row.phonetic || rowPhonetics[vocalRows.indexOf(row)]),
+                        (row.translation || rowTranslations[vocalRows.indexOf(row)]) && react.createElement("div", {
+                            className: "ivlyrics-panel-line-translation"
+                        }, row.translation || rowTranslations[vocalRows.indexOf(row)])
                     )
                 )
             )
@@ -1162,11 +1242,11 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             // 노래방 가사 (글자별 타이밍)
             karaokeContent,
             // 발음
-            phonetic && react.createElement("div", {
+            !(Array.isArray(vocalRows) && vocalRows.length > 1) && phonetic && react.createElement("div", {
                 className: "ivlyrics-panel-line-phonetic"
             }, phonetic),
             // 번역
-            translation && react.createElement("div", {
+            !(Array.isArray(vocalRows) && vocalRows.length > 1) && translation && react.createElement("div", {
                 className: "ivlyrics-panel-line-translation"
             }, translation)
         );
@@ -1280,7 +1360,11 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     // 노래방 가사와 일반 가사 모두 지원
     // ============================================
     const LyricLine = memo(({ line, lineIndex, lineCount, isActive, isPast, isFuture, translation, phonetic, isPlaceholder, instrumentalBreakRevision = 0 }) => {
-        const lineClass = `ivlyrics-panel-line ${isActive ? 'active' : ''} ${isPast ? 'past' : ''} ${isFuture ? 'future' : ''} ${isPlaceholder ? 'placeholder' : ''}`;
+        const speakerClass = String(line?.speaker || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9_-]/g, '');
+        const lineClass = `ivlyrics-panel-line ${isActive ? 'active' : ''} ${isPast ? 'past' : ''} ${isFuture ? 'future' : ''} ${isPlaceholder ? 'placeholder' : ''} ${line?.kind || ''} ${speakerClass ? `speaker-${speakerClass}` : ''}`;
         const interludeInfo = isPlaceholder ? { isInterlude: false, durationMs: 0 } : (line?.interludeInfo || getInterludeInfo(line, lineIndex, lineCount));
 
         // 노래방 가사인지 확인

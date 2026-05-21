@@ -1791,10 +1791,12 @@
                     const leadPart = parallelParts.find(part => part.role === 'lead') || parallelParts[0];
                     const backgroundParts = parallelParts.filter(part => part !== leadPart);
                     const allPartTimes = parallelParts.flatMap(part => [part.startTime, part.endTime]).filter(Number.isFinite);
-                    result.push({
-                        startTime: Math.min(...allPartTimes, lineStartTime),
-                        endTime: Math.max(...allPartTimes, lineEndTime),
-                        text: lineText,
+	                    result.push({
+	                        startTime: Math.min(...allPartTimes, lineStartTime),
+	                        endTime: Math.max(...allPartTimes, lineEndTime),
+	                        text: lineText,
+	                        speaker: lineData.speaker || leadPart.speaker || '',
+	                        kind: lineData.kind || leadPart.kind || 'vocal',
 	                        vocals: {
 	                            lead: {
 	                                id: leadPart.id,
@@ -1817,12 +1819,14 @@
                     continue;
                 }
 
-                result.push({
-                    startTime: lineStartTime,
-                    endTime: lineEndTime,
-                    text: lineText,
-                    syllables
-                });
+	                result.push({
+	                    startTime: lineStartTime,
+	                    endTime: lineEndTime,
+	                    text: lineText,
+	                    speaker: lineData.speaker || '',
+	                    kind: lineData.kind || 'vocal',
+	                    syllables
+	                });
             }
 
             return result;
@@ -1838,7 +1842,9 @@
 
             return karaoke.map(line => ({
                 startTime: line.startTime,
-                text: line.text
+                text: line.text,
+                speaker: line.speaker,
+                kind: line.kind
             }));
         }
 

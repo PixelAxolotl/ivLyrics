@@ -740,6 +740,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const [currentLineIndex, setCurrentLineIndex] = useState(0);
 	const [activeParallelPartId, setActiveParallelPartId] = useState('full');
 	const [parallelPartMetaDrafts, setParallelPartMetaDrafts] = useState({});
+	const [lineMetaDrafts, setLineMetaDrafts] = useState({});
 	const [syncData, setSyncData] = useState(null);
 	const [furiganaRevision, setFuriganaRevision] = useState(0);
 	const [characterPronunciations, setCharacterPronunciations] = useState(null);
@@ -975,6 +976,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		if (!Array.isArray(syncData?.lines)) return null;
 		return syncData.lines.find(line => line.start === currentLineStart) || null;
 	}, [syncData, currentLineStart]);
+	const currentLineMeta = useMemo(() => ({
+		speaker: lineMetaDrafts[currentLineStart]?.speaker || currentExistingLineData?.speaker || 'A',
+		kind: lineMetaDrafts[currentLineStart]?.kind || currentExistingLineData?.kind || 'vocal'
+	}), [lineMetaDrafts, currentLineStart, currentExistingLineData]);
 	const currentParallelTemplate = useMemo(
 		() => buildParentheticalParallelTemplate(currentFullLineChars, currentLineStart),
 		[currentFullLineChars, currentLineStart]
@@ -1804,12 +1809,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		};
 
 		const fullLineChars = buildFullLineChars();
-		const lineData = {
-			...(existingLine || {}),
-			start: lineStart,
-			end: lineEnd,
-			chars: fullLineChars.map((time) => roundSyncTime(time))
-		};
+			const lineData = {
+				...(existingLine || {}),
+				start: lineStart,
+				end: lineEnd,
+				chars: fullLineChars.map((time) => roundSyncTime(time)),
+				speaker: currentLineMeta.speaker || existingLine?.speaker || 'A',
+				kind: currentLineMeta.kind || existingLine?.kind || 'vocal'
+			};
 
 		if (activeParallelPart && currentParallelData) {
 			const existingParts = Array.isArray(existingLine?.parallel?.parts) ? existingLine.parallel.parts : [];
@@ -1879,6 +1886,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		currentLineCharRefs,
 		activeParallelPart,
 		currentParallelData,
+		currentLineMeta,
 		normalizeCommittedLineChars
 	]);
 
@@ -2666,6 +2674,29 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						}
 					};
 				})
+			};
+		});
+	}, [lineCharOffsets, currentLineIndex]);
+
+	const updateCurrentLineMeta = useCallback((field, value) => {
+		const safeValue = String(value || '').trim();
+		if (!field || !safeValue) return;
+		const lineStart = lineCharOffsets[currentLineIndex];
+		setLineMetaDrafts(prev => ({
+			...prev,
+			[lineStart]: {
+				...(prev[lineStart] || {}),
+				[field]: safeValue
+			}
+		}));
+
+		setSyncData(prev => {
+			if (!prev || !Array.isArray(prev.lines)) return prev;
+			return {
+				...prev,
+				lines: prev.lines.map(line => line.start === lineStart
+					? { ...line, [field]: safeValue }
+					: line)
 			};
 		});
 	}, [lineCharOffsets, currentLineIndex]);
@@ -3930,6 +3961,29 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							style: s.parallelMetaSelect,
 							value: activeParallelPart.kind || 'vocal',
 							onChange: (e) => updateParallelPartMeta(activeParallelPart.id, 'kind', e.target.value)
+						}, [
+							['vocal', '보컬'],
+							['effect', '효과음'],
+							['adlib', '애드립']
+						].map(([value, label]) =>
+							react.createElement('option', { key: value, value }, label)
+						))
+					),
+
+					!activeParallelPart && react.createElement('div', { style: s.parallelMetaRow },
+						react.createElement('span', { style: s.parallelMetaLabel }, 'Speaker'),
+						react.createElement('select', {
+							style: s.parallelMetaSelect,
+							value: currentLineMeta.speaker || 'A',
+							onChange: (e) => updateCurrentLineMeta('speaker', e.target.value)
+						}, ['A', 'B', 'C', 'D', 'SFX'].map(value =>
+							react.createElement('option', { key: value, value }, value)
+						)),
+						react.createElement('span', { style: s.parallelMetaLabel }, 'Type'),
+						react.createElement('select', {
+							style: s.parallelMetaSelect,
+							value: currentLineMeta.kind || 'vocal',
+							onChange: (e) => updateCurrentLineMeta('kind', e.target.value)
 						}, [
 							['vocal', '보컬'],
 							['effect', '효과음'],

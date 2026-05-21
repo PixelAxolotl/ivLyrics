@@ -244,7 +244,11 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
             try {
                 const userHash = Utils.getUserHash();
                 // 백엔드 엔드포인트: /lyrics/youtube (트랙 메타데이터 포함)
-                let youtubeUrl = `https://lyrics.api.ivl.is/lyrics/youtube?trackId=${trackId}&userHash=${userHash}&useCommunity=true`;
+                const clientVersion =
+                    (typeof Utils !== "undefined" && Utils.currentVersion) ||
+                    window.CONFIG?.version ||
+                    "unknown";
+                let youtubeUrl = `https://lyrics.api.ivl.is/lyrics/youtube?trackId=${trackId}&userHash=${userHash}&useCommunity=true&client=ivLyrics&clientVersion=${encodeURIComponent(clientVersion)}&requestVersion=2`;
 
                 // Spotify 트랙 메타데이터를 백엔드에 전달
                 const spotifyData = window.SpotifyDataHelper?.extractSpotifyData?.(trackUri);
@@ -261,7 +265,13 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                     logId = window.ApiTracker.logRequest('youtube', youtubeUrl, { trackId, userHash });
                 }
 
-                const res = await fetch(youtubeUrl);
+                const res = await fetch(youtubeUrl, {
+                    headers: Utils.getApiHeaders({
+                        "X-ivLyrics-Client": "ivLyrics",
+                        "X-ivLyrics-Request-Version": "2",
+                        "X-ivLyrics-Client-Version": clientVersion
+                    })
+                });
                 const data = await res.json();
 
                 if (!isMounted) return;

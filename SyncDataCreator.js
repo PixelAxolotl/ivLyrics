@@ -555,6 +555,94 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const chars = Array.isArray(lineChars) ? lineChars : [];
 		if (!chars.length) return null;
 
+		const speakerLabels = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+		const buildPart = (index, ranges, role = index === 0 ? 'lead' : 'background') => ({
+			id: speakerLabels[index]?.toLowerCase() || `p${index + 1}`,
+			role,
+			speaker: speakerLabels[index] || `P${index + 1}`,
+			kind: 'vocal',
+			ranges,
+			join: ranges.length > 1 ? new Array(ranges.length - 1).fill(1) : []
+		});
+
+		const buildSeparatorTemplate = () => {
+			const partRanges = [];
+			const hiddenRanges = [];
+			let depth = 0;
+			let partIndex = 0;
+			let runStart = null;
+
+			const pushHidden = (index) => {
+				const previous = hiddenRanges[hiddenRanges.length - 1];
+				const absoluteIndex = lineStart + index;
+				if (previous && previous.end + 1 === absoluteIndex) {
+					previous.end = absoluteIndex;
+				} else {
+					hiddenRanges.push({ start: absoluteIndex, end: absoluteIndex });
+				}
+			};
+
+			const flushRun = (endIndex) => {
+				if (runStart !== null && endIndex >= runStart) {
+					while (runStart <= endIndex && /\s/u.test(chars[runStart] || '')) {
+						pushHidden(runStart);
+						runStart++;
+					}
+					const originalEndIndex = endIndex;
+					while (endIndex >= runStart && /\s/u.test(chars[endIndex] || '')) {
+						endIndex--;
+					}
+					for (let index = endIndex + 1; index <= originalEndIndex; index++) {
+						pushHidden(index);
+					}
+				}
+				if (runStart !== null && endIndex >= runStart) {
+					if (!partRanges[partIndex]) partRanges[partIndex] = [];
+					pushSyncCreatorRange(partRanges[partIndex], runStart, endIndex, lineStart);
+				}
+				runStart = null;
+			};
+
+			for (let index = 0; index < chars.length; index++) {
+				const char = chars[index] || '';
+				if (char === '(') depth++;
+				if (char === ')') depth = Math.max(0, depth - 1);
+
+				if ((char === '/' || char === '|') && depth === 0) {
+					flushRun(index - 1);
+					pushHidden(index);
+					partIndex++;
+					continue;
+				}
+
+				if (/\s/u.test(char) && runStart === null) {
+					pushHidden(index);
+					continue;
+				}
+
+				if (runStart === null) {
+					runStart = index;
+				}
+			}
+
+			flushRun(chars.length - 1);
+
+			const parts = partRanges
+				.filter(ranges => Array.isArray(ranges) && ranges.length > 0)
+				.map((ranges, index) => buildPart(index, ranges));
+
+			if (parts.length < 2) return null;
+
+			return {
+				layout: 'stack',
+				parts,
+				hiddenRanges
+			};
+		};
+
+		const separatorTemplate = buildSeparatorTemplate();
+		if (separatorTemplate) return separatorTemplate;
+
 		const leadRanges = [];
 		const backgroundRanges = [];
 		const hiddenRanges = [];
@@ -615,12 +703,12 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 		return {
 			layout: 'stack',
-				parts: [
-					{ id: 'a', role: 'lead', speaker: 'A', kind: 'vocal', ranges: leadRanges, join: leadRanges.length > 1 ? new Array(leadRanges.length - 1).fill(1) : [] },
-					{ id: 'b', role: 'background', speaker: 'B', kind: 'vocal', ranges: backgroundRanges, join: backgroundRanges.length > 1 ? new Array(backgroundRanges.length - 1).fill(1) : [] }
-				],
-				hiddenRanges
-			};
+			parts: [
+				buildPart(0, leadRanges, 'lead'),
+				buildPart(1, backgroundRanges, 'background')
+			],
+			hiddenRanges
+		};
 	};
 
 	const mergeSyncCreatorParallelTemplate = (template, existingParallel) => {

@@ -755,6 +755,10 @@ window.LANG_MS = {
         "desc": "Tetapkan berapa kali lirik senada dan karaoke dikemas kini sesaat. Nilai rendah mengurangkan beban sistem, nilai tinggi menjadikannya lebih lancar.",
         "unit": " FPS"
       },
+      "textEffects": {
+        "label": "Kesan teks",
+        "desc": "Mainkan animasi kesan teks karaoke seperti gegaran, pernafasan, cahaya dan glitch."
+      },
       "visualCost": {
         "title": "Beban Kesan Visual",
         "subtitle": "Laraskan dengan pantas kesan yang boleh meningkatkan penggunaan GPU."

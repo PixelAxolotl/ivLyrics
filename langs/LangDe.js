@@ -755,6 +755,10 @@ window.LANG_DE = {
         "desc": "Legt fest, wie oft synchronisierte und Karaoke-Lyrics pro Sekunde aktualisiert werden. Niedrigere Werte reduzieren Last, höhere wirken flüssiger.",
         "unit": " FPS"
       },
+      "textEffects": {
+        "label": "Texteffekte",
+        "desc": "Animiert Karaoke-Texteffekte wie Zittern, Atmen, Leuchten und Glitch."
+      },
       "visualCost": {
         "title": "Visuelle Last",
         "subtitle": "Schneller Zugriff auf Effekte, die die GPU stärker belasten können."

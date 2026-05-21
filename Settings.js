@@ -4202,6 +4202,14 @@ const ConfigModal = ({
       i18nKeys: ["tabs.performance", "settingsAdvanced.performance.rendering.title", "settingsAdvanced.karaokeMode.lineTransition.label", "settingsAdvanced.karaokeMode.lineTransition.desc"]
     },
     {
+      section: I18n.t("tabs.performance"),
+      sectionKey: "performance",
+      settingKey: "karaoke-text-effects",
+      name: I18n.t("settingsAdvanced.performance.textEffects.label"),
+      desc: I18n.t("settingsAdvanced.performance.textEffects.desc"),
+      i18nKeys: ["tabs.performance", "settingsAdvanced.performance.rendering.title", "settingsAdvanced.performance.textEffects.label", "settingsAdvanced.performance.textEffects.desc"]
+    },
+    {
       section: I18n.t("tabs.appearance"),
       sectionKey: "appearance",
       settingKey: "colorful",
@@ -11085,6 +11093,13 @@ const ConfigModal = ({
               desc: I18n.t("settingsAdvanced.karaokeMode.lineTransition.label"),
               info: I18n.t("settingsAdvanced.karaokeMode.lineTransition.desc"),
               key: "karaoke-line-transition",
+              type: ConfigSlider,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.performance.textEffects.label"),
+              info: I18n.t("settingsAdvanced.performance.textEffects.desc"),
+              key: "karaoke-text-effects",
+              defaultValue: CONFIG.visual["karaoke-text-effects"] ?? true,
               type: ConfigSlider,
             },
           ],

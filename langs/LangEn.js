@@ -755,6 +755,10 @@ window.LANG_EN = {
         "desc": "Controls how often synced and karaoke lyrics update. Lower values reduce load; higher values feel smoother.",
         "unit": " FPS"
       },
+      "textEffects": {
+        "label": "Text Effects",
+        "desc": "Animate karaoke text effects such as shake, breathing, glow, and glitch."
+      },
       "visualCost": {
         "title": "Visual Cost",
         "subtitle": "Quick access to effects that can increase GPU work."

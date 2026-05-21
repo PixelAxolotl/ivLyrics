@@ -755,6 +755,10 @@ window.LANG_ES = {
         "desc": "Controla cuántas veces por segundo se actualizan las letras sincronizadas y karaoke. Valores más bajos reducen carga; valores más altos se sienten más fluidos.",
         "unit": " FPS"
       },
+      "textEffects": {
+        "label": "Efectos de texto",
+        "desc": "Anima efectos de texto de karaoke como temblor, respiración, brillo y glitch."
+      },
       "visualCost": {
         "title": "Costo visual",
         "subtitle": "Acceso rápido a efectos que pueden aumentar el trabajo de la GPU."

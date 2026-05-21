@@ -755,6 +755,10 @@ window.LANG_PT = {
         "desc": "Controla quantas vezes por segundo letras sincronizadas e karaokê são atualizadas. Valores menores reduzem a carga; valores maiores ficam mais suaves.",
         "unit": " FPS"
       },
+      "textEffects": {
+        "label": "Efeitos de texto",
+        "desc": "Anima efeitos de texto de karaokê como tremor, respiração, brilho e glitch."
+      },
       "visualCost": {
         "title": "Custo visual",
         "subtitle": "Acesso rápido a efeitos que podem aumentar o trabalho da GPU."

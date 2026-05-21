@@ -755,6 +755,10 @@ window.LANG_ZH_TW = {
         "desc": "控制同步歌詞與卡拉 OK 歌詞每秒更新的次數。較低數值可降低負載，較高數值較流暢。",
         "unit": " FPS"
       },
+      "textEffects": {
+        "label": "文字效果",
+        "desc": "播放抖動、呼吸、發光、故障等卡拉 OK 文字效果動畫。"
+      },
       "visualCost": {
         "title": "視覺負載",
         "subtitle": "快速調整可能增加 GPU 工作量的效果。"

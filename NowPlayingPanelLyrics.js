@@ -742,6 +742,13 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
   transform-origin: center !important;
 }
 
+.ivlyrics-panel-line.text-effects-disabled,
+.ivlyrics-panel-line.text-effects-disabled *,
+.ivlyrics-panel-line-karaoke-row.text-effects-disabled,
+.ivlyrics-panel-line-karaoke-row.text-effects-disabled * {
+  animation: none !important;
+}
+
 .ivlyrics-panel-karaoke-space {
   margin-right: 5px !important;
 }
@@ -1084,6 +1091,37 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         return [];
     };
 
+    const TEXT_EFFECT_KIND_CLASSES = new Set([
+        'effect',
+        'adlib',
+        'pulse',
+        'wave',
+        'sparkle',
+        'echo',
+        'whisper',
+        'bounce',
+        'sway',
+        'glow',
+        'glitch',
+        'flicker',
+        'float',
+        'blur',
+        'pop'
+    ]);
+
+    const areTextEffectsEnabled = () => CONFIG?.visual?.['karaoke-text-effects'] !== false;
+
+    const getTextEffectKindClassParts = (kind) => {
+        const kindClass = String(kind || '').trim().toLowerCase();
+        if (!kindClass) return [];
+
+        const classes = [kindClass];
+        if (TEXT_EFFECT_KIND_CLASSES.has(kindClass) && !areTextEffectsEnabled()) {
+            classes.push('text-effects-disabled');
+        }
+        return classes;
+    };
+
     const getVocalRowsFromLine = (line) => {
         if (!line?.vocals?.lead?.syllables) return null;
         const normalizeSpeakerClass = (speaker) => String(speaker || '')
@@ -1421,18 +1459,20 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     // ============================================
     // 노래방 라인 컴포넌트 (syllables 포함)
     // ============================================
-    const KaraokeLine = memo(({ syllables, vocalRows, isActive, isPast, phonetic, translation, lineClass }) => {
+    const KaraokeLine = memo(({ syllables, vocalRows, isActive, isPast, phonetic, translation, lineClass, textEffectRevision = 0 }) => {
         const rowPhonetics = splitLineByParallelShape(phonetic, Array.isArray(vocalRows) ? vocalRows.length : 0);
         const rowTranslations = splitLineByParallelShape(translation, Array.isArray(vocalRows) ? vocalRows.length : 0);
         const karaokeContent = Array.isArray(vocalRows) && vocalRows.length > 1
             ? react.createElement("div", { className: "ivlyrics-panel-line-karaoke ivlyrics-panel-line-karaoke-stack" },
-                vocalRows.map((row) =>
+                vocalRows.map((row) => {
+                    const rowKindClasses = getTextEffectKindClassParts(row.kind);
+                    return (
                     react.createElement("div", {
                         key: row.key,
-                        className: `ivlyrics-panel-line-karaoke-part ${row.role || ''} ${row.kind || ''} ${row.speakerClass ? `speaker-${row.speakerClass}` : ''}`
+                        className: `ivlyrics-panel-line-karaoke-part ${row.role || ''} ${rowKindClasses.join(' ')} ${row.speakerClass ? `speaker-${row.speakerClass}` : ''}`
                     },
                         react.createElement("div", {
-                            className: `ivlyrics-panel-line-karaoke-row ${row.role || ''} ${row.kind || ''} ${row.speakerClass ? `speaker-${row.speakerClass}` : ''}`
+                            className: `ivlyrics-panel-line-karaoke-row ${row.role || ''} ${rowKindClasses.join(' ')} ${row.speakerClass ? `speaker-${row.speakerClass}` : ''}`
                         },
                             row.syllables.map((syllable, idx) =>
                                 react.createElement(KaraokeWord, {
@@ -1450,7 +1490,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                             className: "ivlyrics-panel-line-translation"
                         }, row.translation || rowTranslations[vocalRows.indexOf(row)])
                     )
-                )
+                    );
+                })
             )
             : react.createElement("div", { className: "ivlyrics-panel-line-karaoke" },
                 syllables.map((syllable, idx) =>
@@ -1480,6 +1521,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         return prevProps.isActive === nextProps.isActive &&
             prevProps.isPast === nextProps.isPast &&
             prevProps.lineClass === nextProps.lineClass &&
+            prevProps.textEffectRevision === nextProps.textEffectRevision &&
             prevProps.phonetic === nextProps.phonetic &&
             prevProps.translation === nextProps.translation &&
             prevProps.vocalRows === nextProps.vocalRows;
@@ -1584,13 +1626,14 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     // 가사 라인 컴포넌트 (Apple Music 스타일)
     // 노래방 가사와 일반 가사 모두 지원
     // ============================================
-    const LyricLine = memo(({ line, lineIndex, lineCount, isActive, isPast, isFuture, translation, phonetic, isPlaceholder, instrumentalBreakRevision = 0 }) => {
+    const LyricLine = memo(({ line, lineIndex, lineCount, isActive, isPast, isFuture, translation, phonetic, isPlaceholder, instrumentalBreakRevision = 0, textEffectRevision = 0 }) => {
         const speakerClass = String(line?.speaker || '')
             .trim()
             .toLowerCase()
             .replace(/[_\s]+/g, '-')
             .replace(/[^a-z0-9-]/g, '');
-        const lineClass = `ivlyrics-panel-line ${isActive ? 'active' : ''} ${isPast ? 'past' : ''} ${isFuture ? 'future' : ''} ${isPlaceholder ? 'placeholder' : ''} ${line?.kind || ''} ${speakerClass ? `speaker-${speakerClass}` : ''}`;
+        const lineKindClasses = getTextEffectKindClassParts(line?.kind);
+        const lineClass = `ivlyrics-panel-line ${isActive ? 'active' : ''} ${isPast ? 'past' : ''} ${isFuture ? 'future' : ''} ${isPlaceholder ? 'placeholder' : ''} ${lineKindClasses.join(' ')} ${speakerClass ? `speaker-${speakerClass}` : ''}`;
         const interludeInfo = isPlaceholder ? { isInterlude: false, durationMs: 0 } : (line?.interludeInfo || getInterludeInfo(line, lineIndex, lineCount));
 
         // 노래방 가사인지 확인
@@ -1624,7 +1667,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 isPast,
                 phonetic,
                 translation,
-                lineClass
+                lineClass,
+                textEffectRevision
             });
         }
 
@@ -1646,6 +1690,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             prevProps.lineIndex === nextProps.lineIndex &&
             prevProps.lineCount === nextProps.lineCount &&
             prevProps.instrumentalBreakRevision === nextProps.instrumentalBreakRevision &&
+            prevProps.textEffectRevision === nextProps.textEffectRevision &&
             prevProps.line === nextProps.line;
     });
 
@@ -1665,6 +1710,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         const [numLines, setNumLines] = useState(parseInt(getStorageValue(PANEL_LINES_KEY, DEFAULT_LINES), 10));
         const [fontScale, setFontScale] = useState(parseInt(getStorageValue(FONT_SCALE_KEY, DEFAULT_FONT_SCALE), 10));
         const [instrumentalBreakRevision, setInstrumentalBreakRevision] = useState(0);
+        const [textEffectRevision, setTextEffectRevision] = useState(0);
         const [isPlaybackPaused, setIsPlaybackPaused] = useState(getPlaybackPaused);
         const containerRef = useRef(null);
         const scrollRef = useRef(null);
@@ -1993,6 +2039,9 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 }
                 if (event.detail?.name === 'pseudo-karaoke-render-advance') {
                     setPseudoKaraokeAdvanceMs(Number(event.detail.value) || 0);
+                }
+                if (event.detail?.name === 'karaoke-text-effects') {
+                    setTextEffectRevision((revision) => revision + 1);
                 }
                 if (event.detail?.name === 'instrumental-break-icon' ||
                     event.detail?.name === 'instrumental-break-show-label' ||
@@ -2497,7 +2546,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                         translation: visLine.translation,
                         phonetic: visLine.phonetic,
                         isPlaceholder: visLine.isPlaceholder,
-                        instrumentalBreakRevision
+                        instrumentalBreakRevision,
+                        textEffectRevision
                     })
                 )
             )

@@ -755,6 +755,10 @@ window.LANG_VI = {
         "desc": "Điều khiển số lần cập nhật lời đồng bộ và karaoke mỗi giây. Giá trị thấp giảm tải, giá trị cao mượt hơn.",
         "unit": " FPS"
       },
+      "textEffects": {
+        "label": "Hiệu ứng văn bản",
+        "desc": "Phát hiệu ứng chữ karaoke như rung, thở, phát sáng và glitch."
+      },
       "visualCost": {
         "title": "Chi phí hình ảnh",
         "subtitle": "Truy cập nhanh các hiệu ứng có thể làm GPU hoạt động nhiều hơn."

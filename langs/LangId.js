@@ -755,6 +755,10 @@ window.LANG_ID = {
         "desc": "Mengatur berapa kali lirik sinkron dan karaoke diperbarui per detik. Nilai lebih rendah mengurangi beban, nilai lebih tinggi terasa lebih halus.",
         "unit": " FPS"
       },
+      "textEffects": {
+        "label": "Efek teks",
+        "desc": "Memutar animasi efek teks karaoke seperti getar, bernapas, cahaya, dan glitch."
+      },
       "visualCost": {
         "title": "Beban Visual",
         "subtitle": "Akses cepat ke efek yang dapat menambah kerja GPU."

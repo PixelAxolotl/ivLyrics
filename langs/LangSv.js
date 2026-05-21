@@ -755,6 +755,10 @@ window.LANG_SV = {
         "desc": "Styr hur många gånger per sekund synkade och karaoke-texter uppdateras. Lägre värden minskar belastningen, högre känns mjukare.",
         "unit": " FPS"
       },
+      "textEffects": {
+        "label": "Texteffekter",
+        "desc": "Animerar karaoketexteffekter som skakning, andning, glöd och glitch."
+      },
       "visualCost": {
         "title": "Visuell kostnad",
         "subtitle": "Snabb åtkomst till effekter som kan öka GPU-arbetet."

@@ -1639,6 +1639,10 @@ const CONFIG = {
       "ivLyrics:visual:karaoke-line-transition",
       true
     ),
+    "karaoke-text-effects": StorageManager.get(
+      "ivLyrics:visual:karaoke-text-effects",
+      true
+    ),
     "karaoke-mode-enabled": StorageManager.get(
       "ivLyrics:visual:karaoke-mode-enabled",
       true

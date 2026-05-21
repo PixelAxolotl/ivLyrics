@@ -1253,6 +1253,7 @@ const renderLyricMainContent = ({
 	line,
 	position,
 	isActive,
+	settingsRevision = 0,
 	globalCharOffset = 0,
 	activeGlobalCharIndex = -1,
 	subText = null,
@@ -1267,6 +1268,7 @@ const renderLyricMainContent = ({
 			// except the one currently being sung.
 			position: isActive ? position : 0,
 			isActive,
+			settingsRevision,
 			globalCharOffset,
 			activeGlobalCharIndex,
 			phonetic: subText,
@@ -1568,11 +1570,44 @@ const normalizeKaraokeSpeakerClass = (speaker) => String(speaker || "")
 	.replace(/[_\s]+/g, "-")
 	.replace(/[^a-z0-9-]/g, "");
 
+const KARAOKE_TEXT_EFFECT_KIND_CLASSES = new Set([
+	"effect",
+	"adlib",
+	"pulse",
+	"wave",
+	"sparkle",
+	"echo",
+	"whisper",
+	"bounce",
+	"sway",
+	"glow",
+	"glitch",
+	"flicker",
+	"float",
+	"blur",
+	"pop",
+]);
+
+const areKaraokeTextEffectsEnabled = () => CONFIG?.visual?.["karaoke-text-effects"] !== false;
+
+const getKaraokeKindClassParts = (kind) => {
+	const kindClass = String(kind || "").trim().toLowerCase();
+	if (!kindClass) {
+		return [];
+	}
+
+	const classes = [kindClass];
+	if (KARAOKE_TEXT_EFFECT_KIND_CLASSES.has(kindClass) && !areKaraokeTextEffectsEnabled()) {
+		classes.push("text-effects-disabled");
+	}
+	return classes;
+};
+
 const getKaraokeLineMetaClass = (line) => {
 	const classes = [];
 	const speakerClass = normalizeKaraokeSpeakerClass(line?.speaker);
 	if (speakerClass) classes.push(`speaker-${speakerClass}`);
-	if (line?.kind) classes.push(String(line.kind).trim().toLowerCase());
+	if (line?.kind) classes.push(...getKaraokeKindClassParts(line.kind));
 	return classes.join(" ");
 };
 
@@ -2489,6 +2524,7 @@ const LyricsLineBlock = react.memo(({
 					line: mainLine,
 					position: isKara ? position : 0,
 					isActive,
+					settingsRevision,
 					globalCharOffset,
 					activeGlobalCharIndex,
 					subText,
@@ -2654,6 +2690,7 @@ const useSyncedLyricsEngine = ({
 	activeLineRef,
 	lyricsId,
 	containerReady = true,
+	settingsRevision = 0,
 }) => {
 	const leadingEmptyLines = compact ? 2 : 1;
 	const { isScrolling, handleContainerClick } = useScrollActivity(
@@ -3030,6 +3067,7 @@ const useSyncedLyricsEngine = ({
 		visualAnchorLineNumber,
 		globalCharOffsets,
 		activeGlobalCharIndex,
+		settingsRevision,
 	]);
 
 	return {
@@ -3429,7 +3467,7 @@ const getKaraokeBounceValues = (position, isActive, startTime, endTime, attenuat
 	};
 };
 
-const KaraokeLine = react.memo(({ line, position, isActive, globalCharOffset = 0, activeGlobalCharIndex = -1, phonetic = null, translation = null }) => {
+const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0, globalCharOffset = 0, activeGlobalCharIndex = -1, phonetic = null, translation = null }) => {
 	if (!line) {
 		return "";
 	}
@@ -3456,7 +3494,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, globalCharOffset = 0
 			const classParts = [
 				"lyrics-karaoke-part",
 				row.role === "background" ? "background" : "lead",
-				row.kind || "vocal",
+				...getKaraokeKindClassParts(row.kind || "vocal"),
 				row.speakerClass ? `speaker-${row.speakerClass}` : "",
 			].filter(Boolean);
 			const currentOffset = rowGlobalCharOffset;
@@ -3474,6 +3512,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, globalCharOffset = 0
 					line: rowLine,
 					position,
 					isActive,
+					settingsRevision,
 					globalCharOffset: currentOffset,
 					activeGlobalCharIndex,
 				}),
@@ -3662,6 +3701,7 @@ const SyncedLyricsPage = react.memo(({ lyrics = [], provider, contributors, copy
 		activeLineRef: compactActiveLineEle,
 		lyricsId,
 		containerReady,
+		settingsRevision: reRenderLyricsPage,
 	});
 
 	const prevScrollModeRef = useRef(false);
@@ -3982,6 +4022,7 @@ const SyncedExpandedLyricsPage = react.memo(({ lyrics = [], provider, contributo
 		containerRef: pageRef,
 		activeLineRef,
 		lyricsId,
+		settingsRevision: reRenderLyricsPage,
 	});
 
 	if (!Array.isArray(lyrics) || lyrics.length === 0) {

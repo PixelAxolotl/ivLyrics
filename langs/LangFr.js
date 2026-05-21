@@ -755,6 +755,10 @@ window.LANG_FR = {
         "desc": "Contrôle le nombre de mises à jour par seconde des paroles synchronisées et karaoké. Des valeurs plus basses réduisent la charge, des valeurs plus hautes sont plus fluides.",
         "unit": " FPS"
       },
+      "textEffects": {
+        "label": "Effets de texte",
+        "desc": "Anime les effets de texte karaoké comme le tremblement, la respiration, la lueur et le glitch."
+      },
       "visualCost": {
         "title": "Coût visuel",
         "subtitle": "Accès rapide aux effets pouvant augmenter le travail du GPU."

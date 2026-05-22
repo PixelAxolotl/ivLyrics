@@ -1232,30 +1232,6 @@
                     }
                 }
 
-                if (getSyncDataLrclibId(syncDataSource)) {
-                    const directCandidate = decorateDirectCandidate(
-                        await fetchLrclibCandidateById(syncDataSource, headers),
-                        syncDataSource,
-                        trackDurationSec
-                    );
-                    const previewCandidate = buildDirectPreviewCandidate(directCandidate);
-
-                    if (previewCandidate) {
-                        return {
-                            success: true,
-                            error: null,
-                            candidates: [previewCandidate],
-                            selectedCandidateKey: previewCandidate.candidateKey,
-                            selectedSource: 'source-direct',
-                            searchMode: 'source-direct',
-                            totalResults: 1,
-                            usedFallbackQuery: false,
-                            syncDataLineCount: syncDataLineCharCounts?.length || 0,
-                            directLrclibId: getSyncDataLrclibId(syncDataSource)
-                        };
-                    }
-                }
-
                 const runSearch = async (params, label) => {
                     const query = new URLSearchParams();
                     if (params.track_name) query.set('track_name', params.track_name);

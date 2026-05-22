@@ -2798,7 +2798,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			return !(line.chars && line.chars[0] < normalizedLastCharTime);
 		});
 
-		setSyncData(validLines.length > 0 ? { version: validLines.some(line => line.parallel) ? 2 : (syncData?.version || 1), lines: validLines } : null);
+		setSyncData(validLines.length > 0 ? { version: 2, lines: validLines } : null);
 		return normalizedLineData;
 	}, [
 		syncData,

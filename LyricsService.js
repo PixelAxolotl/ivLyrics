@@ -1951,8 +1951,14 @@
                 return null;
             }
 
-            const syncLines = syncData.syncData.lines;
-            const shouldNormalizeParentheticalLines = Number(syncData.syncData.version ?? syncData.version ?? 1) >= 2;
+            const syncBody = syncData.syncData;
+            const syncLines = syncBody.lines;
+            const syncSource = syncBody.source || syncData.source || null;
+            const hasNormalizedSourceLineShape = Array.isArray(syncSource?.lineCharCounts)
+                && syncSource.lineCharCounts.length > 0;
+            const shouldNormalizeParentheticalLines =
+                Number(syncBody.version ?? syncData.version ?? 1) >= 2
+                || hasNormalizedSourceLineShape;
             const baseLyricsLines = getSyncDataBaseLyricsLines(lyrics, shouldNormalizeParentheticalLines);
 
             // 전체 가사 텍스트를 하나로 합침 (줄바꿈 없이 - SyncDataCreator와 동일하게)

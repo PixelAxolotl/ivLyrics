@@ -1519,7 +1519,37 @@
         const _inflightRequests = new Map(); // 진행 중인 요청 추적
         const _fullyLoadedTracks = new Set(); // 전체 목록이 로드된 트랙 ID
         const _usageReportCache = new Set(); // 세션 내 중복 사용량 보고 방지
+        const _serverCacheBypassUntil = new Map(); // 로컬 캐시 삭제 직후 서버 캐시 우회
+        const SERVER_CACHE_BYPASS_MS = 30 * 1000;
+        let _serverCacheBypassAllUntil = 0;
         let _spotifyProfilePromise = null;
+
+        function markServerCacheBypass(trackId) {
+            const expiresAt = Date.now() + SERVER_CACHE_BYPASS_MS;
+            if (!trackId) {
+                _serverCacheBypassAllUntil = expiresAt;
+                return;
+            }
+            _serverCacheBypassUntil.set(trackId, expiresAt);
+        }
+
+        function shouldBypassServerCache(trackId) {
+            if (_serverCacheBypassAllUntil > Date.now()) {
+                return true;
+            }
+            if (_serverCacheBypassAllUntil > 0) {
+                _serverCacheBypassAllUntil = 0;
+            }
+            if (!trackId) {
+                return false;
+            }
+            const expiresAt = _serverCacheBypassUntil.get(trackId) || 0;
+            if (expiresAt <= Date.now()) {
+                _serverCacheBypassUntil.delete(trackId);
+                return false;
+            }
+            return true;
+        }
 
         /**
          * 사용 가능한 sync-data provider 목록 조회
@@ -1569,7 +1599,11 @@
                 const fetchPromise = (async () => {
                     // provider가 legacy인 경우 (Spicetify-custom-apps 호환)
                     const queryProvider = provider === 'legacy' ? 'spotify' : provider;
-                    const response = await fetch(`${API_BASE}/lyrics/sync-data?trackId=${trackId}&provider=${queryProvider}`, {
+                    let requestUrl = `${API_BASE}/lyrics/sync-data?trackId=${trackId}&provider=${queryProvider}`;
+                    if (shouldBypassServerCache(trackId)) {
+                        requestUrl += '&bypassCache=1';
+                    }
+                    const response = await fetch(requestUrl, {
                         cache: 'no-store'
                     });
 
@@ -1644,10 +1678,13 @@
                     }
                 }
                 _fullyLoadedTracks.delete(trackId);
+                markServerCacheBypass(trackId);
             } else {
                 _syncDataCache.clear();
                 _fullyLoadedTracks.clear();
                 _usageReportCache.clear();
+                _serverCacheBypassUntil.clear();
+                markServerCacheBypass();
             }
         }
 
@@ -2160,6 +2197,7 @@
             reportSyncDataUsage,
             applySyncDataToLyrics,
             convertKaraokeToSynced,
+            shouldBypassServerCache,
             clearCache
         };
     })();
@@ -4251,7 +4289,12 @@
                 // 하지만 호출하는 쪽에서 이미 처리가 되어있어야 함.
                 // 여기서는 있는 그대로 호출.
 
-                const response = await fetch(`https://lyrics.api.ivl.is/lyrics/sync-data?trackId=${trackId}&provider=${provider}`, {
+                let requestUrl = `https://lyrics.api.ivl.is/lyrics/sync-data?trackId=${trackId}&provider=${provider}`;
+                if (window.SyncDataService?.shouldBypassServerCache?.(trackId)) {
+                    requestUrl += '&bypassCache=1';
+                }
+
+                const response = await fetch(requestUrl, {
                     cache: 'no-store'
                 });
                 if (response.ok) {

@@ -258,6 +258,9 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                         youtubeUrl += `&trackArtists=${encodeURIComponent(spotifyData.artists.join(', '))}`;
                     }
                 }
+                if (window.SyncDataService?.shouldBypassServerCache?.(trackId)) {
+                    youtubeUrl += `&bypassCache=1`;
+                }
 
                 // API 요청 로깅
                 let logId = null;

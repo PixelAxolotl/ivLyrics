@@ -2519,6 +2519,9 @@ const Prefetcher = {
             youtubeApiUrl += `&trackArtists=${encodeURIComponent(spotifyData.artists.join(', '))}`;
           }
         }
+        if (window.SyncDataService?.shouldBypassServerCache?.(trackId)) {
+          youtubeApiUrl += `&bypassCache=1`;
+        }
         const response = await fetch(youtubeApiUrl, { cache: "no-store" });
         const data = await response.json();
 

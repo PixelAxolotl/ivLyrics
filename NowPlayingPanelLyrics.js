@@ -457,6 +457,20 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
   font-family: var(--ivlyrics-panel-original-font) !important;
 }
 
+.ivlyrics-panel-line-karaoke.is-text-run,
+.ivlyrics-panel-line-karaoke-row.is-text-run {
+  display: block !important;
+  flex-wrap: nowrap !important;
+  letter-spacing: 0 !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  unicode-bidi: plaintext !important;
+}
+
+.ivlyrics-panel-line-karaoke.is-text-run.is-rtl,
+.ivlyrics-panel-line-karaoke-row.is-text-run.is-rtl {
+  direction: ltr !important;
+}
 .ivlyrics-panel-line-karaoke-stack {
   display: flex !important;
   flex-direction: column !important;
@@ -762,20 +776,52 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
   transform-origin: center bottom !important;
 }
 
+.ivlyrics-panel-karaoke-text-run-segment {
+  position: relative !important;
+  display: inline-block !important;
+  white-space: pre !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  transition: color 0.15s ease, transform 0.15s ease !important;
+  transform-origin: center bottom !important;
+  vertical-align: baseline !important;
+  unicode-bidi: isolate !important;
+  -webkit-box-decoration-break: clone !important;
+  box-decoration-break: clone !important;
+}
+
+.ivlyrics-panel-karaoke-text-run-space {
+  white-space: pre-wrap !important;
+}
 /* 노래방 단어 - 활성 (하이라이트 + 미세 바운스) */
-.ivlyrics-panel-karaoke-word.sung {
+.ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-karaoke-text-run-segment.sung {
   color: #ffffff !important;
   animation: ivlyrics-bounce 0.2s ease-out forwards !important;
 }
 
 /* 노래방 라인 활성 시 단어 기본 색상 더 밝게 */
-.ivlyrics-panel-line.active .ivlyrics-panel-karaoke-word {
+.ivlyrics-panel-line.active .ivlyrics-panel-karaoke-word,
+.ivlyrics-panel-line.active .ivlyrics-panel-karaoke-text-run-segment {
   color: rgba(255, 255, 255, 0.6) !important;
 }
 
-.ivlyrics-panel-line.active .ivlyrics-panel-karaoke-word.sung {
+.ivlyrics-panel-line.active .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.active .ivlyrics-panel-karaoke-text-run-segment.sung {
   color: #ffffff !important;
   text-shadow: 0 0 10px rgba(255, 255, 255, 0.5) !important;
+}
+
+.ivlyrics-panel-line.active .ivlyrics-panel-karaoke-text-run-segment.active {
+  color: transparent !important;
+  background-image: linear-gradient(var(--ivlyrics-panel-karaoke-gradient-direction, to right),
+      #ffffff 0,
+      #ffffff var(--ivlyrics-panel-karaoke-fill-soft-start, var(--ivlyrics-panel-karaoke-fill, 0%)),
+      rgba(255, 255, 255, 0.6) var(--ivlyrics-panel-karaoke-fill-soft-end, var(--ivlyrics-panel-karaoke-fill, 0%)),
+      rgba(255, 255, 255, 0.6) 100%) !important;
+  background-repeat: no-repeat !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
 }
 
 /* 가사 없음 상태 */
@@ -1052,6 +1098,98 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     // 노래방 가사 렌더링 헬퍼
     // syllables 또는 vocals 구조에서 syllables 추출
     // ============================================
+    const KARAOKE_RTL_STRONG_CHAR_REGEX = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFC]/u;
+    const KARAOKE_LTR_STRONG_CHAR_REGEX = /[A-Za-z\u00C0-\u02AF\u0370-\u052F\u1E00-\u1EFF]/u;
+    const KARAOKE_JOINING_SCRIPT_REGEX = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFC]/u;
+    const KARAOKE_TEXT_RUN_FILL_STEPS = 25;
+
+    const getKaraokeTextDirection = (text) => {
+        const normalizedText = typeof text === "string" ? text : "";
+        let rtlCount = 0;
+        let ltrCount = 0;
+
+        for (const char of Array.from(normalizedText)) {
+            if (KARAOKE_RTL_STRONG_CHAR_REGEX.test(char)) {
+                rtlCount++;
+                continue;
+            }
+            if (KARAOKE_LTR_STRONG_CHAR_REGEX.test(char)) {
+                ltrCount++;
+            }
+        }
+
+        return rtlCount > ltrCount ? "rtl" : "ltr";
+    };
+
+    const shouldUseKaraokeTextRun = (text) => {
+        const normalizedText = typeof text === "string" ? text : "";
+        return KARAOKE_RTL_STRONG_CHAR_REGEX.test(normalizedText) ||
+            KARAOKE_JOINING_SCRIPT_REGEX.test(normalizedText);
+    };
+
+    const getKaraokeSyllablesText = (syllables) => (
+        Array.isArray(syllables)
+            ? syllables.map((syllable) => syllable?.text || "").join("")
+            : ""
+    );
+
+    const toKaraokeFiniteTime = (value, fallback = 0) => {
+        const numeric = Number(value);
+        return Number.isFinite(numeric) ? numeric : fallback;
+    };
+
+    const getKaraokeTextRunFill = (segment, currentTime) => {
+        const startTime = toKaraokeFiniteTime(segment?.startTime, 0);
+        const endTime = toKaraokeFiniteTime(segment?.endTime, startTime);
+        if (currentTime <= startTime) return 0;
+        if (currentTime >= endTime) return 100;
+
+        const raw = Math.max(0, Math.min(1, (currentTime - startTime) / Math.max(1, endTime - startTime)));
+        return Math.round(raw * KARAOKE_TEXT_RUN_FILL_STEPS) * (100 / KARAOKE_TEXT_RUN_FILL_STEPS);
+    };
+
+    const buildKaraokeTextRunSegments = (syllables) => {
+        if (!Array.isArray(syllables) || syllables.length === 0) return [];
+
+        const segments = [];
+        let currentSegment = null;
+
+        const flushSegment = () => {
+            if (!currentSegment || currentSegment.text.length === 0) {
+                currentSegment = null;
+                return;
+            }
+            segments.push(currentSegment);
+            currentSegment = null;
+        };
+
+        syllables.forEach((syllable) => {
+            const text = syllable?.text || "";
+            if (!text) return;
+
+            const type = /^\s+$/u.test(text) ? "space" : "text";
+            const startTime = toKaraokeFiniteTime(syllable?.startTime, currentSegment?.endTime ?? 0);
+            const endTime = toKaraokeFiniteTime(syllable?.endTime, startTime);
+
+            if (!currentSegment || currentSegment.type !== type) {
+                flushSegment();
+                currentSegment = {
+                    type,
+                    startIndex: segments.length,
+                    text: "",
+                    startTime,
+                    endTime
+                };
+            }
+
+            currentSegment.text += text;
+            currentSegment.startTime = Math.min(currentSegment.startTime, startTime);
+            currentSegment.endTime = Math.max(currentSegment.endTime, endTime);
+        });
+
+        flushSegment();
+        return segments;
+    };
     const splitRenderableSyllables = (syllables) => {
         if (!Array.isArray(syllables) || syllables.length === 0) return [];
 
@@ -1456,53 +1594,128 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         }, text);
     });
 
+    const KaraokeTextRunSegment = memo(({ segment, idx, isLinePast, textDirection }) => {
+        const segmentRef = useRef(null);
+        const text = segment?.text || "";
+        const segmentDirection = getKaraokeTextDirection(text) || textDirection || "ltr";
+        const gradientDirection = segmentDirection === "rtl" ? "to left" : "to right";
+
+        useEffect(() => {
+            if (!segmentRef.current || !text || segment?.type === "space") return;
+
+            const updateSegmentState = () => {
+                const el = segmentRef.current;
+                if (!el) return;
+
+                const currentTime = window._ivLyricsPanelCurrentTime || 0;
+                const fill = isLinePast ? 100 : getKaraokeTextRunFill(segment, currentTime);
+                const isDone = fill >= 100;
+                const isActive = fill > 0 && fill < 100;
+
+                el.classList.toggle("sung", isDone);
+                el.classList.toggle("active", isActive);
+
+                if (isActive) {
+                    const softEdge = 10;
+                    el.style.setProperty("--ivlyrics-panel-karaoke-gradient-direction", gradientDirection);
+                    el.style.setProperty("--ivlyrics-panel-karaoke-fill", String(fill) + "%");
+                    el.style.setProperty("--ivlyrics-panel-karaoke-fill-soft-start", String(Math.max(0, fill - softEdge)) + "%");
+                    el.style.setProperty("--ivlyrics-panel-karaoke-fill-soft-end", String(Math.min(100, fill + softEdge)) + "%");
+                } else {
+                    el.style.removeProperty("--ivlyrics-panel-karaoke-gradient-direction");
+                    el.style.removeProperty("--ivlyrics-panel-karaoke-fill");
+                    el.style.removeProperty("--ivlyrics-panel-karaoke-fill-soft-start");
+                    el.style.removeProperty("--ivlyrics-panel-karaoke-fill-soft-end");
+                }
+            };
+
+            updateSegmentState();
+            window.addEventListener("ivlyrics-panel-time-update", updateSegmentState);
+            return () => {
+                window.removeEventListener("ivlyrics-panel-time-update", updateSegmentState);
+            };
+        }, [segment, text, isLinePast, gradientDirection]);
+
+        if (!text) return null;
+        if (segment?.type === "space") {
+            return react.createElement("span", {
+                key: "text-run-space-" + idx,
+                className: "ivlyrics-panel-karaoke-text-run-space"
+            }, text);
+        }
+
+        return react.createElement("span", {
+            key: "text-run-" + idx,
+            ref: segmentRef,
+            className: "ivlyrics-panel-karaoke-text-run-segment " + (isLinePast ? "sung" : ""),
+            dir: segmentDirection
+        }, text);
+    });
     // ============================================
     // 노래방 라인 컴포넌트 (syllables 포함)
     // ============================================
     const KaraokeLine = memo(({ syllables, vocalRows, isActive, isPast, phonetic, translation, lineClass, textEffectRevision = 0 }) => {
         const rowPhonetics = splitLineByParallelShape(phonetic, Array.isArray(vocalRows) ? vocalRows.length : 0);
         const rowTranslations = splitLineByParallelShape(translation, Array.isArray(vocalRows) ? vocalRows.length : 0);
-        const karaokeContent = Array.isArray(vocalRows) && vocalRows.length > 1
-            ? react.createElement("div", { className: "ivlyrics-panel-line-karaoke ivlyrics-panel-line-karaoke-stack" },
-                vocalRows.map((row) => {
-                    const rowKindClasses = getTextEffectKindClassParts(row.kind);
-                    return (
-                    react.createElement("div", {
-                        key: row.key,
-                        className: `ivlyrics-panel-line-karaoke-part ${row.role || ''} ${rowKindClasses.join(' ')} ${row.speakerClass ? `speaker-${row.speakerClass}` : ''}`
-                    },
-                        react.createElement("div", {
-                            className: `ivlyrics-panel-line-karaoke-row ${row.role || ''} ${rowKindClasses.join(' ')} ${row.speakerClass ? `speaker-${row.speakerClass}` : ''}`
-                        },
-                            row.syllables.map((syllable, idx) =>
-                                react.createElement(KaraokeWord, {
-                                    key: `${row.key}-${idx}`,
-                                    syllable,
-                                    idx,
-                                    isLinePast: isPast
-                                })
-                            )
-                        ),
-                        (row.phonetic || rowPhonetics[vocalRows.indexOf(row)]) && react.createElement("div", {
-                            className: "ivlyrics-panel-line-phonetic"
-                        }, row.phonetic || rowPhonetics[vocalRows.indexOf(row)]),
-                        (row.translation || rowTranslations[vocalRows.indexOf(row)]) && react.createElement("div", {
-                            className: "ivlyrics-panel-line-translation"
-                        }, row.translation || rowTranslations[vocalRows.indexOf(row)])
+        const renderKaraokeSyllables = (items, keyPrefix, className) => {
+            const joinedText = getKaraokeSyllablesText(items);
+
+            if (shouldUseKaraokeTextRun(joinedText)) {
+                const textDirection = getKaraokeTextDirection(joinedText);
+                const segments = buildKaraokeTextRunSegments(items);
+                const renderSegments = textDirection === "rtl" ? [...segments].reverse() : segments;
+
+                return react.createElement("div", {
+                    className: className + " is-text-run " + (textDirection === "rtl" ? "is-rtl" : ""),
+                    dir: textDirection === "rtl" ? "ltr" : textDirection
+                },
+                    renderSegments.map((segment, idx) =>
+                        react.createElement(KaraokeTextRunSegment, {
+                            key: keyPrefix + "-text-run-" + segment.startIndex + "-" + idx,
+                            segment,
+                            idx,
+                            isLinePast: isPast,
+                            textDirection
+                        })
                     )
-                    );
-                })
-            )
-            : react.createElement("div", { className: "ivlyrics-panel-line-karaoke" },
-                syllables.map((syllable, idx) =>
+                );
+            }
+
+            return react.createElement("div", { className },
+                items.map((syllable, idx) =>
                     react.createElement(KaraokeWord, {
-                        key: idx,
+                        key: keyPrefix + "-" + idx,
                         syllable,
                         idx,
                         isLinePast: isPast
                     })
                 )
             );
+        };
+
+        const karaokeContent = Array.isArray(vocalRows) && vocalRows.length > 1
+            ? react.createElement("div", { className: "ivlyrics-panel-line-karaoke ivlyrics-panel-line-karaoke-stack" },
+                vocalRows.map((row, rowIndex) => {
+                    const rowKindClasses = getTextEffectKindClassParts(row.kind);
+                    const rowKey = row.key || "row-" + rowIndex;
+                    const rowClassName = "ivlyrics-panel-line-karaoke-row " + (row.role || "") + " " + rowKindClasses.join(" ") + " " + (row.speakerClass ? "speaker-" + row.speakerClass : "");
+                    return (
+                    react.createElement("div", {
+                        key: rowKey,
+                        className: "ivlyrics-panel-line-karaoke-part " + (row.role || "") + " " + rowKindClasses.join(" ") + " " + (row.speakerClass ? "speaker-" + row.speakerClass : "")
+                    },
+                        renderKaraokeSyllables(row.syllables, rowKey, rowClassName),
+                        (row.phonetic || rowPhonetics[rowIndex]) && react.createElement("div", {
+                            className: "ivlyrics-panel-line-phonetic"
+                        }, row.phonetic || rowPhonetics[rowIndex]),
+                        (row.translation || rowTranslations[rowIndex]) && react.createElement("div", {
+                            className: "ivlyrics-panel-line-translation"
+                        }, row.translation || rowTranslations[rowIndex])
+                    )
+                    );
+                })
+            )
+            : renderKaraokeSyllables(syllables, "main", "ivlyrics-panel-line-karaoke");
 
         return react.createElement("div", { className: lineClass },
             // 노래방 가사 (글자별 타이밍)

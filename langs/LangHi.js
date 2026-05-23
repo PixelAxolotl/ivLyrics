@@ -1991,6 +1991,12 @@ window.LANG_HI = {
     "lrclibIdInvalid": "मान्य LRCLIB ID दर्ज करें",
     "lrclibIdLoadSuccess": "LRCLIB ID से बोल लोड हो गए",
     "lrclibIdLoadError": "LRCLIB ID से बोल लोड नहीं हो सके",
+    "lrclibSearchQueryLabel": "LRCLIB खोज",
+    "lrclibSearchQueryPlaceholder": "गीत का नाम या कलाकार",
+    "lrclibSearchButton": "खोजें",
+    "lrclibSearchLoading": "खोज रहा है...",
+    "lrclibSearchQueryRequired": "LRCLIB खोज शब्द दर्ज करें",
+    "lrclibSearchError": "LRCLIB खोज विफल रही",
     "shortcuts": {
       "charForward": "1 अक्षर",
       "charBack": "1 अक्षर वापस",

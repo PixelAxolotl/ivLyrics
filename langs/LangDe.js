@@ -1991,6 +1991,12 @@ window.LANG_DE = {
     "lrclibIdInvalid": "Gib eine gültige LRCLIB-ID ein",
     "lrclibIdLoadSuccess": "Lyrics per LRCLIB-ID geladen",
     "lrclibIdLoadError": "Lyrics konnten per LRCLIB-ID nicht geladen werden",
+    "lrclibSearchQueryLabel": "LRCLIB-Suche",
+    "lrclibSearchQueryPlaceholder": "Songtitel oder Künstler",
+    "lrclibSearchButton": "Suchen",
+    "lrclibSearchLoading": "Suche läuft...",
+    "lrclibSearchQueryRequired": "Gib einen LRCLIB-Suchbegriff ein",
+    "lrclibSearchError": "LRCLIB-Suche fehlgeschlagen",
     "shortcuts": {
       "charForward": "1 Zeichen",
       "charBack": "1 Zeichen rückgängig",

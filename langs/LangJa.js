@@ -1992,6 +1992,12 @@ window.LANG_JA = {
     "lrclibIdInvalid": "有効なLRCLIB IDを入力してください",
     "lrclibIdLoadSuccess": "LRCLIB IDから歌詞を読み込みました",
     "lrclibIdLoadError": "LRCLIB IDから歌詞を読み込めませんでした",
+    "lrclibSearchQueryLabel": "LRCLIB検索",
+    "lrclibSearchQueryPlaceholder": "曲名またはアーティスト",
+    "lrclibSearchButton": "検索",
+    "lrclibSearchLoading": "検索中...",
+    "lrclibSearchQueryRequired": "LRCLIBの検索語を入力してください",
+    "lrclibSearchError": "LRCLIBの検索に失敗しました",
     "shortcuts": {
       "charForward": "1文字",
       "charBack": "1文字取消",

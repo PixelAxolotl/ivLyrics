@@ -1992,6 +1992,12 @@ window.LANG_ES = {
     "lrclibIdInvalid": "Introduce un ID de LRCLIB válido",
     "lrclibIdLoadSuccess": "Letra cargada por ID de LRCLIB",
     "lrclibIdLoadError": "No se pudo cargar la letra por ID de LRCLIB",
+    "lrclibSearchQueryLabel": "Búsqueda en LRCLIB",
+    "lrclibSearchQueryPlaceholder": "Título o artista",
+    "lrclibSearchButton": "Buscar",
+    "lrclibSearchLoading": "Buscando...",
+    "lrclibSearchQueryRequired": "Introduce una búsqueda de LRCLIB",
+    "lrclibSearchError": "Error al buscar en LRCLIB",
     "shortcuts": {
       "charForward": "1 Carácter",
       "charBack": "Deshacer 1 Carácter",

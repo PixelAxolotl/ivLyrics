@@ -1992,6 +1992,12 @@ window.LANG_IT = {
     "lrclibIdInvalid": "Inserisci un ID LRCLIB valido",
     "lrclibIdLoadSuccess": "Testo caricato tramite ID LRCLIB",
     "lrclibIdLoadError": "Impossibile caricare il testo tramite ID LRCLIB",
+    "lrclibSearchQueryLabel": "Ricerca LRCLIB",
+    "lrclibSearchQueryPlaceholder": "Titolo del brano o artista",
+    "lrclibSearchButton": "Cerca",
+    "lrclibSearchLoading": "Ricerca...",
+    "lrclibSearchQueryRequired": "Inserisci una ricerca LRCLIB",
+    "lrclibSearchError": "Ricerca LRCLIB non riuscita",
     "shortcuts": {
       "charForward": "1 Carattere",
       "charBack": "Annulla 1 Carattere",

@@ -124,6 +124,21 @@ const getSyncCreatorLeadingCharOffset = (lineCounts, prefixLength) => (
 		.reduce((sum, count) => sum + Math.max(0, Number(count) || 0), 0)
 );
 
+const getSyncCreatorLyricsFingerprintFromText = (text) => {
+	const comparableText = String(text || '')
+		.normalize('NFC')
+		.split('\n')
+		.map(line => line.trim().normalize('NFC'))
+		.filter(Boolean)
+		.join('\n');
+	let hash = 2166136261;
+	for (const char of Array.from(comparableText)) {
+		hash ^= char.codePointAt(0) || 0;
+		hash = Math.imul(hash, 16777619);
+	}
+	return `lrclib-${(hash >>> 0).toString(36)}-${Array.from(comparableText).length.toString(36)}`;
+};
+
 const shiftSyncCreatorRange = (range, charOffset) => {
 	const start = Number(range?.start);
 	const end = Number(range?.end);
@@ -177,8 +192,14 @@ const normalizeLoadedSyncCreatorBodyForLyrics = (syncBody, lyricsText) => {
 	const sourceLineCounts = Array.isArray(syncBody?.source?.lineCharCounts)
 		? syncBody.source.lineCharCounts
 		: null;
+	if (!sourceLineCounts) return syncBody;
 	const currentLineCounts = getSyncCreatorLineCharCountsFromText(lyricsText);
 	const prefix = findSyncCreatorSourceLinePrefix(sourceLineCounts, currentLineCounts);
+	if (prefix < 0) return null;
+	if (prefix === 0 && syncBody?.source?.lyricsFingerprint) {
+		const currentFingerprint = getSyncCreatorLyricsFingerprintFromText(lyricsText);
+		if (syncBody.source.lyricsFingerprint !== currentFingerprint) return null;
+	}
 	if (prefix <= 0) return syncBody;
 
 	const charOffset = getSyncCreatorLeadingCharOffset(sourceLineCounts, prefix);
@@ -1179,6 +1200,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const [showLrclibCandidates, setShowLrclibCandidates] = useState(true);
 	const [lrclibIdInput, setLrclibIdInput] = useState('');
 	const [isLoadingLrclibId, setIsLoadingLrclibId] = useState(false);
+	const [lrclibSearchQuery, setLrclibSearchQuery] = useState('');
+	const [isSearchingLrclib, setIsSearchingLrclib] = useState(false);
 
 	// Refs
 	const containerRef = useRef(null);
@@ -1341,7 +1364,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				if (existingSyncData && existingSyncData.syncData && existingSyncData.syncData.lines) {
 					window.__ivLyricsDebugLog?.('[SyncDataCreator] Found matching existing sync data');
 					loadedSyncBody = existingSyncData.syncData;
-					Toast.success(I18n.t('syncCreator.loadedExistingSyncData') || 'Loaded existing sync data');
 				}
 			} catch (e) {
 				console.warn('[SyncDataCreator] Failed to load existing sync data:', e);
@@ -1355,7 +1377,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				window.__ivLyricsDebugLog?.('[SyncDataCreator] Trimmed leading sync-data source lines for current lyrics');
 			}
 			loadedSyncBody = normalizedLoadedSyncBody;
-			setSyncData(loadedSyncBody);
+			if (loadedSyncBody) {
+				setSyncData(loadedSyncBody);
+				Toast.success(I18n.t('syncCreator.loadedExistingSyncData') || 'Loaded existing sync data');
+			}
 		}
 		if (text.trim().length > 0) {
 			const existingHasParallel = Array.isArray(loadedSyncBody?.lines)
@@ -1469,6 +1494,19 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		};
 	}, [artistName, getLrclibCandidateText, getSyncCreatorLyricsFingerprint, trackInfo, trackName]);
 
+	const buildLrclibSearchCandidate = useCallback((candidate, index, sourceLabel = 'manual') => {
+		const requestedId = candidate?.id ?? `manual-${index}`;
+		const baseCandidate = buildLrclibIdCandidate(candidate, requestedId);
+		if (!baseCandidate) return null;
+		const previewText = baseCandidate.previewText || getLrclibCandidateText(baseCandidate);
+		return {
+			...baseCandidate,
+			candidateKey: `${sourceLabel}:${index}:${candidate?.id ?? requestedId}:${getSyncCreatorLyricsFingerprint(previewText)}`,
+			searchSource: sourceLabel,
+			isSelectedByDefault: index === 0
+		};
+	}, [buildLrclibIdCandidate, getLrclibCandidateText, getSyncCreatorLyricsFingerprint]);
+
 	const loadLrclibById = useCallback(async () => {
 		const lrclibId = String(lrclibIdInput || '').trim();
 		if (!/^\d+$/.test(lrclibId)) {
@@ -1546,6 +1584,63 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		getLrclibCandidateText,
 		lrclibIdInput
 	]);
+
+	const searchLrclibByQuery = useCallback(async () => {
+		const query = String(lrclibSearchQuery || '').trim();
+		if (!query) {
+			Toast.error(I18n.t('syncCreator.lrclibSearchQueryRequired') || 'Enter a LRCLIB search query.');
+			return;
+		}
+
+		setIsSearchingLrclib(true);
+		setError(null);
+		try {
+			const params = new URLSearchParams({ q: query });
+			const response = await fetch(`https://lrclib.net/api/search?${params.toString()}`, {
+				headers: {
+					'x-user-agent': `spicetify v${Spicetify.Config?.version || 'unknown'}`
+				}
+			});
+			if (!response.ok) {
+				throw new Error(`LRCLIB ${response.status}`);
+			}
+
+			const body = await response.json();
+			const candidates = (Array.isArray(body) ? body : [])
+				.map((candidate, index) => buildLrclibSearchCandidate(candidate, index, 'manual'))
+				.filter(candidate => candidate && getLrclibCandidateText(candidate).trim().length > 0);
+			setLrclibCandidates(candidates);
+			setPreviewLrclibCandidateKey(candidates[0]?.candidateKey || '');
+			setSelectedLrclibCandidateKey(prev => (
+				candidates.some(candidate => candidate.candidateKey === prev) ? prev : ''
+			));
+			setLrclibSearchMeta({
+				success: candidates.length > 0,
+				totalResults: candidates.length,
+				selectedCandidateKey: candidates[0]?.candidateKey || null,
+				selectedSource: 'manual',
+				searchMode: 'manual',
+				manualQuery: query,
+				error: candidates.length > 0 ? null : (I18n.t('syncCreator.lrclibNoCandidates') || 'No LRCLIB candidates found')
+			});
+			setShowLrclibCandidates(true);
+		} catch (e) {
+			console.error('[SyncDataCreator] Failed to search LRCLIB:', e);
+			setLrclibCandidates([]);
+			setPreviewLrclibCandidateKey('');
+			setLrclibSearchMeta({
+				success: false,
+				totalResults: 0,
+				selectedCandidateKey: null,
+				selectedSource: 'manual',
+				searchMode: 'manual',
+				manualQuery: query,
+				error: (I18n.t('syncCreator.lrclibSearchError') || 'Failed to search LRCLIB') + ': ' + e.message
+			});
+			setShowLrclibCandidates(true);
+		}
+		setIsSearchingLrclib(false);
+	}, [buildLrclibSearchCandidate, getLrclibCandidateText, lrclibSearchQuery]);
 
 	// 가사를 줄 단위로 파싱
 	// NFC 정규화를 적용하여 결합 문자(NFD)를 합성 문자로 변환
@@ -4870,7 +4965,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			fontWeight: '850',
 			cursor: 'pointer',
 			textAlign: 'left',
-			letterSpacing: '0.01em'
+			letterSpacing: '0.01em',
+			outline: 'none'
 		},
 		speakerDot: { width: '8px', height: '8px', borderRadius: '999px', flexShrink: 0 },
 		effectGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '9px' },
@@ -4886,7 +4982,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			padding: '12px 8px',
 			cursor: 'pointer',
 			overflow: 'visible',
-			boxSizing: 'border-box'
+			boxSizing: 'border-box',
+			outline: 'none'
 		},
 		effectLabel: {
 			minWidth: 0,
@@ -5157,6 +5254,17 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			textTransform: 'uppercase'
 		},
 		lrclibIdRow: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '8px' },
+		lrclibSearchBox: {
+			gridColumn: '1 / -1',
+			display: 'flex',
+			flexDirection: 'column',
+			gap: '6px',
+			padding: '10px',
+			borderRadius: '8px',
+			background: 'rgba(49, 130, 246, 0.055)',
+			border: `1px solid ${TOSS_BORDER}`
+		},
+		lrclibSearchRow: { display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: '8px' },
 		lrclibIdInput: {
 			minWidth: 0,
 			background: 'rgba(0,0,0,0.22)',
@@ -5431,6 +5539,15 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 	const renderTextEffectPicker = (selectedKind, onSelect) => {
 		const normalizedKind = selectedKind || SYNC_CREATOR_DEFAULT_KIND;
+		const renderEffectPreview = (label, value) => react.createElement('span', {
+			style: s.effectLabel,
+			className: `ivlyrics-sync-kind-preview ${value}`
+		}, Array.from(label).map((char, index) => react.createElement('span', {
+			key: `${value}-${index}`,
+			className: `ivlyrics-sync-kind-preview-char ${value}`,
+			style: char === ' ' ? { minWidth: '0.35em' } : null
+		}, char === ' ' ? '\u00A0' : char)));
+
 		return react.createElement('div', { style: s.effectGrid },
 			SYNC_CREATOR_KIND_OPTIONS.map(([value, labelKey]) => {
 				const isSelected = normalizedKind === value;
@@ -5438,23 +5555,34 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				return react.createElement('button', {
 					key: value,
 					type: 'button',
+					className: 'ivlyrics-sync-effect-card',
 					style: {
 						...s.effectCard,
 						background: isSelected ? TOSS_BLUE_SOFT : s.effectCard.background,
 						borderColor: isSelected ? TOSS_BLUE_BORDER : s.effectCard.border,
 						boxShadow: isSelected ? `0 0 0 3px ${TOSS_BLUE_RING}` : 'none'
 					},
+					onMouseDown: (e) => e.preventDefault(),
 					onClick: () => onSelect(value),
 					title: label
-				},
-					react.createElement('span', {
-						style: s.effectLabel,
-						className: `ivlyrics-sync-kind-preview ${value}`
-					}, label)
-				);
+				}, renderEffectPreview(label, value));
 			})
 		);
 	};
+
+	const renderBulkSpeakerControl = () => lyricsLines.length > 0 && react.createElement('label', { style: s.bulkVocalPanelRow },
+		react.createElement('span', { style: s.bulkVocalLabel }, I18n.t('syncCreator.bulkVocalLabel') || 'All vocals'),
+		react.createElement('select', {
+			style: { ...s.select, width: '100%' },
+			value: '',
+			onChange: (e) => applySongVocalSpeaker(e.target.value)
+		},
+			[
+				react.createElement('option', { key: 'placeholder', value: '', disabled: true }, I18n.t('syncCreator.bulkVocalPlaceholder') || 'Set speaker...'),
+				...SYNC_CREATOR_SPEAKER_OPTIONS.map(value => react.createElement('option', { key: value, value }, value))
+			]
+		)
+	);
 
 	const renderLineInspector = () => {
 		const targetSpeaker = activeParallelPart ? activeParallelPart.speaker : currentLineMeta.speaker;
@@ -5472,7 +5600,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			react.createElement('div', { style: s.panel },
 				react.createElement('div', { style: s.panelTitle }, I18n.t('syncCreator.speakerLabel') || 'SPEAKER'),
 				react.createElement('div', { style: s.panelSubtitle }, activeParallelPart ? (activeParallelPart.role || '') : (I18n.t('syncCreator.allLine') || 'Full line')),
-				renderSpeakerPicker(targetSpeaker, updateSpeaker)
+				renderSpeakerPicker(targetSpeaker, updateSpeaker),
+				react.createElement('div', { style: s.railDivider }),
+				renderBulkSpeakerControl()
 			),
 			react.createElement('div', { style: s.panel },
 				react.createElement('div', { style: s.panelTitle }, I18n.t('syncCreator.typeLabel') || 'Text effect'),
@@ -5603,19 +5733,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				onClick: () => setIsCharacterPronunciationPrimary(value => !value),
 				title: I18n.t('syncCreator.characterPronunciationPrimaryDesc') || '생성된 발음을 크게, 원어 가사를 작게 표시합니다.'
 			}, I18n.t('syncCreator.characterPronunciationPrimary') || '발음 크게'),
-			lyricsLines.length > 0 && react.createElement('label', { style: s.bulkVocalPanelRow },
-				react.createElement('span', { style: s.bulkVocalLabel }, I18n.t('syncCreator.bulkVocalLabel') || 'All vocals'),
-				react.createElement('select', {
-					style: { ...s.select, width: '100%' },
-					value: '',
-					onChange: (e) => applySongVocalSpeaker(e.target.value)
-				},
-					[
-						react.createElement('option', { key: 'placeholder', value: '', disabled: true }, I18n.t('syncCreator.bulkVocalPlaceholder') || 'Set speaker...'),
-						...SYNC_CREATOR_SPEAKER_OPTIONS.map(value => react.createElement('option', { key: value, value }, value))
-					]
-				)
-			),
 			isVirtualKaraokeSource && react.createElement('span', { style: s.virtualKaraokeBadge }, I18n.t('syncCreator.virtualKaraoke') || '가상 노래방 데이터')
 		)
 	);
@@ -5685,6 +5802,31 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		)
 	);
 
+	const renderLrclibSearchControls = () => react.createElement('div', { style: s.lrclibSearchBox },
+		react.createElement('div', { style: s.lrclibIdLabel }, I18n.t('syncCreator.lrclibSearchQueryLabel') || 'LRCLIB Search'),
+		react.createElement('div', { style: s.lrclibSearchRow },
+			react.createElement('input', {
+				type: 'text',
+				style: s.lrclibIdInput,
+				value: lrclibSearchQuery,
+				placeholder: I18n.t('syncCreator.lrclibSearchQueryPlaceholder') || `${trackName} ${artistName}`.trim(),
+				onChange: (e) => setLrclibSearchQuery(e.target.value),
+				onKeyDown: (e) => {
+					if (e.key === 'Enter') searchLrclibByQuery();
+				},
+				disabled: isSearchingLrclib
+			}),
+			react.createElement('button', {
+				type: 'button',
+				style: { ...s.loadBtn, whiteSpace: 'nowrap', opacity: isSearchingLrclib ? 0.6 : 1 },
+				onClick: searchLrclibByQuery,
+				disabled: isSearchingLrclib
+			}, isSearchingLrclib
+				? (I18n.t('syncCreator.lrclibSearchLoading') || 'Searching...')
+				: (I18n.t('syncCreator.lrclibSearchButton') || 'Search'))
+		)
+	);
+
 	const renderLrclibCandidatesPanel = () => addonId === 'lrclib' && react.createElement('div', {
 		style: { ...s.candidatePanel, padding: '12px', borderBottom: 'none', borderRadius: '8px' }
 	},
@@ -5700,6 +5842,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				? (I18n.t('syncCreator.hideLrclibSearchResults') || 'Hide Search Results')
 				: (I18n.t('syncCreator.showLrclibSearchResults') || 'Show Search Results'))
 		),
+		showLrclibCandidates && renderLrclibSearchControls(),
 		showLrclibCandidates && react.createElement('div', { style: s.candidateList },
 			isLoading && lrclibCandidates.length === 0 && react.createElement('div', { style: s.candidateEmpty }, I18n.t('syncCreator.loadingLyrics') || 'Loading lyrics...'),
 			!isLoading && lrclibCandidates.length === 0 && react.createElement('div', { style: s.candidateEmpty }, lrclibSearchMeta?.error || (I18n.t('syncCreator.lrclibNoCandidates') || 'No LRCLIB candidates found')),

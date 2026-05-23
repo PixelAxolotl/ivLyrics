@@ -1992,6 +1992,12 @@ window.LANG_BN = {
     "lrclibIdInvalid": "সঠিক LRCLIB ID লিখুন",
     "lrclibIdLoadSuccess": "LRCLIB ID দিয়ে লিরিক্স লোড হয়েছে",
     "lrclibIdLoadError": "LRCLIB ID দিয়ে লিরিক্স লোড করা যায়নি",
+    "lrclibSearchQueryLabel": "LRCLIB অনুসন্ধান",
+    "lrclibSearchQueryPlaceholder": "গানের নাম বা শিল্পী",
+    "lrclibSearchButton": "অনুসন্ধান",
+    "lrclibSearchLoading": "অনুসন্ধান চলছে...",
+    "lrclibSearchQueryRequired": "LRCLIB অনুসন্ধান শব্দ লিখুন",
+    "lrclibSearchError": "LRCLIB অনুসন্ধান ব্যর্থ হয়েছে",
     "shortcuts": {
       "charForward": "১টি অক্ষর",
       "charBack": "১টি অক্ষর বাতিল",

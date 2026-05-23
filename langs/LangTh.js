@@ -1992,6 +1992,12 @@ window.LANG_TH = {
     "lrclibIdInvalid": "กรุณาใส่ LRCLIB ID ที่ถูกต้อง",
     "lrclibIdLoadSuccess": "โหลดเนื้อเพลงจาก LRCLIB ID แล้ว",
     "lrclibIdLoadError": "โหลดเนื้อเพลงจาก LRCLIB ID ไม่สำเร็จ",
+    "lrclibSearchQueryLabel": "ค้นหา LRCLIB",
+    "lrclibSearchQueryPlaceholder": "ชื่อเพลงหรือศิลปิน",
+    "lrclibSearchButton": "ค้นหา",
+    "lrclibSearchLoading": "กำลังค้นหา...",
+    "lrclibSearchQueryRequired": "ป้อนคำค้นหา LRCLIB",
+    "lrclibSearchError": "ค้นหา LRCLIB ไม่สำเร็จ",
     "shortcuts": {
       "charForward": "1 ตัวอักษร",
       "charBack": "ยกเลิก 1 ตัวอักษร",

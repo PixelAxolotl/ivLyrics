@@ -1992,6 +1992,12 @@ window.LANG_RU = {
     "lrclibIdInvalid": "Введите корректный ID LRCLIB",
     "lrclibIdLoadSuccess": "Текст загружен по ID LRCLIB",
     "lrclibIdLoadError": "Не удалось загрузить текст по ID LRCLIB",
+    "lrclibSearchQueryLabel": "Поиск LRCLIB",
+    "lrclibSearchQueryPlaceholder": "Название песни или исполнитель",
+    "lrclibSearchButton": "Искать",
+    "lrclibSearchLoading": "Поиск...",
+    "lrclibSearchQueryRequired": "Введите запрос для LRCLIB",
+    "lrclibSearchError": "Не удалось выполнить поиск в LRCLIB",
     "shortcuts": {
       "charForward": "1 Символ",
       "charBack": "Отменить 1 символ",

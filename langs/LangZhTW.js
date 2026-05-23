@@ -1992,6 +1992,12 @@ window.LANG_ZH_TW = {
     "lrclibIdInvalid": "請輸入有效的 LRCLIB ID",
     "lrclibIdLoadSuccess": "已透過 LRCLIB ID 載入歌詞",
     "lrclibIdLoadError": "無法透過 LRCLIB ID 載入歌詞",
+    "lrclibSearchQueryLabel": "LRCLIB 搜尋",
+    "lrclibSearchQueryPlaceholder": "歌曲名稱或藝人",
+    "lrclibSearchButton": "搜尋",
+    "lrclibSearchLoading": "正在搜尋...",
+    "lrclibSearchQueryRequired": "請輸入 LRCLIB 搜尋詞",
+    "lrclibSearchError": "LRCLIB 搜尋失敗",
     "shortcuts": {
       "charForward": "1字",
       "charBack": "取消1字",

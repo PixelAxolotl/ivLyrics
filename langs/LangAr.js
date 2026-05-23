@@ -1991,6 +1991,12 @@ window.LANG_AR = {
     "lrclibIdInvalid": "أدخل معرّف LRCLIB صحيحًا",
     "lrclibIdLoadSuccess": "تم تحميل الكلمات بواسطة معرّف LRCLIB",
     "lrclibIdLoadError": "تعذر تحميل الكلمات بواسطة معرّف LRCLIB",
+    "lrclibSearchQueryLabel": "بحث LRCLIB",
+    "lrclibSearchQueryPlaceholder": "عنوان الأغنية أو الفنان",
+    "lrclibSearchButton": "بحث",
+    "lrclibSearchLoading": "جارٍ البحث...",
+    "lrclibSearchQueryRequired": "أدخل عبارة بحث LRCLIB",
+    "lrclibSearchError": "فشل البحث في LRCLIB",
     "shortcuts": {
       "charForward": "حرف واحد",
       "charBack": "تراجع حرف",

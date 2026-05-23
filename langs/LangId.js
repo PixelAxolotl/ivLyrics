@@ -1991,6 +1991,12 @@ window.LANG_ID = {
     "lrclibIdInvalid": "Masukkan ID LRCLIB yang valid",
     "lrclibIdLoadSuccess": "Lirik dimuat dari ID LRCLIB",
     "lrclibIdLoadError": "Gagal memuat lirik dari ID LRCLIB",
+    "lrclibSearchQueryLabel": "Pencarian LRCLIB",
+    "lrclibSearchQueryPlaceholder": "Judul lagu atau artis",
+    "lrclibSearchButton": "Cari",
+    "lrclibSearchLoading": "Mencari...",
+    "lrclibSearchQueryRequired": "Masukkan kata kunci LRCLIB",
+    "lrclibSearchError": "Gagal mencari di LRCLIB",
     "shortcuts": {
       "charForward": "1 Karakter",
       "charBack": "Batalkan 1 Karakter",

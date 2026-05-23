@@ -2001,6 +2001,12 @@ window.LANG_MS = {
     "lrclibIdInvalid": "Masukkan ID LRCLIB yang sah",
     "lrclibIdLoadSuccess": "Lirik dimuatkan daripada ID LRCLIB",
     "lrclibIdLoadError": "Gagal memuatkan lirik daripada ID LRCLIB",
+    "lrclibSearchQueryLabel": "Carian LRCLIB",
+    "lrclibSearchQueryPlaceholder": "Tajuk lagu atau artis",
+    "lrclibSearchButton": "Cari",
+    "lrclibSearchLoading": "Mencari...",
+    "lrclibSearchQueryRequired": "Masukkan carian LRCLIB",
+    "lrclibSearchError": "Carian LRCLIB gagal",
     "shortcuts": {
       "charForward": "Satu Huruf",
       "charBack": "Batal Satu Huruf",

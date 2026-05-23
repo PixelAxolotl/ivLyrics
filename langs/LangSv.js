@@ -1991,6 +1991,12 @@ window.LANG_SV = {
     "lrclibIdInvalid": "Ange ett giltigt LRCLIB-ID",
     "lrclibIdLoadSuccess": "Texten lästes in från LRCLIB-ID",
     "lrclibIdLoadError": "Kunde inte läsa in texten från LRCLIB-ID",
+    "lrclibSearchQueryLabel": "LRCLIB-sökning",
+    "lrclibSearchQueryPlaceholder": "Låttitel eller artist",
+    "lrclibSearchButton": "Sök",
+    "lrclibSearchLoading": "Söker...",
+    "lrclibSearchQueryRequired": "Ange en LRCLIB-sökning",
+    "lrclibSearchError": "Kunde inte söka i LRCLIB",
     "shortcuts": {
       "charForward": "1 Char",
       "charBack": "Ångra 1 tecken",

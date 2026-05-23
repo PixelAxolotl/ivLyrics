@@ -1969,7 +1969,7 @@
 
         const getSyncDataBaseLyricsLines = (lyrics, normalizeStandaloneParentheticalLines) => {
             const sourceLines = (Array.isArray(lyrics) ? lyrics : [])
-                .map(line => (line?.text || '').normalize('NFC'))
+                .map(line => (line?.text || '').normalize('NFC').trim())
                 .filter(line => line.trim().length > 0);
 
             if (!normalizeStandaloneParentheticalLines) {
@@ -1978,7 +1978,99 @@
 
             return normalizeSyncDataStandaloneParentheticalLines(sourceLines.join('\n'))
                 .split('\n')
+                .map(line => line.trim())
                 .filter(line => line.trim().length > 0);
+        };
+
+        const getSyncDataLineCharCounts = (lines) => (
+            (Array.isArray(lines) ? lines : [])
+                .map(line => Array.from(String(line || '').normalize('NFC')).length)
+        );
+
+        const hasExactSyncDataLineShape = (expectedCounts, actualCounts) => (
+            Array.isArray(expectedCounts)
+            && Array.isArray(actualCounts)
+            && expectedCounts.length > 0
+            && expectedCounts.length === actualCounts.length
+            && expectedCounts.every((count, index) => Number(count) === Number(actualCounts[index]))
+        );
+
+        const findSyncDataLineShapePrefix = (expectedCounts, actualCounts) => {
+            if (hasExactSyncDataLineShape(expectedCounts, actualCounts)) return 0;
+            if (!Array.isArray(expectedCounts) || !Array.isArray(actualCounts)) return -1;
+            if (actualCounts.length === 0 || expectedCounts.length <= actualCounts.length) return -1;
+
+            const maxPrefix = expectedCounts.length - actualCounts.length;
+            for (let prefix = 1; prefix <= maxPrefix; prefix++) {
+                const matches = actualCounts.every((count, index) => (
+                    Number(count) === Number(expectedCounts[prefix + index])
+                ));
+                if (matches) return prefix;
+            }
+
+            return -1;
+        };
+
+        const getSyncDataLeadingCharOffset = (lineCounts, prefixLength) => (
+            (Array.isArray(lineCounts) ? lineCounts.slice(0, prefixLength) : [])
+                .reduce((sum, count) => sum + Math.max(0, Number(count) || 0), 0)
+        );
+
+        const shiftSyncDataRange = (range, charOffset) => {
+            const start = Number(range?.start);
+            const end = Number(range?.end);
+            if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+            if (end < charOffset) return null;
+            return {
+                ...range,
+                start: Math.max(0, start - charOffset),
+                end: Math.max(0, end - charOffset)
+            };
+        };
+
+        const shiftSyncDataRanges = (ranges, charOffset) => (
+            (Array.isArray(ranges) ? ranges : [])
+                .map(range => shiftSyncDataRange(range, charOffset))
+                .filter(Boolean)
+        );
+
+        const shiftSyncDataLineIndexes = (lines, charOffset) => {
+            if (!charOffset) return lines;
+
+            return (Array.isArray(lines) ? lines : [])
+                .filter(line => Number(line?.end) >= charOffset)
+                .map(line => {
+                    const shifted = {
+                        ...line,
+                        start: Math.max(0, Number(line.start) - charOffset),
+                        end: Math.max(0, Number(line.end) - charOffset)
+                    };
+
+                    if (line?.parallel) {
+                        shifted.parallel = {
+                            ...line.parallel,
+                            hiddenRanges: shiftSyncDataRanges(line.parallel.hiddenRanges, charOffset),
+                            parts: (Array.isArray(line.parallel.parts) ? line.parallel.parts : [])
+                                .map(part => ({
+                                    ...part,
+                                    ranges: shiftSyncDataRanges(part.ranges, charOffset)
+                                }))
+                                .filter(part => part.ranges.length > 0)
+                        };
+                    }
+
+                    return shifted;
+                });
+        };
+
+        const getSyncDataLyricsFingerprint = (text) => {
+            const value = String(text || '').normalize('NFC');
+            let hash = 2166136261;
+            for (const char of Array.from(value)) {
+                hash ^= char.codePointAt(0) || 0;
+                hash = Math.imul(hash, 16777619);
+            }
+            return `lrclib-${(hash >>> 0).toString(36)}-${Array.from(value).length.toString(36)}`;
         };
 
         /**
@@ -1999,6 +2091,50 @@
                 Number(syncBody.version ?? syncData.version ?? 1) >= 2
                 || hasNormalizedSourceLineShape;
             const baseLyricsLines = getSyncDataBaseLyricsLines(lyrics, shouldNormalizeParentheticalLines);
+            const baseLyricsText = baseLyricsLines.join('\n');
+            let normalizedSyncLines = syncLines;
+            let sourceLinePrefix = 0;
+            const sourceLineCharCounts = hasNormalizedSourceLineShape ? syncSource.lineCharCounts : null;
+            if (sourceLineCharCounts) {
+                const baseLineCharCounts = getSyncDataLineCharCounts(baseLyricsLines);
+                sourceLinePrefix = findSyncDataLineShapePrefix(sourceLineCharCounts, baseLineCharCounts);
+                if (sourceLinePrefix < 0) {
+                    window.__ivLyricsDebugLog?.('[SyncDataService] Sync-data source line shape mismatch; skipping karaoke render', {
+                        expectedLineCount: sourceLineCharCounts.length,
+                        actualLineCount: baseLineCharCounts.length,
+                        expectedPreview: sourceLineCharCounts.slice(0, 12),
+                        actualPreview: baseLineCharCounts.slice(0, 12),
+                        provider: syncData.provider,
+                        sourceProvider: syncSource?.provider,
+                        lrclibId: syncSource?.lrclibId
+                    });
+                    return null;
+                }
+                if (sourceLinePrefix > 0) {
+                    const sourceCharOffset = getSyncDataLeadingCharOffset(sourceLineCharCounts, sourceLinePrefix);
+                    normalizedSyncLines = shiftSyncDataLineIndexes(syncLines, sourceCharOffset);
+                    window.__ivLyricsDebugLog?.('[SyncDataService] Trimmed leading sync-data source lines', {
+                        prefixLineCount: sourceLinePrefix,
+                        sourceCharOffset,
+                        provider: syncData.provider,
+                        sourceProvider: syncSource?.provider,
+                        lrclibId: syncSource?.lrclibId
+                    });
+                }
+            }
+            if (sourceLinePrefix === 0 && syncSource?.lyricsFingerprint) {
+                const baseLyricsFingerprint = getSyncDataLyricsFingerprint(baseLyricsText);
+                if (syncSource.lyricsFingerprint !== baseLyricsFingerprint) {
+                    window.__ivLyricsDebugLog?.('[SyncDataService] Sync-data source fingerprint mismatch; skipping karaoke render', {
+                        expected: syncSource.lyricsFingerprint,
+                        actual: baseLyricsFingerprint,
+                        provider: syncData.provider,
+                        sourceProvider: syncSource?.provider,
+                        lrclibId: syncSource?.lrclibId
+                    });
+                    return null;
+                }
+            }
 
             // 전체 가사 텍스트를 하나로 합침 (줄바꿈 없이 - SyncDataCreator와 동일하게)
             // SyncDataCreator에서는 각 줄의 글자 수만 계산하고 줄바꿈은 포함하지 않음
@@ -2015,9 +2151,9 @@
 
             const result = [];
 
-            for (let i = 0; i < syncLines.length; i++) {
-                const lineData = syncLines[i];
-                const nextLineData = syncLines[i + 1];
+            for (let i = 0; i < normalizedSyncLines.length; i++) {
+                const lineData = normalizedSyncLines[i];
+                const nextLineData = normalizedSyncLines[i + 1];
 
                 // 해당 범위의 텍스트 추출 (유니코드 문자 배열에서 slice 사용)
                 const lineText = fullTextChars.slice(lineData.start, lineData.end + 1).join('');

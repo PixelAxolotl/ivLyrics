@@ -36,6 +36,7 @@ const SYNC_CREATOR_KIND_OPTIONS = [
 ];
 const SYNC_CREATOR_KIND_LABELS = new Map(SYNC_CREATOR_KIND_OPTIONS);
 const SYNC_CREATOR_PARALLEL_HINT_REGEX = /[()（）\/|／｜]/u;
+const SYNC_CREATOR_LRC_METADATA_LINE_REGEX = /^\s*\[(?:ar|al|ti|au|length|by|offset|re|ve):[^\]]*\]\s*$/i;
 const SYNC_CREATOR_HANGUL_CODA_BY_JAMO = new Map([
 	['ㄱ', 1], ['ㄲ', 2], ['ㄳ', 3], ['ㄴ', 4], ['ㄵ', 5], ['ㄶ', 6], ['ㄷ', 7], ['ㄹ', 8],
 	['ㄺ', 9], ['ㄻ', 10], ['ㄼ', 11], ['ㄽ', 12], ['ㄾ', 13], ['ㄿ', 14], ['ㅀ', 15], ['ㅁ', 16],
@@ -83,6 +84,110 @@ const getSyncCreatorTextDirection = (text) => {
 	}
 
 	return rtlCount > ltrCount ? 'rtl' : 'ltr';
+};
+
+const getSyncCreatorLineCharCountsFromText = (text) => (
+	String(text || '')
+		.normalize('NFC')
+		.split('\n')
+		.map(line => line.trim().normalize('NFC'))
+		.filter(Boolean)
+		.map(line => Array.from(line).length)
+);
+
+const hasExactSyncCreatorLineShape = (expectedCounts, actualCounts) => (
+	Array.isArray(expectedCounts)
+	&& Array.isArray(actualCounts)
+	&& expectedCounts.length > 0
+	&& expectedCounts.length === actualCounts.length
+	&& expectedCounts.every((count, index) => Number(count) === Number(actualCounts[index]))
+);
+
+const findSyncCreatorSourceLinePrefix = (expectedCounts, actualCounts) => {
+	if (hasExactSyncCreatorLineShape(expectedCounts, actualCounts)) return 0;
+	if (!Array.isArray(expectedCounts) || !Array.isArray(actualCounts)) return -1;
+	if (actualCounts.length === 0 || expectedCounts.length <= actualCounts.length) return -1;
+
+	const maxPrefix = expectedCounts.length - actualCounts.length;
+	for (let prefix = 1; prefix <= maxPrefix; prefix++) {
+		const matches = actualCounts.every((count, index) => (
+			Number(count) === Number(expectedCounts[prefix + index])
+		));
+		if (matches) return prefix;
+	}
+
+	return -1;
+};
+
+const getSyncCreatorLeadingCharOffset = (lineCounts, prefixLength) => (
+	(Array.isArray(lineCounts) ? lineCounts.slice(0, prefixLength) : [])
+		.reduce((sum, count) => sum + Math.max(0, Number(count) || 0), 0)
+);
+
+const shiftSyncCreatorRange = (range, charOffset) => {
+	const start = Number(range?.start);
+	const end = Number(range?.end);
+	if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+	if (end < charOffset) return null;
+	return {
+		...range,
+		start: Math.max(0, start - charOffset),
+		end: Math.max(0, end - charOffset)
+	};
+};
+
+const shiftSyncCreatorRanges = (ranges, charOffset) => (
+	(Array.isArray(ranges) ? ranges : [])
+		.map(range => shiftSyncCreatorRange(range, charOffset))
+		.filter(Boolean)
+);
+
+const shiftSyncCreatorLineIndexes = (lines, charOffset) => {
+	if (!charOffset) return lines;
+
+	return (Array.isArray(lines) ? lines : [])
+		.filter(line => Number(line?.end) >= charOffset)
+		.map(line => {
+			const shifted = {
+				...line,
+				start: Math.max(0, Number(line.start) - charOffset),
+				end: Math.max(0, Number(line.end) - charOffset)
+			};
+
+			if (line?.parallel) {
+				shifted.parallel = {
+					...line.parallel,
+					hiddenRanges: shiftSyncCreatorRanges(line.parallel.hiddenRanges, charOffset),
+					parts: (Array.isArray(line.parallel.parts) ? line.parallel.parts : [])
+						.map(part => ({
+							...part,
+							ranges: shiftSyncCreatorRanges(part.ranges, charOffset)
+						}))
+						.filter(part => part.ranges.length > 0)
+				};
+			}
+
+			return shifted;
+		});
+};
+
+const normalizeLoadedSyncCreatorBodyForLyrics = (syncBody, lyricsText) => {
+	if (!syncBody || !Array.isArray(syncBody.lines)) return syncBody;
+
+	const sourceLineCounts = Array.isArray(syncBody?.source?.lineCharCounts)
+		? syncBody.source.lineCharCounts
+		: null;
+	const currentLineCounts = getSyncCreatorLineCharCountsFromText(lyricsText);
+	const prefix = findSyncCreatorSourceLinePrefix(sourceLineCounts, currentLineCounts);
+	if (prefix <= 0) return syncBody;
+
+	const charOffset = getSyncCreatorLeadingCharOffset(sourceLineCounts, prefix);
+	if (!charOffset) return syncBody;
+
+	return {
+		...syncBody,
+		lines: shiftSyncCreatorLineIndexes(syncBody.lines, charOffset)
+	};
 };
 
 const normalizeSyncCreatorSpeaker = (value) => {
@@ -1098,7 +1203,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 	const stripLrclibTimestamp = useCallback((text) => {
 		if (!text || typeof text !== 'string') return '';
-		return text.replace(/^\[\d+:\d+(?:[.,]\d+)?\]\s*/, '').trim();
+		const trimmed = text.trim();
+		if (SYNC_CREATOR_LRC_METADATA_LINE_REGEX.test(trimmed)) return '';
+		return trimmed.replace(/^\[\d+:\d+(?:[.,]\d+)?\]\s*/, '').trim();
 	}, []);
 
 	const extractLyricsText = useCallback((lyricsSource) => {
@@ -1138,7 +1245,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		if (!sourceText) return '';
 
 		if (usePlain || !candidate.syncedLyrics) {
-			return normalizeSyncCreatorStandaloneParentheticalLines(sourceText);
+			return normalizeSyncCreatorStandaloneParentheticalLines(sourceText
+				.split('\n')
+				.map(line => stripLrclibTimestamp(line))
+				.filter(Boolean)
+				.join('\n'));
 		}
 
 		return normalizeSyncCreatorStandaloneParentheticalLines(sourceText
@@ -1230,7 +1341,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				if (existingSyncData && existingSyncData.syncData && existingSyncData.syncData.lines) {
 					window.__ivLyricsDebugLog?.('[SyncDataCreator] Found matching existing sync data');
 					loadedSyncBody = existingSyncData.syncData;
-					setSyncData(loadedSyncBody);
 					Toast.success(I18n.t('syncCreator.loadedExistingSyncData') || 'Loaded existing sync data');
 				}
 			} catch (e) {
@@ -1239,6 +1349,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 
 		const text = extractLyricsText(result.synced || result.unsynced);
+		if (loadedSyncBody) {
+			const normalizedLoadedSyncBody = normalizeLoadedSyncCreatorBodyForLyrics(loadedSyncBody, text);
+			if (normalizedLoadedSyncBody !== loadedSyncBody) {
+				window.__ivLyricsDebugLog?.('[SyncDataCreator] Trimmed leading sync-data source lines for current lyrics');
+			}
+			loadedSyncBody = normalizedLoadedSyncBody;
+			setSyncData(loadedSyncBody);
+		}
 		if (text.trim().length > 0) {
 			const existingHasParallel = Array.isArray(loadedSyncBody?.lines)
 				&& loadedSyncBody.lines.some(line => Array.isArray(line?.parallel?.parts) && line.parallel.parts.length > 1);

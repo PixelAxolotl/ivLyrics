@@ -285,10 +285,11 @@
     const LRCLIB_ARTIST_MATCH_THRESHOLD = 0.9;
     const LRCLIB_FALLBACK_TITLE_MATCH_THRESHOLD = 0.98;
     const LRCLIB_ENABLE_INEXACT_SEARCH = true;
-    const LRCLIB_CACHE_VERSION_BASE = '2026-05-22-sync-source-direct-get-1';
+    const LRCLIB_CACHE_VERSION_BASE = '2026-05-23-sync-source-shape-guard-1';
     const LRCLIB_ENGLISH_ACCEPT_LANGUAGE = 'en-US,en;q=0.9';
     const LRCLIB_ORIGINAL_SCRIPT_REGEX = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]/;
     const LRCLIB_MEANINGFUL_TEXT_REGEX = /\p{L}|\p{N}/u;
+    const LRCLIB_METADATA_LINE_REGEX = /^\s*\[(?:ar|al|ti|au|length|by|offset|re|ve):[^\]]*\]\s*$/i;
     const LRCLIB_SETTING_KEYS = {
         fallbackTitleArtist: 'enable_fallback_title_artist',
         fallbackTitleOnly: 'enable_fallback_title_only'
@@ -832,6 +833,7 @@
         return text
             .split('\n')
             .map(line => stripTimestamps ? stripLeadingLrcTimestamp(line) : line.trim())
+            .filter(line => !LRCLIB_METADATA_LINE_REGEX.test(line))
             .filter(line => line.length > 0)
             .map(line => line.normalize('NFC'));
     }
@@ -934,7 +936,7 @@
 
         const candidateId = candidate?.id === undefined || candidate?.id === null ? '' : String(candidate.id);
         const sourceId = source.lrclibId === undefined || source.lrclibId === null ? '' : String(source.lrclibId);
-        const preferredSource = source.preferredLyricsSource || candidate?.preferredLyricsSource || null;
+        const preferredSource = candidate?.preferredLyricsSource || source.preferredLyricsSource || null;
         const candidateText = getComparableCandidateText(candidate, preferredSource);
         const candidateFingerprint = getLyricsTextFingerprint(candidateText);
         const candidateLineCounts = getLineCharCounts(getComparableLyricsLines(candidateText));
@@ -984,7 +986,10 @@
 
     function decorateDirectCandidate(candidate, source, trackDurationSec = 0) {
         if (!candidate) return null;
-        const preferredLyricsSource = source?.preferredLyricsSource
+        const sourceLineCounts = Array.isArray(source?.lineCharCounts) ? source.lineCharCounts : null;
+        const sourceLineMatch = getCandidateSyncLineMatch(candidate, sourceLineCounts);
+        const preferredLyricsSource = sourceLineMatch.preferredLyricsSource
+            || source?.preferredLyricsSource
             || (candidate.syncedLyrics ? 'synced' : (candidate.plainLyrics ? 'plain' : null));
         const lyricsText = getCandidateLyricsText(candidate, preferredLyricsSource);
         const lyricsMix = analyzeLyricsLanguageMix(lyricsText);
@@ -1003,9 +1008,9 @@
             exactDurationMatch: hasExactDurationMatch(trackDurationSec, Number(candidate?.duration || 0)),
             artistMatched: true,
             titleDrivenMatch: false,
-            syncLineExactMatch: true,
-            exactSyncedLineMatch: preferredLyricsSource === 'synced',
-            exactPlainLineMatch: preferredLyricsSource === 'plain',
+            syncLineExactMatch: sourceLineMatch.syncLineExactMatch,
+            exactSyncedLineMatch: sourceLineMatch.exactSyncedLineMatch,
+            exactPlainLineMatch: sourceLineMatch.exactPlainLineMatch,
             lyricsMix,
             hasInterleavedTranslations: lyricsMix.hasInterleavedTranslations,
             matchReason: 'sync-source',

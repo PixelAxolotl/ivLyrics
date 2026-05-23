@@ -14,7 +14,7 @@
     // ============================================
 
     const STORAGE_PREFIX = 'ivLyrics:lyrics:';
-    const SYNC_DATA_RENDERER_VERSION = '2026-05-21-parenthetical-v2-1';
+    const SYNC_DATA_RENDERER_VERSION = '2026-05-23-source-line-shape-1';
 
     // 가사 유형
     const LYRICS_TYPES = {

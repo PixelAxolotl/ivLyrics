@@ -13,6 +13,27 @@ fi
 
 LOG_PATH="${LOG_ROOT}/updater.log"
 
+notify_macos() {
+    if [[ "$(uname -s)" != "Darwin" ]]; then
+        return 0
+    fi
+    if ! command -v osascript >/dev/null 2>&1; then
+        return 0
+    fi
+
+    local message="$1"
+    /usr/bin/osascript -e "display notification \"${message}\" with title \"ivLyrics Updater\"" >/dev/null 2>&1 || true
+}
+
+notify_failure_on_exit() {
+    local status=$?
+    if [[ "$status" -ne 0 ]]; then
+        notify_macos "Update failed. Check updater.log."
+    fi
+}
+
+trap notify_failure_on_exit EXIT
+
 log() {
     mkdir -p "$LOG_ROOT"
     local line
@@ -79,6 +100,7 @@ run_update() {
     bash "$installer_path"
     rm -rf "$temp_root"
     log "ivLyrics update completed."
+    notify_macos "Update completed."
 }
 
 main() {

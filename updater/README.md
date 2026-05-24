@@ -15,7 +15,7 @@ The handler ignores external command text and only allows the fixed actions abov
 ## Platform handlers
 
 - Windows: registers `ivlyrics-updater` under `HKCU:\Software\Classes`.
-- macOS: creates `~/.config/spicetify/CustomApps/ivLyrics/updater/macos/ivLyrics Updater.app` and registers `CFBundleURLTypes`.
+- macOS: creates `~/.config/spicetify/CustomApps/ivLyrics/updater/macos/ivLyrics Updater.app` and registers `CFBundleURLTypes`. The app runs the updater in the background instead of automating Terminal.
 - Linux: creates `~/.local/share/applications/ivlyrics-updater.desktop` and points it to `~/.config/spicetify/CustomApps/ivLyrics/updater/unix/ivlyrics-updater.sh` through `xdg-mime`.
 
 ## Installer hooks

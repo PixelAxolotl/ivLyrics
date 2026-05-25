@@ -176,12 +176,109 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 
 /* 카드 박스 - 앨범 색상 배경 (CSS 변수로 동적 색상 적용) */
 .ivlyrics-panel-lyrics-section {
+  position: relative !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
   padding: 14px 16px 18px !important;
   border-radius: 12px !important;
   background: var(--ivlyrics-panel-bg, rgba(80, 80, 80, 0.6)) !important;
   border: var(--ivlyrics-panel-border, none) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+}
+
+.ivlyrics-panel-bg-gradient {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background-color: rgba(var(--ivlyrics-panel-c1, 30, 30, 40), var(--ivlyrics-panel-gradient-opacity, 0.78));
+  filter: brightness(0.92) saturate(2.35);
+  transition: background-color 1.5s ease, opacity 0.35s ease, filter 0.5s ease;
+  contain: paint;
+}
+
+.ivlyrics-panel-lyrics-section.blur-gradient-bg .ivlyrics-panel-bg-gradient {
+  display: block;
+}
+
+.ivlyrics-panel-bg-gradient::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.46)),
+    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.18), transparent 42%);
+  z-index: 2;
+}
+
+.ivlyrics-panel-bg-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(34px);
+  opacity: 0.82;
+  mix-blend-mode: screen;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: transform, filter;
+}
+
+.ivlyrics-panel-bg-blob.blob-1 { width: 92%; height: 92%; background: rgba(var(--ivlyrics-panel-c2, 60, 40, 70), 1); animation: ivlyrics-panel-blob-1 18s ease-in-out infinite; }
+.ivlyrics-panel-bg-blob.blob-2 { width: 82%; height: 82%; background: rgba(var(--ivlyrics-panel-c3, 20, 50, 60), 0.95); animation: ivlyrics-panel-blob-2 22s ease-in-out infinite; }
+.ivlyrics-panel-bg-blob.blob-3 { width: 62%; height: 62%; background: rgba(var(--ivlyrics-panel-c2, 60, 40, 70), 0.82); filter: blur(28px); animation: ivlyrics-panel-blob-3 15s ease-in-out infinite; }
+.ivlyrics-panel-bg-blob.blob-4 { width: 84%; height: 84%; background: rgba(var(--ivlyrics-panel-c3, 20, 50, 60), 0.72); filter: blur(30px); animation: ivlyrics-panel-blob-4 25s ease-in-out infinite; }
+.ivlyrics-panel-bg-blob.blob-5 { width: 58%; height: 58%; background: rgba(var(--ivlyrics-panel-c2, 60, 40, 70), 0.68); filter: blur(26px); animation: ivlyrics-panel-blob-5 16s ease-in-out infinite; }
+.ivlyrics-panel-bg-blob.blob-6 { width: 100%; height: 100%; background: rgba(var(--ivlyrics-panel-c3, 20, 50, 60), 0.52); filter: blur(38px); animation: ivlyrics-panel-blob-6 20s ease-in-out infinite; }
+
+@keyframes ivlyrics-panel-blob-1 {
+  0%, 100% { top: -28%; left: -28%; transform: scale(1); }
+  20% { top: 4%; left: 46%; transform: scale(1.12); }
+  40% { top: 44%; left: 24%; transform: scale(0.9); }
+  60% { top: 20%; left: -10%; transform: scale(1.14); }
+  80% { top: -12%; left: 18%; transform: scale(0.96); }
+}
+
+@keyframes ivlyrics-panel-blob-2 {
+  0%, 100% { top: 46%; left: 56%; transform: scale(1); }
+  25% { top: 16%; left: -18%; transform: scale(1.2); }
+  50% { top: -18%; left: 36%; transform: scale(0.86); }
+  75% { top: 40%; left: 68%; transform: scale(1.1); }
+}
+
+@keyframes ivlyrics-panel-blob-3 {
+  0%, 100% { top: 58%; left: -12%; transform: scale(1); }
+  33% { top: -24%; left: 58%; transform: scale(1.28); }
+  66% { top: 36%; left: 38%; transform: scale(0.82); }
+}
+
+@keyframes ivlyrics-panel-blob-4 {
+  0%, 100% { top: -34%; left: 66%; transform: scale(1); }
+  20% { top: 58%; left: 48%; transform: scale(0.9); }
+  40% { top: 36%; left: -22%; transform: scale(1.18); }
+  60% { top: -12%; left: 28%; transform: scale(1.05); }
+  80% { top: 18%; left: 78%; transform: scale(0.86); }
+}
+
+@keyframes ivlyrics-panel-blob-5 {
+  0%, 100% { top: 68%; left: 48%; transform: scale(1); }
+  25% { top: 28%; left: 78%; transform: scale(1.24); }
+  50% { top: -12%; left: 18%; transform: scale(0.9); }
+  75% { top: 48%; left: -16%; transform: scale(1.1); }
+}
+
+@keyframes ivlyrics-panel-blob-6 {
+  0%, 100% { top: 24%; left: 24%; transform: scale(1); }
+  33% { top: -24%; left: -22%; transform: scale(1.15); }
+  66% { top: 58%; left: 58%; transform: scale(0.92); }
+}
+
+.ivlyrics-panel-header,
+.ivlyrics-panel-lyrics-wrapper,
+.ivlyrics-panel-empty {
+  position: relative !important;
+  z-index: 1 !important;
 }
 
 /* Lyrics 라벨 */
@@ -2419,10 +2516,49 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 } : { r: 80, g: 80, b: 80 };
             };
 
+            const intToRgb = (colorInt) => ({
+                r: (colorInt >> 16) & 255,
+                g: (colorInt >> 8) & 255,
+                b: colorInt & 255
+            });
+
+            const rgbaToRgb = (rgba) => {
+                if (!rgba) return null;
+                return {
+                    r: Math.round((rgba.red ?? 0) * 255),
+                    g: Math.round((rgba.green ?? 0) * 255),
+                    b: Math.round((rgba.blue ?? 0) * 255)
+                };
+            };
+
+            const scaleRgb = (rgb, scale) => ({
+                r: Math.max(0, Math.min(255, Math.round(rgb.r * scale))),
+                g: Math.max(0, Math.min(255, Math.round(rgb.g * scale))),
+                b: Math.max(0, Math.min(255, Math.round(rgb.b * scale)))
+            });
+
+            const mixRgb = (a, b, ratio) => ({
+                r: Math.round(a.r * (1 - ratio) + b.r * ratio),
+                g: Math.round(a.g * (1 - ratio) + b.g * ratio),
+                b: Math.round(a.b * (1 - ratio) + b.b * ratio)
+            });
+
+            const rgbString = (rgb) => `${rgb.r}, ${rgb.g}, ${rgb.b}`;
+
+            const getCurrentCoverUrl = () => {
+                const item = Spicetify.Player.data?.item;
+                return item?.metadata?.image_xlarge_url ||
+                    item?.metadata?.image_large_url ||
+                    item?.metadata?.image_url ||
+                    item?.album?.images?.[0]?.url ||
+                    item?.album?.images?.[1]?.url ||
+                    item?.album?.images?.[2]?.url ||
+                    "";
+            };
+
             // 앨범에서 색상 추출
-            const getAlbumColor = async () => {
+            const getAlbumColor = async (trackUri) => {
                 try {
-                    const trackUri = Spicetify.Player.data?.item?.uri;
                     if (!trackUri) return null;
 
                     // Spotify에서 앨범 색상 추출
@@ -2444,11 +2580,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                                 (color) => color.preset === "VIBRANT_NON_ALARMING"
                             )?.color;
                             if (colorInt) {
-                                return {
-                                    r: (colorInt >> 16) & 255,
-                                    g: (colorInt >> 8) & 255,
-                                    b: colorInt & 255
-                                };
+                                return intToRgb(colorInt);
                             }
                         } catch {
                             // 색상 추출 실패
@@ -2460,9 +2592,67 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 return null;
             };
 
+            const getAlbumGradientColors = async (trackUri) => {
+                try {
+                    const coverUrl = getCurrentCoverUrl();
+                    if (coverUrl && Spicetify.GraphQL?.Definitions?.getDynamicColorsByUris) {
+                        const colorQuery = await Spicetify.GraphQL.Request(
+                            Spicetify.GraphQL.Definitions.getDynamicColorsByUris,
+                            { imageUris: [coverUrl] }
+                        );
+                        const colorData = colorQuery?.data?.getDynamicColorsByUris?.[0];
+                        if (colorData) {
+                            const c1 = rgbaToRgb(colorData.minContrast?.backgroundBase);
+                            const c2 = rgbaToRgb(colorData.highContrast?.backgroundBase);
+                            const c3 = rgbaToRgb(colorData.higherContrast?.backgroundBase);
+                            if (c1 || c2 || c3) {
+                                const fallback = c1 || c2 || c3 || { r: 30, g: 30, b: 40 };
+                                return {
+                                    c1: c1 || fallback,
+                                    c2: c2 || scaleRgb(fallback, 0.72),
+                                    c3: c3 || scaleRgb(fallback, 0.48)
+                                };
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.warn('[NowPlayingPanelLyrics] Failed to get dynamic album colors:', error);
+                }
+
+                const albumRgb = await getAlbumColor(trackUri);
+                if (!albumRgb) {
+                    return {
+                        c1: { r: 30, g: 30, b: 40 },
+                        c2: { r: 60, g: 40, b: 70 },
+                        c3: { r: 20, g: 50, b: 60 }
+                    };
+                }
+
+                return {
+                    c1: scaleRgb(albumRgb, 0.78),
+                    c2: mixRgb(scaleRgb(albumRgb, 1.12), { r: 70, g: 36, b: 120 }, 0.28),
+                    c3: mixRgb(scaleRgb(albumRgb, 0.55), { r: 18, g: 74, b: 96 }, 0.32)
+                };
+            };
+
+            const getCustomGradientColors = () => {
+                const c1 = hexToRgb(getStorageValue(BG_GRADIENT_1_KEY, DEFAULT_BG_GRADIENT_1));
+                const c2 = hexToRgb(getStorageValue(BG_GRADIENT_2_KEY, DEFAULT_BG_GRADIENT_2));
+                return {
+                    c1: scaleRgb(c1, 0.76),
+                    c2,
+                    c3: mixRgb(c1, c2, 0.55)
+                };
+            };
+
+            let styleRequestSeq = 0;
+            let disposed = false;
+
             const updatePanelStyles = async () => {
-                const section = document.querySelector('.ivlyrics-panel-lyrics-section');
-                if (!section) return;
+                const requestSeq = ++styleRequestSeq;
+                const trackUri = Spicetify.Player.data?.item?.uri;
+                const sections = Array.from(document.querySelectorAll('.ivlyrics-panel-lyrics-section'));
+                if (!sections.length) return;
 
                 // 설정값 읽기
                 const bgType = getStorageValue(BG_TYPE_KEY, DEFAULT_BG_TYPE);
@@ -2475,43 +2665,27 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 const borderOpacity = getStorageValue(BORDER_OPACITY_KEY, DEFAULT_BORDER_OPACITY) / 100;
 
                 let backgroundStyle = '';
+                let gradientColors = null;
 
                 // 배경 유형에 따른 스타일 계산
                 if (bgType === 'album') {
-                    // 앨범 색상 기반
-                    const albumRgb = await getAlbumColor();
-                    if (albumRgb) {
-                        // 약간 어둡게 조정
-                        const r = Math.floor(albumRgb.r * 0.7);
-                        const g = Math.floor(albumRgb.g * 0.7);
-                        const b = Math.floor(albumRgb.b * 0.7);
-                        backgroundStyle = `rgba(${r}, ${g}, ${b}, ${bgOpacity})`;
-                    } else {
-                        backgroundStyle = `rgba(80, 80, 80, ${bgOpacity})`;
-                    }
+                    gradientColors = await getAlbumGradientColors(trackUri);
+                    backgroundStyle = `rgba(${rgbString(gradientColors.c1)}, ${bgOpacity})`;
                 } else if (bgType === 'custom') {
                     // 사용자 지정 단색
                     const rgb = hexToRgb(bgColor);
                     backgroundStyle = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${bgOpacity})`;
                 } else if (bgType === 'gradient') {
-                    // 그라데이션 - 앨범 색상 기반으로 자동 생성
-                    const albumRgb = await getAlbumColor();
-                    if (albumRgb) {
-                        // 앨범 색상을 기반으로 그라데이션 생성
-                        const r1 = Math.floor(albumRgb.r * 0.8);
-                        const g1 = Math.floor(albumRgb.g * 0.8);
-                        const b1 = Math.floor(albumRgb.b * 0.8);
-                        // 보색 또는 밝은 버전으로 두 번째 색상 생성
-                        const r2 = Math.min(255, Math.floor(albumRgb.r * 1.2));
-                        const g2 = Math.min(255, Math.floor(albumRgb.g * 0.6));
-                        const b2 = Math.min(255, Math.floor(albumRgb.b * 1.3));
-                        backgroundStyle = `linear-gradient(135deg, rgba(${r1}, ${g1}, ${b1}, ${bgOpacity}) 0%, rgba(${r2}, ${g2}, ${b2}, ${bgOpacity}) 100%)`;
-                    } else {
-                        // 앨범 색상 없으면 기본 그라데이션
-                        const rgb1 = hexToRgb(bgGradient1);
-                        const rgb2 = hexToRgb(bgGradient2);
-                        backgroundStyle = `linear-gradient(135deg, rgba(${rgb1.r}, ${rgb1.g}, ${rgb1.b}, ${bgOpacity}) 0%, rgba(${rgb2.r}, ${rgb2.g}, ${rgb2.b}, ${bgOpacity}) 100%)`;
-                    }
+                    gradientColors = getCustomGradientColors();
+                    backgroundStyle = `rgba(${rgbString(gradientColors.c1)}, ${bgOpacity})`;
+                }
+
+                if (
+                    disposed ||
+                    requestSeq !== styleRequestSeq ||
+                    (trackUri && Spicetify.Player.data?.item?.uri !== trackUri)
+                ) {
+                    return;
                 }
 
                 // 테두리 스타일 계산
@@ -2522,19 +2696,31 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 }
 
                 // CSS 변수 및 직접 스타일 적용
-                section.style.setProperty('--ivlyrics-panel-bg', backgroundStyle);
-                section.style.setProperty('--ivlyrics-panel-border', borderStyle);
-                section.style.background = backgroundStyle;
-                section.style.border = borderStyle;
+                sections.forEach((section) => {
+                    const useBlurGradient = !!gradientColors && bgOpacity > 0;
+                    const gradientOpacity = useBlurGradient ? Math.max(bgOpacity, 0.72) : bgOpacity;
 
-                // 불투명도가 0이면 backdrop-filter도 제거
-                if (bgOpacity === 0) {
-                    section.style.backdropFilter = 'none';
-                    section.style.webkitBackdropFilter = 'none';
-                } else {
-                    section.style.backdropFilter = 'blur(20px) saturate(180%)';
-                    section.style.webkitBackdropFilter = 'blur(20px) saturate(180%)';
-                }
+                    section.classList.toggle('blur-gradient-bg', useBlurGradient);
+                    section.style.setProperty('--ivlyrics-panel-bg', backgroundStyle);
+                    section.style.setProperty('--ivlyrics-panel-border', borderStyle);
+                    section.style.setProperty('--ivlyrics-panel-gradient-opacity', String(gradientOpacity));
+                    if (gradientColors) {
+                        section.style.setProperty('--ivlyrics-panel-c1', rgbString(gradientColors.c1));
+                        section.style.setProperty('--ivlyrics-panel-c2', rgbString(gradientColors.c2));
+                        section.style.setProperty('--ivlyrics-panel-c3', rgbString(gradientColors.c3));
+                    }
+                    section.style.background = backgroundStyle;
+                    section.style.border = borderStyle;
+
+                    // 불투명도가 0이면 backdrop-filter도 제거
+                    if (bgOpacity === 0) {
+                        section.style.backdropFilter = 'none';
+                        section.style.webkitBackdropFilter = 'none';
+                    } else {
+                        section.style.backdropFilter = 'blur(20px) saturate(180%)';
+                        section.style.webkitBackdropFilter = 'blur(20px) saturate(180%)';
+                    }
+                });
             };
 
             // 초기 스타일 적용
@@ -2557,6 +2743,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             window.addEventListener('ivLyrics', handleSettingsUpdate);
 
             return () => {
+                disposed = true;
                 Spicetify.Player.removeEventListener('songchange', updatePanelStyles);
                 window.removeEventListener('ivLyrics', handleSettingsUpdate);
             };
@@ -2798,16 +2985,28 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         const containerStyle = useMemo(() => ({
             '--ivlyrics-font-scale': fontScale / 100
         }), [fontScale]);
+        const usesBlurGradientPanelBg = getStorageValue(BG_TYPE_KEY, DEFAULT_BG_TYPE) !== 'custom';
+        const sectionClassName = `${PANEL_SECTION_CLASS}${isPlaybackPaused ? " playback-paused" : ""}${usesBlurGradientPanelBg ? " blur-gradient-bg" : ""}`;
+        const panelBackgroundLayer = react.createElement("div", {
+            className: "ivlyrics-panel-bg-gradient",
+            "aria-hidden": "true"
+        }, [1, 2, 3, 4, 5, 6].map((blobIndex) =>
+            react.createElement("div", {
+                key: `panel-bg-blob-${blobIndex}`,
+                className: `ivlyrics-panel-bg-blob blob-${blobIndex}`
+            })
+        ));
 
         // 비활성화 또는 가사 없음
         if (!isEnabled) return null;
         if (!lyrics || lyrics.length === 0) {
             return react.createElement("div", {
-                className: `${PANEL_SECTION_CLASS}${isPlaybackPaused ? " playback-paused" : ""}`,
+                className: sectionClassName,
                 ref: containerRef,
                 onClick: handleContainerClick,
                 style: containerStyle
             },
+                panelBackgroundLayer,
                 react.createElement("div", { className: "ivlyrics-panel-header" },
                     react.createElement("h2", null, "ivLyrics")
                 ),
@@ -2818,11 +3017,12 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         }
 
         return react.createElement("div", {
-            className: `${PANEL_SECTION_CLASS}${isPlaybackPaused ? " playback-paused" : ""}`,
+            className: sectionClassName,
             ref: containerRef,
             onClick: handleContainerClick,
             style: containerStyle
         },
+            panelBackgroundLayer,
             // 헤더
             react.createElement("div", { className: "ivlyrics-panel-header" },
                 react.createElement("h2", null, "ivLyrics")

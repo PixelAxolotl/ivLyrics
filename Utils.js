@@ -1919,6 +1919,45 @@ const Utils = {
     return data.data;
   },
 
+  async fetchSyncCreatorGreetingTranslation(userHash, locale) {
+    if (!userHash || typeof userHash !== "string") {
+      throw new Error(
+        I18n.t("creatorProfile.loadFailed") || "Failed to load creator profile."
+      );
+    }
+
+    const params = new URLSearchParams({
+      userHash,
+    });
+
+    if (typeof locale === "string" && locale.trim()) {
+      params.set("locale", locale.trim());
+    }
+
+    const response = await fetch(
+      `${this.getAccountApiBase()}/creator-profile/greeting-translation?${params.toString()}`,
+      {
+        cache: "no-store",
+        headers: this.getApiHeaders({
+          Accept: "application/json",
+          "Cache-Control": "no-cache, no-store, must-revalidate",
+          Pragma: "no-cache",
+        }),
+      }
+    );
+    const data = await response.json();
+
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(
+        data.error ||
+          I18n.t("creatorProfile.greetingTranslateFailed") ||
+          "Failed to translate creator greeting."
+      );
+    }
+
+    return data.data;
+  },
+
   async setSyncCreatorGreeting(greeting, options = {}) {
     if (!this.getAuthToken()) {
       throw new Error(

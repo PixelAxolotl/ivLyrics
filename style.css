@@ -11096,6 +11096,15 @@ ruby rt {
   margin: 0;
 }
 
+.lyrics-creator-profile-greeting-status,
+.lyrics-creator-profile-modal[data-ui-theme="light"] .lyrics-creator-profile-greeting-status {
+  margin: 8px 0 0;
+  color: var(--creator-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .lyrics-creator-profile-greeting-edit,
 .lyrics-creator-profile-greeting-cancel,
 .lyrics-creator-profile-greeting-save,

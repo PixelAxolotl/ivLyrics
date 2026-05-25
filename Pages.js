@@ -192,6 +192,161 @@ function getCreatorPublicProfileUrl(profileData, contributor) {
 	return `https://lyrics.ivl.is/@${encodeURIComponent(identifier)}`;
 }
 
+const CREATOR_GREETING_LANGUAGE_CODES = new Set([
+	"ar",
+	"bn",
+	"de",
+	"en",
+	"es",
+	"fa",
+	"fr",
+	"hi",
+	"id",
+	"it",
+	"ja",
+	"ko",
+	"ms",
+	"pt",
+	"ru",
+	"sv",
+	"th",
+	"vi",
+	"zh-CN",
+	"zh-TW"
+]);
+const CREATOR_GREETING_LANGUAGE_ALIASES = new Map([
+	["zh", "zh-CN"],
+	["zh-cn", "zh-CN"],
+	["zh-hans", "zh-CN"],
+	["zh-sg", "zh-CN"],
+	["zh-tw", "zh-TW"],
+	["zh-hk", "zh-TW"],
+	["zh-mo", "zh-TW"],
+	["zh-hant", "zh-TW"],
+	["pt-br", "pt"],
+	["pt-pt", "pt"]
+]);
+const CREATOR_GREETING_TRANSLATING_MESSAGES = {
+	en: "Translating this greeting...",
+	ko: "인삿말을 번역하는 중입니다...",
+	ja: "あいさつを翻訳しています...",
+	"zh-CN": "正在翻译这段问候语...",
+	"zh-TW": "正在翻譯這段問候語...",
+	de: "Diese Begrüßung wird übersetzt...",
+	es: "Traduciendo este saludo...",
+	fr: "Traduction de ce message...",
+	it: "Traduzione del saluto...",
+	pt: "Traduzindo esta saudação...",
+	ru: "Переводим это приветствие...",
+	ar: "تتم ترجمة هذه التحية...",
+	fa: "در حال ترجمه این پیام...",
+	bn: "এই শুভেচ্ছাটি অনুবাদ করা হচ্ছে...",
+	hi: "इस अभिवादन का अनुवाद हो रहा है...",
+	id: "Menerjemahkan sapaan ini...",
+	ms: "Menterjemah ucapan ini...",
+	sv: "Översätter hälsningen...",
+	th: "กำลังแปลคำทักทายนี้...",
+	vi: "Đang dịch lời chào này..."
+};
+
+function normalizeCreatorGreetingLocale(value) {
+	const raw = String(value || "").trim();
+	if (!raw) {
+		return null;
+	}
+
+	const normalized = raw.replace(/_/g, "-");
+	if (CREATOR_GREETING_LANGUAGE_CODES.has(normalized)) {
+		return normalized;
+	}
+
+	const lower = normalized.toLowerCase();
+	if (CREATOR_GREETING_LANGUAGE_ALIASES.has(lower)) {
+		return CREATOR_GREETING_LANGUAGE_ALIASES.get(lower);
+	}
+
+	const base = lower.split("-")[0];
+	return CREATOR_GREETING_LANGUAGE_CODES.has(base) ? base : null;
+}
+
+function getCreatorProfileLocale() {
+	const candidates = [
+		window.I18n?.getCurrentLanguage?.(),
+		typeof I18n !== "undefined" ? I18n.getCurrentLanguage?.() : null,
+		window.StorageManager?.getItem?.("ivLyrics:visual:language"),
+		Spicetify?.LocalStorage?.get?.("ivLyrics:visual:language"),
+		Spicetify?.Locale?.getLocale?.()
+	];
+
+	for (const candidate of candidates) {
+		const locale = normalizeCreatorGreetingLocale(candidate);
+		if (locale) {
+			return locale;
+		}
+	}
+
+	return normalizeCreatorGreetingLocale(window.I18n?.DEFAULT_LANGUAGE) || "ko";
+}
+
+function getCreatorGreetingTranslatingMessage(locale) {
+	const normalizedLocale = normalizeCreatorGreetingLocale(locale);
+	return CREATOR_GREETING_TRANSLATING_MESSAGES[normalizedLocale]
+		|| CREATOR_GREETING_TRANSLATING_MESSAGES.en;
+}
+
+function prepareCreatorGreetingTranslationState(profileData, locale, currentProfile = null) {
+	if (!profileData || typeof profileData !== "object") {
+		return profileData;
+	}
+
+	const targetLocale = normalizeCreatorGreetingLocale(locale) || getCreatorProfileLocale();
+	const sourceLocale = normalizeCreatorGreetingLocale(profileData.greetingLang);
+	const rawGreeting = typeof profileData.greeting === "string" ? profileData.greeting : "";
+	const nextProfile = {
+		...profileData,
+		localizedGreeting: null,
+		greetingTranslationLocale: targetLocale,
+		greetingTranslationStatus: rawGreeting.trim() ? "idle" : "empty",
+		greetingTranslationSourceLocale: sourceLocale || null
+	};
+
+	if (!rawGreeting.trim()) {
+		return nextProfile;
+	}
+
+	if (sourceLocale && targetLocale && sourceLocale === targetLocale) {
+		nextProfile.greetingTranslationStatus = "source";
+		return nextProfile;
+	}
+
+	if (
+		currentProfile
+		&& currentProfile.userHash === nextProfile.userHash
+		&& currentProfile.greeting === rawGreeting
+		&& normalizeCreatorGreetingLocale(currentProfile.greetingTranslationLocale) === targetLocale
+		&& typeof currentProfile.localizedGreeting === "string"
+		&& currentProfile.localizedGreeting.trim()
+	) {
+		nextProfile.localizedGreeting = currentProfile.localizedGreeting;
+		nextProfile.greetingTranslationStatus = currentProfile.greetingTranslationStatus || "ready";
+		return nextProfile;
+	}
+
+	nextProfile.greetingTranslationStatus = targetLocale ? "loading" : "idle";
+	return nextProfile;
+}
+
+function shouldFetchCreatorGreetingTranslation(profileData) {
+	return !!(
+		profileData
+		&& profileData.userHash
+		&& typeof profileData.greeting === "string"
+		&& profileData.greeting.trim()
+		&& profileData.greetingTranslationLocale
+		&& profileData.greetingTranslationStatus === "loading"
+	);
+}
+
 const CREATOR_PROFILE_PAGE_SIZE = 12;
 
 function normalizeCreatorCoverText(value) {
@@ -428,6 +583,12 @@ const SyncCreatorProfileModal = react.memo(({
 	const loadMoreLockRef = react.useRef(false);
 	const [failedAvatarUrl, setFailedAvatarUrl] = react.useState(null);
 	const rawGreeting = typeof profileData.greeting === "string" ? profileData.greeting : "";
+	const localizedGreeting = typeof profileData.localizedGreeting === "string" ? profileData.localizedGreeting : "";
+	const displayGreeting = localizedGreeting.trim() ? localizedGreeting : rawGreeting;
+	const greetingTranslationStatus = typeof profileData.greetingTranslationStatus === "string"
+		? profileData.greetingTranslationStatus
+		: null;
+	const greetingTranslationLocale = profileData.greetingTranslationLocale || getCreatorProfileLocale();
 	const [isEditingGreeting, setIsEditingGreeting] = react.useState(false);
 	const [greetingDraft, setGreetingDraft] = react.useState(rawGreeting);
 	const canLike = !!profileData.viewer?.canLike;
@@ -435,7 +596,8 @@ const SyncCreatorProfileModal = react.memo(({
 	const isOwnProfile = !!profileData.viewer?.isOwnProfile;
 	const avatarFailed = !!avatarUrl && failedAvatarUrl === avatarUrl;
 	const subtitle = handle || (account?.displayName && account.displayName !== displayName ? account.displayName : null);
-	const greeting = rawGreeting.trim();
+	const greeting = displayGreeting.trim();
+	const showGreetingTranslationStatus = greetingTranslationStatus === "loading" && !!rawGreeting.trim();
 	const canEditGreeting = isOwnProfile && typeof onSaveGreeting === "function";
 	const publicProfileUrl = getCreatorPublicProfileUrl(profileData, contributor);
 	const likeButtonLabel = likePending ? "..." : liked ? copy.liked : copy.like;
@@ -698,6 +860,14 @@ const SyncCreatorProfileModal = react.memo(({
 							react.Fragment,
 							null,
 							greeting && react.createElement("p", { className: "lyrics-creator-profile-bio" }, greeting),
+							showGreetingTranslationStatus && react.createElement(
+								"p",
+								{
+									className: "lyrics-creator-profile-greeting-status",
+									role: "status"
+								},
+								getCreatorGreetingTranslatingMessage(greetingTranslationLocale)
+							),
 							canEditGreeting && react.createElement(
 								"button",
 								{
@@ -984,9 +1154,11 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 	const [profileSort, setProfileSort] = useState("recent");
 	const [profileArtistFilter, setProfileArtistFilter] = useState(null);
 	const requestIdRef = useRef(0);
+	const greetingTranslationRequestIdRef = useRef(0);
 
 	const closeProfile = useCallback(() => {
 		requestIdRef.current += 1;
+		greetingTranslationRequestIdRef.current += 1;
 		setActiveContributor(null);
 		setCreatorProfile(null);
 		setProfileLoading(false);
@@ -1013,6 +1185,69 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 		window.addEventListener("keydown", onKeyDown);
 		return () => window.removeEventListener("keydown", onKeyDown);
 	}, [activeContributor, closeProfile]);
+
+	const loadCreatorGreetingTranslation = useCallback(async (profileData) => {
+		if (!shouldFetchCreatorGreetingTranslation(profileData)) {
+			return;
+		}
+
+		const locale = normalizeCreatorGreetingLocale(profileData.greetingTranslationLocale);
+		if (!locale) {
+			return;
+		}
+
+		const requestId = greetingTranslationRequestIdRef.current + 1;
+		greetingTranslationRequestIdRef.current = requestId;
+
+		try {
+			const result = await Utils.fetchSyncCreatorGreetingTranslation(profileData.userHash, locale);
+			if (greetingTranslationRequestIdRef.current !== requestId) {
+				return;
+			}
+
+			const translatedGreeting = result?.status === "ready" && typeof result.text === "string"
+				? result.text
+				: "";
+			setCreatorProfile((currentProfile) => {
+				if (
+					!currentProfile
+					|| currentProfile.userHash !== profileData.userHash
+					|| currentProfile.greeting !== profileData.greeting
+					|| normalizeCreatorGreetingLocale(currentProfile.greetingTranslationLocale) !== locale
+				) {
+					return currentProfile;
+				}
+
+				return {
+					...currentProfile,
+					localizedGreeting: translatedGreeting.trim() ? translatedGreeting : null,
+					greetingTranslationStatus: result?.status || (translatedGreeting.trim() ? "ready" : "unavailable"),
+					greetingTranslationSourceLocale: result?.sourceLocale || currentProfile.greetingTranslationSourceLocale || null
+				};
+			});
+		} catch (error) {
+			if (greetingTranslationRequestIdRef.current !== requestId) {
+				return;
+			}
+
+			console.error("[ivLyrics] Failed to translate creator greeting:", error);
+			setCreatorProfile((currentProfile) => {
+				if (
+					!currentProfile
+					|| currentProfile.userHash !== profileData.userHash
+					|| currentProfile.greeting !== profileData.greeting
+					|| normalizeCreatorGreetingLocale(currentProfile.greetingTranslationLocale) !== locale
+				) {
+					return currentProfile;
+				}
+
+				return {
+					...currentProfile,
+					greetingTranslationStatus: "unavailable"
+				};
+			});
+		}
+	}, []);
 
 	const loadCreatorProfile = useCallback(async (contributor, options = {}) => {
 		if (!contributor?.profileAvailable || !contributor.userHash) {
@@ -1049,22 +1284,25 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 				return;
 			}
 
+			const profileLocale = getCreatorProfileLocale();
+			const dataWithInitialGreetingState = prepareCreatorGreetingTranslationState(data, profileLocale);
 			setCreatorProfile((currentProfile) => {
+				const dataWithGreetingState = prepareCreatorGreetingTranslationState(data, profileLocale, currentProfile);
 				if (!append || !currentProfile || currentProfile.userHash !== data.userHash) {
 					if (preserveProfile && currentProfile && currentProfile.userHash === data.userHash) {
 						return {
 							...currentProfile,
-							...data,
+							...dataWithGreetingState,
 							account: data.account || currentProfile.account,
 							displayName: data.displayName || currentProfile.displayName
 						};
 					}
 
-					return data;
+					return dataWithGreetingState;
 				}
 
 				return {
-					...data,
+					...dataWithGreetingState,
 					contributions: mergeCreatorProfileContributions(
 						currentProfile.contributions,
 						data.contributions
@@ -1081,6 +1319,9 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 					filters: data.filters || currentProfile.filters
 				};
 			});
+			if (!append && shouldFetchCreatorGreetingTranslation(dataWithInitialGreetingState)) {
+				void loadCreatorGreetingTranslation(dataWithInitialGreetingState);
+			}
 		} catch (error) {
 			if (requestIdRef.current !== requestId) {
 				return;
@@ -1103,7 +1344,7 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 				}
 			}
 		}
-	}, [copy.loadFailed]);
+	}, [copy.loadFailed, loadCreatorGreetingTranslation]);
 
 	const openCreatorProfile = useCallback(async (contributor) => {
 		if (!contributor?.profileAvailable || !contributor.userHash) {
@@ -1224,13 +1465,28 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 				creatorUserHash: creatorProfile.userHash
 			});
 			const savedGreeting = typeof result?.greeting === "string" ? result.greeting : "";
+			const savedGreetingLang = typeof result?.greetingLang === "string" ? result.greetingLang : null;
+			const profileLocale = getCreatorProfileLocale();
+			const nextGreetingState = prepareCreatorGreetingTranslationState({
+				...creatorProfile,
+				greeting: savedGreeting,
+				greetingLang: savedGreetingLang
+			}, profileLocale);
 			setCreatorProfile((currentProfile) => currentProfile
 				? {
 					...currentProfile,
-					greeting: savedGreeting
+					greeting: savedGreeting,
+					greetingLang: savedGreetingLang,
+					localizedGreeting: nextGreetingState.localizedGreeting,
+					greetingTranslationLocale: nextGreetingState.greetingTranslationLocale,
+					greetingTranslationStatus: nextGreetingState.greetingTranslationStatus,
+					greetingTranslationSourceLocale: nextGreetingState.greetingTranslationSourceLocale
 				}
 				: currentProfile
 			);
+			if (shouldFetchCreatorGreetingTranslation(nextGreetingState)) {
+				void loadCreatorGreetingTranslation(nextGreetingState);
+			}
 			Toast.success(copy.greetingSaveSuccess);
 			return result;
 		} catch (error) {
@@ -1239,7 +1495,7 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 		} finally {
 			setGreetingPending(false);
 		}
-	}, [copy.greetingSaveFailed, copy.greetingSaveSuccess, creatorProfile]);
+	}, [copy.greetingSaveFailed, copy.greetingSaveSuccess, creatorProfile, loadCreatorGreetingTranslation]);
 
 	const handleTrackClick = useCallback((trackId) => {
 		if (!trackId) {

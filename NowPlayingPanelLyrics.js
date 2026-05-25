@@ -73,7 +73,9 @@
 
     // 기본 설정값
     const DEFAULT_ENABLED = true;
-    const DEFAULT_LINES = 5; // 표시할 가사 줄 수 (위 2, 현재 1, 아래 2)
+    const PANEL_CONTEXT_LINES_PER_SIDE = 4;
+    const MIN_PANEL_VISIBLE_LINES = PANEL_CONTEXT_LINES_PER_SIDE * 2 + 1;
+    const DEFAULT_LINES = MIN_PANEL_VISIBLE_LINES; // 위 4, 현재 1, 아래 4
     const DEFAULT_FONT_SCALE = 100; // 폰트 크기 배율 (50% ~ 200%)
     const DEFAULT_FONT_FAMILY = "Pretendard Variable";
     const DEFAULT_PANEL_WIDTH = 280;
@@ -300,11 +302,11 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 
 /* 가사 래퍼 - 슬라이드 업 애니메이션 */
 .ivlyrics-panel-lyrics-wrapper {
-  display: flex !important;
-  flex-direction: column !important;
+  display: grid !important;
+  grid-template-rows: repeat(var(--ivlyrics-panel-visible-lines, 9), minmax(0, 1fr)) !important;
   gap: 4px !important;
-  height: auto !important;
-  max-height: none !important;
+  height: var(--ivlyrics-panel-fixed-height, 342px) !important;
+  max-height: var(--ivlyrics-panel-fixed-height, 342px) !important;
   overflow: hidden !important;
   position: relative !important;
   mask-image: none !important;
@@ -375,13 +377,17 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 .ivlyrics-panel-line {
   display: flex !important;
   flex-direction: column !important;
+  justify-content: center !important;
   gap: 2px !important;
+  min-height: 0 !important;
+  height: 100% !important;
   padding: 3px 0 !important;
   border-radius: 0 !important;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
   background: transparent !important;
   text-align: left !important;
   font-family: var(--ivlyrics-panel-font-family) !important;
+  overflow: hidden !important;
   animation: ivlyrics-slide-up 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards !important;
 }
 
@@ -503,11 +509,15 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 .ivlyrics-panel-lyrics-section.playback-paused .lyrics-break-icon, .ivlyrics-panel-lyrics-section.playback-paused .lyrics-break-icon *, .ivlyrics-panel-lyrics-section.playback-paused .lyrics-break-icon::before, .ivlyrics-panel-lyrics-section.playback-paused .lyrics-break-icon::after, .ivlyrics-panel-lyrics-section.playback-paused .lyrics-break-icon *::before, .ivlyrics-panel-lyrics-section.playback-paused .lyrics-break-icon *::after { animation-play-state: paused !important; }
 
 .ivlyrics-panel-line-phonetic {
+  display: -webkit-box !important;
+  -webkit-line-clamp: 1 !important;
+  -webkit-box-orient: vertical !important;
   font-size: calc(var(--ivlyrics-panel-phonetic-size, 13px) * var(--ivlyrics-font-scale, 1)) !important;
   font-weight: 400 !important;
   color: rgba(255, 255, 255, 0.55) !important;
   line-height: 1.35 !important;
   letter-spacing: 0.01em !important;
+  overflow: hidden !important;
   font-family: var(--ivlyrics-panel-phonetic-font) !important;
 }
 
@@ -517,6 +527,9 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 
 /* 2. 원어 (Original Text) - 크고 볼드 */
 .ivlyrics-panel-line-text {
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
   font-size: calc(var(--ivlyrics-panel-original-size, 18px) * var(--ivlyrics-font-scale, 1)) !important;
   font-weight: 700 !important;
   color: rgba(255, 255, 255, 0.7) !important;
@@ -524,6 +537,7 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
   letter-spacing: -0.01em !important;
   word-break: keep-all !important;
   overflow-wrap: break-word !important;
+  overflow: hidden !important;
   font-family: var(--ivlyrics-panel-original-font) !important;
 }
 
@@ -534,11 +548,15 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 
 /* 3. 번역 (Translation) - 아래에 작게 */
 .ivlyrics-panel-line-translation {
+  display: -webkit-box !important;
+  -webkit-line-clamp: 1 !important;
+  -webkit-box-orient: vertical !important;
   font-size: calc(var(--ivlyrics-panel-translation-size, 13px) * var(--ivlyrics-font-scale, 1)) !important;
   font-weight: 500 !important;
   color: rgba(255, 255, 255, 0.5) !important;
   line-height: 1.35 !important;
   margin-top: 1px !important;
+  overflow: hidden !important;
   font-family: var(--ivlyrics-panel-translation-font) !important;
 }
 
@@ -557,6 +575,8 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
   font-weight: 700 !important;
   line-height: 1.4 !important;
   font-family: var(--ivlyrics-panel-original-font) !important;
+  max-height: calc(var(--ivlyrics-panel-original-size, 18px) * var(--ivlyrics-font-scale, 1) * 2.85) !important;
+  overflow: hidden !important;
 }
 
 .ivlyrics-panel-line-karaoke.is-text-run,
@@ -577,6 +597,7 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
   display: flex !important;
   flex-direction: column !important;
   gap: 8px !important;
+  overflow: hidden !important;
 }
 
 .ivlyrics-panel-line-karaoke-row {
@@ -928,10 +949,14 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 
 /* 가사 없음 상태 */
 .ivlyrics-panel-empty {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: var(--ivlyrics-panel-fixed-height, 342px) !important;
   text-align: center !important;
   color: rgba(255, 255, 255, 0.6) !important;
   font-size: 13px !important;
-  padding: 16px !important;
+  padding: 0 16px !important;
   font-family: 'Pretendard Variable', Pretendard, sans-serif !important;
 }
 
@@ -939,7 +964,7 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 .ivlyrics-panel-line.placeholder {
   opacity: 0 !important;
   pointer-events: none !important;
-  min-height: 24px !important;
+  min-height: 0 !important;
 }
 
 /* Furigana (Ruby) 스타일 */
@@ -995,6 +1020,8 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 
 .ivlyrics-nowplaying-bar-lyrics .ivlyrics-panel-lyrics-wrapper {
   gap: 2px !important;
+  height: var(--ivlyrics-panel-bar-fixed-height, 246px) !important;
+  max-height: var(--ivlyrics-panel-bar-fixed-height, 246px) !important;
 }
 
 .ivlyrics-nowplaying-bar-lyrics .ivlyrics-panel-line {
@@ -1204,6 +1231,15 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             return configValue;
         }
         return getStorageValue(`ivLyrics:visual:${name}`, defaultValue);
+    };
+
+    const normalizePanelVisibleLineCount = (value) => {
+        const numericValue = parseInt(value, 10);
+        const lineCount = Number.isFinite(numericValue) && numericValue > 0
+            ? numericValue
+            : DEFAULT_LINES;
+        const visibleLineCount = Math.max(MIN_PANEL_VISIBLE_LINES, lineCount);
+        return visibleLineCount % 2 === 0 ? visibleLineCount + 1 : visibleLineCount;
     };
 
     const translatePanelText = (key, fallback) => {
@@ -2053,7 +2089,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         const [globalOffset, setGlobalOffset] = useState(() => window.Utils?.getGlobalSyncOffset?.() || 0);
         const [pseudoKaraokeAdvanceMs, setPseudoKaraokeAdvanceMs] = useState(getPseudoKaraokeRenderAdvance());
         const [isEnabled, setIsEnabled] = useState(getStorageValue(STORAGE_KEY, DEFAULT_ENABLED));
-        const [numLines, setNumLines] = useState(parseInt(getStorageValue(PANEL_LINES_KEY, DEFAULT_LINES), 10));
+        const [numLines, setNumLines] = useState(() => normalizePanelVisibleLineCount(getStorageValue(PANEL_LINES_KEY, DEFAULT_LINES)));
         const [fontScale, setFontScale] = useState(parseInt(getStorageValue(FONT_SCALE_KEY, DEFAULT_FONT_SCALE), 10));
         const [instrumentalBreakRevision, setInstrumentalBreakRevision] = useState(0);
         const [textEffectRevision, setTextEffectRevision] = useState(0);
@@ -2412,7 +2448,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     setIsEnabled(event.detail.value);
                 }
                 if (event.detail?.name === 'panel-lyrics-lines') {
-                    setNumLines(parseInt(event.detail.value, 10) || DEFAULT_LINES);
+                    setNumLines(normalizePanelVisibleLineCount(event.detail.value));
                 }
                 if (event.detail?.name === 'panel-font-scale') {
                     setFontScale(parseInt(event.detail.value, 10) || DEFAULT_FONT_SCALE);
@@ -2874,13 +2910,15 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         //     }
         // }, [currentIndex, isEnabled]);
 
+        const visibleLineCount = normalizePanelVisibleLineCount(numLines);
+
         // 표시할 가사 라인들 계산
         // 노래방 가사는 line 객체에 syllables 또는 vocals 포함
-        // 항상 numLines 개수만큼 표시 (빈 줄은 투명 placeholder로)
+        // 항상 홀수 개수만큼 표시 (빈 줄은 투명 placeholder로)하여 현재 가사가 가운데에 오도록 함
         const visibleLines = useMemo(() => {
             if (!lyrics || lyrics.length === 0) return [];
 
-            const halfLines = Math.floor(numLines / 2);
+            const halfLines = Math.floor(visibleLineCount / 2);
             const lines = [];
             const displayableLyrics = lyrics
                 .map((line, index) => ({
@@ -2925,7 +2963,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     : entry.index === currentIndex)
             );
 
-            // 항상 numLines 개수만큼 표시
+            // 항상 visibleLineCount 개수만큼 표시
             for (let offset = -halfLines; offset <= halfLines; offset++) {
                 const displayIndex = currentDisplayIndex + offset;
                 const entry = displayableLyrics[displayIndex];
@@ -2972,7 +3010,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             }
 
             return lines;
-        }, [lyrics, currentIndex, numLines, activeTrailingInterludeKey]);
+        }, [lyrics, currentIndex, visibleLineCount, activeTrailingInterludeKey]);
 
         // currentTime은 더 이상 상태로 관리하지 않음 (전역 변수 window._ivLyricsPanelCurrentTime 사용)
 
@@ -2981,10 +3019,19 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             Spicetify.Platform.History.push('/ivLyrics');
         }, []);
 
+        const panelLineSlotHeight = useMemo(() => {
+            const originalSize = Number(getStorageValue(ORIGINAL_SIZE_KEY, DEFAULT_ORIGINAL_SIZE)) || DEFAULT_ORIGINAL_SIZE;
+            const scale = Number(fontScale) > 0 ? Number(fontScale) / 100 : 1;
+            return Math.round(Math.max(34, Math.min(58, originalSize * scale * 2.05)));
+        }, [fontScale, instrumentalBreakRevision]);
+
         // 폰트 스케일 스타일
         const containerStyle = useMemo(() => ({
-            '--ivlyrics-font-scale': fontScale / 100
-        }), [fontScale]);
+            '--ivlyrics-font-scale': fontScale / 100,
+            '--ivlyrics-panel-visible-lines': visibleLineCount,
+            '--ivlyrics-panel-fixed-height': `${visibleLineCount * panelLineSlotHeight}px`,
+            '--ivlyrics-panel-bar-fixed-height': `${Math.round(visibleLineCount * panelLineSlotHeight * 0.72)}px`
+        }), [fontScale, panelLineSlotHeight, visibleLineCount]);
         const usesBlurGradientPanelBg = getStorageValue(BG_TYPE_KEY, DEFAULT_BG_TYPE) !== 'custom';
         const sectionClassName = `${PANEL_SECTION_CLASS}${isPlaybackPaused ? " playback-paused" : ""}${usesBlurGradientPanelBg ? " blur-gradient-bg" : ""}`;
         const panelBackgroundLayer = react.createElement("div", {

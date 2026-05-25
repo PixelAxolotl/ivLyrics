@@ -4486,12 +4486,23 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		};
 	}, [provider, selectedLrclibSource]);
 
-	const clearLyricsCachesAfterSyncSubmit = useCallback(() => {
+	const clearLyricsCachesAfterSyncSubmit = useCallback(async () => {
 		window.SyncDataService?.clearCache?.(trackId);
-		window.LyricsService?.clearTrackCache?.(trackId)?.catch?.((error) => {
+		const dispatchSyncDataUpdated = () => window.dispatchEvent(new CustomEvent('ivLyrics:sync-data-updated', {
+			detail: {
+				trackId,
+				trackUri: trackId ? `spotify:track:${trackId}` : null,
+				provider
+			}
+		}));
+		try {
+			await window.LyricsService?.clearTrackCache?.(trackId);
+		} catch (error) {
 			console.warn('[SyncDataCreator] Failed to clear lyrics cache after sync-data submit:', error);
-		});
-	}, [trackId]);
+		} finally {
+			dispatchSyncDataUpdated();
+		}
+	}, [trackId, provider]);
 
 	const handleSubmit = useCallback(async () => {
 		if (!syncData || !syncData.lines || syncData.lines.length === 0) {
@@ -4592,7 +4603,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				if (result) {
 					Toast.success(I18n.t('syncCreator.submitSuccess'));
 					// 캐시 무효화
-					clearLyricsCachesAfterSyncSubmit();
+					await clearLyricsCachesAfterSyncSubmit();
 					// 가사 페이지 새로고침
 					setTimeout(() => {
 						if (typeof window.reloadLyrics === 'function') {
@@ -4615,7 +4626,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				if (response.ok) {
 					Toast.success(I18n.t('syncCreator.submitSuccess'));
 					// 캐시 무효화
-					clearLyricsCachesAfterSyncSubmit();
+					await clearLyricsCachesAfterSyncSubmit();
 					// 가사 페이지 새로고침
 					setTimeout(() => {
 						if (typeof window.reloadLyrics === 'function') {

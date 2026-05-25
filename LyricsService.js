@@ -1520,9 +1520,35 @@
         const _fullyLoadedTracks = new Set(); // 전체 목록이 로드된 트랙 ID
         const _usageReportCache = new Set(); // 세션 내 중복 사용량 보고 방지
         const _serverCacheBypassUntil = new Map(); // 로컬 캐시 삭제 직후 서버 캐시 우회
+        const _trackCacheGenerations = new Map(); // 캐시 삭제 전 시작된 요청의 재저장을 방지
         const SERVER_CACHE_BYPASS_MS = 30 * 1000;
         let _serverCacheBypassAllUntil = 0;
+        let _syncDataCacheGeneration = 0;
         let _spotifyProfilePromise = null;
+
+        function getCacheGeneration(trackId) {
+            return `${_syncDataCacheGeneration}:${_trackCacheGenerations.get(trackId) || 0}`;
+        }
+
+        function bumpCacheGeneration(trackId) {
+            if (!trackId) {
+                _syncDataCacheGeneration += 1;
+                return;
+            }
+            _trackCacheGenerations.set(trackId, (_trackCacheGenerations.get(trackId) || 0) + 1);
+        }
+
+        function clearInflightRequests(trackId) {
+            if (!trackId) {
+                _inflightRequests.clear();
+                return;
+            }
+            for (const key of _inflightRequests.keys()) {
+                if (key === trackId || key.startsWith(`${trackId}:`)) {
+                    _inflightRequests.delete(key);
+                }
+            }
+        }
 
         function markServerCacheBypass(trackId) {
             const expiresAt = Date.now() + SERVER_CACHE_BYPASS_MS;
@@ -1583,6 +1609,7 @@
             }
 
             const specificKey = `${trackId}:${provider}`;
+            const requestGeneration = getCacheGeneration(trackId);
 
             // 캐시 확인
             if (_syncDataCache.has(specificKey)) {
@@ -1640,6 +1667,9 @@
                             updatedAt: data.updatedAt || null,
                             loadCount: data.loadCount || 0
                         };
+                        if (requestGeneration !== getCacheGeneration(trackId)) {
+                            return null;
+                        }
                         _syncDataCache.set(specificKey, syncData);
                         return syncData;
                     }
@@ -1670,6 +1700,8 @@
 
         function clearCache(trackId) {
             if (trackId) {
+                bumpCacheGeneration(trackId);
+                clearInflightRequests(trackId);
                 _syncDataCache.delete(trackId);
                 // trackId 관련 모든 캐시 삭제
                 for (const key of _syncDataCache.keys()) {
@@ -1680,6 +1712,8 @@
                 _fullyLoadedTracks.delete(trackId);
                 markServerCacheBypass(trackId);
             } else {
+                bumpCacheGeneration();
+                clearInflightRequests();
                 _syncDataCache.clear();
                 _fullyLoadedTracks.clear();
                 _usageReportCache.clear();

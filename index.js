@@ -3200,10 +3200,12 @@ class LyricsContainer extends react.Component {
       lyricsEditHasTranslationCache: false,
       lyricsEditError: "",
       isPlaybackPaused: true,
+      lyricsRequestSeq: 0,
     };
     this.currentTrackUri = "";
     this._lyricsFetchSeq = 0;
     this._activeLyricsFetchSeq = 0;
+    this._lyricsPresentationSeq = 0;
     this.nextTrackUri = "";
     this._cleanupFloatingMenuOutsideClick = null;
     this.availableModes = [];
@@ -3229,6 +3231,10 @@ class LyricsContainer extends react.Component {
     // Translation loading timers - separate for phonetic and translation
     this.phoneticLoadingTimer = null;
     this.translationLoadingTimer = null;
+    this._phoneticLoadingSeq = 0;
+    this._translationLoadingSeq = 0;
+    this._activePhoneticLoadingTokens = new Set();
+    this._activeTranslationLoadingTokens = new Set();
     this.streamingApplyTimer = null;
     this.pendingStreamingPayload = null;
     this.floatingMenuCloseTimer = null;
@@ -3646,6 +3652,50 @@ class LyricsContainer extends react.Component {
     }
   }
 
+  isCurrentLyricsUri(uri) {
+    return !!uri && this.currentTrackUri === uri;
+  }
+
+  isCurrentLyricsState(lyricsState) {
+    if (!lyricsState?.uri || !this.isCurrentLyricsUri(lyricsState.uri)) {
+      return false;
+    }
+
+    const requestSeq = lyricsState.lyricsRequestSeq;
+    return !requestSeq || requestSeq === this._activeLyricsFetchSeq;
+  }
+
+  clearPendingLyricsUpdates() {
+    if (this.streamingApplyTimer) {
+      clearTimeout(this.streamingApplyTimer);
+      this.streamingApplyTimer = null;
+    }
+    this.pendingStreamingPayload = null;
+    this.clearPhoneticLoading();
+    this.clearTranslationLoading();
+  }
+
+  getLoadingLyricsState(info, requestSeq) {
+    return {
+      ...emptyState,
+      uri: info?.uri || "",
+      lyricsRequestSeq: requestSeq || 0,
+      provider: "",
+      contributors: null,
+      currentLyrics: [],
+      language: null,
+      translatedMetadata: null,
+      trackLyricsProviderOverride: null,
+      isLoading: true,
+      isCached: false,
+      error: null,
+      artist: info?.artist || "",
+      title: info?.title || "",
+      coverUrl: info?.image || "",
+      currentLyricIndex: 0,
+    };
+  }
+
   /**
    * 저장된 선택 영상 로드 (IndexedDB에서)
    * @param {string} trackUri - 트랙 URI
@@ -3676,46 +3726,83 @@ class LyricsContainer extends react.Component {
    * 발음 로딩 상태를 시작합니다 (1초 후에 로딩 메시지 표시)
    */
   startPhoneticLoading() {
-    this.clearPhoneticLoading();
+    const token = ++this._phoneticLoadingSeq;
+    this._activePhoneticLoadingTokens.add(token);
+    if (this.phoneticLoadingTimer) {
+      clearTimeout(this.phoneticLoadingTimer);
+      this.phoneticLoadingTimer = null;
+    }
     this.phoneticLoadingTimer = setTimeout(() => {
-      this.setState({ isPhoneticLoading: true });
+      this.phoneticLoadingTimer = null;
+      if (this._activePhoneticLoadingTokens.size > 0) {
+        this.setState({ isPhoneticLoading: true });
+      }
     }, 1000);
+    return token;
   }
 
   /**
    * 발음 로딩 상태를 종료합니다
    */
-  clearPhoneticLoading() {
-    if (this.phoneticLoadingTimer) {
+  clearPhoneticLoading(token = null) {
+    if (token === null) {
+      this._activePhoneticLoadingTokens.clear();
+    } else {
+      this._activePhoneticLoadingTokens.delete(token);
+    }
+
+    if (this._activePhoneticLoadingTokens.size === 0 && this.phoneticLoadingTimer) {
       clearTimeout(this.phoneticLoadingTimer);
       this.phoneticLoadingTimer = null;
     }
-    this.setState({ isPhoneticLoading: false });
+
+    if (this._activePhoneticLoadingTokens.size === 0) {
+      this.setState({ isPhoneticLoading: false });
+    }
   }
 
   /**
    * 번역 로딩 상태를 시작합니다 (1초 후에 로딩 메시지 표시)
    */
   startTranslationLoading() {
-    this.clearTranslationLoading();
+    const token = ++this._translationLoadingSeq;
+    this._activeTranslationLoadingTokens.add(token);
+    if (this.translationLoadingTimer) {
+      clearTimeout(this.translationLoadingTimer);
+      this.translationLoadingTimer = null;
+    }
     this.translationLoadingTimer = setTimeout(() => {
-      this.setState({ isTranslationLoading: true });
+      this.translationLoadingTimer = null;
+      if (this._activeTranslationLoadingTokens.size > 0) {
+        this.setState({ isTranslationLoading: true });
+      }
     }, 1000);
+    return token;
   }
 
   /**
    * 번역 로딩 상태를 종료합니다
    */
-  clearTranslationLoading() {
-    if (this.translationLoadingTimer) {
+  clearTranslationLoading(token = null) {
+    if (token === null) {
+      this._activeTranslationLoadingTokens.clear();
+    } else {
+      this._activeTranslationLoadingTokens.delete(token);
+    }
+
+    if (this._activeTranslationLoadingTokens.size === 0 && this.translationLoadingTimer) {
       clearTimeout(this.translationLoadingTimer);
       this.translationLoadingTimer = null;
     }
-    this.setState({ isTranslationLoading: false });
+
+    if (this._activeTranslationLoadingTokens.size === 0) {
+      this.setState({ isTranslationLoading: false });
+    }
   }
 
   applyStreamingTranslation({
     uri,
+    presentationSeq = null,
     lyrics,
     lyricsMode1,
     lyricsMode2,
@@ -3724,6 +3811,7 @@ class LyricsContainer extends react.Component {
   }) {
     this.pendingStreamingPayload = {
       uri,
+      presentationSeq,
       lyrics,
       lyricsMode1,
       lyricsMode2,
@@ -3739,7 +3827,11 @@ class LyricsContainer extends react.Component {
       this.streamingApplyTimer = null;
       const payload = this.pendingStreamingPayload;
       this.pendingStreamingPayload = null;
-      if (!payload || this.state.uri !== payload.uri) {
+      if (
+        !payload ||
+        !this.isCurrentLyricsUri(payload.uri) ||
+        (payload.presentationSeq !== null && payload.presentationSeq !== this._lyricsPresentationSeq)
+      ) {
         return;
       }
 
@@ -3863,6 +3955,7 @@ class LyricsContainer extends react.Component {
       return;
     }
 
+    const requestUri = this.state.uri;
     // trackId 가져오기
     const trackId = Spicetify.Player.data?.item?.uri?.split(':')[2];
     if (!trackId) {
@@ -3870,12 +3963,15 @@ class LyricsContainer extends react.Component {
       return;
     }
 
+    let phoneticLoadingToken = null;
+    let translationLoadingToken = null;
+
     try {
       if (needPhonetic) {
-        this.startPhoneticLoading();
+        phoneticLoadingToken = this.startPhoneticLoading();
       }
       if (needTranslation) {
-        this.startTranslationLoading();
+        translationLoadingToken = this.startTranslationLoading();
       }
 
       Toast.show(I18n.t("notifications.regeneratingTranslation"), false, 2000);
@@ -3968,7 +4064,7 @@ class LyricsContainer extends react.Component {
       const streamedTranslationLines = [];
 
       const pushStreamingUpdate = () => {
-        if (this.state.uri !== currentUri) {
+        if (!this.isCurrentLyricsUri(currentUri)) {
           return;
         }
 
@@ -3990,7 +4086,7 @@ class LyricsContainer extends react.Component {
           if (typeof lineIndex !== "number" || lineIndex < 0) {
             return;
           }
-          if (this.state.uri !== currentUri) {
+          if (!this.isCurrentLyricsUri(currentUri)) {
             return;
           }
 
@@ -4017,7 +4113,7 @@ class LyricsContainer extends react.Component {
           if (typeof lineIndex !== "number" || lineIndex < 0) {
             return;
           }
-          if (this.state.uri !== currentUri) {
+          if (!this.isCurrentLyricsUri(currentUri)) {
             return;
           }
 
@@ -4059,6 +4155,9 @@ class LyricsContainer extends react.Component {
 
       // 번역 요청 (gemini_ko)
       if (needTranslation) {
+        if (!this.isCurrentLyricsUri(currentUri)) {
+          return;
+        }
         translationResponse = await window.Translator.callGemini({
           trackId,
           artist: this.state.artist || lyricsState.artist,
@@ -4069,6 +4168,10 @@ class LyricsContainer extends react.Component {
           ignoreCache: true,
           onLine: handleTranslationStreamLine,
         });
+      }
+
+      if (!this.isCurrentLyricsUri(currentUri) || requestUri !== currentUri) {
+        return;
       }
 
       // 번역 결과를 getGeminiTranslation과 동일한 방식으로 처리하는 함수
@@ -4103,6 +4206,9 @@ class LyricsContainer extends react.Component {
 
       // _dmResults에 번역 결과 저장
       // mode1과 mode2 결과 저장
+      if (!this._dmResults?.[currentUri]) {
+        return;
+      }
       this._dmResults[currentUri].mode1 = translatedLyrics1;
       this._dmResults[currentUri].mode2 = translatedLyrics2;
       this._dmResults[currentUri].lastMode1 = mode1;
@@ -4121,13 +4227,15 @@ class LyricsContainer extends react.Component {
       this.lyricsSource(this.state, currentMode);
       Toast.success(I18n.t("notifications.translationRegenerated"));
     } catch (error) {
-      Toast.error(`${I18n.t("notifications.translationRegenerateFailed")}: ${error.message}`);
+      if (this.isCurrentLyricsUri(requestUri)) {
+        Toast.error(`${I18n.t("notifications.translationRegenerateFailed")}: ${error.message}`);
+      }
     } finally {
       if (needPhonetic) {
-        this.clearPhoneticLoading();
+        this.clearPhoneticLoading(phoneticLoadingToken);
       }
       if (needTranslation) {
-        this.clearTranslationLoading();
+        this.clearTranslationLoading(translationLoadingToken);
       }
     }
   }
@@ -4344,9 +4452,15 @@ class LyricsContainer extends react.Component {
       const requestSeq = ++this._lyricsFetchSeq;
       const requestUri = info.uri;
       this._activeLyricsFetchSeq = requestSeq;
+      this.currentTrackUri = requestUri;
       isLatestLyricsRequest = () =>
         this._activeLyricsFetchSeq === requestSeq &&
         this.currentTrackUri === requestUri;
+
+      this.clearPendingLyricsUpdates();
+      this.lastProcessedUri = null;
+      this.lastProcessedMode = null;
+      this.setState(this.getLoadingLyricsState(info, requestSeq));
 
       // 트랙별 언어 오버라이드 로드 (IndexedDB)
       let trackLanguageOverride = null;
@@ -4411,6 +4525,7 @@ class LyricsContainer extends react.Component {
           contributors: null,
           ...CACHE[info.uri],
           trackLyricsProviderOverride,
+          lyricsRequestSeq: requestSeq,
           isLoading: false,
           isCached,
         };
@@ -4424,6 +4539,11 @@ class LyricsContainer extends react.Component {
         this.lastModeBeforeLoading = currentMode !== -1 ? currentMode : SYNCED;
         this.setState({
           ...emptyState,
+          uri: requestUri,
+          lyricsRequestSeq: requestSeq,
+          artist: info.artist,
+          title: info.title,
+          coverUrl: info.image,
           provider: "",
           contributors: null,
           trackLyricsProviderOverride,
@@ -4467,6 +4587,7 @@ class LyricsContainer extends react.Component {
             contributors: null,
             ...resp,
             trackLyricsProviderOverride,
+            lyricsRequestSeq: requestSeq,
             isLoading: false,
             isCached,
           };
@@ -4566,6 +4687,8 @@ class LyricsContainer extends react.Component {
         error: `Failed to fetch lyrics: ${error.message}`,
         isLoading: false,
         ...emptyState,
+        uri: this.currentTrackUri,
+        lyricsRequestSeq: this._activeLyricsFetchSeq,
       });
     }
   }
@@ -4591,9 +4714,16 @@ class LyricsContainer extends react.Component {
 
   lyricsSource(lyricsState, mode) {
     if (!lyricsState) return;
+    if (!this.isCurrentLyricsState(lyricsState)) return;
+    const presentationSeq = ++this._lyricsPresentationSeq;
+    const isActivePresentation = () =>
+      presentationSeq === this._lyricsPresentationSeq &&
+      this.isCurrentLyricsState(lyricsState);
 
     const lyrics = this.resolveLyricsForMode(lyricsState, mode);
     if (!lyrics) {
+      if (lyricsState.isLoading) return;
+      if (!isActivePresentation()) return;
       this.setState({ currentLyrics: [] });
       // 오버레이에 가사 없음 상태 전송 (트랙 정보 업데이트용)
       window.dispatchEvent(new CustomEvent('ivLyrics:lyrics-ready', {
@@ -4674,6 +4804,9 @@ class LyricsContainer extends react.Component {
           );
         }
       } catch (error) {
+        if (!isActivePresentation()) {
+          return null;
+        }
         const modeDisplayName =
           mode === "gemini_romaji"
             ? I18n.t("notifications.romajiTranslationFailed")
@@ -4713,7 +4846,7 @@ class LyricsContainer extends react.Component {
 
     // 즉시 원문 표시 - 번역이 로딩되는 동안에도 사용자가 가사를 볼 수 있도록
     // URI 체크: 곡이 변경되지 않았을 때만 표시
-    if (this.state.uri === uri) {
+    if (isActivePresentation()) {
       const optimizedOriginal = this.optimizeTranslations(
         lyrics,
         null,
@@ -4774,7 +4907,7 @@ class LyricsContainer extends react.Component {
 
     const updateCombinedLyrics = () => {
       // Guard clause to prevent race conditions from previous songs
-      if (this.state.uri !== uri) {
+      if (!isActivePresentation()) {
         return;
       }
       ivLyricsDebug(
@@ -4833,11 +4966,12 @@ class LyricsContainer extends react.Component {
       const promise1 = lyricsMode1
         ? Promise.resolve(lyricsMode1)
         : processMode(displayMode1, lyrics, (partialLyrics) => {
-          if (this.state.uri !== uri || !partialLyrics) return;
+          if (!isActivePresentation() || !partialLyrics || !this._dmResults?.[currentUri]) return;
           lyricsMode1 = partialLyrics;
           this._dmResults[currentUri].mode1 = partialLyrics;
           this.applyStreamingTranslation({
             uri,
+            presentationSeq,
             lyrics,
             lyricsMode1,
             lyricsMode2,
@@ -4848,11 +4982,12 @@ class LyricsContainer extends react.Component {
       const promise2 = lyricsMode2
         ? Promise.resolve(lyricsMode2)
         : processMode(displayMode2, lyrics, (partialLyrics) => {
-          if (this.state.uri !== uri || !partialLyrics) return;
+          if (!isActivePresentation() || !partialLyrics || !this._dmResults?.[currentUri]) return;
           lyricsMode2 = partialLyrics;
           this._dmResults[currentUri].mode2 = partialLyrics;
           this.applyStreamingTranslation({
             uri,
+            presentationSeq,
             lyrics,
             lyricsMode1,
             lyricsMode2,
@@ -4865,7 +5000,7 @@ class LyricsContainer extends react.Component {
       promise1
         .then((result) => {
           // Guard clause: 다른 곡으로 변경되었는지 확인
-          if (this.state.uri !== uri) {
+          if (!isActivePresentation() || !this._dmResults?.[currentUri]) {
             return;
           }
           if (result) {
@@ -4882,7 +5017,7 @@ class LyricsContainer extends react.Component {
       promise2
         .then((result) => {
           // Guard clause: 다른 곡으로 변경되었는지 확인
-          if (this.state.uri !== uri) {
+          if (!isActivePresentation() || !this._dmResults?.[currentUri]) {
             return;
           }
           if (result) {
@@ -4906,11 +5041,12 @@ class LyricsContainer extends react.Component {
         updateCombinedLyrics();
       } else {
         processMode(displayMode1, lyrics, (partialLyrics) => {
-          if (this.state.uri !== uri || !partialLyrics) return;
+          if (!isActivePresentation() || !partialLyrics || !this._dmResults?.[currentUri]) return;
           lyricsMode1 = partialLyrics;
           this._dmResults[currentUri].mode1 = partialLyrics;
           this.applyStreamingTranslation({
             uri,
+            presentationSeq,
             lyrics,
             lyricsMode1,
             lyricsMode2,
@@ -4919,6 +5055,9 @@ class LyricsContainer extends react.Component {
           });
         })
           .then((result) => {
+            if (!isActivePresentation() || !this._dmResults?.[currentUri]) {
+              return;
+            }
             lyricsMode1 = result;
             this._dmResults[currentUri].mode1 = result;
             updateCombinedLyrics();
@@ -4939,11 +5078,12 @@ class LyricsContainer extends react.Component {
         updateCombinedLyrics();
       } else {
         processMode(displayMode2, lyrics, (partialLyrics) => {
-          if (this.state.uri !== uri || !partialLyrics) return;
+          if (!isActivePresentation() || !partialLyrics || !this._dmResults?.[currentUri]) return;
           lyricsMode2 = partialLyrics;
           this._dmResults[currentUri].mode2 = partialLyrics;
           this.applyStreamingTranslation({
             uri,
+            presentationSeq,
             lyrics,
             lyricsMode1,
             lyricsMode2,
@@ -4952,6 +5092,9 @@ class LyricsContainer extends react.Component {
           });
         })
           .then((result) => {
+            if (!isActivePresentation() || !this._dmResults?.[currentUri]) {
+              return;
+            }
             lyricsMode2 = result;
             this._dmResults[currentUri].mode2 = result;
             updateCombinedLyrics();
@@ -5241,18 +5384,16 @@ class LyricsContainer extends react.Component {
           if (typeof lineIndex !== "number" || lineIndex < 0) return;
           streamedLines[lineIndex] = typeof lineText === "string" ? lineText : "";
           const partialMapped = mapResultLinesToLyrics(streamedLines);
-          if (partialMapped && this.state.uri === lyricsState.uri) {
+          if (partialMapped && this.isCurrentLyricsState(lyricsState)) {
             onProgress(partialMapped);
           }
         }
         : null;
 
       // Start appropriate loading indicator based on mode type (1초 후 표시)
-      if (wantSmartPhonetic) {
-        this.startPhoneticLoading();
-      } else {
-        this.startTranslationLoading();
-      }
+      const loadingToken = wantSmartPhonetic
+        ? this.startPhoneticLoading()
+        : this.startTranslationLoading();
 
       const inflightPromise = window.Translator.callGemini({
         apiKey,
@@ -5312,9 +5453,9 @@ class LyricsContainer extends react.Component {
         .finally(() => {
           // Clear appropriate loading indicator based on mode type
           if (wantSmartPhonetic) {
-            this.clearPhoneticLoading();
+            this.clearPhoneticLoading(loadingToken);
           } else {
-            this.clearTranslationLoading();
+            this.clearTranslationLoading(loadingToken);
           }
           this._inflightGemini = this._inflightGemini || new Map();
           this._inflightGemini?.delete(inflightKey);
@@ -5343,7 +5484,7 @@ class LyricsContainer extends react.Component {
       }
 
       // Start translation loading indicator (1초 후 표시)
-      this.startTranslationLoading();
+      const loadingToken = this.startTranslationLoading();
 
       const inflightPromise = this.translateLyrics(
         language,
@@ -5358,7 +5499,7 @@ class LyricsContainer extends react.Component {
           throw new Error("Empty result from conversion.");
         })
         .finally(() => {
-          this.clearTranslationLoading();
+          this.clearTranslationLoading(loadingToken);
           this._inflightTrad.delete(inflightKey);
         });
 
@@ -5843,8 +5984,17 @@ class LyricsContainer extends react.Component {
           window.Translator.clearInflightRequests(previousTrackId);
         }
 
+        const transitionInfo = this.infoFromTrack(queue.current) || { uri: newUri };
+        const transitionSeq = ++this._lyricsFetchSeq;
+        this._activeLyricsFetchSeq = transitionSeq;
         this.currentTrackUri = newUri;
-        this.setState({ explicitMode: -1 }, () => {
+        this.trackLanguageOverride = null;
+        this.trackLyricsProviderOverride = null;
+        this.clearPendingLyricsUpdates();
+        this.setState({
+          ...this.getLoadingLyricsState(transitionInfo, transitionSeq),
+          explicitMode: -1,
+        }, () => {
           this.fetchLyrics(queue.current, -1);
         });
         this.viewPort.scrollTo(0, 0);
@@ -5871,8 +6021,14 @@ class LyricsContainer extends react.Component {
     };
 
     if (Spicetify.Player?.data?.item) {
+      const initialInfo = this.infoFromTrack(Spicetify.Player.data.item);
+      const initialSeq = ++this._lyricsFetchSeq;
       this.currentTrackUri = Spicetify.Player.data.item.uri;
-      this.setState({ explicitMode: -1 }, () => {
+      this._activeLyricsFetchSeq = initialSeq;
+      this.setState({
+        ...this.getLoadingLyricsState(initialInfo, initialSeq),
+        explicitMode: -1,
+      }, () => {
         this.fetchLyrics(Spicetify.Player.data.item, -1);
       });
       // 초기 로드 시 저장된 영상 확인
@@ -5898,6 +6054,17 @@ class LyricsContainer extends react.Component {
       const item = Spicetify.Player.data?.item;
       const trackUri = item?.uri;
       const trackId = trackUri?.split(":").pop();
+
+      if (item && trackUri) {
+        const reloadInfo = this.infoFromTrack(item) || { uri: trackUri };
+        const reloadSeq = ++this._lyricsFetchSeq;
+        this.currentTrackUri = trackUri;
+        this._activeLyricsFetchSeq = reloadSeq;
+        this.clearPendingLyricsUpdates();
+        this.lastProcessedUri = null;
+        this.lastProcessedMode = null;
+        this.setState(this.getLoadingLyricsState(reloadInfo, reloadSeq));
+      }
 
       // CacheManager (Gemini 번역 메모리 캐시)도 항상 현재 트랙에 대해 초기화
       if (trackUri) {

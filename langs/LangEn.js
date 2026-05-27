@@ -1216,6 +1216,30 @@ window.LANG_EN = {
         "processing": "Importing..."
       }
     },
+    "settingsPresets": {
+      "title": "Settings Presets",
+      "subtitle": "Save the current settings combination and apply it all at once.",
+      "nameLabel": "Preset name",
+      "namePlaceholder": "e.g. Focus mode",
+      "saveCurrent": "Save current",
+      "savedPresets": "Saved presets",
+      "empty": "No presets saved yet.",
+      "apply": "Apply",
+      "delete": "Delete",
+      "saved": "Preset \"{name}\" saved.",
+      "saveFailed": "Failed to save preset.",
+      "applied": "Preset \"{name}\" applied.",
+      "applyFailed": "Failed to apply preset.",
+      "deleted": "Preset \"{name}\" deleted.",
+      "deleteFailed": "Failed to delete preset.",
+      "nameRequired": "Enter a preset name.",
+      "confirmApply": "Apply preset \"{name}\" and reload the page?",
+      "confirmDelete": "Delete preset \"{name}\"?",
+      "confirmOverwrite": "A preset named \"{name}\" already exists. Overwrite it?",
+      "settingsCount": "{count} settings",
+      "updatedAt": "Updated {date}",
+      "excludedSecrets": "Current visual and behavior settings are saved. API keys are excluded."
+    },
     "dbExportImport": {
       "title": "Export/Import Database",
       "subtitle": "Transfer translations, lyrics cache and all data",

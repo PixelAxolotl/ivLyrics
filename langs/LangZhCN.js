@@ -1216,6 +1216,30 @@ window.LANG_ZH_CN = {
         "processing": "正在导入..."
       }
     },
+    "settingsPresets": {
+      "title": "设置预设",
+      "subtitle": "保存当前设置组合，并一次性应用。",
+      "nameLabel": "预设名称",
+      "namePlaceholder": "例如：专注模式",
+      "saveCurrent": "保存当前",
+      "savedPresets": "已保存的预设",
+      "empty": "还没有保存任何预设。",
+      "apply": "应用",
+      "delete": "删除",
+      "saved": "已保存预设“{name}”。",
+      "saveFailed": "保存预设失败。",
+      "applied": "已应用预设“{name}”。",
+      "applyFailed": "应用预设失败。",
+      "deleted": "已删除预设“{name}”。",
+      "deleteFailed": "删除预设失败。",
+      "nameRequired": "请输入预设名称。",
+      "confirmApply": "应用预设“{name}”并重新加载页面？",
+      "confirmDelete": "删除预设“{name}”？",
+      "confirmOverwrite": "名为“{name}”的预设已存在。要覆盖吗？",
+      "settingsCount": "{count} 项设置",
+      "updatedAt": "更新于 {date}",
+      "excludedSecrets": "会保存当前外观和行为设置。API 密钥会被排除。"
+    },
     "dbExportImport": {
       "title": "导出/导入数据库",
       "subtitle": "转移翻译、歌词缓存等所有数据",

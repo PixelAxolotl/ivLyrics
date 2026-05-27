@@ -1216,6 +1216,30 @@ window.LANG_RU = {
         "processing": "Импорт..."
       }
     },
+    "settingsPresets": {
+      "title": "Пресеты настроек",
+      "subtitle": "Сохраните текущую комбинацию настроек и применяйте её одним действием.",
+      "nameLabel": "Название пресета",
+      "namePlaceholder": "Напр.: Режим фокуса",
+      "saveCurrent": "Сохранить текущие",
+      "savedPresets": "Сохранённые пресеты",
+      "empty": "Сохранённых пресетов пока нет.",
+      "apply": "Применить",
+      "delete": "Удалить",
+      "saved": "Пресет \"{name}\" сохранён.",
+      "saveFailed": "Не удалось сохранить пресет.",
+      "applied": "Пресет \"{name}\" применён.",
+      "applyFailed": "Не удалось применить пресет.",
+      "deleted": "Пресет \"{name}\" удалён.",
+      "deleteFailed": "Не удалось удалить пресет.",
+      "nameRequired": "Введите название пресета.",
+      "confirmApply": "Применить пресет \"{name}\" и перезагрузить страницу?",
+      "confirmDelete": "Удалить пресет \"{name}\"?",
+      "confirmOverwrite": "Пресет с названием \"{name}\" уже существует. Перезаписать?",
+      "settingsCount": "{count} настроек",
+      "updatedAt": "Обновлено {date}",
+      "excludedSecrets": "Сохраняются текущие настройки внешнего вида и поведения. API-ключи исключаются."
+    },
     "dbExportImport": {
       "title": "Export/Import Database",
       "subtitle": "Transfer translations, lyrics cache and all data",

@@ -1216,6 +1216,30 @@ window.LANG_HI = {
         "processing": "आयात हो रहा है..."
       }
     },
+    "settingsPresets": {
+      "title": "सेटिंग प्रीसेट",
+      "subtitle": "मौजूदा सेटिंग संयोजन सहेजें और उसे एक साथ लागू करें।",
+      "nameLabel": "प्रीसेट नाम",
+      "namePlaceholder": "जैसे: फोकस मोड",
+      "saveCurrent": "मौजूदा सहेजें",
+      "savedPresets": "सहेजे गए प्रीसेट",
+      "empty": "अभी कोई प्रीसेट सहेजा नहीं गया है।",
+      "apply": "लागू करें",
+      "delete": "हटाएँ",
+      "saved": "प्रीसेट \"{name}\" सहेजा गया।",
+      "saveFailed": "प्रीसेट सहेजने में विफल।",
+      "applied": "प्रीसेट \"{name}\" लागू किया गया।",
+      "applyFailed": "प्रीसेट लागू करने में विफल।",
+      "deleted": "प्रीसेट \"{name}\" हटाया गया।",
+      "deleteFailed": "प्रीसेट हटाने में विफल।",
+      "nameRequired": "प्रीसेट नाम दर्ज करें।",
+      "confirmApply": "प्रीसेट \"{name}\" लागू करके पेज फिर से लोड करें?",
+      "confirmDelete": "प्रीसेट \"{name}\" हटाएँ?",
+      "confirmOverwrite": "\"{name}\" नाम का प्रीसेट पहले से मौजूद है। क्या इसे बदलना है?",
+      "settingsCount": "{count} सेटिंग",
+      "updatedAt": "{date} को अपडेट किया गया",
+      "excludedSecrets": "मौजूदा दृश्य और व्यवहार सेटिंग सहेजी जाती हैं। API कुंजियाँ शामिल नहीं की जातीं।"
+    },
     "dbExportImport": {
       "title": "Export/Import Database",
       "subtitle": "Transfer translations, lyrics cache and all data",

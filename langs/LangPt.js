@@ -1216,6 +1216,30 @@ window.LANG_PT = {
         "processing": "Importando..."
       }
     },
+    "settingsPresets": {
+      "title": "Predefinições de configurações",
+      "subtitle": "Salve a combinação atual de configurações e aplique tudo de uma vez.",
+      "nameLabel": "Nome da predefinição",
+      "namePlaceholder": "Ex.: Modo foco",
+      "saveCurrent": "Salvar atual",
+      "savedPresets": "Predefinições salvas",
+      "empty": "Nenhuma predefinição salva ainda.",
+      "apply": "Aplicar",
+      "delete": "Excluir",
+      "saved": "Predefinição \"{name}\" salva.",
+      "saveFailed": "Falha ao salvar a predefinição.",
+      "applied": "Predefinição \"{name}\" aplicada.",
+      "applyFailed": "Falha ao aplicar a predefinição.",
+      "deleted": "Predefinição \"{name}\" excluída.",
+      "deleteFailed": "Falha ao excluir a predefinição.",
+      "nameRequired": "Digite um nome para a predefinição.",
+      "confirmApply": "Aplicar a predefinição \"{name}\" e recarregar a página?",
+      "confirmDelete": "Excluir a predefinição \"{name}\"?",
+      "confirmOverwrite": "Já existe uma predefinição chamada \"{name}\". Substituir?",
+      "settingsCount": "{count} configurações",
+      "updatedAt": "Atualizado em {date}",
+      "excludedSecrets": "As configurações atuais de aparência e comportamento são salvas. Chaves de API são excluídas."
+    },
     "dbExportImport": {
       "title": "Export/Import Database",
       "subtitle": "Transfer translations, lyrics cache and all data",

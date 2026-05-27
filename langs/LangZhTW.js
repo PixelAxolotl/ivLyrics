@@ -1216,6 +1216,30 @@ window.LANG_ZH_TW = {
         "processing": "正在匯入..."
       }
     },
+    "settingsPresets": {
+      "title": "設定預設",
+      "subtitle": "儲存目前的設定組合，並一次套用。",
+      "nameLabel": "預設名稱",
+      "namePlaceholder": "例如：專注模式",
+      "saveCurrent": "儲存目前設定",
+      "savedPresets": "已儲存的預設",
+      "empty": "尚未儲存任何預設。",
+      "apply": "套用",
+      "delete": "刪除",
+      "saved": "已儲存預設「{name}」。",
+      "saveFailed": "儲存預設失敗。",
+      "applied": "已套用預設「{name}」。",
+      "applyFailed": "套用預設失敗。",
+      "deleted": "已刪除預設「{name}」。",
+      "deleteFailed": "刪除預設失敗。",
+      "nameRequired": "請輸入預設名稱。",
+      "confirmApply": "套用預設「{name}」並重新載入頁面？",
+      "confirmDelete": "刪除預設「{name}」？",
+      "confirmOverwrite": "名為「{name}」的預設已存在。要覆寫嗎？",
+      "settingsCount": "{count} 項設定",
+      "updatedAt": "更新於 {date}",
+      "excludedSecrets": "會儲存目前外觀與行為設定。API 金鑰會被排除。"
+    },
     "dbExportImport": {
       "title": "匯出/匯入資料庫",
       "subtitle": "轉移翻譯、歌詞快取等所有資料",

@@ -2478,6 +2478,424 @@ const ConfigInfo = ({ message, buttonText, onButtonClick }) => {
   );
 };
 
+const SETTINGS_PRESETS_STORAGE_KEY = "ivLyrics:settings-presets";
+const SETTINGS_PRESET_EXCLUDED_KEYS = new Set([
+  "gemini-api-key",
+  "gemini-api-key-romaji",
+]);
+
+const getSettingsPresetText = (key, fallback) =>
+  I18n.t(`settingsAdvanced.settingsPresets.${key}`) || fallback;
+
+const formatSettingsPresetText = (key, fallback, replacements = {}) => {
+  let text = getSettingsPresetText(key, fallback);
+  Object.entries(replacements).forEach(([name, value]) => {
+    text = text.split(`{${name}}`).join(String(value));
+  });
+  return text;
+};
+
+const createSettingsPresetId = () => {
+  if (window.crypto?.randomUUID) {
+    return `preset-${window.crypto.randomUUID()}`;
+  }
+  return `preset-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+};
+
+const normalizeSettingsPreset = (preset) => {
+  if (!preset || typeof preset !== "object" || Array.isArray(preset)) return null;
+  if (!preset.settings || typeof preset.settings !== "object" || Array.isArray(preset.settings)) return null;
+
+  const name = String(preset.name || "").trim();
+  if (!name) return null;
+
+  const now = new Date().toISOString();
+  return {
+    id: String(preset.id || createSettingsPresetId()),
+    name,
+    createdAt: preset.createdAt || preset.updatedAt || now,
+    updatedAt: preset.updatedAt || preset.createdAt || now,
+    settings: Object.entries(preset.settings).reduce((acc, [key, value]) => {
+      if (SETTINGS_PRESET_EXCLUDED_KEYS.has(key)) return acc;
+      acc[key] = value;
+      return acc;
+    }, {}),
+  };
+};
+
+const loadSettingsPresets = () => {
+  try {
+    const rawValue = StorageManager.getItem(SETTINGS_PRESETS_STORAGE_KEY);
+    if (!rawValue) return [];
+
+    const parsed = JSON.parse(rawValue);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .map(normalizeSettingsPreset)
+      .filter(Boolean)
+      .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  } catch (error) {
+    console.error("[ivLyrics] Failed to load settings presets:", error);
+    return [];
+  }
+};
+
+const saveSettingsPresets = (presets) => {
+  StorageManager.setItem(SETTINGS_PRESETS_STORAGE_KEY, JSON.stringify(presets));
+};
+
+const captureSettingsPresetValues = () => {
+  const snapshot = {};
+  Object.entries(CONFIG.visual || {}).forEach(([key, value]) => {
+    if (SETTINGS_PRESET_EXCLUDED_KEYS.has(key)) return;
+    if (typeof value === "undefined" || typeof value === "function") return;
+
+    try {
+      snapshot[key] = JSON.parse(JSON.stringify(value));
+    } catch (error) {
+      snapshot[key] = String(value);
+    }
+  });
+  return snapshot;
+};
+
+const applySettingsPresetValues = (settings) => {
+  Object.entries(settings || {}).forEach(([name, value]) => {
+    if (!name || SETTINGS_PRESET_EXCLUDED_KEYS.has(name)) return;
+
+    CONFIG.visual[name] = value;
+    StorageManager.saveConfig(name, value);
+
+    if (name === "language" && window.I18n?.setLanguage) {
+      window.I18n.setLanguage(value);
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("ivLyrics", {
+        detail: { type: "config", name, value },
+      })
+    );
+  });
+
+  lyricContainerUpdate?.();
+  window.dispatchEvent(
+    new CustomEvent("ivLyrics:panel-preview-update", {
+      detail: { source: "settings-preset" },
+    })
+  );
+};
+
+const formatSettingsPresetDate = (value) => {
+  if (!value) return "";
+  try {
+    return new Intl.DateTimeFormat(window.I18n?.getCurrentLanguage?.() || undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(value));
+  } catch (error) {
+    return String(value);
+  }
+};
+
+const ConfigSettingsPresets = () => {
+  const [presets, setPresets] = useState(loadSettingsPresets);
+  const [presetName, setPresetName] = useState("");
+
+  const persistPresets = useCallback((nextPresets) => {
+    const normalizedPresets = nextPresets
+      .map(normalizeSettingsPreset)
+      .filter(Boolean)
+      .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+
+    saveSettingsPresets(normalizedPresets);
+    setPresets(normalizedPresets);
+  }, []);
+
+  const handleSave = useCallback(() => {
+    const name = presetName.trim();
+    if (!name) {
+      Toast?.error?.(getSettingsPresetText("nameRequired", "Enter a preset name."));
+      return;
+    }
+
+    const existingPreset = presets.find(
+      (preset) => preset.name.toLocaleLowerCase() === name.toLocaleLowerCase()
+    );
+
+    if (
+      existingPreset &&
+      !window.confirm(formatSettingsPresetText(
+        "confirmOverwrite",
+        "A preset named \"{name}\" already exists. Overwrite it?",
+        { name }
+      ))
+    ) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const settings = captureSettingsPresetValues();
+    const nextPreset = {
+      id: existingPreset?.id || createSettingsPresetId(),
+      name,
+      createdAt: existingPreset?.createdAt || now,
+      updatedAt: now,
+      settings,
+    };
+
+    const nextPresets = existingPreset
+      ? presets.map((preset) => preset.id === existingPreset.id ? nextPreset : preset)
+      : [nextPreset, ...presets];
+
+    try {
+      persistPresets(nextPresets);
+      setPresetName("");
+      Toast?.success?.(formatSettingsPresetText(
+        "saved",
+        "Preset \"{name}\" saved.",
+        { name }
+      ));
+    } catch (error) {
+      console.error("[ivLyrics] Failed to save settings preset:", error);
+      Toast?.error?.(getSettingsPresetText("saveFailed", "Failed to save preset."));
+    }
+  }, [presetName, presets, persistPresets]);
+
+  const handleApply = useCallback((preset) => {
+    if (!preset) return;
+    if (
+      !window.confirm(formatSettingsPresetText(
+        "confirmApply",
+        "Apply preset \"{name}\" and reload the page?",
+        { name: preset.name }
+      ))
+    ) {
+      return;
+    }
+
+    try {
+      applySettingsPresetValues(preset.settings);
+      Toast?.success?.(formatSettingsPresetText(
+        "applied",
+        "Preset \"{name}\" applied.",
+        { name: preset.name }
+      ));
+      queueReloadIntoIvLyrics({
+        reopenSettings: true,
+        initialTab: "advanced",
+        initialSettingKey: "settings-presets",
+        delay: 700,
+      });
+    } catch (error) {
+      console.error("[ivLyrics] Failed to apply settings preset:", error);
+      Toast?.error?.(getSettingsPresetText("applyFailed", "Failed to apply preset."));
+    }
+  }, []);
+
+  const handleDelete = useCallback((preset) => {
+    if (!preset) return;
+    if (
+      !window.confirm(formatSettingsPresetText(
+        "confirmDelete",
+        "Delete preset \"{name}\"?",
+        { name: preset.name }
+      ))
+    ) {
+      return;
+    }
+
+    try {
+      persistPresets(presets.filter((item) => item.id !== preset.id));
+      Toast?.success?.(formatSettingsPresetText(
+        "deleted",
+        "Preset \"{name}\" deleted.",
+        { name: preset.name }
+      ));
+    } catch (error) {
+      console.error("[ivLyrics] Failed to delete settings preset:", error);
+      Toast?.error?.(getSettingsPresetText("deleteFailed", "Failed to delete preset."));
+    }
+  }, [presets, persistPresets]);
+
+  return react.createElement(
+    "div",
+    {
+      className: "setting-row",
+    },
+    react.createElement(
+      "div",
+      {
+        className: "setting-row-content",
+        style: {
+          flexDirection: "column",
+          alignItems: "stretch",
+          gap: "14px",
+        },
+      },
+      react.createElement(
+        "div",
+        { className: "setting-row-left" },
+        react.createElement(
+          "div",
+          { className: "setting-name" },
+          getSettingsPresetText("nameLabel", "Preset name")
+        ),
+        react.createElement(
+          "div",
+          { className: "setting-description" },
+          getSettingsPresetText(
+            "excludedSecrets",
+            "Current visual and behavior settings are saved. API keys are excluded."
+          )
+        )
+      ),
+      react.createElement(
+        "div",
+        {
+          style: {
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) auto",
+            gap: "10px",
+          },
+        },
+        react.createElement("input", {
+          className: "config-text-input",
+          type: "text",
+          value: presetName,
+          placeholder: getSettingsPresetText("namePlaceholder", "My preset"),
+          onChange: (event) => setPresetName(event.target.value),
+          onKeyDown: (event) => {
+            if (event.key === "Enter") {
+              handleSave();
+            }
+          },
+        }),
+        react.createElement(
+          "button",
+          {
+            className: "btn",
+            type: "button",
+            onClick: handleSave,
+          },
+          getSettingsPresetText("saveCurrent", "Save current")
+        )
+      ),
+      react.createElement(
+        "div",
+        {
+          style: {
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+          },
+        },
+        react.createElement(
+          "div",
+          {
+            className: "setting-name",
+            style: { fontSize: "13px" },
+          },
+          getSettingsPresetText("savedPresets", "Saved presets")
+        ),
+        presets.length === 0
+          ? react.createElement(
+              "div",
+              {
+                className: "setting-description",
+                style: {
+                  padding: "12px 0",
+                },
+              },
+              getSettingsPresetText("empty", "No presets saved yet.")
+            )
+          : presets.map((preset) =>
+              react.createElement(
+                "div",
+                {
+                  key: preset.id,
+                  style: {
+                    display: "grid",
+                    gridTemplateColumns: "minmax(0, 1fr) auto",
+                    gap: "12px",
+                    alignItems: "center",
+                    padding: "12px",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    background: "rgba(255, 255, 255, 0.04)",
+                    borderRadius: "8px",
+                  },
+                },
+                react.createElement(
+                  "div",
+                  { style: { minWidth: 0 } },
+                  react.createElement(
+                    "div",
+                    {
+                      className: "setting-name",
+                      style: {
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      },
+                      title: preset.name,
+                    },
+                    preset.name
+                  ),
+                  react.createElement(
+                    "div",
+                    { className: "setting-description" },
+                    `${formatSettingsPresetText(
+                      "settingsCount",
+                      "{count} settings",
+                      { count: Object.keys(preset.settings || {}).length }
+                    )} · ${formatSettingsPresetText(
+                      "updatedAt",
+                      "Updated {date}",
+                      { date: formatSettingsPresetDate(preset.updatedAt) }
+                    )}`
+                  )
+                ),
+                react.createElement(
+                  "div",
+                  {
+                    style: {
+                      display: "flex",
+                      gap: "8px",
+                      flexWrap: "wrap",
+                      justifyContent: "flex-end",
+                    },
+                  },
+                  react.createElement(
+                    "button",
+                    {
+                      className: "btn",
+                      type: "button",
+                      onClick: () => handleApply(preset),
+                    },
+                    getSettingsPresetText("apply", "Apply")
+                  ),
+                  react.createElement(
+                    "button",
+                    {
+                      className: "btn",
+                      type: "button",
+                      onClick: () => handleDelete(preset),
+                      style: {
+                        background: "rgba(239, 68, 68, 0.14)",
+                        borderColor: "rgba(239, 68, 68, 0.28)",
+                        color: "#fca5a5",
+                      },
+                    },
+                    getSettingsPresetText("delete", "Delete")
+                  )
+                )
+              )
+            )
+      )
+    )
+  );
+};
+
 // 비디오 헬퍼 토글 컴포넌트 (연결 상태 표시 포함)
 const VideoHelperToggle = ({ name, defaultValue, disabled, onChange = () => { } }) => {
   const [enabled, setEnabled] = useState(defaultValue === "true" || defaultValue === true);
@@ -4454,6 +4872,14 @@ const ConfigModal = ({
       name: I18n.t("settingsAdvanced.exportImport.title"),
       desc: I18n.t("settingsAdvanced.exportImport.subtitle"),
       i18nKeys: ["tabs.advanced", "settingsAdvanced.exportImport.title", "settingsAdvanced.exportImport.subtitle"]
+    },
+    {
+      section: I18n.t("tabs.advanced"),
+      sectionKey: "advanced",
+      settingKey: "settings-presets",
+      name: I18n.t("settingsAdvanced.settingsPresets.title"),
+      desc: I18n.t("settingsAdvanced.settingsPresets.subtitle"),
+      i18nKeys: ["tabs.advanced", "settingsAdvanced.settingsPresets.title", "settingsAdvanced.settingsPresets.subtitle"]
     },
     {
       section: I18n.t("tabs.advanced"),
@@ -11829,6 +12255,13 @@ const ConfigModal = ({
           ],
           onChange: () => { },
         }),
+
+        react.createElement(SectionTitle, {
+          title: I18n.t("settingsAdvanced.settingsPresets.title"),
+          subtitle: I18n.t("settingsAdvanced.settingsPresets.subtitle"),
+          sectionKey: "settings-presets",
+        }),
+        react.createElement(ConfigSettingsPresets),
 
         react.createElement(SectionTitle, {
           title: I18n.t("settingsAdvanced.dbExportImport.title"),

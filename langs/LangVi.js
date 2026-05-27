@@ -1216,6 +1216,30 @@ window.LANG_VI = {
         "processing": "Đang nhập..."
       }
     },
+    "settingsPresets": {
+      "title": "Cài đặt sẵn",
+      "subtitle": "Lưu tổ hợp cài đặt hiện tại và áp dụng tất cả cùng lúc.",
+      "nameLabel": "Tên cài đặt sẵn",
+      "namePlaceholder": "Ví dụ: Chế độ tập trung",
+      "saveCurrent": "Lưu hiện tại",
+      "savedPresets": "Cài đặt sẵn đã lưu",
+      "empty": "Chưa có cài đặt sẵn nào.",
+      "apply": "Áp dụng",
+      "delete": "Xóa",
+      "saved": "Đã lưu cài đặt sẵn \"{name}\".",
+      "saveFailed": "Không thể lưu cài đặt sẵn.",
+      "applied": "Đã áp dụng cài đặt sẵn \"{name}\".",
+      "applyFailed": "Không thể áp dụng cài đặt sẵn.",
+      "deleted": "Đã xóa cài đặt sẵn \"{name}\".",
+      "deleteFailed": "Không thể xóa cài đặt sẵn.",
+      "nameRequired": "Nhập tên cài đặt sẵn.",
+      "confirmApply": "Áp dụng cài đặt sẵn \"{name}\" và tải lại trang?",
+      "confirmDelete": "Xóa cài đặt sẵn \"{name}\"?",
+      "confirmOverwrite": "Đã có cài đặt sẵn tên \"{name}\". Ghi đè?",
+      "settingsCount": "{count} cài đặt",
+      "updatedAt": "Đã cập nhật {date}",
+      "excludedSecrets": "Cài đặt giao diện và hành vi hiện tại sẽ được lưu. Khóa API được loại trừ."
+    },
     "dbExportImport": {
       "title": "Export/Import Database",
       "subtitle": "Transfer translations, lyrics cache and all data",

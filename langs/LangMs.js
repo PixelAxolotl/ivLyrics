@@ -1216,6 +1216,30 @@ window.LANG_MS = {
         "processing": "Mengimport..."
       }
     },
+    "settingsPresets": {
+      "title": "Pratetap Tetapan",
+      "subtitle": "Simpan gabungan tetapan semasa dan gunakan semuanya sekali gus.",
+      "nameLabel": "Nama pratetap",
+      "namePlaceholder": "Contoh: Mod fokus",
+      "saveCurrent": "Simpan semasa",
+      "savedPresets": "Pratetap tersimpan",
+      "empty": "Belum ada pratetap tersimpan.",
+      "apply": "Guna",
+      "delete": "Padam",
+      "saved": "Pratetap \"{name}\" disimpan.",
+      "saveFailed": "Gagal menyimpan pratetap.",
+      "applied": "Pratetap \"{name}\" digunakan.",
+      "applyFailed": "Gagal menggunakan pratetap.",
+      "deleted": "Pratetap \"{name}\" dipadam.",
+      "deleteFailed": "Gagal memadam pratetap.",
+      "nameRequired": "Masukkan nama pratetap.",
+      "confirmApply": "Guna pratetap \"{name}\" dan muat semula halaman?",
+      "confirmDelete": "Padam pratetap \"{name}\"?",
+      "confirmOverwrite": "Pratetap bernama \"{name}\" sudah wujud. Tulis ganti?",
+      "settingsCount": "{count} tetapan",
+      "updatedAt": "Dikemas kini pada {date}",
+      "excludedSecrets": "Tetapan rupa dan tingkah laku semasa disimpan. Kunci API dikecualikan."
+    },
     "dbExportImport": {
       "title": "Eksport/Import Pangkalan Data (DB)",
       "subtitle": "Pindahkan semua data termasuk terjemahan, cache lirik, dsb.",

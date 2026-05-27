@@ -1216,6 +1216,30 @@ window.LANG_FR = {
         "processing": "Importation..."
       }
     },
+    "settingsPresets": {
+      "title": "Préréglages des paramètres",
+      "subtitle": "Enregistrez la combinaison actuelle de paramètres et appliquez-la en une fois.",
+      "nameLabel": "Nom du préréglage",
+      "namePlaceholder": "Ex. : Mode concentration",
+      "saveCurrent": "Enregistrer actuel",
+      "savedPresets": "Préréglages enregistrés",
+      "empty": "Aucun préréglage enregistré pour le moment.",
+      "apply": "Appliquer",
+      "delete": "Supprimer",
+      "saved": "Préréglage \"{name}\" enregistré.",
+      "saveFailed": "Impossible d’enregistrer le préréglage.",
+      "applied": "Préréglage \"{name}\" appliqué.",
+      "applyFailed": "Impossible d’appliquer le préréglage.",
+      "deleted": "Préréglage \"{name}\" supprimé.",
+      "deleteFailed": "Impossible de supprimer le préréglage.",
+      "nameRequired": "Saisissez un nom de préréglage.",
+      "confirmApply": "Appliquer le préréglage \"{name}\" et recharger la page ?",
+      "confirmDelete": "Supprimer le préréglage \"{name}\" ?",
+      "confirmOverwrite": "Un préréglage nommé \"{name}\" existe déjà. Le remplacer ?",
+      "settingsCount": "{count} paramètres",
+      "updatedAt": "Mis à jour le {date}",
+      "excludedSecrets": "Les paramètres actuels d’apparence et de comportement sont enregistrés. Les clés API sont exclues."
+    },
     "dbExportImport": {
       "title": "Export/Import Database",
       "subtitle": "Transfer translations, lyrics cache and all data",

@@ -1216,6 +1216,30 @@ window.LANG_TH = {
         "processing": "กำลังนำเข้า..."
       }
     },
+    "settingsPresets": {
+      "title": "พรีเซ็ตการตั้งค่า",
+      "subtitle": "บันทึกชุดการตั้งค่าปัจจุบันและนำไปใช้พร้อมกันในครั้งเดียว",
+      "nameLabel": "ชื่อพรีเซ็ต",
+      "namePlaceholder": "เช่น โหมดโฟกัส",
+      "saveCurrent": "บันทึกปัจจุบัน",
+      "savedPresets": "พรีเซ็ตที่บันทึกไว้",
+      "empty": "ยังไม่มีพรีเซ็ตที่บันทึกไว้",
+      "apply": "นำไปใช้",
+      "delete": "ลบ",
+      "saved": "บันทึกพรีเซ็ต \"{name}\" แล้ว",
+      "saveFailed": "บันทึกพรีเซ็ตไม่สำเร็จ",
+      "applied": "นำพรีเซ็ต \"{name}\" ไปใช้แล้ว",
+      "applyFailed": "นำพรีเซ็ตไปใช้ไม่สำเร็จ",
+      "deleted": "ลบพรีเซ็ต \"{name}\" แล้ว",
+      "deleteFailed": "ลบพรีเซ็ตไม่สำเร็จ",
+      "nameRequired": "กรุณาใส่ชื่อพรีเซ็ต",
+      "confirmApply": "นำพรีเซ็ต \"{name}\" ไปใช้และโหลดหน้าใหม่หรือไม่?",
+      "confirmDelete": "ลบพรีเซ็ต \"{name}\" หรือไม่?",
+      "confirmOverwrite": "มีพรีเซ็ตชื่อ \"{name}\" อยู่แล้ว ต้องการเขียนทับหรือไม่?",
+      "settingsCount": "{count} การตั้งค่า",
+      "updatedAt": "อัปเดตเมื่อ {date}",
+      "excludedSecrets": "บันทึกการตั้งค่ารูปลักษณ์และการทำงานปัจจุบัน โดยไม่รวมคีย์ API"
+    },
     "dbExportImport": {
       "title": "Export/Import Database",
       "subtitle": "Transfer translations, lyrics cache and all data",

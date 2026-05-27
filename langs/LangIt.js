@@ -1216,6 +1216,30 @@ window.LANG_IT = {
         "processing": "Importazione..."
       }
     },
+    "settingsPresets": {
+      "title": "Preset impostazioni",
+      "subtitle": "Salva la combinazione corrente di impostazioni e applicala tutta insieme.",
+      "nameLabel": "Nome preset",
+      "namePlaceholder": "Es.: Modalità concentrazione",
+      "saveCurrent": "Salva attuale",
+      "savedPresets": "Preset salvati",
+      "empty": "Nessun preset salvato.",
+      "apply": "Applica",
+      "delete": "Elimina",
+      "saved": "Preset \"{name}\" salvato.",
+      "saveFailed": "Impossibile salvare il preset.",
+      "applied": "Preset \"{name}\" applicato.",
+      "applyFailed": "Impossibile applicare il preset.",
+      "deleted": "Preset \"{name}\" eliminato.",
+      "deleteFailed": "Impossibile eliminare il preset.",
+      "nameRequired": "Inserisci un nome per il preset.",
+      "confirmApply": "Applicare il preset \"{name}\" e ricaricare la pagina?",
+      "confirmDelete": "Eliminare il preset \"{name}\"?",
+      "confirmOverwrite": "Esiste già un preset chiamato \"{name}\". Sovrascriverlo?",
+      "settingsCount": "{count} impostazioni",
+      "updatedAt": "Aggiornato il {date}",
+      "excludedSecrets": "Vengono salvate le impostazioni attuali di aspetto e comportamento. Le chiavi API sono escluse."
+    },
     "dbExportImport": {
       "title": "Export/Import Database",
       "subtitle": "Transfer translations, lyrics cache and all data",

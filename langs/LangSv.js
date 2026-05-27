@@ -1216,6 +1216,30 @@ window.LANG_SV = {
         "processing": "Importerar..."
       }
     },
+    "settingsPresets": {
+      "title": "Inställningsförval",
+      "subtitle": "Spara den aktuella inställningskombinationen och använd den på en gång.",
+      "nameLabel": "Förvalsnamn",
+      "namePlaceholder": "T.ex. Fokusläge",
+      "saveCurrent": "Spara aktuella",
+      "savedPresets": "Sparade förval",
+      "empty": "Inga förval har sparats ännu.",
+      "apply": "Använd",
+      "delete": "Ta bort",
+      "saved": "Förvalet \"{name}\" har sparats.",
+      "saveFailed": "Kunde inte spara förvalet.",
+      "applied": "Förvalet \"{name}\" har använts.",
+      "applyFailed": "Kunde inte använda förvalet.",
+      "deleted": "Förvalet \"{name}\" har tagits bort.",
+      "deleteFailed": "Kunde inte ta bort förvalet.",
+      "nameRequired": "Ange ett namn för förvalet.",
+      "confirmApply": "Använd förvalet \"{name}\" och ladda om sidan?",
+      "confirmDelete": "Ta bort förvalet \"{name}\"?",
+      "confirmOverwrite": "Ett förval med namnet \"{name}\" finns redan. Skriva över?",
+      "settingsCount": "{count} inställningar",
+      "updatedAt": "Uppdaterad {date}",
+      "excludedSecrets": "Aktuella utseende- och beteendeinställningar sparas. API-nycklar undantas."
+    },
     "dbExportImport": {
       "title": "Exportera/importera databas",
       "subtitle": "Överför översättningar, textcache och all data",

@@ -1216,6 +1216,30 @@ window.LANG_JA = {
         "processing": "読み込み中..."
       }
     },
+    "settingsPresets": {
+      "title": "設定プリセット",
+      "subtitle": "現在の設定の組み合わせを保存し、まとめて適用します。",
+      "nameLabel": "プリセット名",
+      "namePlaceholder": "例: フォーカスモード",
+      "saveCurrent": "現在の設定を保存",
+      "savedPresets": "保存済みプリセット",
+      "empty": "保存済みのプリセットはまだありません。",
+      "apply": "適用",
+      "delete": "削除",
+      "saved": "プリセット「{name}」を保存しました。",
+      "saveFailed": "プリセットの保存に失敗しました。",
+      "applied": "プリセット「{name}」を適用しました。",
+      "applyFailed": "プリセットの適用に失敗しました。",
+      "deleted": "プリセット「{name}」を削除しました。",
+      "deleteFailed": "プリセットの削除に失敗しました。",
+      "nameRequired": "プリセット名を入力してください。",
+      "confirmApply": "プリセット「{name}」を適用してページを再読み込みしますか？",
+      "confirmDelete": "プリセット「{name}」を削除しますか？",
+      "confirmOverwrite": "「{name}」というプリセットは既に存在します。上書きしますか？",
+      "settingsCount": "{count}個の設定",
+      "updatedAt": "{date}に更新",
+      "excludedSecrets": "現在の外観と動作の設定を保存します。APIキーは除外されます。"
+    },
     "dbExportImport": {
       "title": "DB エクスポート/インポート",
       "subtitle": "翻訳、歌詞キャッシュなどすべてのデータを移行",

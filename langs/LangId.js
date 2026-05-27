@@ -1216,6 +1216,30 @@ window.LANG_ID = {
         "processing": "Mengimpor..."
       }
     },
+    "settingsPresets": {
+      "title": "Preset Pengaturan",
+      "subtitle": "Simpan kombinasi pengaturan saat ini dan terapkan sekaligus.",
+      "nameLabel": "Nama preset",
+      "namePlaceholder": "Contoh: Mode fokus",
+      "saveCurrent": "Simpan saat ini",
+      "savedPresets": "Preset tersimpan",
+      "empty": "Belum ada preset tersimpan.",
+      "apply": "Terapkan",
+      "delete": "Hapus",
+      "saved": "Preset \"{name}\" disimpan.",
+      "saveFailed": "Gagal menyimpan preset.",
+      "applied": "Preset \"{name}\" diterapkan.",
+      "applyFailed": "Gagal menerapkan preset.",
+      "deleted": "Preset \"{name}\" dihapus.",
+      "deleteFailed": "Gagal menghapus preset.",
+      "nameRequired": "Masukkan nama preset.",
+      "confirmApply": "Terapkan preset \"{name}\" dan muat ulang halaman?",
+      "confirmDelete": "Hapus preset \"{name}\"?",
+      "confirmOverwrite": "Preset bernama \"{name}\" sudah ada. Timpa?",
+      "settingsCount": "{count} pengaturan",
+      "updatedAt": "Diperbarui {date}",
+      "excludedSecrets": "Pengaturan tampilan dan perilaku saat ini disimpan. Kunci API dikecualikan."
+    },
     "dbExportImport": {
       "title": "Export/Import Database",
       "subtitle": "Transfer translations, lyrics cache and all data",

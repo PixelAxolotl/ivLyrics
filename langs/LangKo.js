@@ -1216,6 +1216,30 @@ window.LANG_KO = {
         "processing": "불러오는 중..."
       }
     },
+    "settingsPresets": {
+      "title": "설정 프리셋",
+      "subtitle": "현재 설정 조합을 저장하고 한 번에 적용합니다.",
+      "nameLabel": "프리셋 이름",
+      "namePlaceholder": "예: 집중 모드",
+      "saveCurrent": "현재 설정 저장",
+      "savedPresets": "저장된 프리셋",
+      "empty": "아직 저장된 프리셋이 없습니다.",
+      "apply": "적용",
+      "delete": "삭제",
+      "saved": "프리셋 \"{name}\"을 저장했습니다.",
+      "saveFailed": "프리셋 저장에 실패했습니다.",
+      "applied": "프리셋 \"{name}\"을 적용했습니다.",
+      "applyFailed": "프리셋 적용에 실패했습니다.",
+      "deleted": "프리셋 \"{name}\"을 삭제했습니다.",
+      "deleteFailed": "프리셋 삭제에 실패했습니다.",
+      "nameRequired": "프리셋 이름을 입력하세요.",
+      "confirmApply": "프리셋 \"{name}\"을 적용하고 페이지를 새로고침할까요?",
+      "confirmDelete": "프리셋 \"{name}\"을 삭제할까요?",
+      "confirmOverwrite": "이미 \"{name}\" 프리셋이 있습니다. 덮어쓸까요?",
+      "settingsCount": "{count}개 설정",
+      "updatedAt": "{date}에 업데이트됨",
+      "excludedSecrets": "현재 외형 및 동작 설정을 저장합니다. API 키는 제외됩니다."
+    },
     "dbExportImport": {
       "title": "DB 내보내기/가져오기",
       "subtitle": "번역, 가사 캐시 등 모든 데이터를 옮기세요",

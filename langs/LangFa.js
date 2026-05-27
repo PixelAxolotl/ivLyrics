@@ -1216,6 +1216,30 @@ window.LANG_FA = {
         "processing": "در حال وارد کردن..."
       }
     },
+    "settingsPresets": {
+      "title": "پیش‌تنظیم‌های تنظیمات",
+      "subtitle": "ترکیب فعلی تنظیمات را ذخیره کنید و یک‌جا اعمال کنید.",
+      "nameLabel": "نام پیش‌تنظیم",
+      "namePlaceholder": "مثلاً: حالت تمرکز",
+      "saveCurrent": "ذخیره فعلی",
+      "savedPresets": "پیش‌تنظیم‌های ذخیره‌شده",
+      "empty": "هنوز هیچ پیش‌تنظیمی ذخیره نشده است.",
+      "apply": "اعمال",
+      "delete": "حذف",
+      "saved": "پیش‌تنظیم \"{name}\" ذخیره شد.",
+      "saveFailed": "ذخیره پیش‌تنظیم ناموفق بود.",
+      "applied": "پیش‌تنظیم \"{name}\" اعمال شد.",
+      "applyFailed": "اعمال پیش‌تنظیم ناموفق بود.",
+      "deleted": "پیش‌تنظیم \"{name}\" حذف شد.",
+      "deleteFailed": "حذف پیش‌تنظیم ناموفق بود.",
+      "nameRequired": "نام پیش‌تنظیم را وارد کنید.",
+      "confirmApply": "پیش‌تنظیم \"{name}\" اعمال شود و صفحه دوباره بارگیری شود؟",
+      "confirmDelete": "پیش‌تنظیم \"{name}\" حذف شود؟",
+      "confirmOverwrite": "پیش‌تنظیمی با نام \"{name}\" از قبل وجود دارد. بازنویسی شود؟",
+      "settingsCount": "{count} تنظیم",
+      "updatedAt": "به‌روزرسانی شده در {date}",
+      "excludedSecrets": "تنظیمات فعلی ظاهر و رفتار ذخیره می‌شود. کلیدهای API ذخیره نمی‌شوند."
+    },
     "dbExportImport": {
       "title": "Export/Import Database",
       "subtitle": "Transfer translations, lyrics cache and all data",

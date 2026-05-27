@@ -1216,6 +1216,30 @@ window.LANG_ES = {
         "processing": "Importando..."
       }
     },
+    "settingsPresets": {
+      "title": "Preajustes de configuración",
+      "subtitle": "Guarda la combinación actual de ajustes y aplícala de una vez.",
+      "nameLabel": "Nombre del preajuste",
+      "namePlaceholder": "Ej.: Modo concentración",
+      "saveCurrent": "Guardar actual",
+      "savedPresets": "Preajustes guardados",
+      "empty": "Aún no hay preajustes guardados.",
+      "apply": "Aplicar",
+      "delete": "Eliminar",
+      "saved": "Preajuste \"{name}\" guardado.",
+      "saveFailed": "No se pudo guardar el preajuste.",
+      "applied": "Preajuste \"{name}\" aplicado.",
+      "applyFailed": "No se pudo aplicar el preajuste.",
+      "deleted": "Preajuste \"{name}\" eliminado.",
+      "deleteFailed": "No se pudo eliminar el preajuste.",
+      "nameRequired": "Introduce un nombre de preajuste.",
+      "confirmApply": "¿Aplicar el preajuste \"{name}\" y recargar la página?",
+      "confirmDelete": "¿Eliminar el preajuste \"{name}\"?",
+      "confirmOverwrite": "Ya existe un preajuste llamado \"{name}\". ¿Sobrescribirlo?",
+      "settingsCount": "{count} ajustes",
+      "updatedAt": "Actualizado el {date}",
+      "excludedSecrets": "Se guardan los ajustes actuales de apariencia y comportamiento. Las claves API se excluyen."
+    },
     "dbExportImport": {
       "title": "Export/Import Database",
       "subtitle": "Transfer translations, lyrics cache and all data",

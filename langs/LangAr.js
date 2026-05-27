@@ -1216,6 +1216,30 @@ window.LANG_AR = {
         "processing": "جارٍ الاستيراد..."
       }
     },
+    "settingsPresets": {
+      "title": "إعدادات مسبقة",
+      "subtitle": "احفظ مجموعة الإعدادات الحالية وطبّقها مرة واحدة.",
+      "nameLabel": "اسم الإعداد المسبق",
+      "namePlaceholder": "مثال: وضع التركيز",
+      "saveCurrent": "حفظ الحالي",
+      "savedPresets": "الإعدادات المسبقة المحفوظة",
+      "empty": "لا توجد إعدادات مسبقة محفوظة بعد.",
+      "apply": "تطبيق",
+      "delete": "حذف",
+      "saved": "تم حفظ الإعداد المسبق \"{name}\".",
+      "saveFailed": "فشل حفظ الإعداد المسبق.",
+      "applied": "تم تطبيق الإعداد المسبق \"{name}\".",
+      "applyFailed": "فشل تطبيق الإعداد المسبق.",
+      "deleted": "تم حذف الإعداد المسبق \"{name}\".",
+      "deleteFailed": "فشل حذف الإعداد المسبق.",
+      "nameRequired": "أدخل اسم الإعداد المسبق.",
+      "confirmApply": "هل تريد تطبيق الإعداد المسبق \"{name}\" وإعادة تحميل الصفحة؟",
+      "confirmDelete": "هل تريد حذف الإعداد المسبق \"{name}\"؟",
+      "confirmOverwrite": "يوجد إعداد مسبق باسم \"{name}\" بالفعل. هل تريد استبداله؟",
+      "settingsCount": "{count} إعدادات",
+      "updatedAt": "تم التحديث في {date}",
+      "excludedSecrets": "يتم حفظ إعدادات المظهر والسلوك الحالية. يتم استثناء مفاتيح API."
+    },
     "dbExportImport": {
       "title": "Export/Import Database",
       "subtitle": "Transfer translations, lyrics cache and all data",

@@ -1216,6 +1216,30 @@ window.LANG_BN = {
         "processing": "ইম্পোর্ট করা হচ্ছে..."
       }
     },
+    "settingsPresets": {
+      "title": "সেটিংস প্রিসেট",
+      "subtitle": "বর্তমান সেটিংসের সমন্বয় সংরক্ষণ করে একবারে প্রয়োগ করুন।",
+      "nameLabel": "প্রিসেটের নাম",
+      "namePlaceholder": "যেমন: ফোকাস মোড",
+      "saveCurrent": "বর্তমানটি সংরক্ষণ",
+      "savedPresets": "সংরক্ষিত প্রিসেট",
+      "empty": "এখনও কোনো প্রিসেট সংরক্ষিত নেই।",
+      "apply": "প্রয়োগ",
+      "delete": "মুছুন",
+      "saved": "প্রিসেট \"{name}\" সংরক্ষণ করা হয়েছে।",
+      "saveFailed": "প্রিসেট সংরক্ষণ ব্যর্থ হয়েছে।",
+      "applied": "প্রিসেট \"{name}\" প্রয়োগ করা হয়েছে।",
+      "applyFailed": "প্রিসেট প্রয়োগ ব্যর্থ হয়েছে।",
+      "deleted": "প্রিসেট \"{name}\" মুছে ফেলা হয়েছে।",
+      "deleteFailed": "প্রিসেট মুছে ফেলা যায়নি।",
+      "nameRequired": "প্রিসেটের নাম লিখুন।",
+      "confirmApply": "প্রিসেট \"{name}\" প্রয়োগ করে পৃষ্ঠা পুনরায় লোড করবেন?",
+      "confirmDelete": "প্রিসেট \"{name}\" মুছে ফেলবেন?",
+      "confirmOverwrite": "\"{name}\" নামে একটি প্রিসেট ইতিমধ্যেই আছে। এটি প্রতিস্থাপন করবেন?",
+      "settingsCount": "{count}টি সেটিংস",
+      "updatedAt": "{date} আপডেট হয়েছে",
+      "excludedSecrets": "বর্তমান চেহারা ও আচরণের সেটিংস সংরক্ষণ করা হয়। API কী বাদ দেওয়া হয়।"
+    },
     "dbExportImport": {
       "title": "Export/Import Database",
       "subtitle": "Transfer translations, lyrics cache and all data",

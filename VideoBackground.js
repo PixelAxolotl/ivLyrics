@@ -244,6 +244,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                 trackName: spotifyData?.name || "",
                 title: spotifyData?.name || "",
                 artists: spotifyData?.artists || [],
+                album: spotifyData?.album || spotifyData?.albumName || "",
                 isrc: spotifyData?.isrc || spotifyData?.external_ids?.isrc || ""
             };
             const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, trackMetadata)
@@ -296,6 +297,9 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                     youtubeUrl += `&trackName=${encodeURIComponent(spotifyData.name)}`;
                     if (spotifyData.artists?.length) {
                         youtubeUrl += `&trackArtists=${encodeURIComponent(spotifyData.artists.join(', '))}`;
+                    }
+                    if (spotifyData.album || spotifyData.albumName) {
+                        youtubeUrl += `&album=${encodeURIComponent(spotifyData.album || spotifyData.albumName)}`;
                     }
                 }
                 if (window.SyncDataService?.shouldBypassServerCache?.(trackIsrc)) {

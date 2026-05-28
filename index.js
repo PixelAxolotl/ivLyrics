@@ -2609,6 +2609,7 @@ const Prefetcher = {
       trackName: spotifyData?.name || "",
       title: spotifyData?.name || "",
       artists: spotifyData?.artists || [],
+      album: spotifyData?.album || spotifyData?.albumName || "",
       isrc: spotifyData?.isrc || spotifyData?.external_ids?.isrc || ""
     };
     const isrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, metadata)
@@ -2648,6 +2649,9 @@ const Prefetcher = {
           youtubeApiUrl += `&trackName=${encodeURIComponent(spotifyData.name)}`;
           if (spotifyData.artists?.length) {
             youtubeApiUrl += `&trackArtists=${encodeURIComponent(spotifyData.artists.join(', '))}`;
+          }
+          if (spotifyData.album || spotifyData.albumName) {
+            youtubeApiUrl += `&album=${encodeURIComponent(spotifyData.album || spotifyData.albumName)}`;
           }
         }
         if (window.SyncDataService?.shouldBypassServerCache?.(isrc)) {
@@ -2768,6 +2772,7 @@ const Prefetcher = {
       trackName: spotifyData?.name || "",
       title: spotifyData?.name || "",
       artists: spotifyData?.artists || [],
+      album: spotifyData?.album || spotifyData?.albumName || "",
       isrc: spotifyData?.isrc || spotifyData?.external_ids?.isrc || ""
     };
     const isrc = window.SyncDataService?.getTrackIsrc?.(trackId, metadata) || "";

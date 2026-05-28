@@ -1905,11 +1905,22 @@
                 metadata?.track?.artists ||
                 currentItem?.artists
             );
+            const album = normalizeSyncDataText(
+                metadata?.album ||
+                metadata?.albumName ||
+                metadata?.trackAlbum ||
+                metadata?.albumTitle ||
+                metadata?.track?.album?.name ||
+                metadata?.track?.album ||
+                currentItem?.album?.name ||
+                currentItem?.metadata?.album_title
+            );
 
             return {
                 trackId: normalizeSyncDataTrackId(trackId),
                 title,
-                artist
+                artist,
+                album
             };
         }
 
@@ -1921,13 +1932,14 @@
 
             const trackMetadata = getSyncDataTrackMetadata(identity.trackId, metadata);
             const shouldReportMetadata = !_syncTrackMetadataReported.has(identity.isrc)
-                && (trackMetadata.trackId || trackMetadata.title || trackMetadata.artist);
+                && (trackMetadata.trackId || trackMetadata.title || trackMetadata.artist || trackMetadata.album);
 
             if (shouldReportMetadata) {
                 url.searchParams.set('metadata', '1');
                 if (trackMetadata.trackId) url.searchParams.set('trackId', trackMetadata.trackId);
                 if (trackMetadata.title) url.searchParams.set('title', trackMetadata.title);
                 if (trackMetadata.artist) url.searchParams.set('artist', trackMetadata.artist);
+                if (trackMetadata.album) url.searchParams.set('album', trackMetadata.album);
             }
 
             return shouldReportMetadata;

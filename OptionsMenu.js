@@ -4025,6 +4025,13 @@ const ShareImageButton = react.memo(({ lyrics, trackInfo }) => {
   );
 });
 
+function setSyncDataCreatorVisibility(active) {
+  document.body.classList.toggle("ivlyrics-sync-creator-active", !!active);
+  window.dispatchEvent(new CustomEvent("ivLyrics:sync-creator-visibility", {
+    detail: { active: !!active }
+  }));
+}
+
 // Sync Data Creator - 노래방 싱크 데이터 생성 (전체화면)
 async function openSyncDataCreator(trackInfo, initialData = null) {
   try {
@@ -4039,6 +4046,7 @@ async function openSyncDataCreator(trackInfo, initialData = null) {
 
   // 이미 열려있으면 무시
   if (document.getElementById("ivLyrics-sync-creator-overlay")) {
+    setSyncDataCreatorVisibility(true);
     return;
   }
 
@@ -4052,7 +4060,10 @@ async function openSyncDataCreator(trackInfo, initialData = null) {
     return;
   }
 
+  let isClosed = false;
   const closeModal = () => {
+    if (isClosed) return;
+    isClosed = true;
     // React 컴포넌트 unmount (리스너 정리를 위해)
     if (dom.unmountComponentAtNode) {
       dom.unmountComponentAtNode(overlay);
@@ -4061,6 +4072,7 @@ async function openSyncDataCreator(trackInfo, initialData = null) {
       document.body.removeChild(overlay);
     }
     document.removeEventListener("keydown", handleEscape);
+    setSyncDataCreatorVisibility(false);
   };
 
   // Close on escape key (only if not in recording mode - check global state)
@@ -4074,6 +4086,7 @@ async function openSyncDataCreator(trackInfo, initialData = null) {
   document.addEventListener("keydown", handleEscape);
 
   document.body.appendChild(overlay);
+  setSyncDataCreatorVisibility(true);
 
   // SyncDataCreator 컴포넌트가 없으면 경고
   if (typeof SyncDataCreator === "undefined") {
@@ -4093,7 +4106,7 @@ async function openSyncDataCreator(trackInfo, initialData = null) {
 }
 
 // Sync Data Creator Button
-const SyncDataCreatorButton = react.memo(({ trackInfo, showHint, provider, initialLyrics, isFullscreen = false }) => {
+const SyncDataCreatorButton = react.memo(({ trackInfo, showHint, isFullscreen = false }) => {
   const wrapperRef = react.useRef(null);
   const [hintPosition, setHintPosition] = react.useState(null);
   const reactDom = resolveOptionsReactDom();
@@ -4132,14 +4145,7 @@ const SyncDataCreatorButton = react.memo(({ trackInfo, showHint, provider, initi
   }, [showHint, isFullscreen, updateHintPosition]);
 
   const handleClick = () => {
-    let initialData = null;
-    if (provider && initialLyrics) {
-      initialData = {
-        provider: provider,
-        lyrics: initialLyrics
-      };
-    }
-    void openSyncDataCreator(trackInfo, initialData);
+    void openSyncDataCreator(trackInfo, null);
   };
   const hintText = I18n.t("syncCreator.clickHereHint") || "";
   const canPortalHint = !!reactDom?.createPortal;

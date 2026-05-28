@@ -2010,6 +2010,41 @@ const emptyState = {
   currentLyrics: null,
 };
 
+const getPlainLyricsLineText = (line) => {
+  if (typeof line === "string") return line;
+  if (!line || typeof line !== "object") return "";
+  return String(
+    line.originalText ??
+    line.text ??
+    line.mainText ??
+    line.line ??
+    ""
+  ).trim();
+};
+
+const getPlainLyricsLines = (...sources) => {
+  for (const source of sources) {
+    if (typeof source === "string") {
+      const lines = source
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((text) => ({ text }));
+      if (lines.length > 0) return lines;
+      continue;
+    }
+
+    if (!Array.isArray(source)) continue;
+    const lines = source
+      .map(getPlainLyricsLineText)
+      .filter(Boolean)
+      .map((text) => ({ text }));
+    if (lines.length > 0) return lines;
+  }
+
+  return [];
+};
+
 const SYNC_DATA_RENDERER_VERSION = "2026-05-28-parenthetical-v3-1";
 
 const getLyricsTextCacheHash = (lyrics = []) => {
@@ -3229,6 +3264,7 @@ class LyricsContainer extends react.Component {
       lyricsEditError: "",
       isPlaybackPaused: true,
       lyricsRequestSeq: 0,
+      isSyncCreatorActive: false,
     };
     this.currentTrackUri = "";
     this._lyricsFetchSeq = 0;
@@ -5963,6 +5999,15 @@ class LyricsContainer extends react.Component {
     window.lyricContainer = this;
     // Note: reloadLyrics will be exposed after it's defined below
 
+    this.handleSyncCreatorVisibility = (event) => {
+      const active = event?.detail?.active ?? !!document.getElementById("ivLyrics-sync-creator-overlay");
+      if (this.state.isSyncCreatorActive !== active) {
+        this.setState({ isSyncCreatorActive: active });
+      }
+    };
+    window.addEventListener("ivLyrics:sync-creator-visibility", this.handleSyncCreatorVisibility);
+    this.handleSyncCreatorVisibility();
+
     // Prefetcher에 LyricsContainer 참조 설정
     Prefetcher.setLyricsContainer(this);
 
@@ -6131,7 +6176,16 @@ class LyricsContainer extends react.Component {
         await LyricsCache.clearTrack(trackId);
         window.Translator?.clearMemoryCache?.(trackId);
         window.Translator?.clearInflightRequests?.(trackId);
-        window.SyncDataService?.clearCache(trackId);
+        let clearSyncDataIsrc = "";
+        if (window.SyncDataService?.resolveTrackIsrc) {
+          clearSyncDataIsrc = await window.SyncDataService.resolveTrackIsrc(trackId, {
+            item,
+            title: item?.name,
+            artist: item?.artists,
+            album: item?.album?.name,
+          }).catch(() => "");
+        }
+        window.SyncDataService?.clearCache(clearSyncDataIsrc || trackId, clearSyncDataIsrc ? { isrc: clearSyncDataIsrc } : {});
       }
 
       this.updateVisualOnConfigChange();
@@ -6335,6 +6389,7 @@ class LyricsContainer extends react.Component {
     window.removeEventListener("ivLyrics", this.handleConfigChange);
     window.removeEventListener("furigana-ready", this.handleFuriganaReady);
     window.removeEventListener("ivLyrics:lyric-index-changed", this.handleLyricIndexChange);
+    window.removeEventListener("ivLyrics:sync-creator-visibility", this.handleSyncCreatorVisibility);
     Spicetify.Player?.removeEventListener?.("onplaypause", this.updatePlaybackPausedState);
     Spicetify.Player?.removeEventListener?.("songchange", this.updatePlaybackPausedState);
     this.updatePlaybackPausedState = null;
@@ -6526,8 +6581,17 @@ class LyricsContainer extends react.Component {
     }
 
     this.state.isFADMode = !!fadLyricsContainer;
+    const isSyncCreatorActive = this.state.isSyncCreatorActive === true;
 
-    if (this.state.isFADMode) {
+    if (isSyncCreatorActive) {
+      this.styleVariables = {
+        "--lyrics-color-active": "var(--spice-text, #ffffff)",
+        "--lyrics-color-inactive": "var(--spice-subtext, rgba(255, 255, 255, 0.58))",
+        "--lyrics-color-background": "var(--spice-main, #121212)",
+        "--lyrics-highlight-background": "transparent",
+        "--lyrics-background-noise": "unset",
+      };
+    } else if (this.state.isFADMode) {
       // Text colors will be set by FAD extension
       // Disable colorful backgrounds in FAD mode
       this.styleVariables = {};
@@ -6572,7 +6636,10 @@ class LyricsContainer extends react.Component {
       contain: "paint",
     };
     // Disable background features when in FAD mode (Full Screen extension)
-    if (!this.state.isFADMode && CONFIG.visual["video-background"]) {
+    if (isSyncCreatorActive) {
+      backgroundStyle.backgroundColor = "var(--spice-main, #121212)";
+      backgroundStyle.filter = "none";
+    } else if (!this.state.isFADMode && CONFIG.visual["video-background"]) {
       // Video background is handled by the component
     } else if (!this.state.isFADMode && CONFIG.visual["gradient-background"]) {
       const brightness = CONFIG.visual["background-brightness"] / 100;
@@ -6715,8 +6782,29 @@ class LyricsContainer extends react.Component {
       "--iv-motion-distance-sm": this.shouldReduceMotion() ? "0px" : "10px",
       "--iv-motion-distance-md": this.shouldReduceMotion() ? "0px" : "18px",
     };
+    if (isSyncCreatorActive) {
+      this.styleVariables = {
+        ...this.styleVariables,
+        "--lyrics-color-active": "var(--spice-text, #ffffff)",
+        "--lyrics-color-inactive": "var(--spice-subtext, rgba(255, 255, 255, 0.58))",
+        "--lyrics-color-background": "var(--spice-main, #121212)",
+        "--lyrics-highlight-background": "transparent",
+        "--lyrics-background-noise": "unset",
+        "--lyrics-original-opacity": 1,
+        "--lyrics-translation-opacity": 0,
+        "--lyrics-phonetic-opacity": 0,
+        "--lyrics-text-shadow": "none",
+        "--lyrics-text-drop-shadow": "none",
+      };
+    }
 
     let mode = this.getCurrentMode();
+    const syncCreatorPlainLyrics = isSyncCreatorActive
+      ? getPlainLyricsLines(this.state.unsynced, this.state.currentLyrics, this.state.synced, this.state.karaoke)
+      : [];
+    if (isSyncCreatorActive && syncCreatorPlainLyrics.length > 0) {
+      mode = UNSYNCED;
+    }
     const firstTimedLyricStartTimeMs = Number(this.state.currentLyrics?.[0]?.startTime);
     const defaultCommunityVideoStartTime =
       (mode === KARAOKE || mode === SYNCED) &&
@@ -6745,8 +6833,11 @@ class LyricsContainer extends react.Component {
 
     // Only call lyricsSource on state/mode/translation changes, not every render
     if (
-      this.lastProcessedUri !== this.state.uri ||
-      this.lastProcessedMode !== currentModeKey
+      !isSyncCreatorActive &&
+      (
+        this.lastProcessedUri !== this.state.uri ||
+        this.lastProcessedMode !== currentModeKey
+      )
     ) {
       this.lastProcessedUri = this.state.uri;
       this.lastProcessedMode = currentModeKey;
@@ -6817,18 +6908,51 @@ class LyricsContainer extends react.Component {
           this.setState({ lyricsEditTranslationText: value, lyricsEditError: "" }),
       });
 
-    const activeLyricsPage = window.LyricsPageRenderer
+    const renderedCurrentLyrics = isSyncCreatorActive && syncCreatorPlainLyrics.length > 0
+      ? syncCreatorPlainLyrics
+      : this.state.currentLyrics;
+    const renderedUnsyncedLyrics = isSyncCreatorActive && syncCreatorPlainLyrics.length > 0
+      ? syncCreatorPlainLyrics
+      : this.state.unsynced;
+    const syncCreatorPlainPage = isSyncCreatorActive
+      ? react.createElement(
+        "div",
+        {
+          className: "lyrics-lyricsContainer-UnsyncedLyricsPage ivlyrics-sync-creator-plain-page",
+          style: {
+            position: "relative",
+            zIndex: 1,
+            minHeight: "100%",
+            padding: "96px 48px 120px",
+            color: "var(--spice-text, #ffffff)",
+            fontFamily: "var(--lyrics-font-family, var(--font-family))",
+            fontSize: "18px",
+            lineHeight: 1.8,
+            opacity: 0.72,
+            whiteSpace: "pre-wrap",
+          },
+        },
+        syncCreatorPlainLyrics.length > 0
+          ? syncCreatorPlainLyrics.map((line, index) => react.createElement(
+            "div",
+            { key: `sync-creator-plain-${index}` },
+            line.text
+          ))
+          : react.createElement("div", null, I18n.t("messages.noLyrics"))
+      )
+      : null;
+    const activeLyricsPage = syncCreatorPlainPage || (window.LyricsPageRenderer
       ? react.createElement(window.LyricsPageRenderer, {
         mode,
         karaokeMode: KARAOKE,
         syncedMode: SYNCED,
         unsyncedMode: UNSYNCED,
         trackUri: this.state.uri,
-        currentLyrics: this.state.currentLyrics,
-        karaoke: this.state.karaoke,
-        karaokeSource: this.state.karaokeSource,
-        synced: this.state.synced,
-        unsynced: this.state.unsynced,
+        currentLyrics: renderedCurrentLyrics,
+        karaoke: isSyncCreatorActive ? null : this.state.karaoke,
+        karaokeSource: isSyncCreatorActive ? null : this.state.karaokeSource,
+        synced: isSyncCreatorActive ? null : this.state.synced,
+        unsynced: renderedUnsyncedLyrics,
         provider: this.state.provider,
         contributors: this.state.contributors,
         copyright: this.state.copyright,
@@ -6864,13 +6988,13 @@ class LyricsContainer extends react.Component {
             unavailableMessage
           )
         );
-      })();
+      })());
 
     // Tab bar removed - modes are now auto-detected
     const topBarContent = null;
 
     // Update banner component
-    const updateBanner = window.ivLyrics_updateInfo?.available
+    const updateBanner = !isSyncCreatorActive && window.ivLyrics_updateInfo?.available
       ? react.createElement(UpdateBanner, {
         updateInfo: window.ivLyrics_updateInfo,
         onDismiss: () =>
@@ -6891,6 +7015,9 @@ class LyricsContainer extends react.Component {
     const floatingToolbarStyle = this.state.isFullscreen
       ? { "--iv-floating-menu-content-top-offset": `${this.getFloatingMenuContentTopOffset()}px` }
       : undefined;
+    const shouldUseVideoBackground =
+      !isSyncCreatorActive && !this.state.isFADMode && CONFIG.visual["video-background"];
+    const shouldRenderStaticBackground = !shouldUseVideoBackground;
     const modeButtons = [
       this.state.karaoke &&
       CONFIG.visual["karaoke-mode-enabled"] &&
@@ -7011,7 +7138,7 @@ class LyricsContainer extends react.Component {
       "div",
       {
         className: `lyrics-lyricsContainer-LyricsContainer${CONFIG.visual["fade-blur"] ? " blur-enabled" : ""
-          }${CONFIG.visual["highlight-mode"] ? " highlight-mode-enabled" : ""}${fadLyricsContainer ? " fad-enabled" : ""}${fullscreenClasses}${shouldReduceMotion ? " motion-reduced" : ""}${this.state.isPlaybackPaused ? " playback-paused" : ""}`,
+          }${CONFIG.visual["highlight-mode"] ? " highlight-mode-enabled" : ""}${fadLyricsContainer ? " fad-enabled" : ""}${fullscreenClasses}${shouldReduceMotion ? " motion-reduced" : ""}${this.state.isPlaybackPaused ? " playback-paused" : ""}${isSyncCreatorActive ? " sync-creator-minimal" : ""}`,
         style: this.styleVariables,
         ref: (el) => {
           if (!el) return;
@@ -7029,7 +7156,7 @@ class LyricsContainer extends react.Component {
         },
       },
       // Left panel for fullscreen mode
-      this.state.isFullscreen && !this.state.showMarketplace && window.FullscreenOverlay && react.createElement(window.FullscreenOverlay, {
+      this.state.isFullscreen && !this.state.showMarketplace && !isSyncCreatorActive && window.FullscreenOverlay && react.createElement(window.FullscreenOverlay, {
         coverUrl: this.state.coverUrl,
         title: this.state.title,
         artist: this.state.artist,
@@ -7044,13 +7171,13 @@ class LyricsContainer extends react.Component {
       topBarContent,
       // Update notification banner
       updateBanner,
-      (!CONFIG.visual["video-background"] || this.state.isFADMode) && react.createElement("div", {
+      shouldRenderStaticBackground && react.createElement("div", {
         id: "ivLyrics-gradient-background",
-        className: CONFIG.visual["blur-gradient-background"] ? "color-gradient-bg" : "",
+        className: !isSyncCreatorActive && CONFIG.visual["blur-gradient-background"] ? "color-gradient-bg" : "",
         style: backgroundStyle,
       },
         // 블러 그라데이션일 때 여러 블롭 생성
-        CONFIG.visual["blur-gradient-background"] && [
+        !isSyncCreatorActive && CONFIG.visual["blur-gradient-background"] && [
           react.createElement("div", { key: "blob1", className: "gradient-blob blob-1" }),
           react.createElement("div", { key: "blob2", className: "gradient-blob blob-2" }),
           react.createElement("div", { key: "blob3", className: "gradient-blob blob-3" }),
@@ -7059,7 +7186,7 @@ class LyricsContainer extends react.Component {
           react.createElement("div", { key: "blob6", className: "gradient-blob blob-6" }),
         ]
       ),
-      !this.state.isFADMode && CONFIG.visual["video-background"] && window.VideoBackground && react.createElement(window.VideoBackground, {
+      shouldUseVideoBackground && window.VideoBackground && react.createElement(window.VideoBackground, {
         trackUri: this.state.uri,
         firstLyricTime: this.state.currentLyrics && this.state.currentLyrics.length > 0 ? this.state.currentLyrics[0].startTime : 0,
         brightness: CONFIG.visual["background-brightness"],
@@ -7067,11 +7194,12 @@ class LyricsContainer extends react.Component {
         coverMode: CONFIG.visual["video-cover"],
         externalVideoInfo: this.state.videoInfo
       }),
-      (!CONFIG.visual["video-background"] || this.state.isFADMode) && react.createElement("div", {
+      shouldRenderStaticBackground && react.createElement("div", {
         className: "lyrics-lyricsContainer-LyricsBackground",
       }),
       // Phonetic loading indicator
       this.state.isPhoneticLoading &&
+      !isSyncCreatorActive &&
       !isFullscreenMarketplace && react.createElement(
         "div",
         {
@@ -7094,6 +7222,7 @@ class LyricsContainer extends react.Component {
       ),
       // Translation loading indicator
       this.state.isTranslationLoading &&
+      !isSyncCreatorActive &&
       !isFullscreenMarketplace && react.createElement(
         "div",
         {
@@ -7116,7 +7245,7 @@ class LyricsContainer extends react.Component {
         )
       ),
       // ===== 플로팅 바 (일반 모드: 전체 표시, 전체화면: 메뉴 토글 방식) =====
-      !isFullscreenMarketplace && react.createElement(
+      !isFullscreenMarketplace && !isSyncCreatorActive && react.createElement(
         "div",
         {
           className: "lyrics-config-button-container lyrics-fluent-floating-toolbar" +
@@ -7365,10 +7494,11 @@ class LyricsContainer extends react.Component {
               name: Spicetify.Player.data?.item?.name || '',
               artists: Spicetify.Player.data?.item?.artists || [],
               album: Spicetify.Player.data?.item?.album || {},
+              metadata: Spicetify.Player.data?.item?.metadata || {},
+              external_ids: Spicetify.Player.data?.item?.external_ids || {},
+              externalIds: Spicetify.Player.data?.item?.externalIds || {},
             },
             showHint: !this.state.isFullscreen || this.state.isFloatingMenuOpen,
-            provider: this.state.provider,
-            initialLyrics: this.state.currentLyrics,
             isFullscreen: this.state.isFullscreen
           })
         )

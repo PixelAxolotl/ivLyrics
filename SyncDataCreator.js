@@ -1447,6 +1447,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const trackIsrc = normalizeSyncCreatorIsrc(
 		trackInfo?.external_ids?.isrc
 		|| trackInfo?.externalIds?.isrc
+		|| trackInfo?.metadata?.isrc
+		|| trackInfo?.item?.metadata?.isrc
 		|| spotifyDataForTrack?.isrc
 		|| window.SyncDataService?.getTrackIsrc?.(trackId, trackInfo)
 	);
@@ -1592,10 +1594,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			setSelectedLrclibSource(result.lrclibSource);
 		}
 
-		if (window.SyncDataService && trackId && trackIsrc) {
+		if (window.SyncDataService && trackId) {
 			try {
 				const existingSyncData = await window.SyncDataService.getSyncData(trackId, finalProvider, {
-					isrc: trackIsrc,
+					isrc: trackIsrc || undefined,
 					title: trackName,
 					artist: artistName
 				});
@@ -1645,7 +1647,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			setMultiVocalMode(false);
 			setError(I18n.t('syncCreator.noLyrics'));
 		}
-	}, [extractLyricsText, trackId, trackIsrc]);
+	}, [extractLyricsText, trackId, trackIsrc, trackName, artistName]);
 
 	const resolveMultiVocalDecision = useCallback((useMultiVocalMode) => {
 		if (!pendingMultiVocalDecision) return;
@@ -2687,8 +2689,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	// 컴포넌트 마운트 시 자동 가사 로드 + 기존 싱크 데이터 불러오기
 	useEffect(() => {
 		const initWithExistingSyncData = async () => {
-			// 0. initialData가 있으면 그것을 우선 사용
-			// Auto loading from initialData disabled per user request
+			// 생성기 진입만으로는 가사를 자동 로드하지 않음. 사용자가 직접 provider를 선택하고 로드해야 함.
 			if (false && initialData && initialData.provider && initialData.lyrics) {
 				window.__ivLyricsDebugLog?.('[SyncDataCreator] Using initial data:', initialData.provider);
 				let finalProvider = initialData.provider;
@@ -2739,10 +2740,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				}
 
 				// 기존 싱크 데이터가 있는지 확인
-				if (window.SyncDataService && trackId && trackIsrc) {
+				if (window.SyncDataService && trackId) {
 					try {
 						const existingSyncData = await window.SyncDataService.getSyncData(trackId, finalProvider, {
-							isrc: trackIsrc,
+							isrc: trackIsrc || undefined,
 							title: trackName,
 							artist: artistName
 						});
@@ -4685,11 +4686,12 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		};
 	}, [lyricsFullTextChars, provider, selectedLrclibSource]);
 
-	const clearLyricsCachesAfterSyncSubmit = useCallback(async () => {
-		window.SyncDataService?.clearCache?.(trackIsrc || trackId, { isrc: trackIsrc });
+	const clearLyricsCachesAfterSyncSubmit = useCallback(async (resolvedIsrc = '') => {
+		const cacheIsrc = normalizeSyncCreatorIsrc(resolvedIsrc) || trackIsrc;
+		window.SyncDataService?.clearCache?.(cacheIsrc || trackId, cacheIsrc ? { isrc: cacheIsrc } : {});
 		const dispatchSyncDataUpdated = () => window.dispatchEvent(new CustomEvent('ivLyrics:sync-data-updated', {
 			detail: {
-				isrc: trackIsrc || null,
+				isrc: cacheIsrc || null,
 				trackId,
 				trackUri: trackId ? `spotify:track:${trackId}` : null,
 				provider
@@ -4816,7 +4818,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				if (result) {
 					Toast.success(I18n.t('syncCreator.submitSuccess'));
 					// 캐시 무효화
-					await clearLyricsCachesAfterSyncSubmit();
+					await clearLyricsCachesAfterSyncSubmit(resolvedTrackIsrc);
 					// 가사 페이지 새로고침
 					setTimeout(() => {
 						if (typeof window.reloadLyrics === 'function') {
@@ -4839,7 +4841,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				if (response.ok) {
 					Toast.success(I18n.t('syncCreator.submitSuccess'));
 					// 캐시 무효화
-					await clearLyricsCachesAfterSyncSubmit();
+					await clearLyricsCachesAfterSyncSubmit(resolvedTrackIsrc);
 					// 가사 페이지 새로고침
 					setTimeout(() => {
 						if (typeof window.reloadLyrics === 'function') {

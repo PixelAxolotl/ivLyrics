@@ -4390,9 +4390,17 @@ class LyricsContainer extends react.Component {
   }
 
   async fetchTempo(uri) {
-    const audio = await Spicetify.CosmosAsync.get(
-      `https://api.spotify.com/v1/audio-features/${uri.split(":")[2]}`
-    );
+    const trackId = uri.split(":")[2];
+    let audio;
+    try {
+      audio = await Spicetify.CosmosAsync.get(
+        `wg://audio-attributes/v1/audio-features/${trackId}?format=json`
+      );
+    } catch (error) {
+      console.warn("[ivLyrics] Failed to fetch audio features:", error);
+      return;
+    }
+
     if (this.currentTrackUri !== uri) {
       return;
     }

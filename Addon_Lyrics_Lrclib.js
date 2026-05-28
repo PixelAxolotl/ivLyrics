@@ -1224,12 +1224,15 @@
 
                 const headers = { 'x-user-agent': `spicetify v${Spicetify.Config?.version || 'unknown'}` };
                 const trackId = info?.uri?.split?.(':')?.[2] || '';
+                const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, info)
+                    || window.SyncDataService?.getTrackIsrc?.(trackId, info)
+                    || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);
                 let syncDataLineCharCounts = null;
                 let syncDataSource = null;
 
                 if (trackId && window.SyncDataService?.getSyncData) {
                     try {
-                        const existingSyncData = await window.SyncDataService.getSyncData(trackId, ADDON_INFO.id);
+                        const existingSyncData = await window.SyncDataService.getSyncData(trackId, ADDON_INFO.id, { ...info, isrc: trackIsrc });
                         syncDataLineCharCounts = getSyncDataLineCharCounts(existingSyncData);
                         syncDataSource = getSyncDataLrclibSource(existingSyncData);
                     } catch (e) {
@@ -1941,12 +1944,15 @@
 
                 const headers = { 'x-user-agent': `spicetify v${Spicetify.Config?.version || 'unknown'}` };
                 const trackId = info?.uri?.split?.(':')?.[2] || '';
+                const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, info)
+                    || window.SyncDataService?.getTrackIsrc?.(trackId, info)
+                    || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);
                 let syncDataLineCharCounts = null;
                 let syncDataSource = null;
 
                 if (trackId && window.SyncDataService?.getSyncData) {
                     try {
-                        const existingSyncData = await window.SyncDataService.getSyncData(trackId, ADDON_INFO.id);
+                        const existingSyncData = await window.SyncDataService.getSyncData(trackId, ADDON_INFO.id, { ...info, isrc: trackIsrc });
                         syncDataLineCharCounts = getSyncDataLineCharCounts(existingSyncData);
                         syncDataSource = getSyncDataLrclibSource(existingSyncData);
                     } catch (e) {

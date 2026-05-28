@@ -1531,135 +1531,556 @@
         const API_BASE = 'https://lyrics.api.ivl.is';
         const _syncDataCache = new Map();
         const _inflightRequests = new Map(); // 진행 중인 요청 추적
+        const _isrcLookupCache = new Map(); // trackId -> { isrc, expiresAt }
+        const _isrcInflightRequests = new Map(); // trackId -> Promise<string>
         const _fullyLoadedTracks = new Set(); // 전체 목록이 로드된 트랙 ID
         const _usageReportCache = new Set(); // 세션 내 중복 사용량 보고 방지
+        const _syncTrackMetadataReported = new Set(); // ISRC별 sync-data 메타데이터 보고 방지
         const _serverCacheBypassUntil = new Map(); // 로컬 캐시 삭제 직후 서버 캐시 우회
         const _trackCacheGenerations = new Map(); // 캐시 삭제 전 시작된 요청의 재저장을 방지
         const SERVER_CACHE_BYPASS_MS = 30 * 1000;
+        const ISRC_LOOKUP_SUCCESS_TTL_MS = 24 * 60 * 60 * 1000;
         let _serverCacheBypassAllUntil = 0;
         let _syncDataCacheGeneration = 0;
         let _spotifyProfilePromise = null;
 
-        function getCacheGeneration(trackId) {
-            return `${_syncDataCacheGeneration}:${_trackCacheGenerations.get(trackId) || 0}`;
+        function syncDataConsoleLog(message, details = null, level = 'info') {
+            const prefix = '[ivLyrics sync-data]';
+            const logger = level === 'warn' ? console.warn : console.info;
+            if (details === null || details === undefined) {
+                logger(prefix, message);
+                return;
+            }
+            logger(prefix, message, details);
         }
 
-        function bumpCacheGeneration(trackId) {
-            if (!trackId) {
+        function getCacheGeneration(identityKey) {
+            return `${_syncDataCacheGeneration}:${_trackCacheGenerations.get(identityKey) || 0}`;
+        }
+
+        function bumpCacheGeneration(identityKey) {
+            if (!identityKey) {
                 _syncDataCacheGeneration += 1;
                 return;
             }
-            _trackCacheGenerations.set(trackId, (_trackCacheGenerations.get(trackId) || 0) + 1);
+            _trackCacheGenerations.set(identityKey, (_trackCacheGenerations.get(identityKey) || 0) + 1);
         }
 
-        function clearInflightRequests(trackId) {
-            if (!trackId) {
+        function clearInflightRequests(identityKey) {
+            if (!identityKey) {
                 _inflightRequests.clear();
                 return;
             }
             for (const key of _inflightRequests.keys()) {
-                if (key === trackId || key.startsWith(`${trackId}:`)) {
+                if (key === identityKey || key.startsWith(`${identityKey}:`)) {
                     _inflightRequests.delete(key);
                 }
             }
         }
 
-        function markServerCacheBypass(trackId) {
+        function markServerCacheBypass(identityKey) {
             const expiresAt = Date.now() + SERVER_CACHE_BYPASS_MS;
-            if (!trackId) {
+            if (!identityKey) {
                 _serverCacheBypassAllUntil = expiresAt;
                 return;
             }
-            _serverCacheBypassUntil.set(trackId, expiresAt);
+            _serverCacheBypassUntil.set(identityKey, expiresAt);
         }
 
-        function shouldBypassServerCache(trackId) {
+        function shouldBypassServerCache(identityKey) {
             if (_serverCacheBypassAllUntil > Date.now()) {
                 return true;
             }
             if (_serverCacheBypassAllUntil > 0) {
                 _serverCacheBypassAllUntil = 0;
             }
-            if (!trackId) {
+            if (!identityKey) {
                 return false;
             }
-            const expiresAt = _serverCacheBypassUntil.get(trackId) || 0;
+            const expiresAt = _serverCacheBypassUntil.get(identityKey) || 0;
             if (expiresAt <= Date.now()) {
-                _serverCacheBypassUntil.delete(trackId);
+                _serverCacheBypassUntil.delete(identityKey);
                 return false;
             }
             return true;
         }
 
-        /**
-         * 사용 가능한 sync-data provider 목록 조회
-         * @param {string} trackId - Spotify Track ID
-         * @returns {Promise<Array>} - provider 목록 [{ provider, createdAt, updatedAt }]
-         */
-        async function getAvailableProviders(trackId) {
-            const cacheKey = `${trackId}:providers`;
+        function normalizeSyncDataIsrc(value) {
+            if (typeof value !== 'string') return '';
+            const normalized = value.trim().replace(/[\s-]/g, '').toUpperCase();
+            return /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/.test(normalized) ? normalized : '';
+        }
 
-            // 캐시 확인
+        function normalizeSyncDataTrackId(value) {
+            if (typeof value !== 'string') return '';
+            const trackId = value.trim();
+            return /^[A-Za-z0-9]{22}$/.test(trackId) ? trackId : '';
+        }
+
+        function spotifyTrackIdToGid(trackId) {
+            const normalizedTrackId = normalizeSyncDataTrackId(trackId);
+            if (!normalizedTrackId) return '';
+
+            try {
+                const spotifyUriHelper = typeof Spicetify !== 'undefined' ? Spicetify.URI : null;
+                const idToHex = spotifyUriHelper?.idToHex;
+                if (typeof idToHex === 'function') {
+                    const gid = idToHex(normalizedTrackId);
+                    if (typeof gid === 'string' && /^[a-f0-9]{32}$/i.test(gid)) {
+                        return gid.toLowerCase();
+                    }
+                }
+            } catch (error) {
+                syncDataConsoleLog('resolveTrackIsrc:idToHex-failed', {
+                    trackId: normalizedTrackId,
+                    message: error?.message || String(error)
+                }, 'warn');
+            }
+
+            const alphabet = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            let value = 0n;
+            for (const char of normalizedTrackId) {
+                const digit = alphabet.indexOf(char);
+                if (digit < 0) return '';
+                value = value * 62n + BigInt(digit);
+            }
+
+            return value.toString(16).padStart(32, '0');
+        }
+
+        function getSpclientTrackMetadataIsrc(trackMetadata) {
+            const externalIds = Array.isArray(trackMetadata?.external_id)
+                ? trackMetadata.external_id
+                : (Array.isArray(trackMetadata?.externalId) ? trackMetadata.externalId : []);
+            const isrcEntry = externalIds.find(entry => String(entry?.type || '').toLowerCase() === 'isrc');
+            return firstNormalizedSyncDataIsrc(
+                isrcEntry?.id,
+                trackMetadata?.external_ids?.isrc,
+                trackMetadata?.externalIds?.isrc
+            );
+        }
+
+        async function fetchSpclientTrackMetadata(trackGid, trackIdForLog) {
+            const httpsUrl = `https://spclient.wg.spotify.com/metadata/4/track/${trackGid}?market=from_token`;
+            syncDataConsoleLog('resolveTrackIsrc:metadata-request', {
+                trackId: trackIdForLog,
+                gid: trackGid,
+                url: httpsUrl,
+                transport: 'fetch'
+            });
+            const response = await fetch(httpsUrl, {
+                method: 'GET',
+                credentials: 'include',
+                cache: 'force-cache',
+                headers: {
+                    Accept: 'application/json',
+                    'Accept-Language': 'ko',
+                    'App-Platform': 'Win32_x86_64'
+                }
+            });
+            syncDataConsoleLog('resolveTrackIsrc:metadata-fetch-response', {
+                trackId: trackIdForLog,
+                gid: trackGid,
+                status: response.status,
+                ok: response.ok,
+                contentType: response.headers.get('content-type') || null,
+                fromCache: response.headers.get('age') !== null
+            }, response.ok ? 'info' : 'warn');
+            if (!response.ok) {
+                throw new Error(`metadata request failed: ${response.status}`);
+            }
+            return await response.json();
+        }
+
+        function getTrackIdFromInput(trackId, metadata = {}) {
+            return normalizeSyncDataTrackId(trackId)
+                || normalizeSyncDataTrackId(metadata?.trackId)
+                || normalizeSyncDataTrackId(metadata?.id)
+                || normalizeSyncDataTrackId(metadata?.uri?.split?.(':')?.[2])
+                || normalizeSyncDataTrackId(metadata?.track?.id)
+                || normalizeSyncDataTrackId(metadata?.track?.uri?.split?.(':')?.[2]);
+        }
+
+        function firstNormalizedSyncDataIsrc(...values) {
+            for (const value of values) {
+                const isrc = normalizeSyncDataIsrc(value);
+                if (isrc) return isrc;
+            }
+            return '';
+        }
+
+        function getTrackIsrc(trackId, metadata = {}) {
+            const playerData = typeof Spicetify !== 'undefined' ? Spicetify.Player?.data : null;
+            const playerItem = playerData?.item || null;
+            const playerTrack = playerData?.track || null;
+            const explicitIsrc = firstNormalizedSyncDataIsrc(
+                metadata?.isrc,
+                metadata?.metadata?.isrc,
+                metadata?.external_ids?.isrc,
+                metadata?.externalIds?.isrc,
+                metadata?.track?.isrc,
+                metadata?.track?.metadata?.isrc,
+                metadata?.track?.external_ids?.isrc,
+                metadata?.track?.externalIds?.isrc,
+                metadata?.item?.metadata?.isrc,
+                metadata?.item?.external_ids?.isrc,
+                metadata?.item?.externalIds?.isrc,
+                playerItem?.metadata?.isrc,
+                playerItem?.external_ids?.isrc,
+                playerItem?.externalIds?.isrc,
+                playerTrack?.metadata?.isrc,
+                playerTrack?.external_ids?.isrc,
+                playerTrack?.externalIds?.isrc
+            );
+            if (explicitIsrc) return explicitIsrc;
+
+            try {
+                const currentUri = Spicetify.Player?.data?.item?.uri || '';
+                const targetUri = trackId
+                    ? (currentUri.includes(trackId) ? currentUri : `spotify:track:${trackId}`)
+                    : currentUri;
+                const spotifyData = window.SpotifyDataHelper?.extractSpotifyData?.(targetUri);
+                return normalizeSyncDataIsrc(spotifyData?.isrc || spotifyData?.external_ids?.isrc);
+            } catch (e) {
+                return '';
+            }
+        }
+
+        async function resolveTrackIsrc(trackId, metadata = {}) {
+            const localIsrc = getTrackIsrc(trackId, metadata);
+            const normalizedTrackId = getTrackIdFromInput(trackId, metadata);
+            syncDataConsoleLog('resolveTrackIsrc:start', {
+                trackId: normalizedTrackId || trackId || null,
+                metadataIsrc: metadata?.isrc || metadata?.metadata?.isrc || null,
+                hasLocalIsrc: !!localIsrc
+            });
+            if (localIsrc) {
+                if (normalizedTrackId) {
+                    _isrcLookupCache.set(normalizedTrackId, {
+                        isrc: localIsrc,
+                        expiresAt: Date.now() + ISRC_LOOKUP_SUCCESS_TTL_MS
+                    });
+                }
+                syncDataConsoleLog('resolveTrackIsrc:local-hit', {
+                    trackId: normalizedTrackId || trackId || null,
+                    isrc: localIsrc
+                });
+                return localIsrc;
+            }
+
+            if (!normalizedTrackId) {
+                syncDataConsoleLog('resolveTrackIsrc:missing-track-id', {
+                    trackId: trackId || null,
+                    metadataUri: metadata?.uri || null
+                }, 'warn');
+                return '';
+            }
+
+            const cached = _isrcLookupCache.get(normalizedTrackId);
+            if (cached && cached.expiresAt > Date.now()) {
+                if (cached.isrc) {
+                    syncDataConsoleLog('resolveTrackIsrc:cache-hit', {
+                        trackId: normalizedTrackId,
+                        isrc: cached.isrc,
+                        success: true
+                    });
+                    return cached.isrc;
+                }
+                syncDataConsoleLog('resolveTrackIsrc:ignore-failed-cache', {
+                    trackId: normalizedTrackId
+                }, 'warn');
+                _isrcLookupCache.delete(normalizedTrackId);
+            }
+            if (cached) {
+                _isrcLookupCache.delete(normalizedTrackId);
+            }
+
+            if (_isrcInflightRequests.has(normalizedTrackId)) {
+                syncDataConsoleLog('resolveTrackIsrc:join-inflight', {
+                    trackId: normalizedTrackId
+                });
+                return await _isrcInflightRequests.get(normalizedTrackId);
+            }
+
+            const promise = (async () => {
+                try {
+					const trackGid = spotifyTrackIdToGid(normalizedTrackId);
+					if (!trackGid) {
+                        syncDataConsoleLog('resolveTrackIsrc:gid-failed', {
+                            trackId: normalizedTrackId
+                        }, 'warn');
+                        return '';
+                    }
+
+					const track = await fetchSpclientTrackMetadata(trackGid, normalizedTrackId);
+                    const resolvedIsrc = getSpclientTrackMetadataIsrc(track);
+                    syncDataConsoleLog('resolveTrackIsrc:metadata-response', {
+                        trackId: normalizedTrackId,
+                        gid: trackGid,
+                        isrc: resolvedIsrc || null,
+                        externalIdCount: Array.isArray(track?.external_id) ? track.external_id.length : 0
+                    }, resolvedIsrc ? 'info' : 'warn');
+                    if (resolvedIsrc) {
+                        _isrcLookupCache.set(normalizedTrackId, {
+                            isrc: resolvedIsrc,
+                            expiresAt: Date.now() + ISRC_LOOKUP_SUCCESS_TTL_MS
+                        });
+                    }
+                    return resolvedIsrc;
+                } catch (error) {
+                    syncDataConsoleLog('resolveTrackIsrc:metadata-error', {
+                        trackId: normalizedTrackId,
+                        status: error?.status || error?.statusCode || null,
+                        message: error?.message || String(error)
+                    }, 'warn');
+                    window.__ivLyricsDebugLog?.('[SyncDataService] Failed to resolve ISRC from Spotify track API', {
+                        trackId: normalizedTrackId,
+                        status: error?.status || error?.statusCode,
+                        message: error?.message || String(error)
+                    });
+                    return '';
+                } finally {
+                    _isrcInflightRequests.delete(normalizedTrackId);
+                }
+            })();
+
+            _isrcInflightRequests.set(normalizedTrackId, promise);
+            return await promise;
+        }
+
+        function getSyncDataIdentity(trackId, metadata = {}) {
+            const isrc = getTrackIsrc(trackId, metadata);
+            if (!isrc) {
+                return null;
+            }
+            return {
+                isrc,
+                trackId: getTrackIdFromInput(trackId, metadata) || null
+            };
+        }
+
+        async function resolveSyncDataIdentity(trackId, metadata = {}) {
+            const isrc = await resolveTrackIsrc(trackId, metadata);
+            if (!isrc) {
+                return null;
+            }
+            return {
+                isrc,
+                trackId: getTrackIdFromInput(trackId, metadata) || null
+            };
+        }
+
+        function normalizeSyncDataText(value, maxLength = 256) {
+            if (typeof value !== 'string') return '';
+            return value.trim().slice(0, maxLength);
+        }
+
+        function normalizeSyncDataArtistText(value, maxLength = 256) {
+            if (Array.isArray(value)) {
+                return normalizeSyncDataText(value.map(entry => {
+                    if (typeof entry === 'string') return entry;
+                    if (entry && typeof entry.name === 'string') return entry.name;
+                    return '';
+                }).filter(Boolean).join(', '), maxLength);
+            }
+
+            return normalizeSyncDataText(value, maxLength);
+        }
+
+        function getSyncDataTrackMetadata(trackId, metadata = {}) {
+            const currentItem = Spicetify.Player?.data?.item || null;
+            const title = normalizeSyncDataText(
+                metadata?.title ||
+                metadata?.trackTitle ||
+                metadata?.trackName ||
+                metadata?.name ||
+                metadata?.track?.name ||
+                currentItem?.name
+            );
+            const artist = normalizeSyncDataArtistText(
+                metadata?.artist ||
+                metadata?.artists ||
+                metadata?.trackArtist ||
+                metadata?.artistName ||
+                metadata?.track?.artists ||
+                currentItem?.artists
+            );
+
+            return {
+                trackId: normalizeSyncDataTrackId(trackId),
+                title,
+                artist
+            };
+        }
+
+        function appendSyncDataQueryParams(url, identity, metadata = {}, provider = null) {
+            url.searchParams.set('isrc', identity.isrc);
+            if (provider) {
+                url.searchParams.set('provider', provider);
+            }
+
+            const trackMetadata = getSyncDataTrackMetadata(identity.trackId, metadata);
+            const shouldReportMetadata = !_syncTrackMetadataReported.has(identity.isrc)
+                && (trackMetadata.trackId || trackMetadata.title || trackMetadata.artist);
+
+            if (shouldReportMetadata) {
+                url.searchParams.set('metadata', '1');
+                if (trackMetadata.trackId) url.searchParams.set('trackId', trackMetadata.trackId);
+                if (trackMetadata.title) url.searchParams.set('title', trackMetadata.title);
+                if (trackMetadata.artist) url.searchParams.set('artist', trackMetadata.artist);
+            }
+
+            return shouldReportMetadata;
+        }
+
+        function getSyncDataIdentityKey(trackId, metadata = {}) {
+            return getSyncDataIdentity(trackId, metadata)?.isrc || '';
+        }
+
+        function getMissingIsrcMessage() {
+            return '이 곡의 ISRC를 찾을 수 없어 sync-data를 사용할 수 없습니다. ivLyrics 클라이언트를 최신 버전으로 업데이트해 주세요.';
+        }
+
+        async function getAvailableProviders(trackId, metadata = {}) {
+            const identity = await resolveSyncDataIdentity(trackId, metadata);
+            if (!identity) {
+                syncDataConsoleLog('providers:skip-missing-isrc', {
+                    trackId: getTrackIdFromInput(trackId, metadata) || trackId || null
+                }, 'warn');
+                return [];
+            }
+            const cacheKey = `${identity.isrc}:providers`;
+
             if (_syncDataCache.has(cacheKey)) {
+                syncDataConsoleLog('providers:cache-hit', {
+                    isrc: identity.isrc
+                });
                 return _syncDataCache.get(cacheKey);
             }
 
-            _syncDataCache.set(cacheKey, []);
-            return [];
+            try {
+                const url = new URL(`${API_BASE}/lyrics/sync-data`);
+                const reportsMetadata = appendSyncDataQueryParams(url, identity, metadata);
+                let requestUrl = url.toString();
+                if (shouldBypassServerCache(identity.isrc)) {
+                    requestUrl += '&bypassCache=1';
+                }
+                syncDataConsoleLog('providers:request', {
+                    isrc: identity.isrc,
+                    trackId: identity.trackId || null,
+                    url: requestUrl
+                });
+                const response = await fetch(requestUrl, { cache: 'no-store' });
+                syncDataConsoleLog('providers:response', {
+                    isrc: identity.isrc,
+                    status: response.status,
+                    ok: response.ok
+                }, response.ok ? 'info' : 'warn');
+                if (!response.ok) {
+                    if (response.status === 404) return [];
+                    throw new Error(`API Error: ${response.status}`);
+                }
+                const result = await response.json();
+                if (reportsMetadata) {
+                    _syncTrackMetadataReported.add(identity.isrc);
+                }
+                const providers = Array.isArray(result.providers) ? result.providers : [];
+                _syncDataCache.set(cacheKey, providers);
+                return providers;
+            } catch (e) {
+                console.warn(`[SyncDataService] Failed to fetch sync providers for ${identity.isrc}`, e);
+                return [];
+            }
         }
 
-        /**
-         * 특정 provider의 싱크 데이터 조회
-         * @param {string} trackId - Spotify Track ID
-         * @param {string} provider - 가사 provider
-         * @returns {Promise<Object|null>} - 싱크 데이터 또는 null
-         */
-        async function getSyncData(trackId, provider = null) {
+        async function getSyncData(trackId, provider = null, metadata = {}) {
+            syncDataConsoleLog('getSyncData:called', {
+                trackId: getTrackIdFromInput(trackId, metadata) || trackId || null,
+                provider: provider || null,
+                metadataIsrc: metadata?.isrc || null
+            });
+            const identity = await resolveSyncDataIdentity(trackId, metadata);
+            if (!identity) {
+                syncDataConsoleLog('getSyncData:skip-missing-isrc', {
+                    trackId: getTrackIdFromInput(trackId, metadata) || trackId || null,
+                    provider: provider || null
+                }, 'warn');
+                window.__ivLyricsDebugLog?.('[SyncDataService] Missing ISRC for sync-data lookup', { trackId, provider });
+                return null;
+            }
+
             if (!provider) {
-                // provider 미지정 시 - 하위 호환성: 사용 가능한 첫 번째 provider의 데이터 반환
-                const providers = await getAvailableProviders(trackId);
+                const providers = await getAvailableProviders(trackId, metadata);
                 if (providers.length === 0) return null;
                 provider = providers[0].provider;
             }
 
-            const specificKey = `${trackId}:${provider}`;
-            const requestGeneration = getCacheGeneration(trackId);
+            const queryProvider = provider === 'legacy' ? 'spotify' : provider;
+            const specificKey = `${identity.isrc}:${queryProvider}`;
+            const requestGeneration = getCacheGeneration(identity.isrc);
 
-            // 캐시 확인
             if (_syncDataCache.has(specificKey)) {
+                syncDataConsoleLog('getSyncData:cache-hit', {
+                    isrc: identity.isrc,
+                    provider: queryProvider
+                });
                 return _syncDataCache.get(specificKey);
             }
 
-            // API 직접 요청
             try {
-                // In-flight request check
                 if (_inflightRequests.has(specificKey)) {
+                    syncDataConsoleLog('getSyncData:join-inflight', {
+                        isrc: identity.isrc,
+                        provider: queryProvider
+                    });
                     return _inflightRequests.get(specificKey);
                 }
 
                 const fetchPromise = (async () => {
-                    // provider가 legacy인 경우 (Spicetify-custom-apps 호환)
-                    const queryProvider = provider === 'legacy' ? 'spotify' : provider;
-                    let requestUrl = `${API_BASE}/lyrics/sync-data?trackId=${trackId}&provider=${queryProvider}`;
-                    if (shouldBypassServerCache(trackId)) {
+                    const url = new URL(`${API_BASE}/lyrics/sync-data`);
+                    const reportsMetadata = appendSyncDataQueryParams(url, identity, metadata, queryProvider);
+                    let requestUrl = url.toString();
+                    if (shouldBypassServerCache(identity.isrc)) {
                         requestUrl += '&bypassCache=1';
                     }
-                    const response = await fetch(requestUrl, {
-                        cache: 'no-store'
+                    syncDataConsoleLog('getSyncData:request', {
+                        isrc: identity.isrc,
+                        trackId: identity.trackId || null,
+                        provider: queryProvider,
+                        url: requestUrl
                     });
+                    const response = await fetch(requestUrl, { cache: 'no-store' });
+                    syncDataConsoleLog('getSyncData:response', {
+                        isrc: identity.isrc,
+                        provider: queryProvider,
+                        status: response.status,
+                        ok: response.ok
+                    }, response.ok ? 'info' : 'warn');
 
                     if (!response.ok) {
                         if (response.status === 404) return null;
+                        if (response.status === 426) {
+                            const result = await response.json().catch(() => null);
+                            console.warn(result?.message || getMissingIsrcMessage());
+                            return null;
+                        }
                         throw new Error(`API Error: ${response.status}`);
                     }
 
                     const result = await response.json();
-
-                    // 결과가 있고 success가 true이거나 데이터가 직접 반환된 경우
+                    syncDataConsoleLog('getSyncData:json', {
+                        isrc: identity.isrc,
+                        provider: queryProvider,
+                        hasData: !!(result?.data || result),
+                        hasSyncData: !!(result?.data?.syncData || result?.syncData),
+                        providerReturned: result?.data?.provider || result?.provider || null
+                    });
+                    if (reportsMetadata) {
+                        _syncTrackMetadataReported.add(identity.isrc);
+                    }
                     const data = result.data || result;
 
                     if (data) {
-                        // 결과 구조 정규화 - API 응답 구조: data.syncData.lines
                         let syncDataBody = null;
 
                         if (Array.isArray(data)) {
@@ -1673,7 +2094,9 @@
                         if (!syncDataBody?.lines) return null;
 
                         const syncData = {
-                            trackId,
+                            isrc: normalizeSyncDataIsrc(data.isrc) || identity.isrc,
+                            trackId: identity.trackId || data.trackId || data.storedTrackId || null,
+                            storedTrackId: data.storedTrackId || data.trackId || null,
                             provider: data.provider || provider,
                             syncData: syncDataBody,
                             contributors: data.contributors || [],
@@ -1681,7 +2104,7 @@
                             updatedAt: data.updatedAt || null,
                             loadCount: data.loadCount || 0
                         };
-                        if (requestGeneration !== getCacheGeneration(trackId)) {
+                        if (requestGeneration !== getCacheGeneration(identity.isrc)) {
                             return null;
                         }
                         _syncDataCache.set(specificKey, syncData);
@@ -1695,52 +2118,49 @@
                 _inflightRequests.delete(specificKey);
                 return result;
             } catch (e) {
-                console.warn(`[SyncDataService] Failed to fetch sync data for ${trackId}:${provider}`, e);
+                console.warn(`[SyncDataService] Failed to fetch sync data for ${identity.isrc}:${provider}`, e);
                 _inflightRequests.delete(specificKey);
                 return null;
             }
         }
 
-        /**
-         * 해당 provider에 sync-data가 있는지 확인
-         * @param {string} trackId - Spotify Track ID
-         * @param {string} provider - 가사 provider (예: spotify-abc, lrclib)
-         * @returns {Promise<boolean>}
-         */
-        async function hasSyncData(trackId, provider) {
-            const providers = await getAvailableProviders(trackId);
+        async function hasSyncData(trackId, provider, metadata = {}) {
+            const providers = await getAvailableProviders(trackId, metadata);
             return providers.some(p => p.provider === provider);
         }
 
-        function clearCache(trackId) {
-            if (trackId) {
-                bumpCacheGeneration(trackId);
-                clearInflightRequests(trackId);
-                _syncDataCache.delete(trackId);
-                // trackId 관련 모든 캐시 삭제
+        function clearCache(identityValue, metadata = {}) {
+            const identityKey = getSyncDataIdentityKey(identityValue, metadata) || identityValue;
+            if (identityKey) {
+                bumpCacheGeneration(identityKey);
+                clearInflightRequests(identityKey);
+                _syncDataCache.delete(identityKey);
                 for (const key of _syncDataCache.keys()) {
-                    if (key.startsWith(`${trackId}:`)) {
+                    if (key.startsWith(`${identityKey}:`)) {
                         _syncDataCache.delete(key);
                     }
                 }
-                _fullyLoadedTracks.delete(trackId);
-                markServerCacheBypass(trackId);
+                _fullyLoadedTracks.delete(identityKey);
+                _syncTrackMetadataReported.delete(identityKey);
+                markServerCacheBypass(identityKey);
             } else {
                 bumpCacheGeneration();
                 clearInflightRequests();
                 _syncDataCache.clear();
                 _fullyLoadedTracks.clear();
                 _usageReportCache.clear();
+                _syncTrackMetadataReported.clear();
                 _serverCacheBypassUntil.clear();
                 markServerCacheBypass();
             }
         }
 
         async function reportSyncDataUsage(syncData) {
-            if (!syncData?.trackId || !syncData?.provider) return null;
+            const isrc = normalizeSyncDataIsrc(syncData?.isrc);
+            if (!isrc || !syncData?.provider) return null;
 
             const usageDate = new Date().toISOString().slice(0, 10);
-            const cacheKey = `${syncData.trackId}:${syncData.provider}:${usageDate}`;
+            const cacheKey = `${isrc}:${syncData.provider}:${usageDate}`;
             if (_usageReportCache.has(cacheKey)) {
                 return null;
             }
@@ -1755,7 +2175,8 @@
                     },
                     keepalive: true,
                     body: JSON.stringify({
-                        trackId: syncData.trackId,
+                        isrc,
+                        ...(syncData.trackId ? { trackId: syncData.trackId } : {}),
                         provider: syncData.provider,
                         listenerHash
                     })
@@ -1768,7 +2189,7 @@
                 return await response.json().catch(() => null);
             } catch (e) {
                 _usageReportCache.delete(cacheKey);
-                console.warn(`[SyncDataService] Failed to report sync usage for ${syncData.trackId}:${syncData.provider}`, e);
+                console.warn(`[SyncDataService] Failed to report sync usage for ${isrc}:${syncData.provider}`, e);
                 return null;
             }
         }
@@ -1831,76 +2252,75 @@
             return _spotifyProfilePromise;
         }
 
-        /**
-         * 싱크 데이터 제출
-         * @param {string} trackId - Spotify Track ID
-         * @param {string} provider - 가사 출처 ('spotify', 'lrclib')
-         * @param {Object} syncData - 싱크 데이터 { lines: [...] }
-         * @param {Object} metadata - 선택 메타데이터 { title?: string, artist?: string }
-         * @returns {Promise<Object>} - 제출 결과
-         */
-	        async function submitSyncData(trackId, provider, syncData, metadata = {}) {
-		            const userHash = getUserHash();
-		            const authToken = typeof Utils !== "undefined" && Utils.getAuthToken
-		                ? Utils.getAuthToken()
-		                : Spicetify.LocalStorage.get("ivLyrics:auth-token");
-	                const title = typeof metadata?.title === "string" ? metadata.title.trim() : "";
-	                const artist = typeof metadata?.artist === "string" ? metadata.artist.trim() : "";
-	                const spotifyProfile = await getCurrentSpotifyProfile();
-	
-		            if (typeof Utils !== "undefined" && Utils.requireDiscordAuth) {
-		                await Utils.requireDiscordAuth(I18n.t('syncCreator.loginRequired'));
-		            } else {
-		                const profileResponse = await fetch(`${API_BASE}/user/profile?userHash=${encodeURIComponent(userHash)}`, {
-		                    cache: 'no-store',
-		                    headers: {
-		                        "Cache-Control": "no-cache, no-store, must-revalidate",
-		                        Pragma: "no-cache",
-		                        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-		                    },
-		                });
-		                const profile = await profileResponse.json();
-	
-		                if (!profileResponse.ok) {
-		                    throw new Error(profile.error || I18n.t('settingsAdvanced.aboutTab.account.loadFailed'));
-		                }
-	
-		                if (!profile?.authenticated || !profile?.linked || !profile?.account) {
-		                    throw new Error(I18n.t('syncCreator.loginRequired'));
-		                }
-		            }
-
-		            const submitAuthToken = typeof Utils !== "undefined" && Utils.getAuthToken
-		                ? Utils.getAuthToken()
-		                : authToken;
-		
-		            const response = await fetch(`${API_BASE}/lyrics/sync-data`, {
-		                method: 'POST',
-		                headers: {
-		                    "Content-Type": "application/json",
-		                    "User-Agent": `spicetify v${Spicetify.Config.version}`,
-		                    ...(submitAuthToken ? { Authorization: `Bearer ${submitAuthToken}` } : {}),
-		                },
-	                body: JSON.stringify({
-	                    trackId,
-	                    provider,
-	                    syncData,
-	                    ...(title ? { title } : {}),
-	                    ...(artist ? { artist } : {}),
-	                    ...(spotifyProfile?.id ? {
-	                        spotifyUserId: spotifyProfile.id,
-	                        ...(spotifyProfile.displayName ? { spotifyDisplayName: spotifyProfile.displayName } : {})
-	                    } : {})
-	                })
-            });
-
-	            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Failed to submit sync data');
+        async function submitSyncData(trackId, provider, syncData, metadata = {}) {
+            const identity = await resolveSyncDataIdentity(trackId, metadata);
+            if (!identity) {
+                throw new Error(getMissingIsrcMessage());
             }
 
-            clearCache(trackId);
+            const userHash = getUserHash();
+            const authToken = typeof Utils !== "undefined" && Utils.getAuthToken
+                ? Utils.getAuthToken()
+                : Spicetify.LocalStorage.get("ivLyrics:auth-token");
+            const trackMetadata = getSyncDataTrackMetadata(identity.trackId, metadata);
+            const title = trackMetadata.title;
+            const artist = trackMetadata.artist;
+            const spotifyProfile = await getCurrentSpotifyProfile();
+
+            if (typeof Utils !== "undefined" && Utils.requireDiscordAuth) {
+                await Utils.requireDiscordAuth(I18n.t('syncCreator.loginRequired'));
+            } else {
+                const profileResponse = await fetch(`${API_BASE}/user/profile?userHash=${encodeURIComponent(userHash)}`, {
+                    cache: 'no-store',
+                    headers: {
+                        "Cache-Control": "no-cache, no-store, must-revalidate",
+                        Pragma: "no-cache",
+                        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+                    },
+                });
+                const profile = await profileResponse.json();
+
+                if (!profileResponse.ok) {
+                    throw new Error(profile.error || I18n.t('settingsAdvanced.aboutTab.account.loadFailed'));
+                }
+
+                if (!profile?.authenticated || !profile?.linked || !profile?.account) {
+                    throw new Error(I18n.t('syncCreator.loginRequired'));
+                }
+            }
+
+            const submitAuthToken = typeof Utils !== "undefined" && Utils.getAuthToken
+                ? Utils.getAuthToken()
+                : authToken;
+
+            const response = await fetch(`${API_BASE}/lyrics/sync-data`, {
+                method: 'POST',
+                headers: {
+                    "Content-Type": "application/json",
+                    "User-Agent": `spicetify v${Spicetify.Config.version}`,
+                    ...(submitAuthToken ? { Authorization: `Bearer ${submitAuthToken}` } : {}),
+                },
+                body: JSON.stringify({
+                    isrc: identity.isrc,
+                    ...(identity.trackId ? { trackId: identity.trackId } : {}),
+                    provider,
+                    syncData,
+                    ...(title ? { title } : {}),
+                    ...(artist ? { artist } : {}),
+                    ...(spotifyProfile?.id ? {
+                        spotifyUserId: spotifyProfile.id,
+                        ...(spotifyProfile.displayName ? { spotifyDisplayName: spotifyProfile.displayName } : {})
+                    } : {})
+                })
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || result.message || 'Failed to submit sync data');
+            }
+
+            clearCache(identity.isrc);
             return result;
         }
 
@@ -2497,6 +2917,10 @@
             reportSyncDataUsage,
             applySyncDataToLyrics,
             convertKaraokeToSynced,
+            getTrackIsrc,
+            resolveTrackIsrc,
+            getSyncDataTrackMetadata,
+            normalizeSyncDataIsrc,
             shouldBypassServerCache,
             clearCache
         };
@@ -2650,7 +3074,10 @@
 
             const promise = (async () => {
                 try {
-                    const analysis = await Spicetify.CosmosAsync.get(`https://api.spotify.com/v1/audio-analysis/${trackId}`);
+                    if (typeof Spicetify.getAudioData !== 'function') {
+                        return null;
+                    }
+                    const analysis = await Spicetify.getAudioData(`spotify:track:${trackId}`);
                     _analysisCache.set(trackId, analysis);
                     return analysis;
                 } catch (error) {
@@ -4635,20 +5062,27 @@
          * @param {string} provider - 가사 제공자 (예: spotify-abc, lrclib)
          * @returns {Promise<Object|null>}
          */
-        async getIvLyricsSyncData(trackId, provider) {
+        async getIvLyricsSyncData(trackId, provider, metadata = {}) {
             if (!trackId || !provider) return null;
+
+            const isrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, metadata)
+                || window.SyncDataService?.getTrackIsrc?.(trackId, metadata)
+                || window.SyncDataService?.normalizeSyncDataIsrc?.(metadata?.isrc);
+            if (!isrc) {
+                window.__ivLyricsDebugLog?.('[LyricsService] Missing ISRC for ivLyrics sync-data lookup', { trackId, provider });
+                return null;
+            }
 
             try {
                 if (window.SyncDataService?.getSyncData) {
-                    return await window.SyncDataService.getSyncData(trackId, provider);
+                    return await window.SyncDataService.getSyncData(trackId, provider, { ...metadata, isrc });
                 }
 
-                // provider가 spotify인 경우 내부 provider(abc 등)가 붙어있지 않다면 붙여준다
-                // 하지만 호출하는 쪽에서 이미 처리가 되어있어야 함.
-                // 여기서는 있는 그대로 호출.
-
-                let requestUrl = `https://lyrics.api.ivl.is/lyrics/sync-data?trackId=${trackId}&provider=${provider}`;
-                if (window.SyncDataService?.shouldBypassServerCache?.(trackId)) {
+                const url = new URL('https://lyrics.api.ivl.is/lyrics/sync-data');
+                url.searchParams.set('isrc', isrc);
+                url.searchParams.set('provider', provider);
+                let requestUrl = url.toString();
+                if (window.SyncDataService?.shouldBypassServerCache?.(isrc)) {
                     requestUrl += '&bypassCache=1';
                 }
 
@@ -4656,16 +5090,23 @@
                     cache: 'no-store'
                 });
                 if (response.ok) {
-                    const data = await response.json();
-                    if (data && data.provider === provider) {
-                        return data;
+                    const result = await response.json();
+                    const data = result?.data || result;
+                    if (data && (data.provider === provider || (provider.startsWith('spotify-') && data.provider === 'spotify'))) {
+                        return {
+                            isrc,
+                            trackId: data.trackId || trackId,
+                            storedTrackId: data.storedTrackId || data.trackId || null,
+                            ...data
+                        };
                     }
                 }
             } catch (e) {
-                console.warn(`[LyricsService] Failed to fetch sync data for ${trackId} (${provider}):`, e);
+                console.warn(`[LyricsService] Failed to fetch sync data for ${isrc} (${provider}):`, e);
             }
             return null;
         },
+
 
         /**
          * 가사 결과에 ivLyrics Sync 데이터 적용
@@ -4678,7 +5119,15 @@
             }
 
             const trackId = result.uri.split(':')[2];
-            const syncData = await this.getIvLyricsSyncData(trackId, result.provider);
+            const spotifyData = window.SpotifyDataHelper?.extractSpotifyData?.(result.uri);
+            const trackIsrc = window.SyncDataService?.normalizeSyncDataIsrc?.(
+                result.isrc ||
+                result.external_ids?.isrc ||
+                result.externalIds?.isrc ||
+                result.track?.external_ids?.isrc ||
+                spotifyData?.isrc
+            );
+            const syncData = await this.getIvLyricsSyncData(trackId, result.provider, { isrc: trackIsrc });
 
             const isProviderMatch = syncData?.provider === result.provider
                 || (typeof result.provider === 'string' && result.provider.startsWith('spotify-') && syncData?.provider === 'spotify');

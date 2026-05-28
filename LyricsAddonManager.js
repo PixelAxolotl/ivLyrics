@@ -492,6 +492,16 @@
                 ? allEnabledProviders.filter(provider => provider.id === forcedProviderId)
                 : allEnabledProviders;
             const trackId = info.uri?.split(':')[2];
+            const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, info)
+                || window.SyncDataService?.getTrackIsrc?.(trackId, info)
+                || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);
+            console.info('[ivLyrics sync-data]', 'LyricsAddonManager:getLyrics:start', {
+                uri: info.uri,
+                trackId,
+                resolvedIsrc: trackIsrc || null,
+                forcedProviderId,
+                enabledProviders: enabledProviders.map(provider => provider.id)
+            });
 
             // 디버그 로깅
             if (window.AddonDebug?.isEnabled()) {
@@ -587,6 +597,18 @@
                     // 2. karaoke가 필요한데 없으면 sync-data 조회
                     const needsKaraoke = allowKaraoke && !result.karaoke;
                     const hasBaseLyrics = result.synced || result.unsynced;
+                    console.info('[ivLyrics sync-data]', 'LyricsAddonManager:sync-check', {
+                        providerId: provider.id,
+                        resultProvider: result.provider || null,
+                        allowKaraoke,
+                        hasKaraoke: !!result.karaoke,
+                        hasSynced: !!result.synced,
+                        hasUnsynced: !!result.unsynced,
+                        needsKaraoke,
+                        hasBaseLyrics: !!hasBaseLyrics,
+                        isrc: trackIsrc || null,
+                        hasSyncDataService: !!window.SyncDataService?.getSyncData
+                    });
 
                     if (needsKaraoke && hasBaseLyrics) {
                         window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Karaoke needed but not available, checking sync-data for ${provider.id}...`);
@@ -595,9 +617,19 @@
                         if (window.SyncDataService?.getSyncData) {
                             try {
                                 const syncProvider = result.provider || provider.id;
-                                window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Fetching sync-data for trackId=${trackId}, provider=${syncProvider}`);
+                                window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Fetching sync-data for isrc=${trackIsrc || 'missing'}, provider=${syncProvider}`);
+                                console.info('[ivLyrics sync-data]', 'LyricsAddonManager:calling-getSyncData', {
+                                    trackId,
+                                    isrc: trackIsrc || null,
+                                    provider: syncProvider
+                                });
 
-                                const syncData = await window.SyncDataService.getSyncData(trackId, syncProvider);
+                                const syncData = await window.SyncDataService.getSyncData(trackId, syncProvider, { ...info, isrc: trackIsrc });
+                                console.info('[ivLyrics sync-data]', 'LyricsAddonManager:getSyncData-result', {
+                                    provider: syncProvider,
+                                    found: !!syncData,
+                                    hasSyncData: !!syncData?.syncData
+                                });
 
                                 if (syncData && syncData.syncData) {
                                     window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Found sync-data, applying...`);

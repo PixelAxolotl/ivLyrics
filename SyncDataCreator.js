@@ -34,6 +34,11 @@ const SYNC_CREATOR_DEFAULT_SPEAKER = 'MALE 1';
 const SYNC_CREATOR_DEFAULT_KIND = 'vocal';
 const SYNC_CREATOR_MAX_MERGED_LINES = 5;
 const SYNC_CREATOR_SYNC_DATA_VERSION = 3;
+const normalizeSyncCreatorIsrc = (value) => {
+	if (typeof value !== 'string') return '';
+	const normalized = value.trim().replace(/[\s-]/g, '').toUpperCase();
+	return /^[A-Z]{2}[A-Z0-9]{3}\d{7}$/.test(normalized) ? normalized : '';
+};
 const SYNC_CREATOR_KIND_OPTIONS = [
 	['vocal', 'syncCreator.kindVocal'],
 	['effect', 'syncCreator.kindEffect'],
@@ -1432,6 +1437,19 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	// 트랙 정보
 	const trackId = trackInfo?.uri?.split(':')[2] || '';
 	const trackUri = trackInfo?.uri || Spicetify.Player?.data?.item?.uri;
+	const spotifyDataForTrack = (() => {
+		try {
+			return window.SpotifyDataHelper?.extractSpotifyData?.(trackUri || (trackId ? `spotify:track:${trackId}` : '')) || null;
+		} catch (e) {
+			return null;
+		}
+	})();
+	const trackIsrc = normalizeSyncCreatorIsrc(
+		trackInfo?.external_ids?.isrc
+		|| trackInfo?.externalIds?.isrc
+		|| spotifyDataForTrack?.isrc
+		|| window.SyncDataService?.getTrackIsrc?.(trackId, trackInfo)
+	);
 	const trackName = trackInfo?.name || Spicetify.Player?.data?.item?.name || '';
 	const artistName = trackInfo?.artists?.map(a => a.name).join(', ') ||
 		Spicetify.Player?.data?.item?.artists?.map(a => a.name).join(', ') || '';
@@ -1574,9 +1592,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			setSelectedLrclibSource(result.lrclibSource);
 		}
 
-		if (window.SyncDataService && trackId) {
+		if (window.SyncDataService && trackId && trackIsrc) {
 			try {
-				const existingSyncData = await window.SyncDataService.getSyncData(trackId, finalProvider);
+				const existingSyncData = await window.SyncDataService.getSyncData(trackId, finalProvider, {
+					isrc: trackIsrc,
+					title: trackName,
+					artist: artistName
+				});
 				if (existingSyncData && existingSyncData.syncData && existingSyncData.syncData.lines) {
 					window.__ivLyricsDebugLog?.('[SyncDataCreator] Found matching existing sync data');
 					loadedSyncBody = existingSyncData.syncData;
@@ -1623,7 +1645,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			setMultiVocalMode(false);
 			setError(I18n.t('syncCreator.noLyrics'));
 		}
-	}, [extractLyricsText, trackId]);
+	}, [extractLyricsText, trackId, trackIsrc]);
 
 	const resolveMultiVocalDecision = useCallback((useMultiVocalMode) => {
 		if (!pendingMultiVocalDecision) return;
@@ -2717,9 +2739,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				}
 
 				// 기존 싱크 데이터가 있는지 확인
-				if (window.SyncDataService && trackId) {
+				if (window.SyncDataService && trackId && trackIsrc) {
 					try {
-						const existingSyncData = await window.SyncDataService.getSyncData(trackId, finalProvider);
+						const existingSyncData = await window.SyncDataService.getSyncData(trackId, finalProvider, {
+							isrc: trackIsrc,
+							title: trackName,
+							artist: artistName
+						});
 						if (existingSyncData && existingSyncData.syncData && existingSyncData.syncData.lines) {
 							window.__ivLyricsDebugLog?.('[SyncDataCreator] Found matching existing sync data');
 							const normalizedSyncBody = normalizeLoadedSyncCreatorBodyForLyrics(existingSyncData.syncData, text);
@@ -4660,9 +4686,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	}, [lyricsFullTextChars, provider, selectedLrclibSource]);
 
 	const clearLyricsCachesAfterSyncSubmit = useCallback(async () => {
-		window.SyncDataService?.clearCache?.(trackId);
+		window.SyncDataService?.clearCache?.(trackIsrc || trackId, { isrc: trackIsrc });
 		const dispatchSyncDataUpdated = () => window.dispatchEvent(new CustomEvent('ivLyrics:sync-data-updated', {
 			detail: {
+				isrc: trackIsrc || null,
 				trackId,
 				trackUri: trackId ? `spotify:track:${trackId}` : null,
 				provider
@@ -4675,7 +4702,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		} finally {
 			dispatchSyncDataUpdated();
 		}
-	}, [trackId, provider]);
+	}, [trackId, trackIsrc, provider]);
 
 	const handleSubmit = useCallback(async () => {
 		if (!syncData || !syncData.lines || syncData.lines.length === 0) {
@@ -4764,10 +4791,23 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			})
 		});
 
+		const resolvedTrackIsrc = trackIsrc
+			|| await window.SyncDataService?.resolveTrackIsrc?.(trackId, {
+				...trackInfo,
+				title: trackName,
+				artist: artistName
+			});
+
+		if (!resolvedTrackIsrc) {
+			Toast.error('이 곡의 ISRC를 찾을 수 없어 sync-data를 등록할 수 없습니다. ivLyrics를 최신 버전으로 업데이트한 뒤 다시 시도해 주세요.');
+			return;
+		}
+
 		setIsSubmitting(true);
 
 		try {
 			const submitMetadata = {
+				isrc: resolvedTrackIsrc,
 				title: trackName,
 				artist: artistName
 			};
@@ -4793,7 +4833,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				const response = await fetch('https://lyrics.api.ivl.is/lyrics/sync-data', {
 					method: 'POST',
 					headers: Utils.getApiHeaders({ 'Content-Type': 'application/json' }),
-					body: JSON.stringify({ trackId, provider, syncData: syncDataToSubmit, ...submitMetadata })
+					body: JSON.stringify({ isrc: resolvedTrackIsrc, trackId, provider, syncData: syncDataToSubmit, ...submitMetadata })
 				});
 
 				if (response.ok) {
@@ -4819,7 +4859,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 
 		setIsSubmitting(false);
-	}, [syncData, lyricsLines, lineCharOffsets, multiVocalMode, trackId, provider, trackName, artistName, onClose, attachSelectedLrclibSource, clearLyricsCachesAfterSyncSubmit, getParallelTemplateForLineData, getMergedLineIndexesForStart, isLineCoveredByMergedPrevious]);
+	}, [syncData, lyricsLines, lineCharOffsets, multiVocalMode, trackId, trackIsrc, provider, trackName, artistName, onClose, attachSelectedLrclibSource, clearLyricsCachesAfterSyncSubmit, getParallelTemplateForLineData, getMergedLineIndexesForStart, isLineCoveredByMergedPrevious]);
 
 	// 싱크 데이터 내보내기 (JSON 파일로 저장)
 	const exportSyncData = useCallback(async () => {

@@ -2184,21 +2184,44 @@ const Utils = {
   // 커뮤니티 영상 추천 시스템
   // ==========================================
 
+  async getCommunityVideoIdentity(trackUri) {
+    const trackId = this.extractTrackId(trackUri);
+    if (!trackId) return null;
+
+    const spotifyData = window.SpotifyDataHelper?.extractSpotifyData?.(trackUri) || null;
+    const metadata = {
+      trackId,
+      trackName: spotifyData?.name || "",
+      title: spotifyData?.name || "",
+      artists: spotifyData?.artists || []
+    };
+    const isrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, metadata)
+      || window.SyncDataService?.getTrackIsrc?.(trackId, metadata)
+      || "";
+
+    if (!isrc) {
+      window.__ivLyricsDebugLog?.("[ivLyrics] Missing ISRC for community video request", { trackId });
+      return null;
+    }
+
+    return { isrc, trackId, metadata };
+  },
+
   /**
    * 커뮤니티 영상 목록 조회
    * @param {string} trackUri - 트랙 URI
    * @param {boolean} skipCache - true면 캐시를 건너뛰고 서버에서 가져옴
    */
   async getCommunityVideos(trackUri, skipCache = false) {
-    const trackId = this.extractTrackId(trackUri);
-    if (!trackId) return null;
+    const identity = await this.getCommunityVideoIdentity(trackUri);
+    if (!identity) return null;
 
     const userHash = this.getUserHash();
 
     try {
       // 브라우저 캐시 우회를 위해 타임스탬프 추가
       const response = await fetch(
-        `https://lyrics.api.ivl.is/lyrics/youtube/community?trackId=${trackId}&userId=${userHash}&_t=${Date.now()}`,
+        `https://lyrics.api.ivl.is/lyrics/youtube/community?isrc=${encodeURIComponent(identity.isrc)}&trackId=${encodeURIComponent(identity.trackId)}&userId=${encodeURIComponent(userHash)}&_t=${Date.now()}`,
         {
           cache: 'no-store',  // 브라우저 캐시 완전히 우회
           headers: this.getApiHeaders({
@@ -2223,8 +2246,10 @@ const Utils = {
    * 커뮤니티 영상 등록
    */
   async submitCommunityVideo(trackUri, videoId, videoTitle, startTime = 0) {
-    const trackId = this.extractTrackId(trackUri);
-    if (!trackId) return null;
+    const identity = await this.getCommunityVideoIdentity(trackUri);
+    if (!identity) {
+      throw new Error("이 곡의 ISRC를 찾을 수 없어 커뮤니티 영상을 등록할 수 없습니다. ivLyrics 클라이언트를 최신 버전으로 업데이트해 주세요.");
+    }
 
     await this.requireDiscordAuth(
       I18n.t("communityVideo.loginRequired")
@@ -2236,7 +2261,8 @@ const Utils = {
         headers: this.getApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           action: 'submit',
-          trackId,
+          isrc: identity.isrc,
+          trackId: identity.trackId,
           videoId,
           videoTitle,
           startTime

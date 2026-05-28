@@ -267,10 +267,27 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                     (typeof Utils !== "undefined" && Utils.currentVersion) ||
                     window.CONFIG?.version ||
                     "unknown";
-                let youtubeUrl = `https://lyrics.api.ivl.is/lyrics/youtube?trackId=${trackId}&userHash=${userHash}&useCommunity=true&client=ivLyrics&clientVersion=${encodeURIComponent(clientVersion)}&requestVersion=2`;
-
                 // Spotify 트랙 메타데이터를 백엔드에 전달
                 const spotifyData = window.SpotifyDataHelper?.extractSpotifyData?.(trackUri);
+                const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, {
+                    trackId,
+                    trackName: spotifyData?.name || "",
+                    title: spotifyData?.name || "",
+                    artists: spotifyData?.artists || []
+                }) || window.SyncDataService?.getTrackIsrc?.(trackId, {
+                    trackId,
+                    trackName: spotifyData?.name || "",
+                    title: spotifyData?.name || "",
+                    artists: spotifyData?.artists || []
+                }) || "";
+                const useCommunity = !!trackIsrc;
+                let youtubeUrl = `https://lyrics.api.ivl.is/lyrics/youtube?trackId=${trackId}&userHash=${userHash}&useCommunity=${useCommunity ? "true" : "false"}&client=ivLyrics&clientVersion=${encodeURIComponent(clientVersion)}&requestVersion=2`;
+                if (trackIsrc) {
+                    youtubeUrl += `&isrc=${encodeURIComponent(trackIsrc)}`;
+                } else {
+                    window.__ivLyricsDebugLog?.("[VideoBackground] Missing ISRC for community video lookup", { trackId });
+                }
+
                 if (spotifyData?.name) {
                     youtubeUrl += `&trackName=${encodeURIComponent(spotifyData.name)}`;
                     if (spotifyData.artists?.length) {

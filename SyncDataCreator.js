@@ -1439,8 +1439,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const preventNextTrackRef = useRef(false);
 
 	// 트랙 정보
-	const trackId = trackInfo?.uri?.split(':')[2] || '';
 	const trackUri = trackInfo?.uri || Spicetify.Player?.data?.item?.uri;
+	const trackId = Utils.extractTrackId(trackUri) || '';
 	const spotifyDataForTrack = (() => {
 		try {
 			return window.SpotifyDataHelper?.extractSpotifyData?.(trackUri || (trackId ? `spotify:track:${trackId}` : '')) || null;

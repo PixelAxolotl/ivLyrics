@@ -1656,7 +1656,8 @@ window.LANG_MS = {
     "feedbackFailed": "Gagal menyerahkan maklum balas",
     "autoSubmitEnabled": "⚡ Penyerahan automatik diaktifkan",
     "globalTitle": "Segerak Global",
-    "globalInfo": "Digunakan pada semua lagu hanya pada peranti ini. Tidak akan dihantar kepada komuniti."
+    "globalInfo": "Digunakan pada semua lagu hanya pada peranti ini. Tidak akan dihantar kepada komuniti.",
+    "communityUnavailableLocal": "Ofset komuniti tidak boleh dihantar untuk lagu setempat tanpa Spotify trackId."
   },
   "playbarButton": {
     "label": "Lyrics Plus"
@@ -1665,6 +1666,7 @@ window.LANG_MS = {
     "loading": "Memuatkan maklumat video...",
     "notFound": "Video tidak ditemui.",
     "error": "Ralat telah berlaku.",
+    "localTrackNeedsVideo": "Untuk lagu setempat, tetapkan URL YouTube secara manual daripada butang video.",
     "loadingMessage": "Memuatkan latar belakang video... Proses ini mengambil masa sekitar 30 saat.",
     "downloadingVideo": "Memuat turun video...",
     "downloading": "Memuat turun: {percent}%",
@@ -1730,6 +1732,8 @@ window.LANG_MS = {
     "loading": "Memuatkan senarai video...",
     "loadError": "Gagal memuatkan senarai video",
     "noVideos": "Tiada video komuniti berdaftar",
+    "localTrackDesc": "Ini ialah lagu setempat. URL YouTube hanya disimpan pada peranti ini dan tidak dihantar ke pelayan.",
+    "localOnlyApplied": "Video setempat digunakan.",
     "autoDetected": "Daftar_Automatik",
     "startTime": "Mula",
     "submittedBy": "Diserahkan oleh",
@@ -2118,6 +2122,7 @@ window.LANG_MS = {
     "submit": "Serah",
     "submitting": "Menyerahkan...",
     "noSyncData": "Tiada data senada berdaftar",
+    "trackIdRequired": "Segerak karaoke tidak boleh dihantar untuk lagu setempat tanpa Spotify trackId.",
     "incompleteConfirm": "Beberapa baris masih belum disenadakan. Adakah anda tetap mahu menyerahkannya?",
     "submitSuccess": "Data senada telah diserahkan! Ia akan diterapkan selepas kelulusan pentadbir (admin).",
     "submitError": "Gagal menyerahkan data senada",

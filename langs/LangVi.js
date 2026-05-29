@@ -1656,7 +1656,8 @@ window.LANG_VI = {
     "feedbackFailed": "Gửi phản hồi thất bại",
     "autoSubmitEnabled": "⚡ Tự động gửi đang được bật",
     "globalTitle": "Đồng bộ toàn cục",
-    "globalInfo": "Chỉ áp dụng cho mọi bài hát trên thiết bị này. Không bao giờ được gửi lên cộng đồng."
+    "globalInfo": "Chỉ áp dụng cho mọi bài hát trên thiết bị này. Không bao giờ được gửi lên cộng đồng.",
+    "communityUnavailableLocal": "Không thể gửi độ lệch cộng đồng cho bài hát cục bộ không có Spotify trackId."
   },
   "playbarButton": {
     "label": "Lyrics Plus"
@@ -1665,6 +1666,7 @@ window.LANG_VI = {
     "loading": "Đang tải thông tin video...",
     "notFound": "Không tìm thấy video.",
     "error": "Đã xảy ra lỗi.",
+    "localTrackNeedsVideo": "Với bài hát cục bộ, hãy đặt URL YouTube thủ công từ nút video.",
     "loadingMessage": "Đang tải nền video... Sẽ mất khoảng 30 giây.",
     "downloadingVideo": "Đang tải video...",
     "downloading": "Đang tải: {percent}%",
@@ -1720,6 +1722,8 @@ window.LANG_VI = {
     "loading": "Đang tải danh sách video...",
     "loadError": "Không thể tải danh sách video",
     "noVideos": "Không có video cộng đồng nào được đăng ký",
+    "localTrackDesc": "Đây là bài hát cục bộ. URL YouTube chỉ được lưu trên thiết bị này và không được gửi lên máy chủ.",
+    "localOnlyApplied": "Đã áp dụng video cục bộ.",
     "autoDetected": "Tự động phát hiện",
     "startTime": "Bắt đầu",
     "submittedBy": "Người đăng",
@@ -2109,6 +2113,7 @@ window.LANG_VI = {
     "submit": "Gửi",
     "submitting": "Đang gửi...",
     "noSyncData": "Không có dữ liệu đồng bộ nào được ghi lại",
+    "trackIdRequired": "Không thể gửi đồng bộ karaoke cho bài hát cục bộ không có Spotify trackId.",
     "incompleteConfirm": "Một số dòng chưa được đồng bộ. Bạn vẫn muốn gửi chứ?",
     "submitSuccess": "Dữ liệu đồng bộ đã được gửi! Sẽ áp dụng sau khi quản trị viên phê duyệt.",
     "submitError": "Gửi dữ liệu đồng bộ thất bại",

@@ -1656,7 +1656,8 @@ window.LANG_SV = {
     "feedbackFailed": "Det gick inte att skicka feedback",
     "autoSubmitEnabled": "⚡ Automatisk inlämning är aktiverad",
     "globalTitle": "Global synk",
-    "globalInfo": "Gäller alla låtar endast på den här enheten. Skickas aldrig till communityn."
+    "globalInfo": "Gäller alla låtar endast på den här enheten. Skickas aldrig till communityn.",
+    "communityUnavailableLocal": "Community-offsets kan inte skickas för lokala spår utan Spotify trackId."
   },
   "playbarButton": {
     "label": "Lyrics Plus"
@@ -1665,6 +1666,7 @@ window.LANG_SV = {
     "loading": "Laddar videoinformation...",
     "notFound": "Videon hittades inte.",
     "error": "Ett fel uppstod.",
+    "localTrackNeedsVideo": "För lokala spår anger du YouTube-URL manuellt från videoknappen.",
     "loadingMessage": "Laddar videobakgrund... Detta tar cirka 30 sekunder.",
     "downloadingVideo": "Laddar ned video...",
     "downloading": "Laddar ner: {percent}%",
@@ -1720,6 +1722,8 @@ window.LANG_SV = {
     "loading": "Laddar videolista...",
     "loadError": "Det gick inte att läsa in videolistan",
     "noVideos": "Inga communityvideor registrerade",
+    "localTrackDesc": "Det här är ett lokalt spår. YouTube-URL:en sparas bara på den här enheten och skickas inte till servern.",
+    "localOnlyApplied": "Lokal video tillämpad.",
     "autoDetected": "Automatiskt upptäckt",
     "startTime": "Starta",
     "submittedBy": "Inskickad av",
@@ -2108,6 +2112,7 @@ window.LANG_SV = {
     "submit": "Skicka in",
     "submitting": "Skickar...",
     "noSyncData": "Inga synkdata registrerade",
+    "trackIdRequired": "Karaoke-synk kan inte skickas för lokala spår utan Spotify trackId.",
     "incompleteConfirm": "Vissa rader är inte synkroniserade än. Vill du lämna in ändå?",
     "submitSuccess": "Synkroniseringsdata har skickats! Det kommer att tillämpas efter administratörens godkännande.",
     "submitError": "Det gick inte att skicka synkroniseringsdata",

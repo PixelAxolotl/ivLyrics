@@ -196,7 +196,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
             playerRef.current = null;
         }
 
-        const trackId = trackUri.split(":")[2];
+        const trackId = Utils.extractTrackId(trackUri);
         setStatusMessage(I18n.t("videoBackground.loading"));
         setVideoInfo(null);
         setIsPlayerReady(false);
@@ -224,6 +224,14 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                 }
             } catch (e) {
                 console.error('[VideoBackground] Failed to load saved video:', e);
+            }
+
+            if (!trackId) {
+                if (!isMounted) return;
+                setIsLoading(false);
+                setVideoInfo(null);
+                setStatusMessage(I18n.t("videoBackground.localTrackNeedsVideo") || "로컬 곡은 영상 버튼에서 YouTube URL을 직접 지정하세요.");
+                return;
             }
 
             // 2. 프리페치된 비디오 정보가 있는지 확인

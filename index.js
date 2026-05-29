@@ -2339,7 +2339,7 @@ const SpotifyDataHelper = {
    */
   extractSpotifyData(uri) {
     try {
-      const trackId = uri?.split(':')[2];
+      const trackId = Utils.extractTrackId(uri);
       if (!trackId) return null;
 
       const playerData = Spicetify.Player?.data;
@@ -2521,7 +2521,7 @@ const Prefetcher = {
    */
   async _prefetchTranslations(trackInfo, lyrics) {
     const uri = trackInfo.uri;
-    const trackId = uri?.split(':')[2];  // spotify:track:XXXX -> XXXX
+    const trackId = Utils.extractTrackId(uri);  // spotify:track:XXXX -> XXXX
     const cacheKeyBase = `prefetch:translation:${uri}`;
     const versionedCacheKeyBase = `${cacheKeyBase}:${getSyncDataRendererCacheVersion(lyrics)}`;
 
@@ -2668,7 +2668,8 @@ const Prefetcher = {
    * 영상 배경 정보 프리페치
    */
   async _prefetchVideoBackground(uri) {
-    const trackId = uri.split(":")[2];
+    const trackId = Utils.extractTrackId(uri);
+    if (!trackId) return;
     const spotifyData = SpotifyDataHelper.extractSpotifyData(uri);
     const currentItem = Spicetify.Player?.data?.item || null;
     const fallbackArtists = Array.isArray(spotifyData?.artists) && spotifyData.artists.length
@@ -2851,7 +2852,8 @@ const Prefetcher = {
    * 프리페치된 영상 배경 정보 가져오기
    */
   getVideoInfo(uri) {
-    const trackId = uri.split(":")[2];
+    const trackId = Utils.extractTrackId(uri);
+    if (!trackId) return null;
     const spotifyData = SpotifyDataHelper.extractSpotifyData(uri);
     const metadata = {
       trackId,
@@ -3556,7 +3558,7 @@ class LyricsContainer extends react.Component {
     const sourceLines = this.getEditableCacheSourceLines();
     const sourceText = getNonSectionLyricsText(this.getEditingBaseLyrics());
     const sourceHash = getTranslationSourceCacheHash(sourceText);
-    const trackId = this.state.uri?.split(":")[2];
+    const trackId = Utils.extractTrackId(this.state.uri);
 
     if (!trackId || sourceLines.length === 0) {
       Toast.error(I18n.t("notifications.noLyricsLoaded"));
@@ -3635,7 +3637,7 @@ class LyricsContainer extends react.Component {
       }
     }
 
-    const trackId = trackUri?.split(":")[2];
+    const trackId = Utils.extractTrackId(trackUri);
     if (trackId) {
       window.Translator?.clearMemoryCache?.(trackId);
       window.Translator?.clearInflightRequests?.(trackId);
@@ -3667,7 +3669,7 @@ class LyricsContainer extends react.Component {
       return;
     }
 
-    const trackId = this.state.uri?.split(":")[2];
+    const trackId = Utils.extractTrackId(this.state.uri);
     if (!trackId) {
       this.setState({
         lyricsEditError: I18n.t("lyricsCacheEditor.trackMissing"),
@@ -3740,7 +3742,7 @@ class LyricsContainer extends react.Component {
       return;
     }
 
-    const trackId = uri?.split(':')[2];
+    const trackId = Utils.extractTrackId(uri);
     if (!trackId || !title || !artist) {
       return;
     }
@@ -4072,7 +4074,7 @@ class LyricsContainer extends react.Component {
 
     const requestUri = this.state.uri;
     // trackId 가져오기
-    const trackId = Spicetify.Player.data?.item?.uri?.split(':')[2];
+    const trackId = Utils.extractTrackId(Spicetify.Player.data?.item?.uri);
     if (!trackId) {
       Toast.error(I18n.t("notifications.noTrackPlaying"));
       return;
@@ -4507,7 +4509,8 @@ class LyricsContainer extends react.Component {
   }
 
   async fetchTempo(uri) {
-    const trackId = uri.split(":")[2];
+    const trackId = Utils.extractTrackId(uri);
+    if (!trackId) return;
     let audio;
     try {
       audio = await Spicetify.CosmosAsync.get(
@@ -5811,6 +5814,10 @@ class LyricsContainer extends react.Component {
    */
   async applyCommunityOffset(trackUri) {
     try {
+      if (!Utils.extractTrackId(trackUri)) {
+        return;
+      }
+
       // 이미 로컬에 저장된 오프셋이 있으면 스킵
       const localOffset = await Utils.getTrackSyncOffset(trackUri);
       if (localOffset && localOffset !== 0) {
@@ -6111,7 +6118,7 @@ class LyricsContainer extends react.Component {
           this.closeLyricsEditModal();
         }
         // 이전 트랙의 진행 중인 번역 요청 정리
-        const previousTrackId = this.currentTrackUri?.split(':')[2];
+        const previousTrackId = Utils.extractTrackId(this.currentTrackUri);
         if (previousTrackId) {
           window.Translator.clearInflightRequests(previousTrackId);
         }

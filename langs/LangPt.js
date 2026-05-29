@@ -1656,7 +1656,8 @@ window.LANG_PT = {
     "feedbackFailed": "Falha ao enviar feedback",
     "autoSubmitEnabled": "⚡ Envio automático ativado",
     "globalTitle": "Sincronização global",
-    "globalInfo": "Aplica-se a todas as músicas apenas neste dispositivo. Nunca é enviada à comunidade."
+    "globalInfo": "Aplica-se a todas as músicas apenas neste dispositivo. Nunca é enviada à comunidade.",
+    "communityUnavailableLocal": "Offsets da comunidade não podem ser enviados para faixas locais sem Spotify trackId."
   },
   "playbarButton": {
     "label": "Letra Plus"
@@ -1665,6 +1666,7 @@ window.LANG_PT = {
     "loading": "Carregando informações do vídeo...",
     "notFound": "Vídeo não encontrado.",
     "error": "Ocorreu um erro.",
+    "localTrackNeedsVideo": "Para faixas locais, defina manualmente a URL do YouTube pelo botão de vídeo.",
     "loadingMessage": "Carregando fundo de vídeo... Leva cerca de 30 segundos.",
     "downloadingVideo": "Baixando vídeo...",
     "downloading": "Baixando: {percent}%",
@@ -1720,6 +1722,8 @@ window.LANG_PT = {
     "loading": "Carregando lista de vídeos...",
     "loadError": "Não foi possível carregar a lista de vídeos",
     "noVideos": "Nenhum vídeo registrado pela comunidade",
+    "localTrackDesc": "Esta é uma faixa local. A URL do YouTube é salva apenas neste dispositivo e não é enviada ao servidor.",
+    "localOnlyApplied": "Vídeo local aplicado.",
     "autoDetected": "Auto Detectado",
     "startTime": "Início",
     "submittedBy": "Enviado por",
@@ -2109,6 +2113,7 @@ window.LANG_PT = {
     "submit": "Enviar",
     "submitting": "Enviando...",
     "noSyncData": "Nenhum dado de sync registrado",
+    "trackIdRequired": "A sincronização de karaokê não pode ser enviada para faixas locais sem Spotify trackId.",
     "incompleteConfirm": "Algumas linhas ainda não foram sincronizadas. Deseja enviar mesmo assim?",
     "submitSuccess": "Dados de sync enviados! Serão aplicados após aprovação do administrador.",
     "submitError": "Falha ao enviar dados de sync",

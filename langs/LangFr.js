@@ -1656,7 +1656,8 @@ window.LANG_FR = {
     "feedbackFailed": "Échec de l'envoi du retour",
     "autoSubmitEnabled": "⚡ Soumission auto activée",
     "globalTitle": "Synchronisation globale",
-    "globalInfo": "S'applique à tous les titres sur cet appareil uniquement. Elle n'est jamais envoyée à la communauté."
+    "globalInfo": "S'applique à tous les titres sur cet appareil uniquement. Elle n'est jamais envoyée à la communauté.",
+    "communityUnavailableLocal": "Les offsets communautaires ne peuvent pas être envoyés pour les titres locaux sans Spotify trackId."
   },
   "playbarButton": {
     "label": "Lyrics Plus"
@@ -1665,6 +1666,7 @@ window.LANG_FR = {
     "loading": "Chargement infos vidéo...",
     "notFound": "Vidéo introuvable.",
     "error": "Erreur survenue.",
+    "localTrackNeedsVideo": "Pour les titres locaux, définissez manuellement l’URL YouTube avec le bouton vidéo.",
     "loadingMessage": "Chargement fond vidéo... env. 30s.",
     "downloadingVideo": "Téléchargement vidéo...",
     "downloading": "Téléchargement : {percent}%",
@@ -1720,6 +1722,8 @@ window.LANG_FR = {
     "loading": "Chargement liste vidéos...",
     "loadError": "Impossible de charger la liste",
     "noVideos": "Aucune vidéo communautaire enregistrée",
+    "localTrackDesc": "Il s’agit d’un titre local. L’URL YouTube est enregistrée uniquement sur cet appareil et n’est pas envoyée au serveur.",
+    "localOnlyApplied": "Vidéo locale appliquée.",
     "autoDetected": "Auto-détecté",
     "startTime": "Début",
     "submittedBy": "Par",
@@ -2109,6 +2113,7 @@ window.LANG_FR = {
     "submit": "Soumettre",
     "submitting": "Envoi...",
     "noSyncData": "Aucune donnée de synchro",
+    "trackIdRequired": "La synchronisation karaoké ne peut pas être envoyée pour les titres locaux sans Spotify trackId.",
     "incompleteConfirm": "Certaines lignes ne sont pas synchronisées. Soumettre quand même ?",
     "submitSuccess": "Données soumises ! Appliquées après validation admin.",
     "submitError": "Échec de l'envoi",

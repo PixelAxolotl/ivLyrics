@@ -1656,7 +1656,8 @@ window.LANG_IT = {
     "feedbackFailed": "Invio feedback fallito",
     "autoSubmitEnabled": "⚡ Invio automatico attivo",
     "globalTitle": "Sincronizzazione globale",
-    "globalInfo": "Si applica a tutti i brani solo su questo dispositivo. Non viene mai inviata alla community."
+    "globalInfo": "Si applica a tutti i brani solo su questo dispositivo. Non viene mai inviata alla community.",
+    "communityUnavailableLocal": "Non è possibile inviare offset della community per brani locali senza Spotify trackId."
   },
   "playbarButton": {
     "label": "Lyrics Plus"
@@ -1665,6 +1666,7 @@ window.LANG_IT = {
     "loading": "Caricamento info video...",
     "notFound": "Video non trovato.",
     "error": "Si è verificato un errore.",
+    "localTrackNeedsVideo": "Per i brani locali, imposta manualmente l’URL YouTube dal pulsante video.",
     "loadingMessage": "Caricamento sfondo video... Richiede circa 30s.",
     "downloadingVideo": "Scaricamento video...",
     "downloading": "Scaricamento: {percent}%",
@@ -1720,6 +1722,8 @@ window.LANG_IT = {
     "loading": "Caricamento elenco video...",
     "loadError": "Impossibile caricare elenco video",
     "noVideos": "Nessun video community registrato",
+    "localTrackDesc": "Questo è un brano locale. L’URL YouTube viene salvato solo su questo dispositivo e non viene inviato al server.",
+    "localOnlyApplied": "Video locale applicato.",
     "autoDetected": "Rilevamento Auto",
     "startTime": "Inizio",
     "submittedBy": "Inviato da",
@@ -2109,6 +2113,7 @@ window.LANG_IT = {
     "submit": "Invia",
     "submitting": "Invio...",
     "noSyncData": "Nessun dato sync registrato",
+    "trackIdRequired": "Non è possibile inviare la sincronizzazione karaoke per brani locali senza Spotify trackId.",
     "incompleteConfirm": "Alcune righe non sono sincronizzate. Inviare comunque?",
     "submitSuccess": "Dati sync inviati! Saranno applicati dopo approvazione admin.",
     "submitError": "Invio dati sync fallito",

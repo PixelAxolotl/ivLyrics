@@ -5602,6 +5602,17 @@ ruby rt {
   animation: spin 1s linear infinite;
 }
 
+.community-video-local-note {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.26);
+  color: rgba(248, 250, 252, 0.72);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .community-video-list {
   display: flex;
   flex-direction: column;
@@ -5983,6 +5994,7 @@ ruby rt {
 #ivLyrics-community-video-overlay[data-ui-theme="light"] .community-video-loading,
 #ivLyrics-community-video-overlay[data-ui-theme="light"] .community-video-error,
 #ivLyrics-community-video-overlay[data-ui-theme="light"] .community-video-empty,
+#ivLyrics-community-video-overlay[data-ui-theme="light"] .community-video-local-note,
 #ivLyrics-community-video-overlay[data-ui-theme="light"] .community-video-meta,
 #ivLyrics-community-video-overlay[data-ui-theme="light"] .form-hint,
 #ivLyrics-community-video-overlay[data-ui-theme="light"] .loading-title,

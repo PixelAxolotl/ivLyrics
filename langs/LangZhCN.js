@@ -1656,7 +1656,8 @@ window.LANG_ZH_CN = {
     "feedbackFailed": "反馈提交失败",
     "autoSubmitEnabled": "⚡ 自动提交已启用",
     "globalTitle": "全局同步",
-    "globalInfo": "仅在此设备上应用到所有歌曲，绝不会提交到社区。"
+    "globalInfo": "仅在此设备上应用到所有歌曲，绝不会提交到社区。",
+    "communityUnavailableLocal": "没有 Spotify trackId 的本地曲目无法提交社区偏移。"
   },
   "playbarButton": {
     "label": "歌词 Plus"
@@ -1665,6 +1666,7 @@ window.LANG_ZH_CN = {
     "loading": "正在加载视频信息...",
     "notFound": "找不到视频。",
     "error": "发生错误。",
+    "localTrackNeedsVideo": "对于本地曲目，请从视频按钮手动设置 YouTube URL。",
     "loadingMessage": "视频背景加载中... 大约需要 30 秒。",
     "downloadingVideo": "视频下载中...",
     "downloading": "下载中: {percent}%",
@@ -1720,6 +1722,8 @@ window.LANG_ZH_CN = {
     "loading": "正在加载视频列表...",
     "loadError": "无法加载视频列表",
     "noVideos": "没有注册的社区视频",
+    "localTrackDesc": "这是本地曲目。YouTube URL 只会保存在此设备上，不会发送到服务器。",
+    "localOnlyApplied": "已应用本地视频。",
     "autoDetected": "自动注册",
     "startTime": "开始",
     "submittedBy": "注册者",
@@ -2109,6 +2113,7 @@ window.LANG_ZH_CN = {
     "submit": "提交",
     "submitting": "提交中...",
     "noSyncData": "没有注册的同步数据",
+    "trackIdRequired": "没有 Spotify trackId 的本地曲目无法提交卡拉 OK 同步。",
     "incompleteConfirm": "部分行尚未同步。确定要提交吗？",
     "submitSuccess": "同步数据已提交！管理员批准后生效。",
     "submitError": "同步数据提交失败",

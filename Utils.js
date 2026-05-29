@@ -2224,12 +2224,39 @@ const Utils = {
   },
 
   /**
-   * Track ID 추출 (spotify:track:xxx -> xxx)
+   * Spotify Track ID 여부 확인
+   */
+  isSpotifyTrackId(value) {
+    return typeof value === "string" && /^[A-Za-z0-9]{22}$/.test(value.trim());
+  },
+
+  /**
+   * Spotify Track URI 여부 확인
+   */
+  isSpotifyTrackUri(uri) {
+    return typeof uri === "string" && /^spotify:track:[A-Za-z0-9]{22}$/.test(uri.trim());
+  },
+
+  /**
+   * Spotify 로컬 곡 URI 여부 확인
+   */
+  isLocalTrackUri(uri) {
+    return typeof uri === "string" && uri.startsWith("spotify:local:");
+  },
+
+  /**
+   * Track ID 추출 (spotify:track:xxx / open.spotify.com/track/xxx -> xxx)
    */
   extractTrackId(uri) {
-    if (!uri) return null;
-    const parts = uri.split(':');
-    return parts.length >= 3 ? parts[2] : null;
+    if (!uri || typeof uri !== "string") return null;
+    const value = uri.trim();
+    if (this.isSpotifyTrackId(value)) return value;
+
+    const uriMatch = value.match(/^spotify:track:([A-Za-z0-9]{22})(?:$|[?#])/);
+    if (uriMatch) return uriMatch[1];
+
+    const webMatch = value.match(/open\.spotify\.com\/track\/([A-Za-z0-9]{22})(?:[/?#]|$)/);
+    return webMatch ? webMatch[1] : null;
   },
 
   /**

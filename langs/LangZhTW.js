@@ -1656,7 +1656,8 @@ window.LANG_ZH_TW = {
     "feedbackFailed": "回饋提交失敗",
     "autoSubmitEnabled": "⚡ 自動提交已啟用",
     "globalTitle": "全域同步",
-    "globalInfo": "只會在此裝置上套用到所有歌曲，絕不會提交到社群。"
+    "globalInfo": "只會在此裝置上套用到所有歌曲，絕不會提交到社群。",
+    "communityUnavailableLocal": "沒有 Spotify trackId 的本機曲目無法提交社群偏移。"
   },
   "playbarButton": {
     "label": "歌詞 Plus"
@@ -1665,6 +1666,7 @@ window.LANG_ZH_TW = {
     "loading": "正在載入影片資訊...",
     "notFound": "找不到影片。",
     "error": "發生錯誤。",
+    "localTrackNeedsVideo": "對於本機曲目，請從影片按鈕手動設定 YouTube URL。",
     "loadingMessage": "影片背景載入中... 約需 30 秒。",
     "downloadingVideo": "正在下載影片...",
     "downloading": "下載中: {percent}%",
@@ -1720,6 +1722,8 @@ window.LANG_ZH_TW = {
     "loading": "正在載入影片列表...",
     "loadError": "無法載入影片列表",
     "noVideos": "無已登錄的社群影片",
+    "localTrackDesc": "這是本機曲目。YouTube URL 只會儲存在此裝置上，不會傳送到伺服器。",
+    "localOnlyApplied": "已套用本機影片。",
     "autoDetected": "自動登錄",
     "startTime": "開始",
     "submittedBy": "登錄者",
@@ -2109,6 +2113,7 @@ window.LANG_ZH_TW = {
     "submit": "提交",
     "submitting": "提交中...",
     "noSyncData": "無已登錄的同步資料",
+    "trackIdRequired": "沒有 Spotify trackId 的本機曲目無法提交卡拉 OK 同步。",
     "incompleteConfirm": "部分行尚未同步。確定要提交嗎？",
     "submitSuccess": "同步資料已提交！管理員核准後將生效。",
     "submitError": "同步資料提交失敗",

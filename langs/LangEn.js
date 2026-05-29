@@ -1656,7 +1656,8 @@ window.LANG_EN = {
     "feedbackFailed": "Failed to submit feedback",
     "autoSubmitEnabled": "⚡ Auto-submit is enabled",
     "globalTitle": "Global Sync",
-    "globalInfo": "Applies to every song on this device only. It is never submitted to the community."
+    "globalInfo": "Applies to every song on this device only. It is never submitted to the community.",
+    "communityUnavailableLocal": "Community offsets cannot be submitted for local tracks without a Spotify trackId."
   },
   "playbarButton": {
     "label": "Lyrics Plus"
@@ -1665,6 +1666,7 @@ window.LANG_EN = {
     "loading": "Loading video info...",
     "notFound": "Video not found.",
     "error": "An error occurred.",
+    "localTrackNeedsVideo": "For local tracks, set a YouTube URL manually from the video button.",
     "loadingMessage": "Loading video background... This takes about 30 seconds.",
     "downloadingVideo": "Downloading video...",
     "downloading": "Downloading: {percent}%",
@@ -1720,6 +1722,8 @@ window.LANG_EN = {
     "loading": "Loading video list...",
     "loadError": "Failed to load video list",
     "noVideos": "No community videos registered",
+    "localTrackDesc": "This is a local track. The YouTube URL is saved on this device only and is not sent to the server.",
+    "localOnlyApplied": "Local video applied.",
     "autoDetected": "Auto Detected",
     "startTime": "Start",
     "submittedBy": "Submitted by",
@@ -2109,6 +2113,7 @@ window.LANG_EN = {
     "submit": "Submit",
     "submitting": "Submitting...",
     "noSyncData": "No sync data registered",
+    "trackIdRequired": "Karaoke sync cannot be submitted for local tracks without a Spotify trackId.",
     "incompleteConfirm": "Some lines are not synced yet. Do you want to submit anyway?",
     "submitSuccess": "Sync data submitted! It will be applied after admin approval.",
     "submitError": "Failed to submit sync data",

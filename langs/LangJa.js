@@ -1656,7 +1656,8 @@ window.LANG_JA = {
     "feedbackFailed": "フィードバックの提出に失敗しました",
     "autoSubmitEnabled": "⚡ 自動提出が有効になっています",
     "globalTitle": "グローバル同期",
-    "globalInfo": "このデバイス上のすべての曲にのみ適用されます。コミュニティには送信されません。"
+    "globalInfo": "このデバイス上のすべての曲にのみ適用されます。コミュニティには送信されません。",
+    "communityUnavailableLocal": "Spotify trackId がないローカルトラックでは、コミュニティオフセットを送信できません。"
   },
   "playbarButton": {
     "label": "歌詞プラス"
@@ -1665,6 +1666,7 @@ window.LANG_JA = {
     "loading": "動画情報を読み込み中...",
     "notFound": "動画が見つかりません。",
     "error": "エラーが発生しました。",
+    "localTrackNeedsVideo": "ローカルトラックでは、動画ボタンから YouTube URL を手動で指定してください。",
     "loadingMessage": "動画背景を読み込み中... 30秒ほどかかります。",
     "downloadingVideo": "動画をダウンロード中...",
     "downloading": "ダウンロード中: {percent}%",
@@ -1720,6 +1722,8 @@ window.LANG_JA = {
     "loading": "動画リストを読み込み中...",
     "loadError": "動画リストを読み込めませんでした",
     "noVideos": "登録されたコミュニティ動画がありません",
+    "localTrackDesc": "これはローカルトラックです。YouTube URL はこのデバイスにのみ保存され、サーバーには送信されません。",
+    "localOnlyApplied": "ローカル動画を適用しました。",
     "autoDetected": "自動登録",
     "startTime": "開始",
     "submittedBy": "登録者",
@@ -2109,6 +2113,7 @@ window.LANG_JA = {
     "submit": "提出",
     "submitting": "提出中...",
     "noSyncData": "登録された同期データがありません",
+    "trackIdRequired": "Spotify trackId がないローカルトラックでは、カラオケ同期を送信できません。",
     "incompleteConfirm": "一部の行がまだ同期されていません。それでも提出しますか？",
     "submitSuccess": "同期データが提出されました！管理者の承認後に適用されます。",
     "submitError": "同期データの提出に失敗しました",

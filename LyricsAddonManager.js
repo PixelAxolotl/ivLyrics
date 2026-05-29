@@ -491,7 +491,7 @@
             const enabledProviders = forcedProviderId
                 ? allEnabledProviders.filter(provider => provider.id === forcedProviderId)
                 : allEnabledProviders;
-            const trackId = info.uri?.split(':')[2];
+            const trackId = Utils.extractTrackId(info.uri) || '';
             const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, info)
                 || window.SyncDataService?.getTrackIsrc?.(trackId, info)
                 || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);

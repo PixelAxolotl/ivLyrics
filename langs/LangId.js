@@ -1656,7 +1656,8 @@ window.LANG_ID = {
     "feedbackFailed": "Gagal mengirim umpan balik",
     "autoSubmitEnabled": "⚡ Kirim otomatis aktif",
     "globalTitle": "Sinkronisasi Global",
-    "globalInfo": "Berlaku untuk semua lagu hanya di perangkat ini. Tidak pernah dikirim ke komunitas."
+    "globalInfo": "Berlaku untuk semua lagu hanya di perangkat ini. Tidak pernah dikirim ke komunitas.",
+    "communityUnavailableLocal": "Offset komunitas tidak dapat dikirim untuk lagu lokal tanpa Spotify trackId."
   },
   "playbarButton": {
     "label": "Lirik Plus"
@@ -1665,6 +1666,7 @@ window.LANG_ID = {
     "loading": "Memuat info video...",
     "notFound": "Video tidak ditemukan.",
     "error": "Terjadi kesalahan.",
+    "localTrackNeedsVideo": "Untuk lagu lokal, atur URL YouTube secara manual dari tombol video.",
     "loadingMessage": "Memuat latar belakang video... Membutuhkan waktu sekitar 30 detik.",
     "downloadingVideo": "engunduh video...",
     "downloading": "Mengunduh: {percent}%",
@@ -1720,6 +1722,8 @@ window.LANG_ID = {
     "loading": "Memuat daftar video...",
     "loadError": "Gagal memuat daftar video",
     "noVideos": "Tidak ada video komunitas terdaftar",
+    "localTrackDesc": "Ini adalah lagu lokal. URL YouTube hanya disimpan di perangkat ini dan tidak dikirim ke server.",
+    "localOnlyApplied": "Video lokal diterapkan.",
     "autoDetected": "Otomatis",
     "startTime": "Mulai",
     "submittedBy": "Pengirim",
@@ -2108,6 +2112,7 @@ window.LANG_ID = {
     "submit": "Kirim",
     "submitting": "Mengirim...",
     "noSyncData": "Tidak ada data sinkronisasi yang terdaftar",
+    "trackIdRequired": "Sinkronisasi karaoke tidak dapat dikirim untuk lagu lokal tanpa Spotify trackId.",
     "incompleteConfirm": "Beberapa baris belum disinkronkan. Tetap kirim?",
     "submitSuccess": "Data sinkronisasi terkirim! Akan diterapkan setelah persetujuan admin.",
     "submitError": "Gagal mengirim data sinkronisasi",

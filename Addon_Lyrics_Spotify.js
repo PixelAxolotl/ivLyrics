@@ -103,7 +103,11 @@
                 spotifyLyricsProvider: null
             };
 
-            const trackId = info.uri.split(':')[2];
+            const trackId = window.Utils?.extractTrackId?.(info.uri);
+            if (!trackId) {
+                result.error = 'Missing Spotify track ID';
+                return result;
+            }
 
             // Spotify API 호출
             let body;

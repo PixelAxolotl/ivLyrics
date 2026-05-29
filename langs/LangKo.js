@@ -1656,7 +1656,8 @@ window.LANG_KO = {
     "feedbackFailed": "피드백 제출에 실패했습니다",
     "autoSubmitEnabled": "⚡ 자동 제출이 활성화되어 있습니다",
     "globalTitle": "전역 싱크",
-    "globalInfo": "이 기기에서만 모든 곡에 적용됩니다. 커뮤니티에는 절대 제출되지 않습니다."
+    "globalInfo": "이 기기에서만 모든 곡에 적용됩니다. 커뮤니티에는 절대 제출되지 않습니다.",
+    "communityUnavailableLocal": "Spotify trackId가 없는 로컬 곡은 커뮤니티 오프셋을 등록할 수 없습니다."
   },
   "playbarButton": {
     "label": "가사 플러스"
@@ -1665,6 +1666,7 @@ window.LANG_KO = {
     "loading": "동영상 정보를 불러오는 중...",
     "notFound": "동영상을 찾을 수 없습니다.",
     "error": "오류가 발생했습니다.",
+    "localTrackNeedsVideo": "로컬 곡은 영상 버튼에서 YouTube URL을 직접 지정하세요.",
     "loadingMessage": "영상 배경 로딩 중... 30초 정도 소요됩니다.",
     "downloadingVideo": "영상 다운로드 중...",
     "downloading": "다운로드 중: {percent}%",
@@ -1720,6 +1722,8 @@ window.LANG_KO = {
     "loading": "영상 목록 불러오는 중...",
     "loadError": "영상 목록을 불러오지 못했습니다",
     "noVideos": "등록된 커뮤니티 영상이 없습니다",
+    "localTrackDesc": "로컬 곡입니다. YouTube URL은 이 기기에만 저장되고 서버로 전송되지 않습니다.",
+    "localOnlyApplied": "로컬 영상이 적용되었습니다.",
     "autoDetected": "자동등록",
     "startTime": "시작",
     "submittedBy": "등록자",
@@ -2109,6 +2113,7 @@ window.LANG_KO = {
     "submit": "제출",
     "submitting": "제출 중...",
     "noSyncData": "등록된 싱크 데이터가 없습니다",
+    "trackIdRequired": "Spotify trackId가 없는 로컬 곡은 노래방 싱크를 등록할 수 없습니다.",
     "incompleteConfirm": "일부 줄이 아직 싱크되지 않았습니다. 그래도 제출하시겠습니까?",
     "submitSuccess": "싱크 데이터가 제출되었습니다! 관리자 승인 후 적용됩니다.",
     "submitError": "싱크 데이터 제출에 실패했습니다",

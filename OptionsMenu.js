@@ -2341,6 +2341,7 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
   const triggerRef = useRef(null);
   const panelRef = useRef(null);
   const reactDom = window.Spicetify?.ReactDOM ?? window.ReactDOM ?? null;
+  const hasTrackId = !!Utils.extractTrackId(trackUri);
 
   useEffect(() => {
     ensureFluentModalStyles();
@@ -2356,6 +2357,13 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
   }, [trackUri]);
 
   const loadCommunityData = async () => {
+    if (!hasTrackId) {
+      setCommunityData(null);
+      setFeedbackStatus(null);
+      setIsLoadingCommunity(false);
+      return;
+    }
+
     setIsLoadingCommunity(true);
     try {
       const data = await Utils.getCommunityOffset(trackUri, provider);
@@ -2371,10 +2379,10 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
   };
 
   useEffect(() => {
-    if (isOpen && CONFIG.visual["community-sync-enabled"]) {
+    if (isOpen && CONFIG.visual["community-sync-enabled"] && hasTrackId) {
       loadCommunityData();
     }
-  }, [isOpen, trackUri, provider]);
+  }, [isOpen, trackUri, provider, hasTrackId]);
 
   useEffect(() => {
     const handleCommunityOffsetChange = (event) => {
@@ -2438,7 +2446,7 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
     await Utils.setTrackSyncOffset(trackUri, newOffset);
     onOffsetChange?.(newOffset);
 
-    if (CONFIG.visual["community-sync-enabled"] && CONFIG.visual["community-sync-auto-submit"]) {
+    if (CONFIG.visual["community-sync-enabled"] && CONFIG.visual["community-sync-auto-submit"] && hasTrackId) {
       if (submitTimeoutRef.current) {
         clearTimeout(submitTimeoutRef.current);
       }
@@ -2461,6 +2469,10 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
 
   const submitOffset = async () => {
     if (!CONFIG.visual["community-sync-enabled"]) return;
+    if (!hasTrackId) {
+      Toast.error(I18n.t("syncAdjust.communityUnavailableLocal") || "Spotify trackId가 없는 로컬 곡은 커뮤니티 오프셋을 등록할 수 없습니다.");
+      return;
+    }
     setIsSubmitting(true);
     try {
       await Utils.submitCommunityOffset(trackUri, offset, provider);
@@ -2479,6 +2491,10 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
 
   const submitFeedback = async (isPositive) => {
     if (!CONFIG.visual["community-sync-enabled"]) return;
+    if (!hasTrackId) {
+      Toast.error(I18n.t("syncAdjust.communityUnavailableLocal") || "Spotify trackId가 없는 로컬 곡은 커뮤니티 오프셋을 등록할 수 없습니다.");
+      return;
+    }
     if (communityData?.user?.hasSubmitted) {
       Toast.error(I18n.t("syncAdjust.cannotFeedbackOwnSubmission"));
       return;
@@ -2506,6 +2522,7 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
   const communityOffset = communityData?.medianOffsetMs ?? communityData?.offsetMs ?? 0;
   const confidence = communityData?.confidence ?? 0;
   const isCommunityEnabled = CONFIG.visual["community-sync-enabled"];
+  const canUseCommunitySync = isCommunityEnabled && hasTrackId;
 
   const modalOverlay = isOpen
     ? react.createElement(
@@ -2672,7 +2689,18 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
                 )
               )
             ),
-            isCommunityEnabled &&
+            isCommunityEnabled && !hasTrackId &&
+              react.createElement(
+                "div",
+                { className: "lyrics-sync-adjust-community-section" },
+                react.createElement("div", { className: "lyrics-sync-adjust-community-header" }, I18n.t("syncAdjust.communityTitle")),
+                react.createElement(
+                  "div",
+                  { className: "lyrics-sync-adjust-empty-row" },
+                  react.createElement("span", { className: "lyrics-sync-adjust-empty" }, I18n.t("syncAdjust.communityUnavailableLocal") || "Spotify trackId가 없는 로컬 곡은 커뮤니티 오프셋을 등록할 수 없습니다.")
+                )
+              ),
+            canUseCommunitySync &&
               react.createElement(
                 "div",
                 { className: "lyrics-sync-adjust-community-section" },
@@ -4034,6 +4062,12 @@ function setSyncDataCreatorVisibility(active) {
 
 // Sync Data Creator - 노래방 싱크 데이터 생성 (전체화면)
 async function openSyncDataCreator(trackInfo, initialData = null) {
+  const trackId = Utils.extractTrackId(trackInfo?.uri);
+  if (!trackId) {
+    Toast.error(I18n.t("syncCreator.trackIdRequired") || "Spotify trackId가 없는 로컬 곡은 노래방 싱크를 등록할 수 없습니다.");
+    return;
+  }
+
   try {
     await Utils.requireDiscordAuth(
       I18n.t("syncCreator.loginRequired"),
@@ -4110,6 +4144,8 @@ const SyncDataCreatorButton = react.memo(({ trackInfo, showHint, isFullscreen = 
   const wrapperRef = react.useRef(null);
   const [hintPosition, setHintPosition] = react.useState(null);
   const reactDom = resolveOptionsReactDom();
+  const hasTrackId = !!Utils.extractTrackId(trackInfo?.uri);
+  const disabledTooltip = I18n.t("syncCreator.trackIdRequired") || "Spotify trackId가 없는 로컬 곡은 노래방 싱크를 등록할 수 없습니다.";
 
   const updateHintPosition = react.useCallback(() => {
     const wrapper = wrapperRef.current;
@@ -4145,6 +4181,10 @@ const SyncDataCreatorButton = react.memo(({ trackInfo, showHint, isFullscreen = 
   }, [showHint, isFullscreen, updateHintPosition]);
 
   const handleClick = () => {
+    if (!hasTrackId) {
+      Toast.error(disabledTooltip);
+      return;
+    }
     void openSyncDataCreator(trackInfo, null);
   };
   const hintText = I18n.t("syncCreator.clickHereHint") || "";
@@ -4181,12 +4221,13 @@ const SyncDataCreatorButton = react.memo(({ trackInfo, showHint, isFullscreen = 
       inlineHint,
     react.createElement(
       Spicetify.ReactComponent.TooltipWrapper,
-      { label: I18n.t("syncCreator.buttonTooltip") || "Create Karaoke Sync" },
+      { label: hasTrackId ? (I18n.t("syncCreator.buttonTooltip") || "Create Karaoke Sync") : disabledTooltip },
       react.createElement(
         "button",
         {
-        className: "lyrics-config-button",
+        className: `lyrics-config-button${hasTrackId ? "" : " disabled"}`,
           onClick: handleClick,
+          disabled: !hasTrackId,
         },
         react.createElement(
           "svg",

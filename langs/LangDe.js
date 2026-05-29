@@ -1656,7 +1656,8 @@ window.LANG_DE = {
     "feedbackFailed": "Feedback fehlgeschlagen",
     "autoSubmitEnabled": "⚡ Automatisches Senden aktiviert",
     "globalTitle": "Globale Synchronisierung",
-    "globalInfo": "Gilt nur auf diesem Gerät für alle Songs. Wird niemals an die Community gesendet."
+    "globalInfo": "Gilt nur auf diesem Gerät für alle Songs. Wird niemals an die Community gesendet.",
+    "communityUnavailableLocal": "Community-Offsets können für lokale Titel ohne Spotify trackId nicht übermittelt werden."
   },
   "playbarButton": {
     "label": "Lyrics Plus"
@@ -1665,6 +1666,7 @@ window.LANG_DE = {
     "loading": "Lade Videoinformationen...",
     "notFound": "Video nicht gefunden.",
     "error": "Ein Fehler ist aufgetreten.",
+    "localTrackNeedsVideo": "Lege für lokale Titel die YouTube-URL manuell über die Video-Schaltfläche fest.",
     "loadingMessage": "Lade Video-Hintergrund... dauert ca. 30 Sekunden.",
     "downloadingVideo": "Lade Video herunter...",
     "downloading": "Herunterladen: {percent}%",
@@ -1720,6 +1722,8 @@ window.LANG_DE = {
     "loading": "Lade Videoliste...",
     "loadError": "Videoliste konnte nicht geladen werden",
     "noVideos": "Keine Community-Videos registriert",
+    "localTrackDesc": "Dies ist ein lokaler Titel. Die YouTube-URL wird nur auf diesem Gerät gespeichert und nicht an den Server gesendet.",
+    "localOnlyApplied": "Lokales Video angewendet.",
     "autoDetected": "Automatisch",
     "startTime": "Start",
     "submittedBy": "Von",
@@ -2108,6 +2112,7 @@ window.LANG_DE = {
     "submit": "Senden",
     "submitting": "Sende...",
     "noSyncData": "Keine Sync-Daten vorhanden",
+    "trackIdRequired": "Karaoke-Sync kann für lokale Titel ohne Spotify trackId nicht übermittelt werden.",
     "incompleteConfirm": "Einige Zeilen sind noch nicht synchronisiert. Trotzdem senden?",
     "submitSuccess": "Sync-Daten gesendet! Werden nach Prüfung angewendet.",
     "submitError": "Senden fehlgeschlagen",

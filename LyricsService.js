@@ -1712,9 +1712,9 @@
             return normalizeSyncDataTrackId(trackId)
                 || normalizeSyncDataTrackId(metadata?.trackId)
                 || normalizeSyncDataTrackId(metadata?.id)
-                || normalizeSyncDataTrackId(metadata?.uri?.split?.(':')?.[2])
+                || normalizeSyncDataTrackId(window.Utils?.extractTrackId?.(metadata?.uri))
                 || normalizeSyncDataTrackId(metadata?.track?.id)
-                || normalizeSyncDataTrackId(metadata?.track?.uri?.split?.(':')?.[2]);
+                || normalizeSyncDataTrackId(window.Utils?.extractTrackId?.(metadata?.track?.uri));
         }
 
         function firstNormalizedSyncDataIsrc(...values) {
@@ -4654,7 +4654,7 @@
             }
 
             const trackUri = result.uri || info?.uri || '';
-            const trackId = trackUri.split(':')[2];
+            const trackId = Utils.extractTrackId(trackUri);
             if (!trackId) {
                 return clearPseudoKaraoke(result);
             }
@@ -4859,7 +4859,7 @@
                 artist: item.artists?.map(a => a.name).join(', ') || '',
                 album: item.album?.name || '',
                 duration: item.duration?.milliseconds || 0,
-                trackId: item.uri?.split(':')[2]
+                trackId: Utils.extractTrackId(item.uri)
             };
         },
 
@@ -5019,7 +5019,7 @@
                         if (mode1 && mode1 !== 'none' && String(mode1).startsWith('gemini')) {
                             const wantPhonetic = mode1 === 'gemini_romaji';
                             const response = await window.Translator.callGemini({
-                                trackId: info.uri?.split(':')[2],
+                                trackId: Utils.extractTrackId(info.uri),
                                 artist: info.artist,
                                 title: info.title,
                                 text: lyricsText,
@@ -5034,7 +5034,7 @@
                         if (mode2 && mode2 !== 'none' && String(mode2).startsWith('gemini')) {
                             const wantPhonetic = mode2 === 'gemini_romaji';
                             const response = await window.Translator.callGemini({
-                                trackId: info.uri?.split(':')[2],
+                                trackId: Utils.extractTrackId(info.uri),
                                 artist: info.artist,
                                 title: info.title,
                                 text: lyricsText,
@@ -5228,7 +5228,7 @@
                 return result;
             }
 
-            const trackId = result.uri.split(':')[2];
+            const trackId = Utils.extractTrackId(result.uri);
             const spotifyData = window.SpotifyDataHelper?.extractSpotifyData?.(result.uri);
             const trackIsrc = window.SyncDataService?.normalizeSyncDataIsrc?.(
                 result.isrc ||
@@ -5476,7 +5476,7 @@
 
             let finalTrackId = trackId;
             if (!finalTrackId) {
-                finalTrackId = Spicetify.Player.data?.item?.uri?.split(':')[2];
+                finalTrackId = Utils.extractTrackId(Spicetify.Player.data?.item?.uri);
             }
             if (!finalTrackId) {
                 return null;
@@ -5594,7 +5594,7 @@
 
             let finalTrackId = trackId;
             if (!finalTrackId) {
-                finalTrackId = Spicetify.Player.data?.item?.uri?.split(':')[2];
+                finalTrackId = Utils.extractTrackId(Spicetify.Player.data?.item?.uri);
             }
             if (!finalTrackId) {
                 throw new Error("No track ID available");

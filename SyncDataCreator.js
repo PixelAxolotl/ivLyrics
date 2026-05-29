@@ -1960,14 +1960,18 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			.sort((a, b) => a - b)
 			.slice(0, SYNC_CREATOR_MAX_MERGED_LINES - 1);
 	}, []);
-	const lineHasParallelRangeCovering = useCallback((line, lineStart, lineEnd) => (
+	const lineHasParallelRangeOverlapping = useCallback((line, lineStart, lineEnd) => (
 		Array.isArray(line?.parallel?.parts)
 		&& line.parallel.parts.some(part =>
 			Array.isArray(part?.ranges)
-			&& part.ranges.some(range =>
-				Number(range?.start) <= lineStart
-				&& Number(range?.end) >= lineEnd
-			)
+			&& part.ranges.some((range) => {
+				const rangeStart = Number(range?.start);
+				const rangeEnd = Number(range?.end);
+				return Number.isInteger(rangeStart)
+					&& Number.isInteger(rangeEnd)
+					&& rangeStart <= lineEnd
+					&& rangeEnd >= lineStart;
+			})
 		)
 	), []);
 	const getMergedLineIndexesForStart = useCallback((startIndex, linesByStartOverride = null) => {
@@ -1975,38 +1979,48 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const lineStart = lineCharOffsets[startIndex];
 		if (!Number.isInteger(lineStart)) return [startIndex];
 
-		const draftStarts = normalizeMergedLineDraftStarts(mergedLineDrafts[lineStart]);
-		if (draftStarts.length > 0) {
+		const getIndexesFromMergedStarts = (mergedStarts) => {
 			const indexes = [startIndex];
 			for (let index = startIndex + 1; index < lyricsLines.length && indexes.length < SYNC_CREATOR_MAX_MERGED_LINES; index++) {
 				const nextStart = lineCharOffsets[index];
-				if (draftStarts.includes(nextStart)) {
+				if (mergedStarts.includes(nextStart)) {
 					indexes.push(index);
 					continue;
 				}
 				break;
 			}
 			return indexes;
-		}
+		};
+
+		const draftStarts = normalizeMergedLineDraftStarts(mergedLineDrafts[lineStart]);
+		if (draftStarts.length > 0) return getIndexesFromMergedStarts(draftStarts);
 
 		const linesByStart = linesByStartOverride
 			|| new Map((Array.isArray(syncData?.lines) ? syncData.lines : []).map(line => [line.start, line]));
 		const lineData = linesByStart.get(lineStart);
-		if (!lineData || !Array.isArray(lineData.parallel?.parts)) return [startIndex];
+		if (!lineData) return [startIndex];
+
+		const persistedMergedStarts = normalizeMergedLineDraftStarts(lineData.mergedLineContinuationStarts);
+		if (persistedMergedStarts.length > 0) {
+			const indexes = getIndexesFromMergedStarts(persistedMergedStarts);
+			if (indexes.length > 1) return indexes;
+		}
+
+		if (!Array.isArray(lineData.parallel?.parts)) return [startIndex];
 
 		const indexes = [startIndex];
 		for (let index = startIndex + 1; index < lyricsLines.length && indexes.length < SYNC_CREATOR_MAX_MERGED_LINES; index++) {
 			const nextStart = lineCharOffsets[index];
 			const nextEnd = getLineEndAtIndex(index);
 			if (!Number.isInteger(nextStart) || nextEnd < nextStart || Number(lineData.end) < nextEnd) break;
-			if (!lineHasParallelRangeCovering(lineData, nextStart, nextEnd)) break;
+			if (!lineHasParallelRangeOverlapping(lineData, nextStart, nextEnd)) break;
 			indexes.push(index);
 		}
 		return indexes;
 	}, [
 		getLineEndAtIndex,
 		lineCharOffsets,
-		lineHasParallelRangeCovering,
+		lineHasParallelRangeOverlapping,
 		lyricsLines.length,
 		mergedLineDrafts,
 		normalizeMergedLineDraftStarts,
@@ -3114,6 +3128,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					chars: normalizeCommittedLineChars(snapshots.flatMap(snapshot => snapshot.chars), previousLineEndTime),
 					speaker: snapshots[0].speaker,
 					kind: snapshots[0].kind,
+					mergedLineContinuationStarts: nextMergedLineIndexes.slice(1).map(index => lineCharOffsets[index]),
 					parallel: sanitizeSyncCreatorParallel({
 						layout: 'stack',
 						parts: snapshots.map((snapshot, index) => ({

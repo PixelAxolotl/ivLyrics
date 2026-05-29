@@ -1085,8 +1085,9 @@ window.LANG_ES = {
           "label": "Tipo de fondo",
           "desc": "Selecciona el estilo de fondo",
           "album": "Color del álbum",
-          "custom": "Color personalizado",
-          "gradient": "Degradado basado en álbum"
+          "gradient": "Degradado personalizado",
+          "custom": "Color sólido",
+          "transparent": "Transparente"
         },
         "color": {
           "label": "Color de fondo",

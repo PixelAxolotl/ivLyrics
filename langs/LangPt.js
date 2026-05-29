@@ -1085,8 +1085,9 @@ window.LANG_PT = {
           "label": "Tipo de Fundo",
           "desc": "Selecione o estilo do fundo",
           "album": "Cor do Álbum",
-          "custom": "Cor Personalizada",
-          "gradient": "Gradiente Baseado no Álbum"
+          "gradient": "Gradiente personalizado",
+          "custom": "Cor sólida",
+          "transparent": "Transparente"
         },
         "color": {
           "label": "Cor de Fundo",

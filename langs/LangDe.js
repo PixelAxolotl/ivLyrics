@@ -1085,8 +1085,9 @@ window.LANG_DE = {
           "label": "Hintergrundtyp",
           "desc": "Wählen Sie den Hintergrundstil",
           "album": "Albumfarbe",
-          "custom": "Benutzerdefinierte Farbe",
-          "gradient": "Album-Verlauf"
+          "gradient": "Benutzerdefinierter Verlauf",
+          "custom": "Einfarbig",
+          "transparent": "Transparent"
         },
         "color": {
           "label": "Hintergrundfarbe",

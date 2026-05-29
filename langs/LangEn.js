@@ -1085,8 +1085,9 @@ window.LANG_EN = {
           "label": "Background Type",
           "desc": "Select background style",
           "album": "Album Color",
-          "custom": "Custom Color",
-          "gradient": "Album-based Gradient"
+          "gradient": "Custom Gradient",
+          "custom": "Solid Color",
+          "transparent": "Transparent"
         },
         "color": {
           "label": "Background Color",

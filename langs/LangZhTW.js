@@ -1085,8 +1085,9 @@ window.LANG_ZH_TW = {
           "label": "背景類型",
           "desc": "選擇背景樣式",
           "album": "專輯顏色",
-          "custom": "自訂顏色",
-          "gradient": "專輯基底漸層"
+          "gradient": "自訂漸層",
+          "custom": "純色",
+          "transparent": "透明"
         },
         "color": {
           "label": "背景顏色",

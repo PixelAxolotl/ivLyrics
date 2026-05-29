@@ -1085,8 +1085,9 @@ window.LANG_SV = {
           "label": "Bakgrundstyp",
           "desc": "Välj bakgrundsstil",
           "album": "Album färg",
-          "custom": "Anpassad färg",
-          "gradient": "Albumbaserad gradient"
+          "gradient": "Anpassad gradient",
+          "custom": "Enfärgad",
+          "transparent": "Transparent"
         },
         "color": {
           "label": "Bakgrundsfärg",

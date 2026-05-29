@@ -1085,8 +1085,9 @@ window.LANG_MS = {
           "label": "Jenis Latar Belakang",
           "desc": "Pilih gaya latar belakang",
           "album": "Warna Album",
-          "custom": "Warna Tersuai",
-          "gradient": "Gradien Berasaskan Album"
+          "gradient": "Gradien Tersuai",
+          "custom": "Warna Pepejal",
+          "transparent": "Lutsinar"
         },
         "color": {
           "label": "Warna Latar Belakang",

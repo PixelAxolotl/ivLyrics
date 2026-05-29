@@ -1085,8 +1085,9 @@ window.LANG_ID = {
           "label": "Tipe Latar Belakang",
           "desc": "Pilih gaya latar belakang",
           "album": "Warna Album",
-          "custom": "Warna Kustom",
-          "gradient": "Gradasi Berbasis Album"
+          "gradient": "Gradasi Kustom",
+          "custom": "Warna Solid",
+          "transparent": "Transparan"
         },
         "color": {
           "label": "Warna Latar Belakang",

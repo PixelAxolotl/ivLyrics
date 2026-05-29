@@ -1085,8 +1085,9 @@ window.LANG_IT = {
           "label": "Tipo sfondo",
           "desc": "Seleziona lo stile dello sfondo",
           "album": "Colore album",
-          "custom": "Colore personalizzato",
-          "gradient": "Gradiente basato sull'album"
+          "gradient": "Gradiente personalizzato",
+          "custom": "Colore pieno",
+          "transparent": "Trasparente"
         },
         "color": {
           "label": "Colore sfondo",

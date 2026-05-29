@@ -1085,8 +1085,9 @@ window.LANG_JA = {
           "label": "背景タイプ",
           "desc": "背景スタイルを選択します",
           "album": "アルバムカラー",
-          "custom": "カスタムカラー",
-          "gradient": "アルバムベースのグラデーション"
+          "gradient": "カスタムグラデーション",
+          "custom": "単色",
+          "transparent": "透明"
         },
         "color": {
           "label": "背景色",

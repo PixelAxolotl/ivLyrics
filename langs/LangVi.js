@@ -1085,8 +1085,9 @@ window.LANG_VI = {
           "label": "Loại nền",
           "desc": "Chọn kiểu nền",
           "album": "Màu Album",
-          "custom": "Màu tùy chỉnh",
-          "gradient": "Gradient dựa trên Album"
+          "gradient": "Gradient tùy chỉnh",
+          "custom": "Màu đơn",
+          "transparent": "Trong suốt"
         },
         "color": {
           "label": "Màu nền",

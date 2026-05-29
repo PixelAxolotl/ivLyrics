@@ -1085,8 +1085,9 @@ window.LANG_ZH_CN = {
           "label": "背景类型",
           "desc": "选择背景样式",
           "album": "专辑颜色",
-          "custom": "自定义颜色",
-          "gradient": "基于专辑的渐变"
+          "gradient": "自定义渐变",
+          "custom": "纯色",
+          "transparent": "透明"
         },
         "color": {
           "label": "背景颜色",

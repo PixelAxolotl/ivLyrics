@@ -3920,26 +3920,31 @@ const loadGoogleFontFamily = (fontFamily) => {
 
 // NowPlaying 패널 가사 미리보기 컴포넌트
 const NowPlayingPanelPreview = () => {
+  const parsePanelNumber = (value, fallback) => {
+    const parsed = parseInt(value, 10);
+    return Number.isNaN(parsed) ? fallback : parsed;
+  };
+
   const [fontFamily, setFontFamily] = useState(CONFIG.visual["panel-lyrics-font-family"] || "Pretendard Variable");
   const [originalFont, setOriginalFont] = useState(CONFIG.visual["panel-lyrics-original-font"] || "");
   const [phoneticFont, setPhoneticFont] = useState(CONFIG.visual["panel-lyrics-phonetic-font"] || "");
   const [translationFont, setTranslationFont] = useState(CONFIG.visual["panel-lyrics-translation-font"] || "");
-  const [fontScale, setFontScale] = useState(parseInt(CONFIG.visual["panel-font-scale"], 10) || 100);
-  const [originalSize, setOriginalSize] = useState(parseInt(CONFIG.visual["panel-lyrics-original-size"], 10) || 26);
-  const [phoneticSize, setPhoneticSize] = useState(parseInt(CONFIG.visual["panel-lyrics-phonetic-size"], 10) || 13);
-  const [translationSize, setTranslationSize] = useState(parseInt(CONFIG.visual["panel-lyrics-translation-size"], 10) || 13);
+  const [fontScale, setFontScale] = useState(parsePanelNumber(CONFIG.visual["panel-font-scale"], 100));
+  const [originalSize, setOriginalSize] = useState(parsePanelNumber(CONFIG.visual["panel-lyrics-original-size"], 26));
+  const [phoneticSize, setPhoneticSize] = useState(parsePanelNumber(CONFIG.visual["panel-lyrics-phonetic-size"], 13));
+  const [translationSize, setTranslationSize] = useState(parsePanelNumber(CONFIG.visual["panel-lyrics-translation-size"], 13));
 
   // 배경 설정
   const [bgType, setBgType] = useState(CONFIG.visual["panel-bg-type"] || "album");
   const [bgColor, setBgColor] = useState(CONFIG.visual["panel-bg-color"] || "#6366f1");
   const [bgGradient1, setBgGradient1] = useState(CONFIG.visual["panel-bg-gradient-1"] || "#6366f1");
   const [bgGradient2, setBgGradient2] = useState(CONFIG.visual["panel-bg-gradient-2"] || "#a855f7");
-  const [bgOpacity, setBgOpacity] = useState(parseInt(CONFIG.visual["panel-bg-opacity"], 10) || 30);
+  const [bgOpacity, setBgOpacity] = useState(parsePanelNumber(CONFIG.visual["panel-bg-opacity"], 30));
 
   // Border 설정
   const [borderEnabled, setBorderEnabled] = useState(CONFIG.visual["panel-border-enabled"] ?? false);
   const [borderColor, setBorderColor] = useState(CONFIG.visual["panel-border-color"] || "#ffffff");
-  const [borderOpacity, setBorderOpacity] = useState(parseInt(CONFIG.visual["panel-border-opacity"], 10) || 10);
+  const [borderOpacity, setBorderOpacity] = useState(parsePanelNumber(CONFIG.visual["panel-border-opacity"], 10));
 
   // 설정 변경 리스너
   useEffect(() => {
@@ -3949,20 +3954,20 @@ const NowPlayingPanelPreview = () => {
       if (name === "panel-lyrics-original-font") setOriginalFont(value || "");
       if (name === "panel-lyrics-phonetic-font") setPhoneticFont(value || "");
       if (name === "panel-lyrics-translation-font") setTranslationFont(value || "");
-      if (name === "panel-font-scale") setFontScale(parseInt(value, 10) || 100);
-      if (name === "panel-lyrics-original-size") setOriginalSize(parseInt(value, 10) || 26);
-      if (name === "panel-lyrics-phonetic-size") setPhoneticSize(parseInt(value, 10) || 13);
-      if (name === "panel-lyrics-translation-size") setTranslationSize(parseInt(value, 10) || 13);
+      if (name === "panel-font-scale") setFontScale(parsePanelNumber(value, 100));
+      if (name === "panel-lyrics-original-size") setOriginalSize(parsePanelNumber(value, 26));
+      if (name === "panel-lyrics-phonetic-size") setPhoneticSize(parsePanelNumber(value, 13));
+      if (name === "panel-lyrics-translation-size") setTranslationSize(parsePanelNumber(value, 13));
       // 배경 설정
       if (name === "panel-bg-type") setBgType(value || "album");
       if (name === "panel-bg-color") setBgColor(value || "#6366f1");
       if (name === "panel-bg-gradient-1") setBgGradient1(value || "#6366f1");
       if (name === "panel-bg-gradient-2") setBgGradient2(value || "#a855f7");
-      if (name === "panel-bg-opacity") setBgOpacity(parseInt(value, 10) || 30);
+      if (name === "panel-bg-opacity") setBgOpacity(parsePanelNumber(value, 30));
       // Border 설정
       if (name === "panel-border-enabled") setBorderEnabled(value === true || value === "true");
       if (name === "panel-border-color") setBorderColor(value || "#ffffff");
-      if (name === "panel-border-opacity") setBorderOpacity(parseInt(value, 10) || 10);
+      if (name === "panel-border-opacity") setBorderOpacity(parsePanelNumber(value, 10));
     };
 
     window.addEventListener("ivLyrics:panel-preview-update", handlePreviewUpdate);
@@ -4000,6 +4005,8 @@ const NowPlayingPanelPreview = () => {
   const getBackgroundStyle = () => {
     const opacityValue = bgOpacity / 100;
     switch (bgType) {
+      case "transparent":
+        return "transparent";
       case "custom":
         // 사용자 지정 단색
         const customRgb = hexToRgb(bgColor);
@@ -4034,6 +4041,11 @@ const NowPlayingPanelPreview = () => {
     } : { r: 99, g: 102, b: 241 };
   };
 
+  const previewBackgroundStyle = bgType === "transparent"
+    ? "transparent"
+    : `linear-gradient(rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.38)), ${getBackgroundStyle()}`;
+  const previewBackdropFilter = bgType === "transparent" || bgOpacity === 0 ? "none" : "blur(20px)";
+
   return react.createElement(
     "div",
     {
@@ -4048,11 +4060,11 @@ const NowPlayingPanelPreview = () => {
           position: "relative",
           overflow: "hidden",
           aspectRatio: "1 / 1",
-          boxSizing: "border-box",
-          display: "flex",
-          flexDirection: "column",
-          background: `linear-gradient(rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.38)), ${getBackgroundStyle()}`,
-          backdropFilter: bgOpacity === 0 ? "none" : "blur(20px)",
+           boxSizing: "border-box",
+           display: "flex",
+           flexDirection: "column",
+          background: previewBackgroundStyle,
+          backdropFilter: previewBackdropFilter,
           border: getBorderStyle(),
         }
       },
@@ -13613,8 +13625,9 @@ const ConfigModal = ({
               type: ConfigSelection,
               options: {
                 "album": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.album") || "Album Color",
-                "custom": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.custom") || "Custom Color",
-                "gradient": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.gradient") || "Gradient",
+                "gradient": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.gradient") || "Custom Gradient",
+                "custom": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.custom") || "Solid Color",
+                "transparent": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.transparent") || "Transparent",
               },
             },
             {
@@ -13625,6 +13638,20 @@ const ConfigModal = ({
               when: () => CONFIG.visual["panel-bg-type"] === "custom",
             },
             {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient1.label") || "Gradient Color 1",
+              key: "panel-bg-gradient-1",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient1.desc") || "First gradient color",
+              type: ConfigColorPicker,
+              when: () => CONFIG.visual["panel-bg-type"] === "gradient",
+            },
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient2.label") || "Gradient Color 2",
+              key: "panel-bg-gradient-2",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient2.desc") || "Second gradient color",
+              type: ConfigColorPicker,
+              when: () => CONFIG.visual["panel-bg-type"] === "gradient",
+            },
+            {
               desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.opacity.label") || "Background Opacity",
               key: "panel-bg-opacity",
               info: I18n.t("settingsAdvanced.nowPlayingPanel.background.opacity.desc") || "Background transparency (0-100%)",
@@ -13633,6 +13660,7 @@ const ConfigModal = ({
               max: 100,
               step: 5,
               unit: "%",
+              when: () => CONFIG.visual["panel-bg-type"] !== "transparent",
             },
           ],
           onChange: (name, value) => {

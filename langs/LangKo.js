@@ -1085,8 +1085,9 @@ window.LANG_KO = {
           "label": "배경 유형",
           "desc": "배경 스타일을 선택합니다",
           "album": "앨범 색상",
-          "custom": "사용자 지정 색상",
-          "gradient": "앨범 기반 그라데이션"
+          "gradient": "사용자 지정 그라데이션",
+          "custom": "단색",
+          "transparent": "투명"
         },
         "color": {
           "label": "배경 색상",

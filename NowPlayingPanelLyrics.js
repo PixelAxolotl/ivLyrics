@@ -201,6 +201,16 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
   background: rgba(0, 0, 0, 0.38) !important;
 }
 
+.ivlyrics-panel-lyrics-section.transparent-bg {
+  background: transparent !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.ivlyrics-panel-lyrics-section.transparent-bg::before {
+  background: transparent !important;
+}
+
 .ivlyrics-panel-bg-gradient {
   display: none;
   position: absolute;
@@ -1294,7 +1304,7 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 }
 
 .ivlyrics-nowplaying-bar-lyrics .ivlyrics-panel-lyrics-section {
-  background: rgba(0, 0, 0, 0.4) !important;
+  background: var(--ivlyrics-panel-bg, rgba(0, 0, 0, 0.4)) !important;
   backdrop-filter: blur(20px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
   aspect-ratio: auto !important;
@@ -3235,11 +3245,13 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 const borderColor = getStorageValue(BORDER_COLOR_KEY, DEFAULT_BORDER_COLOR);
                 const borderOpacity = getStorageValue(BORDER_OPACITY_KEY, DEFAULT_BORDER_OPACITY) / 100;
 
-                let backgroundStyle = '';
+                let backgroundStyle = 'transparent';
                 let gradientColors = null;
 
                 // 배경 유형에 따른 스타일 계산
-                if (bgType === 'album') {
+                if (bgType === 'transparent') {
+                    backgroundStyle = 'transparent';
+                } else if (bgType === 'album') {
                     gradientColors = await getAlbumGradientColors(trackUri);
                     backgroundStyle = `rgba(${rgbString(gradientColors.c1)}, ${bgOpacity})`;
                 } else if (bgType === 'custom') {
@@ -3268,10 +3280,12 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
 
                 // CSS 변수 및 직접 스타일 적용
                 sections.forEach((section) => {
-                    const useBlurGradient = !!gradientColors && bgOpacity > 0;
+                    const isTransparentBg = bgType === 'transparent';
+                    const useBlurGradient = !!gradientColors && bgOpacity > 0 && !isTransparentBg;
                     const gradientOpacity = useBlurGradient ? Math.max(bgOpacity, 0.72) : bgOpacity;
 
                     section.classList.toggle('blur-gradient-bg', useBlurGradient);
+                    section.classList.toggle('transparent-bg', isTransparentBg);
                     section.style.setProperty('--ivlyrics-panel-bg', backgroundStyle);
                     section.style.setProperty('--ivlyrics-panel-border', borderStyle);
                     section.style.setProperty('--ivlyrics-panel-gradient-opacity', String(gradientOpacity));
@@ -3280,16 +3294,16 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                         section.style.setProperty('--ivlyrics-panel-c2', rgbString(gradientColors.c2));
                         section.style.setProperty('--ivlyrics-panel-c3', rgbString(gradientColors.c3));
                     }
-                    section.style.background = backgroundStyle;
-                    section.style.border = borderStyle;
+                    section.style.setProperty('background', backgroundStyle, 'important');
+                    section.style.setProperty('border', borderStyle, 'important');
 
                     // 불투명도가 0이면 backdrop-filter도 제거
-                    if (bgOpacity === 0) {
-                        section.style.backdropFilter = 'none';
-                        section.style.webkitBackdropFilter = 'none';
+                    if (isTransparentBg || bgOpacity === 0) {
+                        section.style.setProperty('backdrop-filter', 'none', 'important');
+                        section.style.setProperty('-webkit-backdrop-filter', 'none', 'important');
                     } else {
-                        section.style.backdropFilter = 'blur(20px) saturate(180%)';
-                        section.style.webkitBackdropFilter = 'blur(20px) saturate(180%)';
+                        section.style.setProperty('backdrop-filter', 'blur(20px) saturate(180%)', 'important');
+                        section.style.setProperty('-webkit-backdrop-filter', 'blur(20px) saturate(180%)', 'important');
                     }
                 });
             };
@@ -3570,17 +3584,21 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             '--ivlyrics-panel-vocal-stack-line-height': `${Math.round(panelLineSlotHeight * 2.3)}px`,
             '--ivlyrics-panel-bar-fixed-height': `${Math.round(visibleLineCount * panelLineSlotHeight * 0.72)}px`
         }), [fontScale, panelLineSlotHeight, visibleLineCount]);
-        const usesBlurGradientPanelBg = getStorageValue(BG_TYPE_KEY, DEFAULT_BG_TYPE) !== 'custom';
-        const sectionClassName = `${PANEL_SECTION_CLASS}${isPlaybackPaused ? " playback-paused" : ""}${usesBlurGradientPanelBg ? " blur-gradient-bg" : ""}`;
-        const panelBackgroundLayer = react.createElement("div", {
-            className: "ivlyrics-panel-bg-gradient",
-            "aria-hidden": "true"
-        }, [1, 2, 3, 4, 5, 6].map((blobIndex) =>
-            react.createElement("div", {
-                key: `panel-bg-blob-${blobIndex}`,
-                className: `ivlyrics-panel-bg-blob blob-${blobIndex}`
-            })
-        ));
+        const panelBgType = getStorageValue(BG_TYPE_KEY, DEFAULT_BG_TYPE);
+        const usesBlurGradientPanelBg = panelBgType === 'album' || panelBgType === 'gradient';
+        const usesTransparentPanelBg = panelBgType === 'transparent';
+        const sectionClassName = `${PANEL_SECTION_CLASS}${isPlaybackPaused ? " playback-paused" : ""}${usesBlurGradientPanelBg ? " blur-gradient-bg" : ""}${usesTransparentPanelBg ? " transparent-bg" : ""}`;
+        const panelBackgroundLayer = usesBlurGradientPanelBg
+            ? react.createElement("div", {
+                className: "ivlyrics-panel-bg-gradient",
+                "aria-hidden": "true"
+            }, [1, 2, 3, 4, 5, 6].map((blobIndex) =>
+                react.createElement("div", {
+                    key: `panel-bg-blob-${blobIndex}`,
+                    className: `ivlyrics-panel-bg-blob blob-${blobIndex}`
+                })
+            ))
+            : null;
         const activeVisibleIndex = visibleLines.findIndex((visLine) => visLine.isActive);
         const currentVisibleIndex = activeVisibleIndex >= 0 ? activeVisibleIndex : Math.floor(visibleLines.length / 2);
         useEffect(() => {

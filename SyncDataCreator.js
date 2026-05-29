@@ -244,9 +244,13 @@ const normalizeSyncCreatorSpeaker = (value) => {
 	return SYNC_CREATOR_SPEAKER_OPTIONS.includes(normalized) ? normalized : '';
 };
 
-const getSyncCreatorSpeakerTextColor = (value) => (
-	SYNC_CREATOR_SPEAKER_TEXT_COLORS[normalizeSyncCreatorSpeaker(value)] || 'var(--spice-text)'
-);
+const getSyncCreatorSpeakerTextColor = (value) => {
+	const speaker = normalizeSyncCreatorSpeaker(value);
+	if (!speaker) return 'var(--spice-text)';
+	return window.ivLyricsSpeakerColors?.getTextColor?.(speaker)
+		|| SYNC_CREATOR_SPEAKER_TEXT_COLORS[speaker]
+		|| 'var(--spice-text)';
+};
 
 const isSyncCreatorDuetSpeaker = (value) => (
 	String(value || '').trim().toUpperCase().startsWith('DUET ')

@@ -770,6 +770,17 @@ window.LANG_ZH_TW = {
       "title": "請開發者喝杯咖啡",
       "button": "贊助"
     },
+    "multiVocalColors": {
+      "title": "多聲部顏色",
+      "subtitle": "自訂男聲、女聲與合唱聲部顏色。",
+      "description": "為每個多聲部演唱者選擇歌詞顏色。",
+      "maleGroup": "男聲",
+      "femaleGroup": "女聲",
+      "duetGroup": "合唱",
+      "reset": "重設顏色",
+      "resetDone": "多聲部顏色已重設。",
+      "invalidColor": "請輸入有效的 HEX 顏色。"
+    },
     "performance": {
       "rendering": {
         "title": "渲染幀率",

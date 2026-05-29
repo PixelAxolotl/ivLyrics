@@ -1426,6 +1426,36 @@ const CONFIG = {
       StorageManager.getItem("ivLyrics:visual:panel-border-color") || "#ffffff",
     "panel-border-opacity":
       StorageManager.getItem("ivLyrics:visual:panel-border-opacity") || "10",
+    "multi-vocal-speaker-color-male-1":
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-male-1") || "#e6f2ff",
+    "multi-vocal-speaker-color-male-2":
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-male-2") || "#d7ecff",
+    "multi-vocal-speaker-color-male-3":
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-male-3") || "#edf7ff",
+    "multi-vocal-speaker-color-male-4":
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-male-4") || "#dbe7ff",
+    "multi-vocal-speaker-color-male-5":
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-male-5") || "#e2f8ff",
+    "multi-vocal-speaker-color-female-1":
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-female-1") || "#ffe7ef",
+    "multi-vocal-speaker-color-female-2":
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-female-2") || "#ffe0e8",
+    "multi-vocal-speaker-color-female-3":
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-female-3") || "#fff0f5",
+    "multi-vocal-speaker-color-female-4":
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-female-4") || "#ffdfe0",
+    "multi-vocal-speaker-color-female-5":
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-female-5") || "#fbe5ff",
+    "multi-vocal-speaker-color-duet-1":
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-1") || "#eadfff",
+    "multi-vocal-speaker-color-duet-2":
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-2") || "#e2d2ff",
+    "multi-vocal-speaker-color-duet-3":
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-3") || "#f0e8ff",
+    "multi-vocal-speaker-color-duet-4":
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-4") || "#dec9ff",
+    "multi-vocal-speaker-color-duet-5":
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-5") || "#e9dcff",
     colorful: StorageManager.get("ivLyrics:visual:colorful", false),
     "gradient-background": StorageManager.get(
       "ivLyrics:visual:gradient-background"
@@ -2000,6 +2030,7 @@ CONFIG.visual["highlight-intensity"] = Number.parseInt(
 
 // Extension에서 접근 가능하도록 window에 노출
 window.CONFIG = CONFIG;
+window.ivLyricsSpeakerColors?.applyCssVariables?.();
 
 let CACHE = {};
 

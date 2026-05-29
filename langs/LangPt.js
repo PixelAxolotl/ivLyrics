@@ -770,6 +770,17 @@ window.LANG_PT = {
       "title": "Comprar um café para o desenvolvedor",
       "button": "Doar"
     },
+    "multiVocalColors": {
+      "title": "Cores de vários vocais",
+      "subtitle": "Personalize as cores de vozes masculinas, femininas e duetos.",
+      "description": "Escolha a cor da letra usada para cada intérprete no modo de vários vocais.",
+      "maleGroup": "Masculino",
+      "femaleGroup": "Feminino",
+      "duetGroup": "Dueto",
+      "reset": "Redefinir cores",
+      "resetDone": "As cores de vários vocais foram redefinidas.",
+      "invalidColor": "Insira uma cor HEX válida."
+    },
     "performance": {
       "rendering": {
         "title": "Taxa de quadros de renderização",

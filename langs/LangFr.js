@@ -770,6 +770,17 @@ window.LANG_FR = {
       "title": "Offrir un café au développeur",
       "button": "Faire un don"
     },
+    "multiVocalColors": {
+      "title": "Couleurs multi-voix",
+      "subtitle": "Personnalisez les couleurs des voix masculines, féminines et duo.",
+      "description": "Choisissez la couleur des paroles pour chaque interprète en mode multi-voix.",
+      "maleGroup": "Masculin",
+      "femaleGroup": "Féminin",
+      "duetGroup": "Duo",
+      "reset": "Réinitialiser les couleurs",
+      "resetDone": "Les couleurs multi-voix ont été réinitialisées.",
+      "invalidColor": "Saisissez une couleur HEX valide."
+    },
     "performance": {
       "rendering": {
         "title": "Fréquence de rendu",

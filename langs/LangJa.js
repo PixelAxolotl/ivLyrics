@@ -770,6 +770,17 @@ window.LANG_JA = {
       "title": "開発者にコーヒーを一杯奢る",
       "button": "寄付"
     },
+    "multiVocalColors": {
+      "title": "複数ボーカルの色",
+      "subtitle": "男性、女性、デュエットの話者色をカスタマイズします。",
+      "description": "複数ボーカルの各話者に使用する歌詞色を選択します。",
+      "maleGroup": "男性",
+      "femaleGroup": "女性",
+      "duetGroup": "デュエット",
+      "reset": "色をリセット",
+      "resetDone": "複数ボーカルの色をリセットしました。",
+      "invalidColor": "有効なHEXカラーを入力してください。"
+    },
     "performance": {
       "rendering": {
         "title": "レンダリングフレームレート",

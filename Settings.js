@@ -2298,6 +2298,234 @@ const ConfigColorPicker = ({ name, defaultValue, onChange = () => { } }) => {
   );
 };
 
+const MULTI_VOCAL_COLOR_GROUPS = [
+  {
+    id: "male",
+    labelKey: "settingsAdvanced.multiVocalColors.maleGroup",
+    fallbackLabel: "Male",
+    speakers: ["MALE 1", "MALE 2", "MALE 3", "MALE 4", "MALE 5"],
+  },
+  {
+    id: "female",
+    labelKey: "settingsAdvanced.multiVocalColors.femaleGroup",
+    fallbackLabel: "Female",
+    speakers: ["FEMALE 1", "FEMALE 2", "FEMALE 3", "FEMALE 4", "FEMALE 5"],
+  },
+  {
+    id: "duet",
+    labelKey: "settingsAdvanced.multiVocalColors.duetGroup",
+    fallbackLabel: "Duet",
+    speakers: ["DUET 1", "DUET 2", "DUET 3", "DUET 4", "DUET 5"],
+  },
+];
+
+const getMultiVocalColorHelper = () => window.ivLyricsSpeakerColors || {
+  defaultColors: {
+    "MALE 1": "#e6f2ff",
+    "MALE 2": "#d7ecff",
+    "MALE 3": "#edf7ff",
+    "MALE 4": "#dbe7ff",
+    "MALE 5": "#e2f8ff",
+    "FEMALE 1": "#ffe7ef",
+    "FEMALE 2": "#ffe0e8",
+    "FEMALE 3": "#fff0f5",
+    "FEMALE 4": "#ffdfe0",
+    "FEMALE 5": "#fbe5ff",
+    "DUET 1": "#eadfff",
+    "DUET 2": "#e2d2ff",
+    "DUET 3": "#f0e8ff",
+    "DUET 4": "#dec9ff",
+    "DUET 5": "#e9dcff",
+  },
+  normalizeColor(value) {
+    const color = String(value || "").trim();
+    if (/^#[0-9a-f]{6}$/i.test(color)) return color.toLowerCase();
+    if (/^#[0-9a-f]{3}$/i.test(color)) {
+      return `#${color.slice(1).split("").map((char) => char + char).join("")}`.toLowerCase();
+    }
+    return "";
+  },
+  getSettingKey(speaker) {
+    return `multi-vocal-speaker-color-${String(speaker || "").toLowerCase().replace(/\s+/g, "-")}`;
+  },
+  getTextColor(speaker) {
+    const key = this.getSettingKey(speaker);
+    return this.normalizeColor(CONFIG.visual[key]) || this.defaultColors[speaker] || "#ffffff";
+  },
+  setTextColor(speaker, color) {
+    const normalized = this.normalizeColor(color);
+    if (!normalized) return "";
+    const key = this.getSettingKey(speaker);
+    CONFIG.visual[key] = normalized;
+    StorageManager.saveConfig(key, normalized);
+    return normalized;
+  },
+  resetToDefaults() {
+    Object.entries(this.defaultColors).forEach(([speaker, color]) => {
+      const key = this.getSettingKey(speaker);
+      CONFIG.visual[key] = color;
+      StorageManager.removeItem(`ivLyrics:visual:${key}`);
+    });
+  },
+  applyCssVariables() {},
+};
+
+const ConfigMultiVocalColorSettings = () => {
+  const helper = getMultiVocalColorHelper();
+  const allSpeakers = MULTI_VOCAL_COLOR_GROUPS.flatMap((group) => group.speakers);
+  const buildCurrentColors = () => Object.fromEntries(
+    allSpeakers.map((speaker) => [
+      speaker,
+      helper.getTextColor?.(speaker) || helper.defaultColors?.[speaker] || "#ffffff",
+    ])
+  );
+  const [colors, setColors] = useState(buildCurrentColors);
+
+  const dispatchColorUpdate = (name, value) => {
+    lyricContainerUpdate?.();
+    window.dispatchEvent(new CustomEvent("ivLyrics", {
+      detail: { type: "config", name, value },
+    }));
+  };
+
+  const commitColor = (speaker, value) => {
+    const normalized = helper.normalizeColor?.(value);
+    if (!normalized) {
+      setColors((prev) => ({
+        ...prev,
+        [speaker]: helper.getTextColor?.(speaker) || helper.defaultColors?.[speaker] || "#ffffff",
+      }));
+      Toast?.error?.(I18n.t("settingsAdvanced.multiVocalColors.invalidColor") || "Enter a valid hex color.");
+      return;
+    }
+
+    const savedColor = helper.setTextColor?.(speaker, normalized) || normalized;
+    helper.applyCssVariables?.();
+    setColors((prev) => ({ ...prev, [speaker]: savedColor }));
+    dispatchColorUpdate(helper.getSettingKey?.(speaker) || `multi-vocal-speaker-color-${speaker.toLowerCase().replace(/\s+/g, "-")}`, savedColor);
+  };
+
+  const resetColors = () => {
+    helper.resetToDefaults?.();
+    helper.applyCssVariables?.();
+    setColors(buildCurrentColors());
+    dispatchColorUpdate("multi-vocal-speaker-color-reset", "default");
+    Toast?.success?.(I18n.t("settingsAdvanced.multiVocalColors.resetDone") || "Multi-vocal colors were reset.");
+  };
+
+  const sharedInputStyle = {
+    background: "var(--glass-bg-hover)",
+    border: "1px solid var(--glass-border)",
+    borderRadius: "8px",
+    color: "var(--text-primary)",
+    minHeight: "34px",
+    boxSizing: "border-box",
+  };
+
+  return react.createElement(
+    "div",
+    { className: "option-list-wrapper", "data-setting-key": "multi-vocal-colors" },
+    react.createElement(
+      "div",
+      {
+        className: "setting-row",
+        style: { alignItems: "stretch" },
+      },
+      react.createElement(
+        "div",
+        { className: "setting-row-content", style: { flexDirection: "column", alignItems: "stretch", gap: "16px" } },
+        react.createElement(
+          "div",
+          { style: { display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start" } },
+          react.createElement(
+            "div",
+            { style: { minWidth: 0 } },
+            react.createElement("div", { className: "setting-name" }, I18n.t("settingsAdvanced.multiVocalColors.description") || "Customize the lyric color for each multi-vocal speaker."),
+            react.createElement("div", { className: "setting-description" }, I18n.t("settingsAdvanced.multiVocalColors.subtitle") || "These colors are used in karaoke lyrics, the Now Playing panel, and the sync creator.")
+          ),
+          react.createElement(
+            "button",
+            { className: "btn", type: "button", onClick: resetColors, style: { whiteSpace: "nowrap" } },
+            I18n.t("settingsAdvanced.multiVocalColors.reset") || "Reset"
+          )
+        ),
+        react.createElement(
+          "div",
+          { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" } },
+          ...MULTI_VOCAL_COLOR_GROUPS.map((group) =>
+            react.createElement(
+              "div",
+              {
+                key: group.id,
+                style: {
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "8px",
+                  padding: "12px",
+                  borderRadius: "12px",
+                  border: "1px solid var(--glass-border)",
+                  background: "var(--glass-bg)",
+                },
+              },
+              react.createElement(
+                "div",
+                {
+                  style: {
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    color: "var(--text-secondary)",
+                    letterSpacing: "0.08em",
+                    textTransform: "uppercase",
+                  },
+                },
+                I18n.t(group.labelKey) || group.fallbackLabel
+              ),
+              ...group.speakers.map((speaker) => {
+                const color = colors[speaker] || helper.defaultColors?.[speaker] || "#ffffff";
+                const safeColor = helper.normalizeColor?.(color) || helper.defaultColors?.[speaker] || "#ffffff";
+                return react.createElement(
+                  "label",
+                  {
+                    key: speaker,
+                    style: {
+                      display: "grid",
+                      gridTemplateColumns: "minmax(58px, auto) 38px minmax(92px, 1fr)",
+                      alignItems: "center",
+                      gap: "8px",
+                      minWidth: 0,
+                    },
+                  },
+                  react.createElement("span", { style: { fontSize: "12px", fontWeight: 700, color: "var(--text-primary)" } }, speaker),
+                  react.createElement("input", {
+                    type: "color",
+                    value: safeColor,
+                    onChange: (event) => commitColor(speaker, event.target.value),
+                    "aria-label": speaker,
+                    style: { ...sharedInputStyle, width: "38px", padding: "3px", cursor: "pointer" },
+                  }),
+                  react.createElement("input", {
+                    type: "text",
+                    value: color,
+                    pattern: "^#[0-9A-Fa-f]{6}$",
+                    onChange: (event) => setColors((prev) => ({ ...prev, [speaker]: event.target.value })) ,
+                    onBlur: (event) => commitColor(speaker, event.target.value),
+                    onKeyDown: (event) => {
+                      if (event.key === "Enter") {
+                        event.currentTarget.blur();
+                      }
+                    },
+                    style: { ...sharedInputStyle, width: "100%", padding: "0 9px", fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace", fontSize: "12px" },
+                  })
+                );
+              })
+            )
+          )
+        )
+      )
+    )
+  );
+};
+
 const ColorPresetSelector = ({ name, defaultValue, onChange = () => { } }) => {
   const [selectedColor, setSelectedColor] = useState(defaultValue);
   const [showAll, setShowAll] = useState(false);
@@ -4703,6 +4931,20 @@ const ConfigModal = ({
       name: I18n.t("settingsAdvanced.syncMode.title"),
       desc: I18n.t("settingsAdvanced.syncMode.subtitle"),
       i18nKeys: ["tabs.appearance", "settingsAdvanced.syncMode.title", "settingsAdvanced.syncMode.subtitle", "sections.visualEffects"]
+    },
+    {
+      section: I18n.t("tabs.appearance"),
+      sectionKey: "appearance",
+      settingKey: "multi-vocal-colors",
+      name: I18n.t("settingsAdvanced.multiVocalColors.title"),
+      desc: I18n.t("settingsAdvanced.multiVocalColors.subtitle"),
+      i18nKeys: [
+        "tabs.appearance",
+        "settingsAdvanced.multiVocalColors.title",
+        "settingsAdvanced.multiVocalColors.subtitle",
+        "settingsAdvanced.multiVocalColors.description",
+      ],
+      keywords: ["multi vocal speaker color male female duet karaoke"]
     },
 
     // 외관 탭
@@ -10575,6 +10817,12 @@ const ConfigModal = ({
             window.dispatchEvent(configChange);
           },
         }),
+        react.createElement(SectionTitle, {
+          title: I18n.t("settingsAdvanced.multiVocalColors.title") || "Multi-vocal Colors",
+          subtitle: I18n.t("settingsAdvanced.multiVocalColors.subtitle") || "Customize male, female, and duet speaker colors.",
+          sectionKey: "multi-vocal-colors",
+        }),
+        react.createElement(ConfigMultiVocalColorSettings),
         react.createElement(SectionTitle, {
           title: I18n.t("settingsAdvanced.instrumentalBreak.title") || "Instrumental Marker",
           subtitle: I18n.t("settingsAdvanced.instrumentalBreak.subtitle") || "Replace long blank or note-only lyric gaps with an icon",

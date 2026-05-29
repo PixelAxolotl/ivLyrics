@@ -770,6 +770,17 @@ window.LANG_SV = {
       "title": "Köp utvecklaren en kaffe",
       "button": "Donera"
     },
+    "multiVocalColors": {
+      "title": "Färger för flera sångare",
+      "subtitle": "Anpassa färger för manliga, kvinnliga och duett-röster.",
+      "description": "Välj textfärg för varje röst i läget med flera sångare.",
+      "maleGroup": "Manlig",
+      "femaleGroup": "Kvinnlig",
+      "duetGroup": "Duett",
+      "reset": "Återställ färger",
+      "resetDone": "Färgerna för flera sångare har återställts.",
+      "invalidColor": "Ange en giltig HEX-färg."
+    },
     "performance": {
       "rendering": {
         "title": "Renderingsbildfrekvens",

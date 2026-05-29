@@ -770,6 +770,17 @@ window.LANG_ID = {
       "title": "Traktir kopi untuk pengembang",
       "button": "Donasi"
     },
+    "multiVocalColors": {
+      "title": "Warna multi-vokal",
+      "subtitle": "Sesuaikan warna penyanyi pria, wanita, dan duet.",
+      "description": "Pilih warna lirik untuk setiap penyanyi dalam mode multi-vokal.",
+      "maleGroup": "Pria",
+      "femaleGroup": "Wanita",
+      "duetGroup": "Duet",
+      "reset": "Reset warna",
+      "resetDone": "Warna multi-vokal telah direset.",
+      "invalidColor": "Masukkan warna HEX yang valid."
+    },
     "performance": {
       "rendering": {
         "title": "Frame Rate Rendering",

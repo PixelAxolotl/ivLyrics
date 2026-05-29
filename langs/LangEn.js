@@ -770,6 +770,17 @@ window.LANG_EN = {
       "title": "Buy the developer a coffee",
       "button": "Donate"
     },
+    "multiVocalColors": {
+      "title": "Multi-vocal Colors",
+      "subtitle": "Customize male, female, and duet speaker colors.",
+      "description": "Choose the lyric color used for each multi-vocal speaker.",
+      "maleGroup": "Male",
+      "femaleGroup": "Female",
+      "duetGroup": "Duet",
+      "reset": "Reset colors",
+      "resetDone": "Multi-vocal colors were reset.",
+      "invalidColor": "Enter a valid hex color."
+    },
     "performance": {
       "rendering": {
         "title": "Rendering Frame Rate",

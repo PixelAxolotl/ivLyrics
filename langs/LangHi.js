@@ -770,6 +770,17 @@ window.LANG_HI = {
       "title": "डेवलपर को कॉफी पिलाएं",
       "button": "डोनेट करें"
     },
+    "multiVocalColors": {
+      "title": "मल्टी-वोकल रंग",
+      "subtitle": "पुरुष, महिला और डुएट स्पीकर के रंग बदलें।",
+      "description": "हर मल्टी-वोकल स्पीकर के लिए उपयोग होने वाला गीत रंग चुनें।",
+      "maleGroup": "पुरुष",
+      "femaleGroup": "महिला",
+      "duetGroup": "डुएट",
+      "reset": "रंग रीसेट करें",
+      "resetDone": "मल्टी-वोकल रंग रीसेट कर दिए गए।",
+      "invalidColor": "मान्य HEX रंग दर्ज करें।"
+    },
     "performance": {
       "rendering": {
         "title": "रेंडरिंग फ्रेम दर",

@@ -770,6 +770,17 @@ window.LANG_VI = {
       "title": "Mua cho nhà phát triển một ly cà phê",
       "button": "Ủng hộ"
     },
+    "multiVocalColors": {
+      "title": "Màu nhiều giọng hát",
+      "subtitle": "Tùy chỉnh màu cho giọng nam, nữ và song ca.",
+      "description": "Chọn màu lời bài hát dùng cho từng giọng trong chế độ nhiều giọng hát.",
+      "maleGroup": "Nam",
+      "femaleGroup": "Nữ",
+      "duetGroup": "Song ca",
+      "reset": "Đặt lại màu",
+      "resetDone": "Đã đặt lại màu nhiều giọng hát.",
+      "invalidColor": "Nhập màu HEX hợp lệ."
+    },
     "performance": {
       "rendering": {
         "title": "Tốc độ khung hình kết xuất",

@@ -770,6 +770,17 @@ window.LANG_MS = {
       "title": "Belanja pembangun secawan kopi",
       "button": "Sumbang"
     },
+    "multiVocalColors": {
+      "title": "Warna berbilang vokal",
+      "subtitle": "Sesuaikan warna penyanyi lelaki, wanita dan duet.",
+      "description": "Pilih warna lirik yang digunakan untuk setiap penyanyi berbilang vokal.",
+      "maleGroup": "Lelaki",
+      "femaleGroup": "Wanita",
+      "duetGroup": "Duet",
+      "reset": "Tetapkan semula warna",
+      "resetDone": "Warna berbilang vokal telah ditetapkan semula.",
+      "invalidColor": "Masukkan warna HEX yang sah."
+    },
     "performance": {
       "rendering": {
         "title": "Bingkai Rendering",

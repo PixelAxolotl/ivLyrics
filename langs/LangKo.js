@@ -770,6 +770,17 @@ window.LANG_KO = {
       "title": "개발자에게 커피 한잔 사주기",
       "button": "후원"
     },
+    "multiVocalColors": {
+      "title": "멀티 보컬 색상",
+      "subtitle": "남성, 여성, 듀엣 스피커 색상을 직접 설정합니다.",
+      "description": "각 멀티 보컬 스피커에 사용할 가사 색상을 선택하세요.",
+      "maleGroup": "남성",
+      "femaleGroup": "여성",
+      "duetGroup": "듀엣",
+      "reset": "색상 초기화",
+      "resetDone": "멀티 보컬 색상을 초기화했습니다.",
+      "invalidColor": "올바른 HEX 색상을 입력하세요."
+    },
     "performance": {
       "rendering": {
         "title": "렌더링 프레임",

@@ -770,6 +770,17 @@ window.LANG_DE = {
       "title": "Dem Entwickler einen Kaffee spendieren",
       "button": "Unterstützen"
     },
+    "multiVocalColors": {
+      "title": "Mehrstimmen-Farben",
+      "subtitle": "Passe die Farben für männliche, weibliche und Duett-Sprecher an.",
+      "description": "Wähle die Textfarbe für jeden Sprecher im Mehrstimmenmodus.",
+      "maleGroup": "Männlich",
+      "femaleGroup": "Weiblich",
+      "duetGroup": "Duett",
+      "reset": "Farben zurücksetzen",
+      "resetDone": "Mehrstimmen-Farben wurden zurückgesetzt.",
+      "invalidColor": "Gib eine gültige HEX-Farbe ein."
+    },
     "performance": {
       "rendering": {
         "title": "Rendering-Bildrate",

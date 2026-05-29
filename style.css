@@ -1186,92 +1186,92 @@ div.lyrics-tabBar-headerItemLink {
 
 .lyrics-karaoke-part.speaker-male-1,
 .lyrics-lyricsContainer-LyricsLine.speaker-male-1 {
-  --lyrics-color-active: #e6f2ff;
-  --lyrics-color-inactive: rgba(210, 232, 255, 0.52);
+  --lyrics-color-active: var(--ivlyrics-multi-vocal-speaker-color-male-1, #e6f2ff);
+  --lyrics-color-inactive: color-mix(in srgb, var(--ivlyrics-multi-vocal-speaker-color-male-1, #e6f2ff) 52%, transparent);
 }
 
 .lyrics-karaoke-part.speaker-male-2,
 .lyrics-lyricsContainer-LyricsLine.speaker-male-2 {
-  --lyrics-color-active: #d7ecff;
-  --lyrics-color-inactive: rgba(190, 222, 255, 0.5);
+  --lyrics-color-active: var(--ivlyrics-multi-vocal-speaker-color-male-2, #d7ecff);
+  --lyrics-color-inactive: color-mix(in srgb, var(--ivlyrics-multi-vocal-speaker-color-male-2, #d7ecff) 50%, transparent);
 }
 
 .lyrics-karaoke-part.speaker-male-3,
 .lyrics-lyricsContainer-LyricsLine.speaker-male-3 {
-  --lyrics-color-active: #edf7ff;
-  --lyrics-color-inactive: rgba(220, 242, 255, 0.5);
+  --lyrics-color-active: var(--ivlyrics-multi-vocal-speaker-color-male-3, #edf7ff);
+  --lyrics-color-inactive: color-mix(in srgb, var(--ivlyrics-multi-vocal-speaker-color-male-3, #edf7ff) 50%, transparent);
 }
 
 .lyrics-karaoke-part.speaker-male-4,
 .lyrics-lyricsContainer-LyricsLine.speaker-male-4 {
-  --lyrics-color-active: #dbe7ff;
-  --lyrics-color-inactive: rgba(198, 214, 255, 0.5);
+  --lyrics-color-active: var(--ivlyrics-multi-vocal-speaker-color-male-4, #dbe7ff);
+  --lyrics-color-inactive: color-mix(in srgb, var(--ivlyrics-multi-vocal-speaker-color-male-4, #dbe7ff) 50%, transparent);
 }
 
 .lyrics-karaoke-part.speaker-male-5,
 .lyrics-lyricsContainer-LyricsLine.speaker-male-5 {
-  --lyrics-color-active: #e2f8ff;
-  --lyrics-color-inactive: rgba(198, 240, 255, 0.5);
+  --lyrics-color-active: var(--ivlyrics-multi-vocal-speaker-color-male-5, #e2f8ff);
+  --lyrics-color-inactive: color-mix(in srgb, var(--ivlyrics-multi-vocal-speaker-color-male-5, #e2f8ff) 50%, transparent);
 }
 
 .lyrics-karaoke-part.speaker-female-1,
 .lyrics-lyricsContainer-LyricsLine.speaker-female-1 {
-  --lyrics-color-active: #ffe7ef;
-  --lyrics-color-inactive: rgba(255, 205, 222, 0.52);
+  --lyrics-color-active: var(--ivlyrics-multi-vocal-speaker-color-female-1, #ffe7ef);
+  --lyrics-color-inactive: color-mix(in srgb, var(--ivlyrics-multi-vocal-speaker-color-female-1, #ffe7ef) 52%, transparent);
 }
 
 .lyrics-karaoke-part.speaker-female-2,
 .lyrics-lyricsContainer-LyricsLine.speaker-female-2 {
-  --lyrics-color-active: #ffe0e8;
-  --lyrics-color-inactive: rgba(255, 192, 214, 0.5);
+  --lyrics-color-active: var(--ivlyrics-multi-vocal-speaker-color-female-2, #ffe0e8);
+  --lyrics-color-inactive: color-mix(in srgb, var(--ivlyrics-multi-vocal-speaker-color-female-2, #ffe0e8) 50%, transparent);
 }
 
 .lyrics-karaoke-part.speaker-female-3,
 .lyrics-lyricsContainer-LyricsLine.speaker-female-3 {
-  --lyrics-color-active: #fff0f5;
-  --lyrics-color-inactive: rgba(255, 220, 232, 0.5);
+  --lyrics-color-active: var(--ivlyrics-multi-vocal-speaker-color-female-3, #fff0f5);
+  --lyrics-color-inactive: color-mix(in srgb, var(--ivlyrics-multi-vocal-speaker-color-female-3, #fff0f5) 50%, transparent);
 }
 
 .lyrics-karaoke-part.speaker-female-4,
 .lyrics-lyricsContainer-LyricsLine.speaker-female-4 {
-  --lyrics-color-active: #ffdfe0;
-  --lyrics-color-inactive: rgba(255, 196, 198, 0.5);
+  --lyrics-color-active: var(--ivlyrics-multi-vocal-speaker-color-female-4, #ffdfe0);
+  --lyrics-color-inactive: color-mix(in srgb, var(--ivlyrics-multi-vocal-speaker-color-female-4, #ffdfe0) 50%, transparent);
 }
 
 .lyrics-karaoke-part.speaker-female-5,
 .lyrics-lyricsContainer-LyricsLine.speaker-female-5 {
-  --lyrics-color-active: #fbe5ff;
-  --lyrics-color-inactive: rgba(242, 204, 255, 0.5);
+  --lyrics-color-active: var(--ivlyrics-multi-vocal-speaker-color-female-5, #fbe5ff);
+  --lyrics-color-inactive: color-mix(in srgb, var(--ivlyrics-multi-vocal-speaker-color-female-5, #fbe5ff) 50%, transparent);
 }
 
 .lyrics-karaoke-part.speaker-duet-1,
 .lyrics-lyricsContainer-LyricsLine.speaker-duet-1 {
-  --lyrics-color-active: #eadfff;
-  --lyrics-color-inactive: rgba(212, 186, 255, 0.52);
+  --lyrics-color-active: var(--ivlyrics-multi-vocal-speaker-color-duet-1, #eadfff);
+  --lyrics-color-inactive: color-mix(in srgb, var(--ivlyrics-multi-vocal-speaker-color-duet-1, #eadfff) 52%, transparent);
 }
 
 .lyrics-karaoke-part.speaker-duet-2,
 .lyrics-lyricsContainer-LyricsLine.speaker-duet-2 {
-  --lyrics-color-active: #e2d2ff;
-  --lyrics-color-inactive: rgba(202, 172, 255, 0.5);
+  --lyrics-color-active: var(--ivlyrics-multi-vocal-speaker-color-duet-2, #e2d2ff);
+  --lyrics-color-inactive: color-mix(in srgb, var(--ivlyrics-multi-vocal-speaker-color-duet-2, #e2d2ff) 50%, transparent);
 }
 
 .lyrics-karaoke-part.speaker-duet-3,
 .lyrics-lyricsContainer-LyricsLine.speaker-duet-3 {
-  --lyrics-color-active: #f0e8ff;
-  --lyrics-color-inactive: rgba(224, 204, 255, 0.5);
+  --lyrics-color-active: var(--ivlyrics-multi-vocal-speaker-color-duet-3, #f0e8ff);
+  --lyrics-color-inactive: color-mix(in srgb, var(--ivlyrics-multi-vocal-speaker-color-duet-3, #f0e8ff) 50%, transparent);
 }
 
 .lyrics-karaoke-part.speaker-duet-4,
 .lyrics-lyricsContainer-LyricsLine.speaker-duet-4 {
-  --lyrics-color-active: #dec9ff;
-  --lyrics-color-inactive: rgba(194, 158, 255, 0.5);
+  --lyrics-color-active: var(--ivlyrics-multi-vocal-speaker-color-duet-4, #dec9ff);
+  --lyrics-color-inactive: color-mix(in srgb, var(--ivlyrics-multi-vocal-speaker-color-duet-4, #dec9ff) 50%, transparent);
 }
 
 .lyrics-karaoke-part.speaker-duet-5,
 .lyrics-lyricsContainer-LyricsLine.speaker-duet-5 {
-  --lyrics-color-active: #e9dcff;
-  --lyrics-color-inactive: rgba(210, 184, 255, 0.5);
+  --lyrics-color-active: var(--ivlyrics-multi-vocal-speaker-color-duet-5, #e9dcff);
+  --lyrics-color-inactive: color-mix(in srgb, var(--ivlyrics-multi-vocal-speaker-color-duet-5, #e9dcff) 50%, transparent);
 }
 
 @keyframes ivlyrics-kind-effect-tremble {

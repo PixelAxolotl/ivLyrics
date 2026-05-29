@@ -770,6 +770,17 @@ window.LANG_TH = {
       "title": "เลี้ยงกาแฟนักพัฒนา",
       "button": "สนับสนุน"
     },
+    "multiVocalColors": {
+      "title": "สีหลายเสียงร้อง",
+      "subtitle": "ปรับแต่งสีของเสียงชาย หญิง และดูเอต",
+      "description": "เลือกสีเนื้อเพลงที่ใช้กับผู้ร้องแต่ละคนในโหมดหลายเสียงร้อง",
+      "maleGroup": "ชาย",
+      "femaleGroup": "หญิง",
+      "duetGroup": "ดูเอต",
+      "reset": "รีเซ็ตสี",
+      "resetDone": "รีเซ็ตสีหลายเสียงร้องแล้ว",
+      "invalidColor": "ป้อนสี HEX ที่ถูกต้อง"
+    },
     "performance": {
       "rendering": {
         "title": "เฟรมเรตการเรนเดอร์",

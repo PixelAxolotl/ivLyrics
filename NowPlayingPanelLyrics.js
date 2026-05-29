@@ -883,49 +883,49 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 
 .ivlyrics-panel-line-karaoke-row.speaker-male-1 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-male-1 .ivlyrics-panel-karaoke-word.sung,
-.ivlyrics-panel-line.speaker-male-1.active .ivlyrics-panel-line-text { color: #e6f2ff !important; }
+.ivlyrics-panel-line.speaker-male-1.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-male-1, #e6f2ff) !important; }
 .ivlyrics-panel-line-karaoke-row.speaker-male-2 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-male-2 .ivlyrics-panel-karaoke-word.sung,
-.ivlyrics-panel-line.speaker-male-2.active .ivlyrics-panel-line-text { color: #d7ecff !important; }
+.ivlyrics-panel-line.speaker-male-2.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-male-2, #d7ecff) !important; }
 .ivlyrics-panel-line-karaoke-row.speaker-male-3 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-male-3 .ivlyrics-panel-karaoke-word.sung,
-.ivlyrics-panel-line.speaker-male-3.active .ivlyrics-panel-line-text { color: #edf7ff !important; }
+.ivlyrics-panel-line.speaker-male-3.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-male-3, #edf7ff) !important; }
 .ivlyrics-panel-line-karaoke-row.speaker-male-4 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-male-4 .ivlyrics-panel-karaoke-word.sung,
-.ivlyrics-panel-line.speaker-male-4.active .ivlyrics-panel-line-text { color: #dbe7ff !important; }
+.ivlyrics-panel-line.speaker-male-4.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-male-4, #dbe7ff) !important; }
 .ivlyrics-panel-line-karaoke-row.speaker-male-5 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-male-5 .ivlyrics-panel-karaoke-word.sung,
-.ivlyrics-panel-line.speaker-male-5.active .ivlyrics-panel-line-text { color: #e2f8ff !important; }
+.ivlyrics-panel-line.speaker-male-5.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-male-5, #e2f8ff) !important; }
 .ivlyrics-panel-line-karaoke-row.speaker-female-1 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-female-1 .ivlyrics-panel-karaoke-word.sung,
-.ivlyrics-panel-line.speaker-female-1.active .ivlyrics-panel-line-text { color: #ffe7ef !important; }
+.ivlyrics-panel-line.speaker-female-1.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-female-1, #ffe7ef) !important; }
 .ivlyrics-panel-line-karaoke-row.speaker-female-2 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-female-2 .ivlyrics-panel-karaoke-word.sung,
-.ivlyrics-panel-line.speaker-female-2.active .ivlyrics-panel-line-text { color: #ffe0e8 !important; }
+.ivlyrics-panel-line.speaker-female-2.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-female-2, #ffe0e8) !important; }
 .ivlyrics-panel-line-karaoke-row.speaker-female-3 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-female-3 .ivlyrics-panel-karaoke-word.sung,
-.ivlyrics-panel-line.speaker-female-3.active .ivlyrics-panel-line-text { color: #fff0f5 !important; }
+.ivlyrics-panel-line.speaker-female-3.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-female-3, #fff0f5) !important; }
 .ivlyrics-panel-line-karaoke-row.speaker-female-4 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-female-4 .ivlyrics-panel-karaoke-word.sung,
-.ivlyrics-panel-line.speaker-female-4.active .ivlyrics-panel-line-text { color: #ffdfe0 !important; }
+.ivlyrics-panel-line.speaker-female-4.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-female-4, #ffdfe0) !important; }
 .ivlyrics-panel-line-karaoke-row.speaker-female-5 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-female-5 .ivlyrics-panel-karaoke-word.sung,
-.ivlyrics-panel-line.speaker-female-5.active .ivlyrics-panel-line-text { color: #fbe5ff !important; }
+.ivlyrics-panel-line.speaker-female-5.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-female-5, #fbe5ff) !important; }
 .ivlyrics-panel-line-karaoke-row.speaker-duet-1 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-duet-1 .ivlyrics-panel-karaoke-word.sung,
-.ivlyrics-panel-line.speaker-duet-1.active .ivlyrics-panel-line-text { color: #eadfff !important; }
+.ivlyrics-panel-line.speaker-duet-1.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-duet-1, #eadfff) !important; }
 .ivlyrics-panel-line-karaoke-row.speaker-duet-2 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-duet-2 .ivlyrics-panel-karaoke-word.sung,
-.ivlyrics-panel-line.speaker-duet-2.active .ivlyrics-panel-line-text { color: #e2d2ff !important; }
+.ivlyrics-panel-line.speaker-duet-2.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-duet-2, #e2d2ff) !important; }
 .ivlyrics-panel-line-karaoke-row.speaker-duet-3 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-duet-3 .ivlyrics-panel-karaoke-word.sung,
-.ivlyrics-panel-line.speaker-duet-3.active .ivlyrics-panel-line-text { color: #f0e8ff !important; }
+.ivlyrics-panel-line.speaker-duet-3.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-duet-3, #f0e8ff) !important; }
 .ivlyrics-panel-line-karaoke-row.speaker-duet-4 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-duet-4 .ivlyrics-panel-karaoke-word.sung,
-.ivlyrics-panel-line.speaker-duet-4.active .ivlyrics-panel-line-text { color: #dec9ff !important; }
+.ivlyrics-panel-line.speaker-duet-4.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-duet-4, #dec9ff) !important; }
 .ivlyrics-panel-line-karaoke-row.speaker-duet-5 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-duet-5 .ivlyrics-panel-karaoke-word.sung,
-.ivlyrics-panel-line.speaker-duet-5.active .ivlyrics-panel-line-text { color: #e9dcff !important; }
+.ivlyrics-panel-line.speaker-duet-5.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-duet-5, #e9dcff) !important; }
 
 @keyframes ivlyrics-panel-effect-tremble {
   0%, 100% { translate: 0 0; }
@@ -1175,6 +1175,52 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
   text-shadow: 0 0 10px rgba(255, 255, 255, 0.5) !important;
 }
 
+.ivlyrics-panel-line-karaoke-row.speaker-male-1 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-male-1 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-male-1.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-male-1, #e6f2ff) !important; }
+.ivlyrics-panel-line-karaoke-row.speaker-male-2 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-male-2 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-male-2.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-male-2, #d7ecff) !important; }
+.ivlyrics-panel-line-karaoke-row.speaker-male-3 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-male-3 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-male-3.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-male-3, #edf7ff) !important; }
+.ivlyrics-panel-line-karaoke-row.speaker-male-4 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-male-4 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-male-4.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-male-4, #dbe7ff) !important; }
+.ivlyrics-panel-line-karaoke-row.speaker-male-5 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-male-5 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-male-5.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-male-5, #e2f8ff) !important; }
+.ivlyrics-panel-line-karaoke-row.speaker-female-1 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-female-1 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-female-1.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-female-1, #ffe7ef) !important; }
+.ivlyrics-panel-line-karaoke-row.speaker-female-2 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-female-2 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-female-2.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-female-2, #ffe0e8) !important; }
+.ivlyrics-panel-line-karaoke-row.speaker-female-3 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-female-3 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-female-3.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-female-3, #fff0f5) !important; }
+.ivlyrics-panel-line-karaoke-row.speaker-female-4 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-female-4 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-female-4.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-female-4, #ffdfe0) !important; }
+.ivlyrics-panel-line-karaoke-row.speaker-female-5 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-female-5 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-female-5.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-female-5, #fbe5ff) !important; }
+.ivlyrics-panel-line-karaoke-row.speaker-duet-1 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-duet-1 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-duet-1.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-duet-1, #eadfff) !important; }
+.ivlyrics-panel-line-karaoke-row.speaker-duet-2 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-duet-2 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-duet-2.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-duet-2, #e2d2ff) !important; }
+.ivlyrics-panel-line-karaoke-row.speaker-duet-3 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-duet-3 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-duet-3.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-duet-3, #f0e8ff) !important; }
+.ivlyrics-panel-line-karaoke-row.speaker-duet-4 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-duet-4 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-duet-4.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-duet-4, #dec9ff) !important; }
+.ivlyrics-panel-line-karaoke-row.speaker-duet-5 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-duet-5 .ivlyrics-panel-karaoke-word.sung,
+.ivlyrics-panel-line.speaker-duet-5.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-duet-5, #e9dcff) !important; }
+
 .ivlyrics-panel-line.active .ivlyrics-panel-karaoke-text-run-segment.active {
   color: transparent !important;
   background-image: linear-gradient(var(--ivlyrics-panel-karaoke-gradient-direction, to right),
@@ -1402,6 +1448,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         document.documentElement.style.setProperty('--ivlyrics-panel-original-size', originalSize + 'px');
         document.documentElement.style.setProperty('--ivlyrics-panel-phonetic-size', phoneticSize + 'px');
         document.documentElement.style.setProperty('--ivlyrics-panel-translation-size', translationSize + 'px');
+        window.ivLyricsSpeakerColors?.applyCssVariables?.();
     };
 
     // 현재 가사 상태
@@ -4124,7 +4171,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             event.detail?.name === 'panel-lyrics-font-family' ||
             event.detail?.name === 'panel-lyrics-original-size' ||
             event.detail?.name === 'panel-lyrics-phonetic-size' ||
-            event.detail?.name === 'panel-lyrics-translation-size') {
+            event.detail?.name === 'panel-lyrics-translation-size' ||
+            event.detail?.name?.startsWith?.('multi-vocal-speaker-color-')) {
             updateCSSVariables();
         }
     };

@@ -770,6 +770,17 @@ window.LANG_AR = {
       "title": "اشترِ قهوة للمطور",
       "button": "تبرع"
     },
+    "multiVocalColors": {
+      "title": "ألوان الأصوات المتعددة",
+      "subtitle": "خصص ألوان أصوات الذكور والإناث والثنائيات.",
+      "description": "اختر لون الكلمات المستخدم لكل مؤد في وضع الأصوات المتعددة.",
+      "maleGroup": "ذكر",
+      "femaleGroup": "أنثى",
+      "duetGroup": "ثنائي",
+      "reset": "إعادة ضبط الألوان",
+      "resetDone": "تمت إعادة ضبط ألوان الأصوات المتعددة.",
+      "invalidColor": "أدخل لون HEX صالحًا."
+    },
     "performance": {
       "rendering": {
         "title": "معدل إطارات العرض",

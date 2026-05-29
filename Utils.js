@@ -77,6 +77,150 @@ const YOUTUBE_ID_PATTERNS = [
   /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
 ];
 
+const IV_LYRICS_DEFAULT_SPEAKER_TEXT_COLORS = {
+  "MALE 1": "#e6f2ff",
+  "MALE 2": "#d7ecff",
+  "MALE 3": "#edf7ff",
+  "MALE 4": "#dbe7ff",
+  "MALE 5": "#e2f8ff",
+  "FEMALE 1": "#ffe7ef",
+  "FEMALE 2": "#ffe0e8",
+  "FEMALE 3": "#fff0f5",
+  "FEMALE 4": "#ffdfe0",
+  "FEMALE 5": "#fbe5ff",
+  "DUET 1": "#eadfff",
+  "DUET 2": "#e2d2ff",
+  "DUET 3": "#f0e8ff",
+  "DUET 4": "#dec9ff",
+  "DUET 5": "#e9dcff",
+};
+const IV_LYRICS_SPEAKER_COLOR_OPTIONS = Object.keys(IV_LYRICS_DEFAULT_SPEAKER_TEXT_COLORS);
+const IV_LYRICS_SPEAKER_COLOR_KEY_PREFIX = "multi-vocal-speaker-color-";
+const IV_LYRICS_SPEAKER_COLOR_STORAGE_PREFIX = "ivLyrics:visual:";
+
+const normalizeIvLyricsSpeakerLabel = (value) => {
+  const normalized = String(value || "")
+    .trim()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .toUpperCase();
+  return IV_LYRICS_DEFAULT_SPEAKER_TEXT_COLORS[normalized] ? normalized : "";
+};
+
+const getIvLyricsSpeakerColorSettingKey = (speaker) => {
+  const normalized = normalizeIvLyricsSpeakerLabel(speaker);
+  return normalized
+    ? `${IV_LYRICS_SPEAKER_COLOR_KEY_PREFIX}${normalized.toLowerCase().replace(/\s+/g, "-")}`
+    : "";
+};
+
+const getIvLyricsSpeakerColorCssVariable = (speaker) => {
+  const settingKey = getIvLyricsSpeakerColorSettingKey(speaker);
+  return settingKey ? `--ivlyrics-${settingKey}` : "";
+};
+
+const normalizeIvLyricsHexColor = (value) => {
+  const color = String(value || "").trim();
+  if (/^#[0-9a-f]{6}$/i.test(color)) return color.toLowerCase();
+  if (/^#[0-9a-f]{3}$/i.test(color)) {
+    return `#${color.slice(1).split("").map((char) => char + char).join("")}`.toLowerCase();
+  }
+  return "";
+};
+
+const readIvLyricsSpeakerColorConfig = (speaker) => {
+  const normalized = normalizeIvLyricsSpeakerLabel(speaker);
+  if (!normalized) return "";
+
+  const settingKey = getIvLyricsSpeakerColorSettingKey(normalized);
+  const configured = normalizeIvLyricsHexColor(window.CONFIG?.visual?.[settingKey]);
+  if (configured) return configured;
+
+  try {
+    const stored = normalizeIvLyricsHexColor(localStorage.getItem(`${IV_LYRICS_SPEAKER_COLOR_STORAGE_PREFIX}${settingKey}`));
+    if (stored) return stored;
+  } catch (error) {
+    // localStorage may be unavailable in restricted contexts.
+  }
+
+  return IV_LYRICS_DEFAULT_SPEAKER_TEXT_COLORS[normalized];
+};
+
+const setIvLyricsSpeakerColorConfig = (speaker, color) => {
+  const normalized = normalizeIvLyricsSpeakerLabel(speaker);
+  const normalizedColor = normalizeIvLyricsHexColor(color);
+  if (!normalized || !normalizedColor) return "";
+
+  const settingKey = getIvLyricsSpeakerColorSettingKey(normalized);
+  if (window.CONFIG?.visual) {
+    window.CONFIG.visual[settingKey] = normalizedColor;
+  }
+
+  try {
+    if (typeof StorageManager !== "undefined" && StorageManager?.saveConfig) {
+      StorageManager.saveConfig(settingKey, normalizedColor);
+    } else {
+      localStorage.setItem(`${IV_LYRICS_SPEAKER_COLOR_STORAGE_PREFIX}${settingKey}`, normalizedColor);
+    }
+  } catch (error) {
+    // Ignore persistence errors; the live CSS variable is still applied below.
+  }
+
+  return normalizedColor;
+};
+
+const resetIvLyricsSpeakerColorConfig = () => {
+  IV_LYRICS_SPEAKER_COLOR_OPTIONS.forEach((speaker) => {
+    const settingKey = getIvLyricsSpeakerColorSettingKey(speaker);
+    if (window.CONFIG?.visual) {
+      window.CONFIG.visual[settingKey] = IV_LYRICS_DEFAULT_SPEAKER_TEXT_COLORS[speaker];
+    }
+
+    try {
+      if (typeof StorageManager !== "undefined" && StorageManager?.removeItem) {
+        StorageManager.removeItem(`${IV_LYRICS_SPEAKER_COLOR_STORAGE_PREFIX}${settingKey}`);
+      } else {
+        localStorage.removeItem(`${IV_LYRICS_SPEAKER_COLOR_STORAGE_PREFIX}${settingKey}`);
+      }
+    } catch (error) {
+      // Ignore persistence errors.
+    }
+  });
+};
+
+const applyIvLyricsSpeakerColorCssVariables = (target = document.documentElement) => {
+  if (!target?.style) return;
+  IV_LYRICS_SPEAKER_COLOR_OPTIONS.forEach((speaker) => {
+    const cssVariable = getIvLyricsSpeakerColorCssVariable(speaker);
+    const color = readIvLyricsSpeakerColorConfig(speaker);
+    if (cssVariable && color) {
+      target.style.setProperty(cssVariable, color);
+    }
+  });
+};
+
+window.ivLyricsSpeakerColors = {
+  defaultColors: IV_LYRICS_DEFAULT_SPEAKER_TEXT_COLORS,
+  options: IV_LYRICS_SPEAKER_COLOR_OPTIONS,
+  normalizeSpeaker: normalizeIvLyricsSpeakerLabel,
+  normalizeColor: normalizeIvLyricsHexColor,
+  getSettingKey: getIvLyricsSpeakerColorSettingKey,
+  getCssVariableName: getIvLyricsSpeakerColorCssVariable,
+  getTextColor: readIvLyricsSpeakerColorConfig,
+  setTextColor(speaker, color) {
+    const savedColor = setIvLyricsSpeakerColorConfig(speaker, color);
+    if (savedColor) applyIvLyricsSpeakerColorCssVariables();
+    return savedColor;
+  },
+  resetToDefaults() {
+    resetIvLyricsSpeakerColorConfig();
+    applyIvLyricsSpeakerColorCssVariables();
+  },
+  applyCssVariables: applyIvLyricsSpeakerColorCssVariables,
+};
+
+setTimeout(() => window.ivLyricsSpeakerColors?.applyCssVariables?.(), 0);
+
 // Optimized Utils with performance improvements and caching
 const Utils = {
   // LRU caches for frequently used operations (최적화 #10 - LRU 캐시 적용)

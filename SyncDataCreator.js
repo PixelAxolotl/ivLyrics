@@ -1455,6 +1455,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const trackName = trackInfo?.name || Spicetify.Player?.data?.item?.name || '';
 	const artistName = trackInfo?.artists?.map(a => a.name).join(', ') ||
 		Spicetify.Player?.data?.item?.artists?.map(a => a.name).join(', ') || '';
+	const albumName = trackInfo?.album?.name ||
+		Spicetify.Player?.data?.item?.album?.name ||
+		spotifyDataForTrack?.album ||
+		spotifyDataForTrack?.albumName ||
+		'';
 	const isVirtualKaraokeSource =
 		lyrics?.karaokeSource === 'spotify-audio-analysis' ||
 		lyrics?.karaokeSource === 'audio-analysis-pseudo';
@@ -1599,7 +1604,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				const existingSyncData = await window.SyncDataService.getSyncData(trackId, finalProvider, {
 					isrc: trackIsrc || undefined,
 					title: trackName,
-					artist: artistName
+					artist: artistName,
+					album: albumName
 				});
 				if (existingSyncData && existingSyncData.syncData && existingSyncData.syncData.lines) {
 					window.__ivLyricsDebugLog?.('[SyncDataCreator] Found matching existing sync data');
@@ -1647,7 +1653,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			setMultiVocalMode(false);
 			setError(I18n.t('syncCreator.noLyrics'));
 		}
-	}, [extractLyricsText, trackId, trackIsrc, trackName, artistName]);
+	}, [extractLyricsText, trackId, trackIsrc, trackName, artistName, albumName]);
 
 	const resolveMultiVocalDecision = useCallback((useMultiVocalMode) => {
 		if (!pendingMultiVocalDecision) return;
@@ -2682,7 +2688,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 
 		setIsLoading(false);
-	}, [trackInfo, trackName, artistName, applyLoadedLyricsResult, buildSyntheticLrclibResult, clearLrclibCandidateState]);
+	}, [trackInfo, trackName, artistName, albumName, applyLoadedLyricsResult, buildSyntheticLrclibResult, clearLrclibCandidateState]);
 
 
 
@@ -2745,7 +2751,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						const existingSyncData = await window.SyncDataService.getSyncData(trackId, finalProvider, {
 							isrc: trackIsrc || undefined,
 							title: trackName,
-							artist: artistName
+							artist: artistName,
+							album: albumName
 						});
 						if (existingSyncData && existingSyncData.syncData && existingSyncData.syncData.lines) {
 							window.__ivLyricsDebugLog?.('[SyncDataCreator] Found matching existing sync data');
@@ -4797,11 +4804,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			|| await window.SyncDataService?.resolveTrackIsrc?.(trackId, {
 				...trackInfo,
 				title: trackName,
-				artist: artistName
-			});
+				artist: artistName,
+				album: albumName
+			})
+			|| '';
 
-		if (!resolvedTrackIsrc) {
-			Toast.error('이 곡의 ISRC를 찾을 수 없어 sync-data를 등록할 수 없습니다. ivLyrics를 최신 버전으로 업데이트한 뒤 다시 시도해 주세요.');
+		if (!trackId && !resolvedTrackIsrc) {
+			Toast.error('이 곡의 trackId를 확인할 수 없어 sync-data를 등록할 수 없습니다.');
 			return;
 		}
 
@@ -4811,7 +4820,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			const submitMetadata = {
 				isrc: resolvedTrackIsrc,
 				title: trackName,
-				artist: artistName
+				artist: artistName,
+				album: albumName
 			};
 			if (typeof SyncDataService !== 'undefined' && SyncDataService.submitSyncData) {
 				const result = await SyncDataService.submitSyncData(trackId, provider, syncDataToSubmit, submitMetadata);
@@ -4834,9 +4844,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			} else {
 				const response = await fetch('https://lyrics.api.ivl.is/lyrics/sync-data', {
 					method: 'POST',
-					headers: Utils.getApiHeaders({ 'Content-Type': 'application/json' }),
-					body: JSON.stringify({ isrc: resolvedTrackIsrc, trackId, provider, syncData: syncDataToSubmit, ...submitMetadata })
-				});
+				headers: Utils.getApiHeaders({ 'Content-Type': 'application/json' }),
+				body: JSON.stringify({ isrc: resolvedTrackIsrc || '', trackId, provider, syncData: syncDataToSubmit, ...submitMetadata })
+			});
 
 				if (response.ok) {
 					Toast.success(I18n.t('syncCreator.submitSuccess'));
@@ -4861,7 +4871,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 
 		setIsSubmitting(false);
-	}, [syncData, lyricsLines, lineCharOffsets, multiVocalMode, trackId, trackIsrc, provider, trackName, artistName, onClose, attachSelectedLrclibSource, clearLyricsCachesAfterSyncSubmit, getParallelTemplateForLineData, getMergedLineIndexesForStart, isLineCoveredByMergedPrevious]);
+	}, [syncData, lyricsLines, lineCharOffsets, multiVocalMode, trackId, trackIsrc, provider, trackName, artistName, albumName, trackInfo, onClose, attachSelectedLrclibSource, clearLyricsCachesAfterSyncSubmit, getParallelTemplateForLineData, getMergedLineIndexesForStart, isLineCoveredByMergedPrevious]);
 
 	// 싱크 데이터 내보내기 (JSON 파일로 저장)
 	const exportSyncData = useCallback(async () => {

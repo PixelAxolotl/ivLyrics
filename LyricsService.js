@@ -1648,34 +1648,41 @@
             return value.toString(16).padStart(32, '0');
         }
 
-        function getSpclientTrackMetadataIsrc(trackMetadata) {
-            const externalIds = Array.isArray(trackMetadata?.external_id)
-                ? trackMetadata.external_id
-                : (Array.isArray(trackMetadata?.externalId) ? trackMetadata.externalId : []);
-            const isrcEntry = externalIds.find(entry => String(entry?.type || '').toLowerCase() === 'isrc');
+        function getSpicetifySessionAccessToken() {
+            const session = typeof Spicetify !== 'undefined' ? Spicetify.Platform?.Session : null;
+            const token = session?.accessToken || session?.access_token;
+            return typeof token === 'string' ? token.replace(/^Bearer\s+/i, '').trim() : '';
+        }
+
+        function findIsrcFromSpclientMetadataBytes(bytes) {
+            if (!bytes || typeof TextDecoder === 'undefined') return '';
+            const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
             return firstNormalizedSyncDataIsrc(
-                isrcEntry?.id,
-                trackMetadata?.external_ids?.isrc,
-                trackMetadata?.externalIds?.isrc
+                text.match(/isrc[\s\S]{0,20}([A-Z]{2}[A-Z0-9]{3}\d{7})/i)?.[1],
+                text.match(/[A-Z]{2}[A-Z0-9]{3}\d{7}/)?.[0]
             );
         }
 
-        async function fetchSpclientTrackMetadata(trackGid, trackIdForLog) {
+        async function fetchSpclientTrackMetadataIsrc(trackGid, trackIdForLog) {
+            const token = getSpicetifySessionAccessToken();
+            if (!token) {
+                throw new Error('Spicetify session access token missing');
+            }
+
             const httpsUrl = `https://spclient.wg.spotify.com/metadata/4/track/${trackGid}?market=from_token`;
             syncDataConsoleLog('resolveTrackIsrc:metadata-request', {
                 trackId: trackIdForLog,
                 gid: trackGid,
                 url: httpsUrl,
-                transport: 'fetch'
+                transport: 'fetch-protobuf'
             });
             const response = await fetch(httpsUrl, {
                 method: 'GET',
-                credentials: 'include',
-                cache: 'force-cache',
+                cache: 'no-store',
                 headers: {
-                    Accept: 'application/json',
-                    'Accept-Language': 'ko',
-                    'App-Platform': 'Win32_x86_64'
+                    Authorization: `Bearer ${token}`,
+                    'App-Platform': 'WebPlayer',
+                    Accept: 'application/x-protobuf'
                 }
             });
             syncDataConsoleLog('resolveTrackIsrc:metadata-fetch-response', {
@@ -1687,9 +1694,18 @@
                 fromCache: response.headers.get('age') !== null
             }, response.ok ? 'info' : 'warn');
             if (!response.ok) {
-                throw new Error(`metadata request failed: ${response.status}`);
+                const body = await response.text().catch(() => '');
+                throw new Error(`metadata request failed: ${response.status}${body ? ` ${body.slice(0, 120)}` : ''}`);
             }
-            return await response.json();
+            const bytes = new Uint8Array(await response.arrayBuffer());
+            const isrc = findIsrcFromSpclientMetadataBytes(bytes);
+            syncDataConsoleLog('resolveTrackIsrc:metadata-protobuf-response', {
+                trackId: trackIdForLog,
+                gid: trackGid,
+                byteLength: bytes.byteLength,
+                isrc: isrc || null
+            }, isrc ? 'info' : 'warn');
+            return isrc;
         }
 
         function getTrackIdFromInput(trackId, metadata = {}) {
@@ -1812,13 +1828,11 @@
                         return '';
                     }
 
-					const track = await fetchSpclientTrackMetadata(trackGid, normalizedTrackId);
-                    const resolvedIsrc = getSpclientTrackMetadataIsrc(track);
+					const resolvedIsrc = await fetchSpclientTrackMetadataIsrc(trackGid, normalizedTrackId);
                     syncDataConsoleLog('resolveTrackIsrc:metadata-response', {
                         trackId: normalizedTrackId,
                         gid: trackGid,
-                        isrc: resolvedIsrc || null,
-                        externalIdCount: Array.isArray(track?.external_id) ? track.external_id.length : 0
+                        isrc: resolvedIsrc || null
                     }, resolvedIsrc ? 'info' : 'warn');
                     if (resolvedIsrc) {
                         _isrcLookupCache.set(normalizedTrackId, {
@@ -1848,26 +1862,26 @@
             return await promise;
         }
 
-        function getSyncDataIdentity(trackId, metadata = {}) {
-            const isrc = getTrackIsrc(trackId, metadata);
-            if (!isrc) {
+        function buildSyncDataIdentity(trackId, metadata = {}, isrcValue = '') {
+            const trackIdentity = getTrackIdFromInput(trackId, metadata);
+            const isrc = normalizeSyncDataIsrc(isrcValue);
+            if (!isrc && !trackIdentity) {
                 return null;
             }
             return {
-                isrc,
-                trackId: getTrackIdFromInput(trackId, metadata) || null
+                isrc: isrc || '',
+                trackId: trackIdentity || null
             };
         }
 
+        function getSyncDataIdentity(trackId, metadata = {}) {
+            return buildSyncDataIdentity(trackId, metadata, getTrackIsrc(trackId, metadata));
+        }
+
         async function resolveSyncDataIdentity(trackId, metadata = {}) {
-            const isrc = await resolveTrackIsrc(trackId, metadata);
-            if (!isrc) {
-                return null;
-            }
-            return {
-                isrc,
-                trackId: getTrackIdFromInput(trackId, metadata) || null
-            };
+            const localIsrc = getTrackIsrc(trackId, metadata);
+            const resolvedIsrc = localIsrc || await resolveTrackIsrc(trackId, metadata);
+            return buildSyncDataIdentity(trackId, metadata, resolvedIsrc);
         }
 
         function normalizeSyncDataText(value, maxLength = 256) {
@@ -1925,13 +1939,16 @@
         }
 
         function appendSyncDataQueryParams(url, identity, metadata = {}, provider = null) {
-            url.searchParams.set('isrc', identity.isrc);
+            if (identity.isrc) {
+                url.searchParams.set('isrc', identity.isrc);
+            }
             if (provider) {
                 url.searchParams.set('provider', provider);
             }
 
             const trackMetadata = getSyncDataTrackMetadata(identity.trackId, metadata);
-            const shouldReportMetadata = !_syncTrackMetadataReported.has(identity.isrc)
+            const identityKey = getSyncDataIdentityCacheKey(identity);
+            const shouldReportMetadata = !_syncTrackMetadataReported.has(identityKey)
                 && (trackMetadata.trackId || trackMetadata.title || trackMetadata.artist || trackMetadata.album);
 
             if (shouldReportMetadata) {
@@ -1945,27 +1962,46 @@
             return shouldReportMetadata;
         }
 
+        function getSyncDataIdentityCacheKey(identity) {
+            if (!identity) return '';
+            return identity.isrc || (identity.trackId ? `track:${identity.trackId}` : '');
+        }
+
         function getSyncDataIdentityKey(trackId, metadata = {}) {
-            return getSyncDataIdentity(trackId, metadata)?.isrc || '';
+            return getSyncDataIdentityCacheKey(getSyncDataIdentity(trackId, metadata));
+        }
+
+        function normalizeSyncDataCacheIdentityKey(identityValue, metadata = {}) {
+            const isrc = normalizeSyncDataIsrc(identityValue);
+            if (isrc) return isrc;
+            const trackId = normalizeSyncDataTrackId(identityValue);
+            if (trackId) return `track:${trackId}`;
+            if (typeof identityValue === 'string' && identityValue.startsWith('track:')) {
+                const prefixedTrackId = normalizeSyncDataTrackId(identityValue.slice('track:'.length));
+                if (prefixedTrackId) return `track:${prefixedTrackId}`;
+            }
+            return getSyncDataIdentityKey(identityValue, metadata) || '';
         }
 
         function getMissingIsrcMessage() {
-            return '이 곡의 ISRC를 찾을 수 없어 sync-data를 사용할 수 없습니다. ivLyrics 클라이언트를 최신 버전으로 업데이트해 주세요.';
+            return '이 곡의 trackId를 확인할 수 없어 sync-data를 사용할 수 없습니다.';
         }
 
         async function getAvailableProviders(trackId, metadata = {}) {
             const identity = await resolveSyncDataIdentity(trackId, metadata);
             if (!identity) {
-                syncDataConsoleLog('providers:skip-missing-isrc', {
+                syncDataConsoleLog('providers:skip-missing-identity', {
                     trackId: getTrackIdFromInput(trackId, metadata) || trackId || null
                 }, 'warn');
                 return [];
             }
-            const cacheKey = `${identity.isrc}:providers`;
+            const identityKey = getSyncDataIdentityCacheKey(identity);
+            const cacheKey = `${identityKey}:providers`;
 
             if (_syncDataCache.has(cacheKey)) {
                 syncDataConsoleLog('providers:cache-hit', {
-                    isrc: identity.isrc
+                    isrc: identity.isrc || null,
+                    trackId: identity.trackId || null
                 });
                 return _syncDataCache.get(cacheKey);
             }
@@ -1974,17 +2010,18 @@
                 const url = new URL(`${API_BASE}/lyrics/sync-data`);
                 const reportsMetadata = appendSyncDataQueryParams(url, identity, metadata);
                 let requestUrl = url.toString();
-                if (shouldBypassServerCache(identity.isrc)) {
+                if (identity.isrc && shouldBypassServerCache(identity.isrc)) {
                     requestUrl += '&bypassCache=1';
                 }
                 syncDataConsoleLog('providers:request', {
-                    isrc: identity.isrc,
+                    isrc: identity.isrc || null,
                     trackId: identity.trackId || null,
                     url: requestUrl
                 });
                 const response = await fetch(requestUrl, { cache: 'no-store' });
                 syncDataConsoleLog('providers:response', {
-                    isrc: identity.isrc,
+                    isrc: identity.isrc || null,
+                    trackId: identity.trackId || null,
                     status: response.status,
                     ok: response.ok
                 }, response.ok ? 'info' : 'warn');
@@ -1994,13 +2031,13 @@
                 }
                 const result = await response.json();
                 if (reportsMetadata) {
-                    _syncTrackMetadataReported.add(identity.isrc);
+                    _syncTrackMetadataReported.add(identityKey);
                 }
                 const providers = Array.isArray(result.providers) ? result.providers : [];
                 _syncDataCache.set(cacheKey, providers);
                 return providers;
             } catch (e) {
-                console.warn(`[SyncDataService] Failed to fetch sync providers for ${identity.isrc}`, e);
+                console.warn(`[SyncDataService] Failed to fetch sync providers for ${identityKey}`, e);
                 return [];
             }
         }
@@ -2013,13 +2050,14 @@
             });
             const identity = await resolveSyncDataIdentity(trackId, metadata);
             if (!identity) {
-                syncDataConsoleLog('getSyncData:skip-missing-isrc', {
+                syncDataConsoleLog('getSyncData:skip-missing-identity', {
                     trackId: getTrackIdFromInput(trackId, metadata) || trackId || null,
                     provider: provider || null
                 }, 'warn');
-                window.__ivLyricsDebugLog?.('[SyncDataService] Missing ISRC for sync-data lookup', { trackId, provider });
+                window.__ivLyricsDebugLog?.('[SyncDataService] Missing track identity for sync-data lookup', { trackId, provider });
                 return null;
             }
+            const identityKey = getSyncDataIdentityCacheKey(identity);
 
             if (!provider) {
                 const providers = await getAvailableProviders(trackId, metadata);
@@ -2028,12 +2066,13 @@
             }
 
             const queryProvider = provider === 'legacy' ? 'spotify' : provider;
-            const specificKey = `${identity.isrc}:${queryProvider}`;
-            const requestGeneration = getCacheGeneration(identity.isrc);
+            const specificKey = `${identityKey}:${queryProvider}`;
+            const requestGeneration = getCacheGeneration(identityKey);
 
             if (_syncDataCache.has(specificKey)) {
                 syncDataConsoleLog('getSyncData:cache-hit', {
-                    isrc: identity.isrc,
+                    isrc: identity.isrc || null,
+                    trackId: identity.trackId || null,
                     provider: queryProvider
                 });
                 return _syncDataCache.get(specificKey);
@@ -2042,7 +2081,8 @@
             try {
                 if (_inflightRequests.has(specificKey)) {
                     syncDataConsoleLog('getSyncData:join-inflight', {
-                        isrc: identity.isrc,
+                        isrc: identity.isrc || null,
+                        trackId: identity.trackId || null,
                         provider: queryProvider
                     });
                     return _inflightRequests.get(specificKey);
@@ -2052,18 +2092,19 @@
                     const url = new URL(`${API_BASE}/lyrics/sync-data`);
                     const reportsMetadata = appendSyncDataQueryParams(url, identity, metadata, queryProvider);
                     let requestUrl = url.toString();
-                    if (shouldBypassServerCache(identity.isrc)) {
+                    if (identity.isrc && shouldBypassServerCache(identity.isrc)) {
                         requestUrl += '&bypassCache=1';
                     }
                     syncDataConsoleLog('getSyncData:request', {
-                        isrc: identity.isrc,
+                        isrc: identity.isrc || null,
                         trackId: identity.trackId || null,
                         provider: queryProvider,
                         url: requestUrl
                     });
                     const response = await fetch(requestUrl, { cache: 'no-store' });
                     syncDataConsoleLog('getSyncData:response', {
-                        isrc: identity.isrc,
+                        isrc: identity.isrc || null,
+                        trackId: identity.trackId || null,
                         provider: queryProvider,
                         status: response.status,
                         ok: response.ok
@@ -2081,14 +2122,15 @@
 
                     const result = await response.json();
                     syncDataConsoleLog('getSyncData:json', {
-                        isrc: identity.isrc,
+                        isrc: identity.isrc || null,
+                        trackId: identity.trackId || null,
                         provider: queryProvider,
                         hasData: !!(result?.data || result),
                         hasSyncData: !!(result?.data?.syncData || result?.syncData),
                         providerReturned: result?.data?.provider || result?.provider || null
                     });
                     if (reportsMetadata) {
-                        _syncTrackMetadataReported.add(identity.isrc);
+                        _syncTrackMetadataReported.add(identityKey);
                     }
                     const data = result.data || result;
 
@@ -2105,9 +2147,11 @@
 
                         if (!syncDataBody?.lines) return null;
 
+                        const resolvedIsrc = normalizeSyncDataIsrc(data.isrc) || identity.isrc;
+                        const resolvedTrackId = identity.trackId || data.trackId || data.storedTrackId || null;
                         const syncData = {
-                            isrc: normalizeSyncDataIsrc(data.isrc) || identity.isrc,
-                            trackId: identity.trackId || data.trackId || data.storedTrackId || null,
+                            isrc: resolvedIsrc,
+                            trackId: resolvedTrackId,
                             storedTrackId: data.storedTrackId || data.trackId || null,
                             provider: data.provider || provider,
                             syncData: syncDataBody,
@@ -2116,10 +2160,16 @@
                             updatedAt: data.updatedAt || null,
                             loadCount: data.loadCount || 0
                         };
-                        if (requestGeneration !== getCacheGeneration(identity.isrc)) {
+                        if (requestGeneration !== getCacheGeneration(identityKey)) {
                             return null;
                         }
                         _syncDataCache.set(specificKey, syncData);
+                        if (resolvedIsrc) {
+                            _syncDataCache.set(`${resolvedIsrc}:${queryProvider}`, syncData);
+                        }
+                        if (resolvedTrackId) {
+                            _syncDataCache.set(`track:${resolvedTrackId}:${queryProvider}`, syncData);
+                        }
                         return syncData;
                     }
                     return null;
@@ -2130,7 +2180,7 @@
                 _inflightRequests.delete(specificKey);
                 return result;
             } catch (e) {
-                console.warn(`[SyncDataService] Failed to fetch sync data for ${identity.isrc}:${provider}`, e);
+                console.warn(`[SyncDataService] Failed to fetch sync data for ${identityKey}:${provider}`, e);
                 _inflightRequests.delete(specificKey);
                 return null;
             }
@@ -2142,7 +2192,7 @@
         }
 
         function clearCache(identityValue, metadata = {}) {
-            const identityKey = getSyncDataIdentityKey(identityValue, metadata) || identityValue;
+            const identityKey = normalizeSyncDataCacheIdentityKey(identityValue, metadata) || identityValue;
             if (identityKey) {
                 bumpCacheGeneration(identityKey);
                 clearInflightRequests(identityKey);
@@ -2267,7 +2317,7 @@
         async function submitSyncData(trackId, provider, syncData, metadata = {}) {
             const identity = await resolveSyncDataIdentity(trackId, metadata);
             if (!identity) {
-                throw new Error(getMissingIsrcMessage());
+                throw new Error('이 곡의 trackId를 확인할 수 없어 sync-data를 등록할 수 없습니다.');
             }
 
             const userHash = getUserHash();
@@ -2277,6 +2327,7 @@
             const trackMetadata = getSyncDataTrackMetadata(identity.trackId, metadata);
             const title = trackMetadata.title;
             const artist = trackMetadata.artist;
+            const album = trackMetadata.album;
             const spotifyProfile = await getCurrentSpotifyProfile();
 
             if (typeof Utils !== "undefined" && Utils.requireDiscordAuth) {
@@ -2313,12 +2364,13 @@
                     ...(submitAuthToken ? { Authorization: `Bearer ${submitAuthToken}` } : {}),
                 },
                 body: JSON.stringify({
-                    isrc: identity.isrc,
+                    isrc: identity.isrc || '',
                     ...(identity.trackId ? { trackId: identity.trackId } : {}),
                     provider,
                     syncData,
                     ...(title ? { title } : {}),
                     ...(artist ? { artist } : {}),
+                    ...(album ? { album } : {}),
                     ...(spotifyProfile?.id ? {
                         spotifyUserId: spotifyProfile.id,
                         ...(spotifyProfile.displayName ? { spotifyDisplayName: spotifyProfile.displayName } : {})
@@ -2332,7 +2384,8 @@
                 throw new Error(result.error || result.message || 'Failed to submit sync data');
             }
 
-            clearCache(identity.isrc);
+            const resolvedResultIsrc = normalizeSyncDataIsrc(result?.isrc || result?.data?.isrc);
+            clearCache(resolvedResultIsrc || identity.isrc || (identity.trackId ? `track:${identity.trackId}` : ''));
             return result;
         }
 
@@ -5077,24 +5130,33 @@
         async getIvLyricsSyncData(trackId, provider, metadata = {}) {
             if (!trackId || !provider) return null;
 
-            const isrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, metadata)
+            const isrc = window.SyncDataService?.normalizeSyncDataIsrc?.(metadata?.isrc)
                 || window.SyncDataService?.getTrackIsrc?.(trackId, metadata)
-                || window.SyncDataService?.normalizeSyncDataIsrc?.(metadata?.isrc);
-            if (!isrc) {
-                window.__ivLyricsDebugLog?.('[LyricsService] Missing ISRC for ivLyrics sync-data lookup', { trackId, provider });
-                return null;
-            }
+                || '';
 
             try {
                 if (window.SyncDataService?.getSyncData) {
-                    return await window.SyncDataService.getSyncData(trackId, provider, { ...metadata, isrc });
+                    return await window.SyncDataService.getSyncData(trackId, provider, { ...metadata, isrc, trackId });
                 }
 
                 const url = new URL('https://lyrics.api.ivl.is/lyrics/sync-data');
-                url.searchParams.set('isrc', isrc);
+                if (isrc) {
+                    url.searchParams.set('isrc', isrc);
+                }
+                url.searchParams.set('trackId', trackId);
                 url.searchParams.set('provider', provider);
+                if (metadata?.title || metadata?.trackName || metadata?.name) {
+                    url.searchParams.set('title', metadata.title || metadata.trackName || metadata.name);
+                }
+                if (metadata?.artist || metadata?.artists) {
+                    const artistText = Array.isArray(metadata.artists) ? metadata.artists.join(', ') : (metadata.artist || metadata.artists);
+                    if (artistText) url.searchParams.set('artist', artistText);
+                }
+                if (metadata?.album || metadata?.albumName) {
+                    url.searchParams.set('album', metadata.album || metadata.albumName);
+                }
                 let requestUrl = url.toString();
-                if (window.SyncDataService?.shouldBypassServerCache?.(isrc)) {
+                if (isrc && window.SyncDataService?.shouldBypassServerCache?.(isrc)) {
                     requestUrl += '&bypassCache=1';
                 }
 
@@ -5106,7 +5168,7 @@
                     const data = result?.data || result;
                     if (data && (data.provider === provider || (provider.startsWith('spotify-') && data.provider === 'spotify'))) {
                         return {
-                            isrc,
+                            isrc: window.SyncDataService?.normalizeSyncDataIsrc?.(data.isrc) || isrc,
                             trackId: data.trackId || trackId,
                             storedTrackId: data.storedTrackId || data.trackId || null,
                             ...data
@@ -5114,7 +5176,7 @@
                     }
                 }
             } catch (e) {
-                console.warn(`[LyricsService] Failed to fetch sync data for ${isrc} (${provider}):`, e);
+                console.warn(`[LyricsService] Failed to fetch sync data for ${isrc || trackId} (${provider}):`, e);
             }
             return null;
         },
@@ -5139,7 +5201,13 @@
                 result.track?.external_ids?.isrc ||
                 spotifyData?.isrc
             );
-            const syncData = await this.getIvLyricsSyncData(trackId, result.provider, { isrc: trackIsrc });
+            const syncData = await this.getIvLyricsSyncData(trackId, result.provider, {
+                isrc: trackIsrc || '',
+                trackId,
+                title: result.name || result.title || spotifyData?.name || '',
+                artist: result.artist || result.artists || spotifyData?.artists || '',
+                album: result.album || result.albumName || spotifyData?.album || spotifyData?.albumName || ''
+            });
 
             const isProviderMatch = syncData?.provider === result.provider
                 || (typeof result.provider === 'string' && result.provider.startsWith('spotify-') && syncData?.provider === 'spotify');

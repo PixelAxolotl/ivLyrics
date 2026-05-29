@@ -2651,16 +2651,12 @@ const Prefetcher = {
       || window.SyncDataService?.getTrackIsrc?.(trackId, metadata)
       || "";
 
-    if (!isrc) {
-      ivLyricsDebug(`[Prefetcher] Video info skipped: missing ISRC for trackId: ${trackId}`);
-      return null;
-    }
-
-    const cacheKey = `prefetch:video:${isrc}`;
+    const identityKey = isrc || `track:${trackId}`;
+    const cacheKey = `prefetch:video:${identityKey}`;
 
     // 이미 캐시에 있으면 스킵
     if (this._prefetchCache.has(cacheKey)) {
-      ivLyricsDebug(`[Prefetcher] Video info already cached for ISRC: ${isrc}`);
+      ivLyricsDebug(`[Prefetcher] Video info already cached for: ${identityKey}`);
       const cached = this._prefetchCache.get(cacheKey);
       if (cached?.data?.youtubeVideoId) {
         this._prefetchVideoWithHelper(cached.data.youtubeVideoId);
@@ -2675,32 +2671,43 @@ const Prefetcher = {
 
     const prefetchPromise = (async () => {
       try {
-        ivLyricsDebug(`[Prefetcher] Fetching video info for ISRC: ${isrc} (fallback)`);
+        ivLyricsDebug(`[Prefetcher] Fetching video info for: ${identityKey} (fallback)`);
 
         const userHash = Utils.getUserHash();
-        // Spotify 트랙 메타데이터를 백엔드에 전달 (백엔드가 Spotify API에 접근 불가하므로)
-        let youtubeApiUrl = `https://lyrics.api.ivl.is/lyrics/youtube?isrc=${encodeURIComponent(isrc)}&trackId=${trackId}&userHash=${userHash}`;
+        // 서버가 ISRC를 보완할 수 있도록 현재 가진 트랙 메타데이터를 함께 전달
+        const youtubeApiUrlObject = new URL('https://lyrics.api.ivl.is/lyrics/youtube');
+        if (isrc) youtubeApiUrlObject.searchParams.set('isrc', isrc);
+        youtubeApiUrlObject.searchParams.set('trackId', trackId);
+        youtubeApiUrlObject.searchParams.set('userHash', userHash);
         if (spotifyData?.name) {
-          youtubeApiUrl += `&trackName=${encodeURIComponent(spotifyData.name)}`;
+          youtubeApiUrlObject.searchParams.set('trackName', spotifyData.name);
           if (spotifyData.artists?.length) {
-            youtubeApiUrl += `&trackArtists=${encodeURIComponent(spotifyData.artists.join(', '))}`;
+            youtubeApiUrlObject.searchParams.set('trackArtists', spotifyData.artists.join(', '));
           }
           if (spotifyData.album || spotifyData.albumName) {
-            youtubeApiUrl += `&album=${encodeURIComponent(spotifyData.album || spotifyData.albumName)}`;
+            youtubeApiUrlObject.searchParams.set('album', spotifyData.album || spotifyData.albumName);
           }
         }
-        if (window.SyncDataService?.shouldBypassServerCache?.(isrc)) {
-          youtubeApiUrl += `&bypassCache=1`;
+        if (isrc && window.SyncDataService?.shouldBypassServerCache?.(isrc)) {
+          youtubeApiUrlObject.searchParams.set('bypassCache', '1');
         }
+        const youtubeApiUrl = youtubeApiUrlObject.toString();
         const response = await fetch(youtubeApiUrl, { cache: "no-store" });
         const data = await response.json();
 
         if (data.success) {
+          const resolvedIsrc = window.SyncDataService?.normalizeSyncDataIsrc?.(data.data?.isrc) || isrc;
           this._prefetchCache.set(cacheKey, {
             data: data.data,
             timestamp: Date.now(),
           });
-          ivLyricsDebug(`[Prefetcher] Video info cached for ISRC: ${isrc}`);
+          if (resolvedIsrc) {
+            this._prefetchCache.set(`prefetch:video:${resolvedIsrc}`, {
+              data: data.data,
+              timestamp: Date.now(),
+            });
+          }
+          ivLyricsDebug(`[Prefetcher] Video info cached for: ${resolvedIsrc || identityKey}`);
           // 헬퍼를 통한 영상 미리 다운로드
           if (data.data?.youtubeVideoId) {
             this._prefetchVideoWithHelper(data.data.youtubeVideoId);
@@ -2811,7 +2818,7 @@ const Prefetcher = {
       isrc: spotifyData?.isrc || spotifyData?.external_ids?.isrc || ""
     };
     const isrc = window.SyncDataService?.getTrackIsrc?.(trackId, metadata) || "";
-    const cacheKey = `prefetch:video:${isrc || trackId}`;
+    const cacheKey = `prefetch:video:${isrc || `track:${trackId}`}`;
     const cached = this._prefetchCache.get(cacheKey);
 
     if (cached && Date.now() - cached.timestamp < 30 * 60 * 1000) {
@@ -6176,15 +6183,12 @@ class LyricsContainer extends react.Component {
         await LyricsCache.clearTrack(trackId);
         window.Translator?.clearMemoryCache?.(trackId);
         window.Translator?.clearInflightRequests?.(trackId);
-        let clearSyncDataIsrc = "";
-        if (window.SyncDataService?.resolveTrackIsrc) {
-          clearSyncDataIsrc = await window.SyncDataService.resolveTrackIsrc(trackId, {
-            item,
-            title: item?.name,
-            artist: item?.artists,
-            album: item?.album?.name,
-          }).catch(() => "");
-        }
+        const clearSyncDataIsrc = window.SyncDataService?.getTrackIsrc?.(trackId, {
+          item,
+          title: item?.name,
+          artist: item?.artists,
+          album: item?.album?.name,
+        }) || "";
         window.SyncDataService?.clearCache(clearSyncDataIsrc || trackId, clearSyncDataIsrc ? { isrc: clearSyncDataIsrc } : {});
       }
 

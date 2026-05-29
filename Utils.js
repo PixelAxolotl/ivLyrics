@@ -1070,7 +1070,7 @@ const Utils = {
   /**
    * Current version of the ivLyrics app
    */
-  currentVersion: "5.2.6",
+  currentVersion: "5.2.7",
 
   /**
    * Check for updates from remote repository
@@ -2100,16 +2100,12 @@ const Utils = {
       trackId,
       trackName: spotifyData?.name || "",
       title: spotifyData?.name || "",
-      artists: spotifyData?.artists || []
+      artists: spotifyData?.artists || [],
+      album: spotifyData?.album || spotifyData?.albumName || ""
     };
     const isrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, metadata)
       || window.SyncDataService?.getTrackIsrc?.(trackId, metadata)
       || "";
-
-    if (!isrc) {
-      window.__ivLyricsDebugLog?.("[ivLyrics] Missing ISRC for community offset request", { trackId });
-      return null;
-    }
 
     return { isrc, trackId, metadata };
   },
@@ -2120,8 +2116,11 @@ const Utils = {
 
     const userHash = this.getUserHash();
     const syncUrl = new URL('https://lyrics.api.ivl.is/lyrics/sync');
-    syncUrl.searchParams.set('isrc', identity.isrc);
+    if (identity.isrc) syncUrl.searchParams.set('isrc', identity.isrc);
     syncUrl.searchParams.set('trackId', identity.trackId);
+    if (identity.metadata?.title) syncUrl.searchParams.set('title', identity.metadata.title);
+    if (identity.metadata?.artists?.length) syncUrl.searchParams.set('artist', identity.metadata.artists.join(', '));
+    if (identity.metadata?.album) syncUrl.searchParams.set('album', identity.metadata.album);
     if (userHash) syncUrl.searchParams.set('userHash', userHash);
     if (provider) syncUrl.searchParams.set('provider', provider);
 
@@ -2150,7 +2149,7 @@ const Utils = {
   async submitCommunityOffset(trackUri, offsetMs, provider) {
     const identity = await this.getCommunityOffsetIdentity(trackUri);
     if (!identity) {
-      throw new Error("이 곡의 ISRC를 찾을 수 없어 커뮤니티 오프셋을 등록할 수 없습니다. ivLyrics 클라이언트를 최신 버전으로 업데이트해 주세요.");
+      throw new Error("이 곡의 trackId를 확인할 수 없어 커뮤니티 오프셋을 등록할 수 없습니다.");
     }
 
     const userHash = this.getUserHash();
@@ -2167,8 +2166,11 @@ const Utils = {
         method: 'POST',
         headers: this.getApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
-          isrc: identity.isrc,
+          isrc: identity.isrc || '',
           trackId: identity.trackId,
+          title: identity.metadata?.title || '',
+          artist: identity.metadata?.artists?.join(', ') || '',
+          album: identity.metadata?.album || '',
           offsetMs,
           userHash,
           provider
@@ -2202,7 +2204,7 @@ const Utils = {
   async submitCommunityFeedback(trackUri, isPositive, provider) {
     const identity = await this.getCommunityOffsetIdentity(trackUri);
     if (!identity) {
-      throw new Error("이 곡의 ISRC를 찾을 수 없어 커뮤니티 오프셋 피드백을 등록할 수 없습니다. ivLyrics 클라이언트를 최신 버전으로 업데이트해 주세요.");
+      throw new Error("이 곡의 trackId를 확인할 수 없어 커뮤니티 오프셋 피드백을 등록할 수 없습니다.");
     }
 
     const userHash = this.getUserHash();
@@ -2212,8 +2214,11 @@ const Utils = {
         method: 'POST',
         headers: this.getApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
-          isrc: identity.isrc,
+          isrc: identity.isrc || '',
           trackId: identity.trackId,
+          title: identity.metadata?.title || '',
+          artist: identity.metadata?.artists?.join(', ') || '',
+          album: identity.metadata?.album || '',
           userHash,
           isPositive,
           provider
@@ -2245,16 +2250,12 @@ const Utils = {
       trackId,
       trackName: spotifyData?.name || "",
       title: spotifyData?.name || "",
-      artists: spotifyData?.artists || []
+      artists: spotifyData?.artists || [],
+      album: spotifyData?.album || spotifyData?.albumName || ""
     };
     const isrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, metadata)
       || window.SyncDataService?.getTrackIsrc?.(trackId, metadata)
       || "";
-
-    if (!isrc) {
-      window.__ivLyricsDebugLog?.("[ivLyrics] Missing ISRC for community video request", { trackId });
-      return null;
-    }
 
     return { isrc, trackId, metadata };
   },
@@ -2272,8 +2273,16 @@ const Utils = {
 
     try {
       // 브라우저 캐시 우회를 위해 타임스탬프 추가
+      const url = new URL('https://lyrics.api.ivl.is/lyrics/youtube/community');
+      if (identity.isrc) url.searchParams.set('isrc', identity.isrc);
+      url.searchParams.set('trackId', identity.trackId);
+      url.searchParams.set('userId', userHash);
+      if (identity.metadata?.title) url.searchParams.set('title', identity.metadata.title);
+      if (identity.metadata?.artists?.length) url.searchParams.set('artist', identity.metadata.artists.join(', '));
+      if (identity.metadata?.album) url.searchParams.set('album', identity.metadata.album);
+      url.searchParams.set('_t', String(Date.now()));
       const response = await fetch(
-        `https://lyrics.api.ivl.is/lyrics/youtube/community?isrc=${encodeURIComponent(identity.isrc)}&trackId=${encodeURIComponent(identity.trackId)}&userId=${encodeURIComponent(userHash)}&_t=${Date.now()}`,
+        url.toString(),
         {
           cache: 'no-store',  // 브라우저 캐시 완전히 우회
           headers: this.getApiHeaders({
@@ -2300,7 +2309,7 @@ const Utils = {
   async submitCommunityVideo(trackUri, videoId, videoTitle, startTime = 0) {
     const identity = await this.getCommunityVideoIdentity(trackUri);
     if (!identity) {
-      throw new Error("이 곡의 ISRC를 찾을 수 없어 커뮤니티 영상을 등록할 수 없습니다. ivLyrics 클라이언트를 최신 버전으로 업데이트해 주세요.");
+      throw new Error("이 곡의 trackId를 확인할 수 없어 커뮤니티 영상을 등록할 수 없습니다.");
     }
 
     await this.requireDiscordAuth(
@@ -2313,8 +2322,11 @@ const Utils = {
         headers: this.getApiHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           action: 'submit',
-          isrc: identity.isrc,
+          isrc: identity.isrc || '',
           trackId: identity.trackId,
+          title: identity.metadata?.title || '',
+          artist: identity.metadata?.artists?.join(', ') || '',
+          album: identity.metadata?.album || '',
           videoId,
           videoTitle,
           startTime

@@ -1961,13 +1961,14 @@
             }
 
             const trackMetadata = getSyncDataTrackMetadata(identity.trackId, metadata);
+            const metadataTrackId = identity.isrc ? '' : trackMetadata.trackId;
             const identityKey = getSyncDataIdentityCacheKey(identity);
             const shouldReportMetadata = !_syncTrackMetadataReported.has(identityKey)
-                && (trackMetadata.trackId || trackMetadata.title || trackMetadata.artist || trackMetadata.album);
+                && (metadataTrackId || trackMetadata.title || trackMetadata.artist || trackMetadata.album);
 
             if (shouldReportMetadata) {
                 url.searchParams.set('metadata', '1');
-                if (trackMetadata.trackId) url.searchParams.set('trackId', trackMetadata.trackId);
+                if (metadataTrackId) url.searchParams.set('trackId', metadataTrackId);
                 if (trackMetadata.title) url.searchParams.set('title', trackMetadata.title);
                 if (trackMetadata.artist) url.searchParams.set('artist', trackMetadata.artist);
                 if (trackMetadata.album) url.searchParams.set('album', trackMetadata.album);
@@ -5176,8 +5177,9 @@
                 const url = new URL('https://lyrics.api.ivl.is/lyrics/sync-data');
                 if (isrc) {
                     url.searchParams.set('isrc', isrc);
+                } else {
+                    url.searchParams.set('trackId', trackId);
                 }
-                url.searchParams.set('trackId', trackId);
                 url.searchParams.set('provider', provider);
                 if (metadata?.title || metadata?.trackName || metadata?.name) {
                     url.searchParams.set('title', metadata.title || metadata.trackName || metadata.name);

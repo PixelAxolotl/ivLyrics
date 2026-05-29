@@ -4842,11 +4842,20 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					Toast.error(I18n.t('syncCreator.submitError'));
 				}
 			} else {
+				const fallbackPayload = {
+					isrc: resolvedTrackIsrc || '',
+					provider,
+					syncData: syncDataToSubmit,
+					...submitMetadata
+				};
+				if (!resolvedTrackIsrc && trackId) {
+					fallbackPayload.trackId = trackId;
+				}
 				const response = await fetch('https://lyrics.api.ivl.is/lyrics/sync-data', {
 					method: 'POST',
-				headers: Utils.getApiHeaders({ 'Content-Type': 'application/json' }),
-				body: JSON.stringify({ isrc: resolvedTrackIsrc || '', trackId, provider, syncData: syncDataToSubmit, ...submitMetadata })
-			});
+					headers: Utils.getApiHeaders({ 'Content-Type': 'application/json' }),
+					body: JSON.stringify(fallbackPayload)
+				});
 
 				if (response.ok) {
 					Toast.success(I18n.t('syncCreator.submitSuccess'));

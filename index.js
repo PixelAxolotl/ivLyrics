@@ -2639,13 +2639,19 @@ const Prefetcher = {
   async _prefetchVideoBackground(uri) {
     const trackId = uri.split(":")[2];
     const spotifyData = SpotifyDataHelper.extractSpotifyData(uri);
+    const currentItem = Spicetify.Player?.data?.item || null;
+    const fallbackArtists = Array.isArray(spotifyData?.artists) && spotifyData.artists.length
+      ? spotifyData.artists
+      : (currentItem?.artists || []).map(artist => typeof artist === "string" ? artist : artist?.name).filter(Boolean);
+    const fallbackTrackName = spotifyData?.name || currentItem?.name || "";
+    const fallbackAlbum = spotifyData?.album || spotifyData?.albumName || currentItem?.album?.name || currentItem?.metadata?.album_title || "";
     const metadata = {
       trackId,
-      trackName: spotifyData?.name || "",
-      title: spotifyData?.name || "",
-      artists: spotifyData?.artists || [],
-      album: spotifyData?.album || spotifyData?.albumName || "",
-      isrc: spotifyData?.isrc || spotifyData?.external_ids?.isrc || ""
+      trackName: fallbackTrackName,
+      title: fallbackTrackName,
+      artists: fallbackArtists,
+      album: fallbackAlbum,
+      isrc: spotifyData?.isrc || spotifyData?.external_ids?.isrc || currentItem?.metadata?.isrc || ""
     };
     const isrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, metadata)
       || window.SyncDataService?.getTrackIsrc?.(trackId, metadata)
@@ -2679,14 +2685,14 @@ const Prefetcher = {
         if (isrc) youtubeApiUrlObject.searchParams.set('isrc', isrc);
         youtubeApiUrlObject.searchParams.set('trackId', trackId);
         youtubeApiUrlObject.searchParams.set('userHash', userHash);
-        if (spotifyData?.name) {
-          youtubeApiUrlObject.searchParams.set('trackName', spotifyData.name);
-          if (spotifyData.artists?.length) {
-            youtubeApiUrlObject.searchParams.set('trackArtists', spotifyData.artists.join(', '));
-          }
-          if (spotifyData.album || spotifyData.albumName) {
-            youtubeApiUrlObject.searchParams.set('album', spotifyData.album || spotifyData.albumName);
-          }
+        if (metadata.trackName) {
+          youtubeApiUrlObject.searchParams.set('trackName', metadata.trackName);
+        }
+        if (metadata.artists?.length) {
+          youtubeApiUrlObject.searchParams.set('trackArtists', metadata.artists.join(', '));
+        }
+        if (metadata.album) {
+          youtubeApiUrlObject.searchParams.set('album', metadata.album);
         }
         if (isrc && window.SyncDataService?.shouldBypassServerCache?.(isrc)) {
           youtubeApiUrlObject.searchParams.set('bypassCache', '1');
@@ -2694,9 +2700,16 @@ const Prefetcher = {
         const youtubeApiUrl = youtubeApiUrlObject.toString();
         const response = await fetch(youtubeApiUrl, { cache: "no-store" });
         const data = await response.json();
+        if (response.headers.get('X-ivLyrics-Decoy') === '1') {
+          console.warn(`[Prefetcher] Video prefetch returned decoy for: ${identityKey}`);
+          return null;
+        }
 
         if (data.success) {
           const resolvedIsrc = window.SyncDataService?.normalizeSyncDataIsrc?.(data.data?.isrc) || isrc;
+          if (resolvedIsrc) {
+            window.SyncDataService?.rememberTrackIsrc?.(trackId, resolvedIsrc);
+          }
           this._prefetchCache.set(cacheKey, {
             data: data.data,
             timestamp: Date.now(),

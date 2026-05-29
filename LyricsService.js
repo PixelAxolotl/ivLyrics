@@ -1862,6 +1862,18 @@
             return await promise;
         }
 
+        function rememberTrackIsrc(trackId, isrcValue) {
+            const normalizedTrackId = getTrackIdFromInput(trackId, {});
+            const isrc = normalizeSyncDataIsrc(isrcValue);
+            if (!normalizedTrackId || !isrc) return '';
+
+            _isrcLookupCache.set(normalizedTrackId, {
+                isrc,
+                expiresAt: Date.now() + ISRC_LOOKUP_SUCCESS_TTL_MS
+            });
+            return isrc;
+        }
+
         function buildSyncDataIdentity(trackId, metadata = {}, isrcValue = '') {
             const trackIdentity = getTrackIdFromInput(trackId, metadata);
             const isrc = normalizeSyncDataIsrc(isrcValue);
@@ -1941,6 +1953,8 @@
         function appendSyncDataQueryParams(url, identity, metadata = {}, provider = null) {
             if (identity.isrc) {
                 url.searchParams.set('isrc', identity.isrc);
+            } else if (identity.trackId) {
+                url.searchParams.set('trackId', identity.trackId);
             }
             if (provider) {
                 url.searchParams.set('provider', provider);
@@ -2030,6 +2044,13 @@
                     throw new Error(`API Error: ${response.status}`);
                 }
                 const result = await response.json();
+                const resolvedIsrc = normalizeSyncDataIsrc(result?.isrc || result?.data?.isrc);
+                if (resolvedIsrc && identity.trackId) {
+                    _isrcLookupCache.set(identity.trackId, {
+                        isrc: resolvedIsrc,
+                        expiresAt: Date.now() + ISRC_LOOKUP_SUCCESS_TTL_MS
+                    });
+                }
                 if (reportsMetadata) {
                     _syncTrackMetadataReported.add(identityKey);
                 }
@@ -2149,6 +2170,12 @@
 
                         const resolvedIsrc = normalizeSyncDataIsrc(data.isrc) || identity.isrc;
                         const resolvedTrackId = identity.trackId || data.trackId || data.storedTrackId || null;
+                        if (resolvedIsrc && resolvedTrackId) {
+                            _isrcLookupCache.set(resolvedTrackId, {
+                                isrc: resolvedIsrc,
+                                expiresAt: Date.now() + ISRC_LOOKUP_SUCCESS_TTL_MS
+                            });
+                        }
                         const syncData = {
                             isrc: resolvedIsrc,
                             trackId: resolvedTrackId,
@@ -2385,6 +2412,12 @@
             }
 
             const resolvedResultIsrc = normalizeSyncDataIsrc(result?.isrc || result?.data?.isrc);
+            if (resolvedResultIsrc && identity.trackId) {
+                _isrcLookupCache.set(identity.trackId, {
+                    isrc: resolvedResultIsrc,
+                    expiresAt: Date.now() + ISRC_LOOKUP_SUCCESS_TTL_MS
+                });
+            }
             clearCache(resolvedResultIsrc || identity.isrc || (identity.trackId ? `track:${identity.trackId}` : ''));
             return result;
         }
@@ -2984,6 +3017,7 @@
             convertKaraokeToSynced,
             getTrackIsrc,
             resolveTrackIsrc,
+            rememberTrackIsrc,
             getSyncDataTrackMetadata,
             normalizeSyncDataIsrc,
             shouldBypassServerCache,

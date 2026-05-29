@@ -2096,12 +2096,19 @@ const Utils = {
     if (!trackId) return null;
 
     const spotifyData = window.SpotifyDataHelper?.extractSpotifyData?.(trackUri) || null;
+    const currentItem = Spicetify.Player?.data?.item || null;
+    const artists = Array.isArray(spotifyData?.artists) && spotifyData.artists.length
+      ? spotifyData.artists
+      : (currentItem?.artists || []).map(artist => typeof artist === "string" ? artist : artist?.name).filter(Boolean);
+    const trackName = spotifyData?.name || currentItem?.name || "";
+    const album = spotifyData?.album || spotifyData?.albumName || currentItem?.album?.name || currentItem?.metadata?.album_title || "";
     const metadata = {
       trackId,
-      trackName: spotifyData?.name || "",
-      title: spotifyData?.name || "",
-      artists: spotifyData?.artists || [],
-      album: spotifyData?.album || spotifyData?.albumName || ""
+      trackName,
+      title: trackName,
+      artists,
+      album,
+      isrc: spotifyData?.isrc || spotifyData?.external_ids?.isrc || currentItem?.metadata?.isrc || ""
     };
     const isrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, metadata)
       || window.SyncDataService?.getTrackIsrc?.(trackId, metadata)

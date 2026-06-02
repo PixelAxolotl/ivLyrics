@@ -36,9 +36,15 @@ const SYNC_CREATOR_DEFAULT_SPEAKER = 'NORMAL';
 const SYNC_CREATOR_DEFAULT_KIND = 'vocal';
 const SYNC_CREATOR_MAX_MERGED_LINES = 5;
 const SYNC_CREATOR_SYNC_DATA_VERSION = 3;
-const SYNC_CREATOR_ACTIVE_POSITION_UPDATE_INTERVAL_MS = 100;
-const SYNC_CREATOR_IDLE_POSITION_UPDATE_INTERVAL_MS = 250;
+const SYNC_CREATOR_PREVIEW_POSITION_UPDATE_INTERVAL_MS = 100;
+const SYNC_CREATOR_RECORD_POSITION_UPDATE_INTERVAL_MS = 500;
+const SYNC_CREATOR_IDLE_POSITION_UPDATE_INTERVAL_MS = 500;
 const SYNC_CREATOR_POSITION_COMMIT_THRESHOLD_MS = 80;
+const SYNC_CREATOR_PROGRESS_COLOR = '#3182f6';
+const SYNC_CREATOR_RECORDING_BACKGROUND = 'rgba(255, 152, 0, 0.6)';
+const getSyncCreatorProgressGradient = (direction, percent, color = SYNC_CREATOR_PROGRESS_COLOR) => (
+	`linear-gradient(${direction === 'rtl' ? 'to left' : 'to right'}, ${color} 0%, ${color} ${percent}%, var(--spice-subtext) ${percent}%, var(--spice-subtext) 100%)`
+);
 const normalizeSyncCreatorIsrc = (value) => {
 	if (typeof value !== 'string') return '';
 	const normalized = value.trim().replace(/[\s-]/g, '').toUpperCase();
@@ -1573,7 +1579,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const positionUpdateTimerRef = useRef(null);
 	const charTimesRef = useRef([]);
 	const charElementsRef = useRef([]);
+	const charHitBoxesRef = useRef([]);
 	const rtlTextRunRef = useRef(null);
+	const recordingCharIndexRef = useRef(-1);
+	const lastPaintedRecordingIndexRef = useRef(-1);
 	const preventNextTrackRef = useRef(false);
 
 	// 트랙 정보
@@ -2343,6 +2352,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const nextPartId = getIncompleteParallelPartId(lineData);
 		if (nextPartId) {
 			setActiveParallelPartId(nextPartId);
+			recordingCharIndexRef.current = -1;
 			setRecordingCharIndex(-1);
 			charTimesRef.current = [];
 			if (lyricsScrollRef.current) lyricsScrollRef.current.scrollLeft = 0;
@@ -2987,9 +2997,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		};
 
 		updatePosition();
-		const intervalMs = mode === 'preview' || mode === 'record'
-			? SYNC_CREATOR_ACTIVE_POSITION_UPDATE_INTERVAL_MS
-			: SYNC_CREATOR_IDLE_POSITION_UPDATE_INTERVAL_MS;
+		const intervalMs = mode === 'preview'
+			? SYNC_CREATOR_PREVIEW_POSITION_UPDATE_INTERVAL_MS
+			: mode === 'record'
+				? SYNC_CREATOR_RECORD_POSITION_UPDATE_INTERVAL_MS
+				: SYNC_CREATOR_IDLE_POSITION_UPDATE_INTERVAL_MS;
 		positionUpdateTimerRef.current = setInterval(updatePosition, intervalMs);
 
 		return () => {
@@ -3022,6 +3034,69 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			scrollContainer.scrollLeft += scrollOffset * 0.3;
 		}
 	}, [currentLineChars.length, isCurrentLineRtl, useCurrentLineTextRun]);
+
+	const applyRecordingProgressVisual = useCallback((nextIndex) => {
+		const normalizedIndex = Number.isInteger(nextIndex) ? nextIndex : -1;
+		if (lastPaintedRecordingIndexRef.current === normalizedIndex) return;
+		lastPaintedRecordingIndexRef.current = normalizedIndex;
+
+		if (useCurrentLineTextRun && rtlTextRunRef.current) {
+			const percent = currentLineChars.length > 0 && normalizedIndex >= 0
+				? Math.max(0, Math.min(100, ((normalizedIndex + 1) / currentLineChars.length) * 100))
+				: 0;
+			rtlTextRunRef.current.style.backgroundImage = getSyncCreatorProgressGradient(
+				currentLineDirection,
+				percent,
+				SYNC_CREATOR_RECORDING_BACKGROUND
+			);
+			return;
+		}
+
+		for (let index = 0; index < currentLineChars.length; index++) {
+			const el = charElementsRef.current[index];
+			if (!el) continue;
+			if (normalizedIndex >= 0 && index <= normalizedIndex) {
+				el.style.background = SYNC_CREATOR_RECORDING_BACKGROUND;
+				el.style.color = 'var(--spice-text)';
+			} else {
+				el.style.background = el.dataset.ivSyncCreatorBaseBackground || '';
+				el.style.color = el.dataset.ivSyncCreatorBaseColor || '';
+			}
+		}
+	}, [currentLineChars.length, currentLineDirection, useCurrentLineTextRun]);
+
+	const setRecordingProgressIndex = useCallback((nextIndex, options = {}) => {
+		const normalizedIndex = Number.isInteger(nextIndex) ? nextIndex : -1;
+		recordingCharIndexRef.current = normalizedIndex;
+		applyRecordingProgressVisual(normalizedIndex);
+		if (options.commitState !== false) {
+			setRecordingCharIndex(normalizedIndex);
+		}
+	}, [applyRecordingProgressVisual]);
+
+	useEffect(() => {
+		lastPaintedRecordingIndexRef.current = -2;
+		applyRecordingProgressVisual(mode === 'record' ? recordingCharIndexRef.current : -1);
+	}, [mode, currentLineIndex, activeParallelTargetId, lyricsText, applyRecordingProgressVisual]);
+
+	const cacheCharHitBoxes = useCallback(() => {
+		if (useCurrentLineTextRun) {
+			charHitBoxesRef.current = [];
+			return;
+		}
+
+		charHitBoxesRef.current = charElementsRef.current.map((el) => {
+			if (!el) return null;
+			const rect = el.getBoundingClientRect();
+			return {
+				left: rect.left,
+				right: rect.right,
+				top: rect.top,
+				bottom: rect.bottom,
+				centerX: rect.left + (rect.width / 2)
+			};
+		});
+	}, [useCurrentLineTextRun]);
 
 	const getCharIndexFromPoint = useCallback((clientX, clientY) => {
 		if (useCurrentLineTextRun && rtlTextRunRef.current && currentLineChars.length > 0) {
@@ -3066,6 +3141,53 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			}
 		}
 
+		const cachedHitBoxes = charHitBoxesRef.current;
+		if (cachedHitBoxes.length > 0) {
+			for (let i = 0; i < cachedHitBoxes.length; i++) {
+				const rect = cachedHitBoxes[i];
+				if (!rect) continue;
+				if (clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom) {
+					return i;
+				}
+			}
+
+			let firstRect = null;
+			let firstIndex = -1;
+			for (let i = 0; i < cachedHitBoxes.length; i++) {
+				if (cachedHitBoxes[i]) {
+					firstRect = cachedHitBoxes[i];
+					firstIndex = i;
+					break;
+				}
+			}
+			let lastRect = null;
+			let lastIndex = -1;
+			for (let i = cachedHitBoxes.length - 1; i >= 0; i--) {
+				if (cachedHitBoxes[i]) {
+					lastRect = cachedHitBoxes[i];
+					lastIndex = i;
+					break;
+				}
+			}
+			if (firstRect && lastRect) {
+				if (clientX < firstRect.left) return firstIndex;
+				if (clientX > lastRect.right) return lastIndex;
+
+				let closestIndex = 0;
+				let closestDist = Infinity;
+				for (let i = 0; i < cachedHitBoxes.length; i++) {
+					const rect = cachedHitBoxes[i];
+					if (!rect) continue;
+					const dist = Math.abs(clientX - rect.centerX);
+					if (dist < closestDist) {
+						closestDist = dist;
+						closestIndex = i;
+					}
+				}
+				return closestIndex;
+			}
+		}
+
 		for (let i = 0; i < charElementsRef.current.length; i++) {
 			const el = charElementsRef.current[i];
 			if (!el) continue;
@@ -3107,6 +3229,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		if (mode !== 'record' || currentLineIndex >= lyricsLines.length) return;
 		e.preventDefault();
 		e.stopPropagation();
+		cacheCharHitBoxes();
 
 		const currentTime = Spicetify.Player.getProgress() / 1000;
 		const startIndex = charIndex < 0 ? 0 : charIndex;
@@ -3132,7 +3255,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 		setDragStartTime(currentTime);
 		setDragStartCharIndex(startIndex);
-		setRecordingCharIndex(startIndex);
+		setRecordingProgressIndex(startIndex, { commitState: false });
 		setIsDragging(true);
 
 		if (hasKeyboardProgress) {
@@ -3172,12 +3295,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			}
 		}
 		charTimesRef.current = nextCharTimes;
-	}, [mode, currentLineIndex, lyricsLines.length, currentLineChars.length]);
+	}, [mode, currentLineIndex, lyricsLines.length, currentLineChars.length, setRecordingProgressIndex, cacheCharHitBoxes]);
 
 	const handleDragMove = useCallback((charIndex, e) => {
 		if (mode !== 'record' || !isDragging || dragStartTime === null) return;
 		e.preventDefault();
 		const currentTime = Spicetify.Player.getProgress() / 1000;
+		const previousRecordingCharIndex = recordingCharIndexRef.current;
 
 		// 마우스를 너무 위/아래로 움직였거나 영역을 벗어났을 때도 처리가 필요할 수 있음
 		// 현재는 index 기반으로만 처리
@@ -3189,24 +3313,24 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			return;
 		}
 
-		if (charIndex >= recordingCharIndex) {
+		if (charIndex >= previousRecordingCharIndex) {
 			// 정방향 진행
-			for (let i = recordingCharIndex + 1; i <= charIndex; i++) {
+			for (let i = previousRecordingCharIndex + 1; i <= charIndex; i++) {
 				if (charTimesRef.current[i] === null) {
 					charTimesRef.current[i] = currentTime;
 				}
 			}
-			setRecordingCharIndex(charIndex);
+			setRecordingProgressIndex(charIndex, { commitState: false });
 			autoScroll(charIndex);
 		} else {
 			// 역방향 진행 (취소)
 			// 현재 recordingCharIndex에서 charIndex+1 까지의 기록을 지움
-			for (let i = charIndex + 1; i <= recordingCharIndex; i++) {
+			for (let i = charIndex + 1; i <= previousRecordingCharIndex; i++) {
 				charTimesRef.current[i] = null;
 			}
-			setRecordingCharIndex(charIndex);
+			setRecordingProgressIndex(charIndex, { commitState: false });
 		}
-	}, [mode, isDragging, dragStartTime, recordingCharIndex, autoScroll]);
+	}, [mode, isDragging, dragStartTime, autoScroll, setRecordingProgressIndex]);
 
 	// Commit-time normalization keeps the client aligned with backend validation:
 	// chars must be non-decreasing and a line must not start before the previous line ends.
@@ -3332,7 +3456,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			[currentStart]: nextMergedLineIndexes.slice(1).map(index => lineCharOffsets[index])
 		}));
 		setMode('idle');
-		setRecordingCharIndex(-1);
+		setRecordingProgressIndex(-1);
 		charTimesRef.current = [];
 		if (lyricsScrollRef.current) lyricsScrollRef.current.scrollLeft = 0;
 		Toast.success(I18n.t('syncCreator.mergedWithNextLine') || 'Merged with the next line as separate vocal parts.');
@@ -3344,7 +3468,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		getLineEndAtIndex,
 		lineCharOffsets,
 		lyricsLines,
-		normalizeCommittedLineChars
+		normalizeCommittedLineChars,
+		setRecordingProgressIndex
 	]);
 
 	const commitCurrentLineSync = useCallback((rawChars) => {
@@ -3540,7 +3665,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	]);
 
 	const handleDragEnd = useCallback((e) => {
-		if (mode !== 'record' || !isDragging || dragStartTime === null || recordingCharIndex === -1) {
+		const endCharIndex = recordingCharIndexRef.current;
+		if (mode !== 'record' || !isDragging || dragStartTime === null || endCharIndex === -1) {
 			setIsDragging(false);
 			return;
 		}
@@ -3551,7 +3677,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		// 여기서는 recordingCharIndex가 유효한 마지막 지점이므로 거기까지만 저장
 
 		const endTime = Spicetify.Player.getProgress() / 1000;
-		const endCharIndex = recordingCharIndex;
 		const charCount = currentLineChars.length;
 
 		// 유효성 체크: 만약 드래그 시작하자마자 바로 끝나거나 이상한 경우
@@ -3585,9 +3710,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		if (!committedLine) {
 			setDragStartTime(null);
 			setDragStartCharIndex(-1);
-			setRecordingCharIndex(-1);
+			setRecordingProgressIndex(-1);
 			setIsDragging(false);
 			charTimesRef.current = [];
+			charHitBoxesRef.current = [];
 			return;
 		}
 
@@ -3598,10 +3724,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 		setDragStartTime(null);
 		setDragStartCharIndex(-1);
-		setRecordingCharIndex(-1);
+		setRecordingProgressIndex(-1);
 		setIsDragging(false);
 		charTimesRef.current = [];
-	}, [mode, isDragging, dragStartTime, recordingCharIndex, currentLineIndex, currentLineChars, lyricsLines.length, dragStartCharIndex, commitCurrentLineSync, advanceAfterCompletedTarget]);
+		charHitBoxesRef.current = [];
+	}, [mode, isDragging, dragStartTime, currentLineIndex, currentLineChars, lyricsLines.length, dragStartCharIndex, commitCurrentLineSync, advanceAfterCompletedTarget, setRecordingProgressIndex]);
 
 	// 키보드 싱크 상태 ref (isDragging과 별개로 키보드용)
 	const isKeyboardSyncingRef = useRef(false);
@@ -3634,8 +3761,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		pendingSyllableSyncRef.current = null;
 		setDragStartTime(null);
 		setDragStartCharIndex(-1);
-		setRecordingCharIndex(-1);
+		setRecordingProgressIndex(-1);
 		setIsDragging(false);
+		charHitBoxesRef.current = [];
 		if (keyboardDragIntervalRef.current) {
 			clearInterval(keyboardDragIntervalRef.current);
 			keyboardDragIntervalRef.current = null;
@@ -3645,7 +3773,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			keyboardDragWarmupTimerRef.current = null;
 		}
 		isKeyboardDraggingRef.current = false;
-	}, []);
+	}, [setRecordingProgressIndex]);
 
 	useEffect(() => () => {
 		if (keyboardDragIntervalRef.current) {
@@ -3691,7 +3819,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			pendingWordSyncRef.current = null; // 보간 대기 상태도 초기화
 			pendingSyllableSyncRef.current = null;
 			setDragStartTime(null);
-			setRecordingCharIndex(-1);
+			setRecordingProgressIndex(-1);
 			// 드래그 모드도 초기화
 			if (isKeyboardDraggingRef.current) {
 				isKeyboardDraggingRef.current = false;
@@ -3744,7 +3872,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			pendingWordSyncRef.current = null;
 			pendingSyllableSyncRef.current = null;
 			setDragStartTime(null);
-			setRecordingCharIndex(-1);
+			setRecordingProgressIndex(-1);
 		};
 
 		const handleKeyDown = (e) => {
@@ -3801,7 +3929,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 					keyboardCharIndexRef.current = startIndex;
 					setDragStartTime(currentTime);
-					setRecordingCharIndex(startIndex);
+					setRecordingProgressIndex(startIndex, { commitState: false });
 					window.__ivLyricsDebugLog?.('[SyncDataCreator] Started keyboard sync, chars:', currentLineChars.length, 'startIndex:', startIndex);
 					return startIndex;
 				} else {
@@ -3823,7 +3951,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						}
 
 						keyboardCharIndexRef.current = nextIndex;
-						setRecordingCharIndex(nextIndex);
+						setRecordingProgressIndex(nextIndex, { commitState: false });
 						autoScroll(nextIndex);
 						window.__ivLyricsDebugLog?.('[SyncDataCreator] Advanced to char:', nextIndex);
 					}
@@ -3920,7 +4048,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					}
 
 					keyboardCharIndexRef.current = endIdx;
-					setRecordingCharIndex(endIdx);
+					setRecordingProgressIndex(endIdx, { commitState: false });
 					autoScroll(endIdx);
 
 					window.__ivLyricsDebugLog?.('[SyncDataCreator] Word sync started, first word ends at:', endIdx);
@@ -3986,7 +4114,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				const finalEndIdx = endIdx - 1;
 				keyboardCharIndexRef.current = Math.max(0, finalEndIdx);
 
-				setRecordingCharIndex(keyboardCharIndexRef.current);
+				setRecordingProgressIndex(keyboardCharIndexRef.current, { commitState: false });
 				autoScroll(keyboardCharIndexRef.current);
 
 				// 보간을 위해 현재 단어 정보 저장
@@ -4052,7 +4180,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				}
 
 				keyboardCharIndexRef.current = targetIdx;
-				setRecordingCharIndex(keyboardCharIndexRef.current);
+				setRecordingProgressIndex(keyboardCharIndexRef.current, { commitState: false });
 				window.__ivLyricsDebugLog?.('[SyncDataCreator] Word reverted to char:', keyboardCharIndexRef.current);
 
 				// 모든 글자 취소시 싱크 상태 초기화
@@ -4079,7 +4207,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					pendingSyllableSyncRef.current = null;
 					charTimesRef.current[keyboardCharIndexRef.current] = null;
 					keyboardCharIndexRef.current--;
-					setRecordingCharIndex(keyboardCharIndexRef.current);
+					setRecordingProgressIndex(keyboardCharIndexRef.current, { commitState: false });
 					window.__ivLyricsDebugLog?.('[SyncDataCreator] Reverted to char:', keyboardCharIndexRef.current);
 					// 모든 글자 취소시 싱크 상태 초기화
 					if (keyboardCharIndexRef.current < 0) {
@@ -4129,7 +4257,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					}
 
 					keyboardCharIndexRef.current = firstSegment.end;
-					setRecordingCharIndex(firstSegment.end);
+					setRecordingProgressIndex(firstSegment.end, { commitState: false });
 					autoScroll(firstSegment.end);
 					window.__ivLyricsDebugLog?.('[SyncDataCreator] Syllable sync started, segment:', firstSegment.start, '-', firstSegment.end);
 
@@ -4166,7 +4294,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				}
 
 				keyboardCharIndexRef.current = nextSegment.end;
-				setRecordingCharIndex(nextSegment.end);
+				setRecordingProgressIndex(nextSegment.end, { commitState: false });
 				autoScroll(nextSegment.end);
 				window.__ivLyricsDebugLog?.('[SyncDataCreator] Syllable advanced to segment:', nextSegment.start, '-', nextSegment.end);
 
@@ -4258,7 +4386,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					pendingWordSyncRef.current = null;
 					pendingSyllableSyncRef.current = null;
 					setDragStartTime(null);
-					setRecordingCharIndex(-1);
+					setRecordingProgressIndex(-1);
 
 					// 드래그 모드도 취소
 					if (isKeyboardDraggingRef.current) {
@@ -4348,7 +4476,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			document.removeEventListener('keypress', handleKeyPress, true);
 			document.removeEventListener('keyup', handleKeyUp, true);
 		};
-	}, [mode, currentLineIndex, activeParallelTargetId, lyricsLines.length, currentLineChars, currentLineEffectiveSyllableSegments, lineCharOffsets, autoScroll, commitCurrentLineSync, advanceAfterCompletedTarget, isCurrentSyncTargetMetaComplete, showMissingMetaToast]);
+	}, [mode, currentLineIndex, activeParallelTargetId, lyricsLines.length, currentLineChars, currentLineEffectiveSyllableSegments, lineCharOffsets, autoScroll, commitCurrentLineSync, advanceAfterCompletedTarget, isCurrentSyncTargetMetaComplete, showMissingMetaToast, setRecordingProgressIndex]);
 
 	const handleContainerMouseDown = useCallback((e) => {
 		if (mode !== 'record' || currentLineIndex >= lyricsLines.length) return;
@@ -4576,10 +4704,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			return next;
 		});
 		setMode('idle');
-		setRecordingCharIndex(-1);
+		setRecordingProgressIndex(-1);
 		charTimesRef.current = [];
 		if (lyricsScrollRef.current) lyricsScrollRef.current.scrollLeft = 0;
-	}, [lineCharOffsets, currentLineIndex]);
+	}, [lineCharOffsets, currentLineIndex, setRecordingProgressIndex]);
 	const unmergeCurrentLine = useCallback(() => {
 		if (!currentLineMergedWithNext || currentMergedLineIndexes.length <= 1) return;
 		const lineStart = lineCharOffsets[currentLineIndex];
@@ -4643,7 +4771,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		});
 		setActiveParallelPartId('full');
 		setMode('idle');
-		setRecordingCharIndex(-1);
+		setRecordingProgressIndex(-1);
 		charTimesRef.current = [];
 		if (lyricsScrollRef.current) lyricsScrollRef.current.scrollLeft = 0;
 	}, [
@@ -4652,7 +4780,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		currentMergedLineIndexes,
 		getLineEndAtIndex,
 		lineCharOffsets,
-		lyricsLines
+		lyricsLines,
+		setRecordingProgressIndex
 	]);
 	const toggleManualParallelSplitPoint = useCallback((splitPoint) => {
 		if (!multiVocalMode || currentFullLineChars.length < 2) return;
@@ -4686,7 +4815,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			return next;
 		});
 		setMode('idle');
-		setRecordingCharIndex(-1);
+		setRecordingProgressIndex(-1);
 		charTimesRef.current = [];
 		if (lyricsScrollRef.current) lyricsScrollRef.current.scrollLeft = 0;
 	}, [
@@ -4695,16 +4824,17 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		currentAutoMergeSplitPointSet,
 		unmergeCurrentLine,
 		lineCharOffsets,
-		currentLineIndex
+		currentLineIndex,
+		setRecordingProgressIndex
 	]);
 	const enableManualMultiVocalMode = useCallback(() => {
 		setMultiVocalMode(true);
 		setActiveParallelPartId('');
 		setMode('idle');
-		setRecordingCharIndex(-1);
+		setRecordingProgressIndex(-1);
 		charTimesRef.current = [];
 		if (lyricsScrollRef.current) lyricsScrollRef.current.scrollLeft = 0;
-	}, []);
+	}, [setRecordingProgressIndex]);
 
 	const toggleMode = useCallback((newMode) => {
 		if (mode === newMode) {
@@ -5213,7 +5343,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		return -1;
 	}, [syncLinesByStart, position, lineCharOffsets, activeParallelPart]);
 
-	useEffect(() => { charElementsRef.current = []; }, [currentLineIndex, lyricsText, activeParallelPartId]);
+	useEffect(() => {
+		charElementsRef.current = [];
+		charHitBoxesRef.current = [];
+	}, [currentLineIndex, lyricsText, activeParallelPartId]);
 
 	const TOSS_BLUE = '#3182f6';
 	const TOSS_BLUE_DEEP = '#1b64da';
@@ -6029,22 +6162,26 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		: null;
 	const currentLinePreviewIndex = currentLineText ? getPreviewCharIndex(currentLineIndex) : -1;
 	const currentLineSyncedIndex = ((currentLineActivePartData || currentLineData)?.chars?.length || 0) - 1;
+	const currentRecordingCharIndex = recordingCharIndexRef.current;
 	const currentLineProgressIndex = mode === 'preview'
 		? currentLinePreviewIndex
-		: mode === 'record' && recordingCharIndex >= 0
-			? recordingCharIndex
+		: mode === 'record' && currentRecordingCharIndex >= 0
+			? currentRecordingCharIndex
 			: currentLineSyncedIndex;
 	const currentLineProgressPercent = currentLineChars.length > 0 && currentLineProgressIndex >= 0
 		? Math.max(0, Math.min(100, ((currentLineProgressIndex + 1) / currentLineChars.length) * 100))
 		: 0;
+	const currentLineProgressColor = mode === 'record' && currentRecordingCharIndex >= 0
+		? SYNC_CREATOR_RECORDING_BACKGROUND
+		: SYNC_CREATOR_PROGRESS_COLOR;
 	const rtlTextRunStyle = {
 		...s.rtlTextRun,
 		direction: currentLineDirection,
-		backgroundImage: `linear-gradient(${currentLineDirection === 'rtl' ? 'to left' : 'to right'}, ${TOSS_BLUE} 0%, ${TOSS_BLUE} ${currentLineProgressPercent}%, var(--spice-subtext) ${currentLineProgressPercent}%, var(--spice-subtext) 100%)`,
+		backgroundImage: getSyncCreatorProgressGradient(currentLineDirection, currentLineProgressPercent, currentLineProgressColor),
 	};
 	const renderCharacterSpan = (char, i, options = {}) => {
 		const isSynced = isCharSynced(currentLineIndex, i);
-		const isRec = mode === 'record' && recordingCharIndex >= 0 && i <= recordingCharIndex;
+		const isRec = mode === 'record' && currentRecordingCharIndex >= 0 && i <= currentRecordingCharIndex;
 		const previewIdx = getPreviewCharIndex(currentLineIndex);
 		const isPlayed = isSynced && previewIdx >= i;
 		const charTime = getCharSyncTime(currentLineIndex, i);
@@ -6053,6 +6190,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const usePrimaryLayout = usePrimaryCharacterPronunciation && !options.suppressPrimaryPronunciation;
 		const useFixedPrimaryLayout = usePrimaryLayout && useFixedPrimaryCharacterCells;
 		const shouldShowCharTime = !options.hideTime && currentLineRenderedPronunciationUnits.length === 0;
+		const baseBackground = !options.wordSpacer && isSynced
+			? (isPlayed ? SYNC_CREATOR_PROGRESS_COLOR : 'rgba(49, 130, 246, 0.20)')
+			: '';
+		const baseColor = !options.wordSpacer && isSynced && isPlayed ? '#fff' : '';
 		const originalContent = furigana
 			? react.createElement('span', { style: s.charFuriganaWrap },
 				char === ' ' ? '\u00A0' : char,
@@ -6083,7 +6224,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				color: isPlayed ? '#fff' : s.charPronunciation.color
 			};
 
-		return react.createElement('span', { key: options.key || i, style, ref: (el) => { charElementsRef.current[i] = el; }, 'data-char-index': i },
+		return react.createElement('span', {
+			key: options.key || i,
+			style,
+			ref: (el) => { charElementsRef.current[i] = el; },
+			'data-char-index': i,
+			'data-iv-sync-creator-base-background': baseBackground,
+			'data-iv-sync-creator-base-color': baseColor
+		},
 			usePrimaryLayout
 				? react.createElement('span', { style: s.charOriginalSmall }, originalContent)
 				: originalContent,
@@ -7234,7 +7382,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							},
 							onClick: () => {
 								setActiveParallelPartId(part.id);
-								setRecordingCharIndex(-1);
+								setRecordingProgressIndex(-1);
 								charTimesRef.current = [];
 								if (lyricsScrollRef.current) lyricsScrollRef.current.scrollLeft = 0;
 							}
@@ -7261,7 +7409,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						},
 						onClick: () => {
 							setActiveParallelPartId(part.id);
-							setRecordingCharIndex(-1);
+							setRecordingProgressIndex(-1);
 							charTimesRef.current = [];
 							if (lyricsScrollRef.current) lyricsScrollRef.current.scrollLeft = 0;
 							}

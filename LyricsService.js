@@ -3048,12 +3048,98 @@
             return `lrclib-${(hash >>> 0).toString(36)}-${Array.from(value).length.toString(36)}`;
         };
 
+        const SYNC_DATA_DURATION_FRONT_OFFSET_RATIO = 0.3;
+        const SYNC_DATA_DURATION_OFFSET_MIN_DIFF_MS = 500;
+
+        function getCurrentSyncDataTrackDurationMs(options = {}) {
+            const playerItem = typeof Spicetify !== 'undefined' ? Spicetify.Player?.data?.item : null;
+            return normalizeSyncDataDurationMs(
+                options?.durationMs,
+                options?.trackDurationMs,
+                options?.duration_ms,
+                options?.trackInfo?.durationMs,
+                options?.trackInfo?.duration_ms,
+                options?.trackInfo?.duration?.milliseconds,
+                options?.result?.durationMs,
+                options?.result?.duration_ms,
+                options?.result?.duration?.milliseconds,
+                playerItem?.duration?.milliseconds,
+                typeof Spicetify !== 'undefined' ? Spicetify.Player?.getDuration?.() : 0
+            );
+        }
+
+        function getRegisteredSyncDataTrackDurationMs(syncData, syncBody) {
+            return normalizeSyncDataDurationMs(
+                syncBody?.trackDurationMs,
+                syncData?.trackDurationMs,
+                syncData?.durationMs
+            );
+        }
+
+        function getSyncDataDurationOffsetMs(syncData, syncBody, options = {}) {
+            const registeredDurationMs = getRegisteredSyncDataTrackDurationMs(syncData, syncBody);
+            const currentDurationMs = getCurrentSyncDataTrackDurationMs(options);
+            if (!registeredDurationMs || !currentDurationMs) {
+                return { offsetMs: 0, registeredDurationMs, currentDurationMs, diffMs: 0 };
+            }
+
+            const diffMs = currentDurationMs - registeredDurationMs;
+            if (Math.abs(diffMs) < SYNC_DATA_DURATION_OFFSET_MIN_DIFF_MS) {
+                return { offsetMs: 0, registeredDurationMs, currentDurationMs, diffMs };
+            }
+
+            return {
+                offsetMs: Math.round(diffMs * SYNC_DATA_DURATION_FRONT_OFFSET_RATIO),
+                registeredDurationMs,
+                currentDurationMs,
+                diffMs
+            };
+        }
+
+        function shiftSyncDataTimeSeconds(value, offsetSeconds) {
+            const numeric = Number(value);
+            if (!Number.isFinite(numeric)) return value;
+            return Math.max(0, Number((numeric + offsetSeconds).toFixed(3)));
+        }
+
+        function shiftSyncDataTimingLine(line, offsetSeconds) {
+            if (!line || typeof line !== 'object') return line;
+            const shifted = {
+                ...line,
+                chars: Array.isArray(line.chars)
+                    ? line.chars.map(value => shiftSyncDataTimeSeconds(value, offsetSeconds))
+                    : line.chars
+            };
+
+            if (line.parallel && typeof line.parallel === 'object') {
+                shifted.parallel = {
+                    ...line.parallel,
+                    parts: Array.isArray(line.parallel.parts)
+                        ? line.parallel.parts.map(part => ({
+                            ...part,
+                            chars: Array.isArray(part?.chars)
+                                ? part.chars.map(value => shiftSyncDataTimeSeconds(value, offsetSeconds))
+                                : part?.chars
+                        }))
+                        : line.parallel.parts
+                };
+            }
+
+            return shifted;
+        }
+
+        function applySyncDataDurationOffsetToLines(lines, offsetMs) {
+            if (!Array.isArray(lines) || !offsetMs) return lines;
+            const offsetSeconds = offsetMs / 1000;
+            return lines.map(line => shiftSyncDataTimingLine(line, offsetSeconds));
+        }
+
         /**
          * Applies community sync-data to base lyrics and produces karaoke lyrics.
          * sync-data v2 uses offsets from lyrics after standalone parenthetical vocal markers are removed.
          * sync-data v3 also strips standalone parenthetical wrappers from parallel vocal part ranges.
          */
-        function applySyncDataToLyrics(lyrics, syncData) {
+        function applySyncDataToLyrics(lyrics, syncData, options = {}) {
             if (!lyrics || !syncData || !syncData.syncData || !syncData.syncData.lines) {
                 return null;
             }
@@ -3110,6 +3196,20 @@
                     });
                     return null;
                 }
+            }
+            const durationAdjustment = getSyncDataDurationOffsetMs(syncData, syncBody, options);
+            if (durationAdjustment.offsetMs) {
+                normalizedSyncLines = applySyncDataDurationOffsetToLines(normalizedSyncLines, durationAdjustment.offsetMs);
+                window.__ivLyricsDebugLog?.('[SyncDataService] Applied duration mismatch offset to sync-data', {
+                    provider: syncData.provider,
+                    isrc: syncData.isrc || null,
+                    registeredDurationMs: durationAdjustment.registeredDurationMs,
+                    currentDurationMs: durationAdjustment.currentDurationMs,
+                    diffMs: durationAdjustment.diffMs,
+                    frontOffsetMs: durationAdjustment.offsetMs,
+                    rearRemainderMs: durationAdjustment.diffMs - durationAdjustment.offsetMs,
+                    frontRatio: SYNC_DATA_DURATION_FRONT_OFFSET_RATIO
+                });
             }
 
             // 전체 가사 텍스트를 하나로 합침 (줄바꿈 없이 - SyncDataCreator와 동일하게)
@@ -5576,7 +5676,10 @@
 
             if (syncData && isProviderMatch) {
                 const baseLyrics = result.synced || result.unsynced;
-                const karaoke = window.SyncDataService.applySyncDataToLyrics(baseLyrics, syncData);
+                const karaoke = window.SyncDataService.applySyncDataToLyrics(baseLyrics, syncData, {
+                    durationMs: result.durationMs || result.duration_ms || result.duration,
+                    result
+                });
 
                 if (karaoke) {
                     result.karaoke = karaoke;

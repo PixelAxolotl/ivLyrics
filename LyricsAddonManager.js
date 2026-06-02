@@ -638,7 +638,10 @@
 
                                     // sync-data를 가사에 적용하여 karaoke 생성
                                     const baseLyrics = result.synced || result.unsynced;
-                                    const karaoke = window.SyncDataService.applySyncDataToLyrics(baseLyrics, syncData);
+                                    const karaoke = window.SyncDataService.applySyncDataToLyrics(baseLyrics, syncData, {
+                                        durationMs: info.durationMs || info.duration_ms || info.duration,
+                                        trackInfo: info
+                                    });
 
                                     if (karaoke && karaoke.length > 0) {
                                         result.karaoke = karaoke;

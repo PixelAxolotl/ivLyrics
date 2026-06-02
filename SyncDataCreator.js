@@ -1002,7 +1002,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 	const normalizeSyncCreatorHiddenRanges = (ranges) => {
 		if (!Array.isArray(ranges)) return [];
-		return ranges
+		const normalizedRanges = ranges
 			.map((range) => {
 				const start = Number(range?.start);
 				const end = Number(range?.end);
@@ -1010,7 +1010,18 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					? { start, end }
 					: null;
 			})
-			.filter(Boolean);
+			.filter(Boolean)
+			.sort((a, b) => a.start - b.start || a.end - b.end);
+
+		return normalizedRanges.reduce((merged, range) => {
+			const previous = merged[merged.length - 1];
+			if (previous && range.start <= previous.end + 1) {
+				previous.end = Math.max(previous.end, range.end);
+			} else {
+				merged.push(range);
+			}
+			return merged;
+		}, []);
 	};
 
 	const sanitizeSyncCreatorParallel = (parallel) => {

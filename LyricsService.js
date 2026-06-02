@@ -1584,7 +1584,6 @@
         const _isrcLookupCache = new Map(); // trackId -> { isrc, expiresAt }
         const _isrcInflightRequests = new Map(); // trackId -> Promise<string>
         const _fullyLoadedTracks = new Set(); // 전체 목록이 로드된 트랙 ID
-        const _usageReportCache = new Set(); // 세션 내 중복 사용량 보고 방지
         const _syncTrackMetadataReported = new Set(); // ISRC별 sync-data 메타데이터 보고 방지
         const _serverCacheBypassUntil = new Map(); // 로컬 캐시 삭제 직후 서버 캐시 우회
         const _trackCacheGenerations = new Map(); // 캐시 삭제 전 시작된 요청의 재저장을 방지
@@ -2235,8 +2234,7 @@
                             syncData: syncDataBody,
                             contributors: data.contributors || [],
                             createdAt: data.createdAt || null,
-                            updatedAt: data.updatedAt || null,
-                            loadCount: data.loadCount || 0
+                            updatedAt: data.updatedAt || null
                         };
                         if (requestGeneration !== getCacheGeneration(identityKey)) {
                             return null;
@@ -2288,49 +2286,9 @@
                 clearInflightRequests();
                 _syncDataCache.clear();
                 _fullyLoadedTracks.clear();
-                _usageReportCache.clear();
                 _syncTrackMetadataReported.clear();
                 _serverCacheBypassUntil.clear();
                 markServerCacheBypass();
-            }
-        }
-
-        async function reportSyncDataUsage(syncData) {
-            const isrc = normalizeSyncDataIsrc(syncData?.isrc);
-            if (!isrc || !syncData?.provider) return null;
-
-            const usageDate = new Date().toISOString().slice(0, 10);
-            const cacheKey = `${isrc}:${syncData.provider}:${usageDate}`;
-            if (_usageReportCache.has(cacheKey)) {
-                return null;
-            }
-            _usageReportCache.add(cacheKey);
-
-            try {
-                const listenerHash = getUserHash();
-                const response = await fetch(`${API_BASE}/lyrics/sync-data/usage`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    keepalive: true,
-                    body: JSON.stringify({
-                        isrc,
-                        ...(syncData.trackId ? { trackId: syncData.trackId } : {}),
-                        provider: syncData.provider,
-                        listenerHash
-                    })
-                });
-
-                if (!response.ok) {
-                    throw new Error(`API Error: ${response.status}`);
-                }
-
-                return await response.json().catch(() => null);
-            } catch (e) {
-                _usageReportCache.delete(cacheKey);
-                console.warn(`[SyncDataService] Failed to report sync usage for ${isrc}:${syncData.provider}`, e);
-                return null;
             }
         }
 
@@ -3203,7 +3161,6 @@
             getAvailableProviders,
             hasSyncData,
             submitSyncData,
-            reportSyncDataUsage,
             applySyncDataToLyrics,
             convertKaraokeToSynced,
             getTrackIsrc,
@@ -5476,8 +5433,6 @@
                     if (syncData.contributors || syncData.syncData?.contributors) {
                         result.contributors = syncData.contributors || syncData.syncData.contributors;
                     }
-
-                    window.SyncDataService.reportSyncDataUsage?.(syncData);
                 }
             }
 

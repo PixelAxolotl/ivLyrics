@@ -46,9 +46,6 @@ const SYNC_CREATOR_RECORDING_BACKGROUND = 'rgba(255, 152, 0, 0.6)';
 const getSyncCreatorProgressGradient = (direction, percent, color = SYNC_CREATOR_PROGRESS_COLOR) => (
 	`linear-gradient(${direction === 'rtl' ? 'to left' : 'to right'}, ${color} 0%, ${color} ${percent}%, var(--spice-subtext) ${percent}%, var(--spice-subtext) 100%)`
 );
-const getSyncCreatorBackgroundProgressGradient = (direction, percent, color, restColor = 'transparent') => (
-	`linear-gradient(${direction === 'rtl' ? 'to left' : 'to right'}, ${color} 0%, ${color} ${percent}%, ${restColor} ${percent}%, ${restColor} 100%)`
-);
 const normalizeSyncCreatorIsrc = (value) => {
 	if (typeof value !== 'string') return '';
 	const normalized = value.trim().replace(/[\s-]/g, '').toUpperCase();
@@ -3233,9 +3230,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 	const applyRecordingProgressVisual = useCallback((nextIndex) => {
 		const numericIndex = Number(nextIndex);
-		const normalizedIndex = Number.isFinite(numericIndex) ? Math.max(-1, numericIndex) : -1;
+		const normalizedIndex = Number.isFinite(numericIndex) ? Math.max(-1, Math.floor(numericIndex)) : -1;
 		const previousIndex = lastPaintedRecordingIndexRef.current;
-		if (Math.abs(previousIndex - normalizedIndex) < 0.01) return;
+		if (previousIndex === normalizedIndex) return;
 		lastPaintedRecordingIndexRef.current = normalizedIndex;
 
 		if (useCurrentLineTextRun && rtlTextRunRef.current) {
@@ -3251,11 +3248,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			return;
 		}
 
-		const completedIndex = Math.floor(normalizedIndex);
-		const partialIndex = completedIndex + 1;
-		const partialPercent = normalizedIndex >= 0
-			? Math.max(0, Math.min(100, (normalizedIndex - completedIndex) * 100))
-			: 0;
+		const completedIndex = normalizedIndex;
 
 		const paintChar = (index) => {
 			const el = charElementsRef.current[index];
@@ -3263,14 +3256,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			const baseBackground = el.dataset.ivSyncCreatorBaseBackground || '';
 			if (normalizedIndex >= 0 && index <= completedIndex) {
 				el.style.background = SYNC_CREATOR_RECORDING_BACKGROUND;
-				el.style.color = 'var(--spice-text)';
-			} else if (normalizedIndex >= 0 && index === partialIndex && partialPercent > 0) {
-				el.style.background = getSyncCreatorBackgroundProgressGradient(
-					currentLineDirection,
-					partialPercent,
-					SYNC_CREATOR_RECORDING_BACKGROUND,
-					baseBackground || 'transparent'
-				);
 				el.style.color = 'var(--spice-text)';
 			} else {
 				el.style.background = baseBackground;
@@ -3286,19 +3271,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			return;
 		}
 
-		const previousCompletedIndex = Math.floor(previousIndex);
-		const previousPartialIndex = previousCompletedIndex + 1;
+		const previousCompletedIndex = previousIndex;
 		const minChangedIndex = Math.max(0, Math.min(
 			completedIndex,
-			partialIndex,
-			previousCompletedIndex,
-			previousPartialIndex
+			previousCompletedIndex
 		));
 		const maxChangedIndex = Math.min(currentLineChars.length - 1, Math.max(
 			completedIndex,
-			partialIndex,
-			previousCompletedIndex,
-			previousPartialIndex
+			previousCompletedIndex
 		));
 
 		for (let index = minChangedIndex; index <= maxChangedIndex; index++) {
@@ -5714,15 +5694,16 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		return -1;
 	}, [syncLinesByStart, lineCharOffsets, activeParallelPart]);
 
-	const getPreviewProgressIndex = useCallback((lineIndex) => (
-		getPreviewProgressIndexAtTime(lineIndex, position / 1000)
-	), [getPreviewProgressIndexAtTime, position]);
+	const getPreviewProgressIndex = useCallback((lineIndex) => {
+		const progressIndex = getPreviewProgressIndexAtTime(lineIndex, position / 1000);
+		return Number.isFinite(progressIndex) ? Math.floor(progressIndex) : -1;
+	}, [getPreviewProgressIndexAtTime, position]);
 
 	const applyPlaybackProgressVisual = useCallback((nextIndex) => {
 		const numericIndex = Number(nextIndex);
-		const normalizedIndex = Number.isFinite(numericIndex) ? Math.max(-1, numericIndex) : -1;
+		const normalizedIndex = Number.isFinite(numericIndex) ? Math.max(-1, Math.floor(numericIndex)) : -1;
 		const previousIndex = lastPaintedPlaybackIndexRef.current;
-		if (Math.abs(previousIndex - normalizedIndex) < 0.01) return;
+		if (previousIndex === normalizedIndex) return;
 		lastPaintedPlaybackIndexRef.current = normalizedIndex;
 
 		if (useCurrentLineTextRun && rtlTextRunRef.current) {
@@ -5737,11 +5718,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			return;
 		}
 
-		const completedIndex = Math.floor(normalizedIndex);
-		const partialIndex = completedIndex + 1;
-		const partialPercent = normalizedIndex >= 0
-			? Math.max(0, Math.min(100, (normalizedIndex - completedIndex) * 100))
-			: 0;
+		const completedIndex = normalizedIndex;
 
 		const paintChar = (index) => {
 			const el = charElementsRef.current[index];
@@ -5750,14 +5727,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			const isSynced = el.dataset.ivSyncCreatorSynced === '1';
 			if (isSynced && normalizedIndex >= 0 && index <= completedIndex) {
 				el.style.background = SYNC_CREATOR_PROGRESS_COLOR;
-				el.style.color = '#fff';
-			} else if (isSynced && normalizedIndex >= 0 && index === partialIndex && partialPercent > 0) {
-				el.style.background = getSyncCreatorBackgroundProgressGradient(
-					currentLineDirection,
-					partialPercent,
-					SYNC_CREATOR_PROGRESS_COLOR,
-					'rgba(49, 130, 246, 0.20)'
-				);
 				el.style.color = '#fff';
 			} else {
 				el.style.background = isSynced ? 'rgba(49, 130, 246, 0.20)' : '';
@@ -5772,19 +5741,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			return;
 		}
 
-		const previousCompletedIndex = Math.floor(previousIndex);
-		const previousPartialIndex = previousCompletedIndex + 1;
+		const previousCompletedIndex = previousIndex;
 		const minChangedIndex = Math.max(0, Math.min(
 			completedIndex,
-			partialIndex,
-			previousCompletedIndex,
-			previousPartialIndex
+			previousCompletedIndex
 		));
 		const maxChangedIndex = Math.min(currentLineChars.length - 1, Math.max(
 			completedIndex,
-			partialIndex,
-			previousCompletedIndex,
-			previousPartialIndex
+			previousCompletedIndex
 		));
 
 		for (let index = minChangedIndex; index <= maxChangedIndex; index++) {
@@ -6732,16 +6696,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const previewIdx = currentLinePreviewIndex;
 		const previewNumericIndex = Number(previewIdx);
 		const previewCompletedIndex = Number.isFinite(previewNumericIndex) ? Math.floor(previewNumericIndex) : -1;
-		const previewPartialIndex = previewCompletedIndex + 1;
-		const previewPartialPercent = previewNumericIndex >= 0
-			? Math.max(0, Math.min(100, (previewNumericIndex - previewCompletedIndex) * 100))
-			: 0;
-		const isPlayed = isSynced && previewNumericIndex >= i;
-		const isPartiallyPlayed = isSynced
-			&& previewNumericIndex >= 0
-			&& !isPlayed
-			&& i === previewPartialIndex
-			&& previewPartialPercent > 0;
+		const isPlayed = isSynced && previewCompletedIndex >= i;
 		const charTime = getCharSyncTime(currentLineIndex, i);
 		const furigana = currentLineFuriganaMap.get(i);
 		const characterPronunciation = options.hidePronunciation ? '' : currentLineCharacterPronunciationMap.get(i);
@@ -6749,18 +6704,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const useFixedPrimaryLayout = usePrimaryLayout && useFixedPrimaryCharacterCells;
 		const shouldShowCharTime = !options.hideTime && currentLineRenderedPronunciationUnits.length === 0;
 		const baseBackground = !options.wordSpacer && isSynced
-			? (isPlayed
-				? SYNC_CREATOR_PROGRESS_COLOR
-				: isPartiallyPlayed
-					? getSyncCreatorBackgroundProgressGradient(
-						currentLineDirection,
-						previewPartialPercent,
-						SYNC_CREATOR_PROGRESS_COLOR,
-						'rgba(49, 130, 246, 0.20)'
-					)
-					: 'rgba(49, 130, 246, 0.20)')
+			? (isPlayed ? SYNC_CREATOR_PROGRESS_COLOR : 'rgba(49, 130, 246, 0.20)')
 			: '';
-		const baseColor = !options.wordSpacer && isSynced && (isPlayed || isPartiallyPlayed) ? '#fff' : '';
+		const baseColor = !options.wordSpacer && isSynced && isPlayed ? '#fff' : '';
 		const originalContent = furigana
 			? react.createElement('span', { style: s.charFuriganaWrap },
 				char === ' ' ? '\u00A0' : char,
@@ -6777,13 +6723,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		if (!options.wordSpacer) {
 			if (isRec) style = { ...style, ...s.charRecording };
 			else if (isSynced) style = isPlayed ? { ...style, ...s.charPlayed } : { ...style, ...s.charSynced };
-			if (!isRec && isPartiallyPlayed) {
-				style = {
-					...style,
-					background: baseBackground,
-					color: baseColor
-				};
-			}
 		}
 
 		const pronunciationStyle = usePrimaryLayout

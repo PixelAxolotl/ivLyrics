@@ -45,6 +45,9 @@ const SYNC_CREATOR_RECORDING_BACKGROUND = 'rgba(255, 152, 0, 0.6)';
 const getSyncCreatorProgressGradient = (direction, percent, color = SYNC_CREATOR_PROGRESS_COLOR) => (
 	`linear-gradient(${direction === 'rtl' ? 'to left' : 'to right'}, ${color} 0%, ${color} ${percent}%, var(--spice-subtext) ${percent}%, var(--spice-subtext) 100%)`
 );
+const getSyncCreatorBackgroundProgressGradient = (direction, percent, color, restColor = 'transparent') => (
+	`linear-gradient(${direction === 'rtl' ? 'to left' : 'to right'}, ${color} 0%, ${color} ${percent}%, ${restColor} ${percent}%, ${restColor} 100%)`
+);
 const normalizeSyncCreatorIsrc = (value) => {
 	if (typeof value !== 'string') return '';
 	const normalized = value.trim().replace(/[\s-]/g, '').toUpperCase();
@@ -1673,6 +1676,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const rtlTextRunRef = useRef(null);
 	const recordingCharIndexRef = useRef(-1);
 	const lastPaintedRecordingIndexRef = useRef(-1);
+	const recordingVisualIndexRef = useRef(-1);
+	const recordingVisualTargetIndexRef = useRef(-1);
+	const recordingVisualFrameRef = useRef(null);
+	const recordingVisualFrameTimeRef = useRef(0);
 	const lastPaintedPlaybackIndexRef = useRef(-1);
 	const preventNextTrackRef = useRef(false);
 
@@ -3202,8 +3209,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	}, [currentLineChars.length, isCurrentLineRtl, useCurrentLineTextRun]);
 
 	const applyRecordingProgressVisual = useCallback((nextIndex) => {
-		const normalizedIndex = Number.isInteger(nextIndex) ? nextIndex : -1;
-		if (lastPaintedRecordingIndexRef.current === normalizedIndex) return;
+		const numericIndex = Number(nextIndex);
+		const normalizedIndex = Number.isFinite(numericIndex) ? Math.max(-1, numericIndex) : -1;
+		if (Math.abs(lastPaintedRecordingIndexRef.current - normalizedIndex) < 0.01) return;
 		lastPaintedRecordingIndexRef.current = normalizedIndex;
 
 		if (useCurrentLineTextRun && rtlTextRunRef.current) {
@@ -3218,32 +3226,128 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			return;
 		}
 
+		const completedIndex = Math.floor(normalizedIndex);
+		const partialIndex = completedIndex + 1;
+		const partialPercent = normalizedIndex >= 0
+			? Math.max(0, Math.min(100, (normalizedIndex - completedIndex) * 100))
+			: 0;
+
 		for (let index = 0; index < currentLineChars.length; index++) {
 			const el = charElementsRef.current[index];
 			if (!el) continue;
-			if (normalizedIndex >= 0 && index <= normalizedIndex) {
+			const baseBackground = el.dataset.ivSyncCreatorBaseBackground || '';
+			if (normalizedIndex >= 0 && index <= completedIndex) {
 				el.style.background = SYNC_CREATOR_RECORDING_BACKGROUND;
 				el.style.color = 'var(--spice-text)';
+			} else if (normalizedIndex >= 0 && index === partialIndex && partialPercent > 0) {
+				el.style.background = getSyncCreatorBackgroundProgressGradient(
+					currentLineDirection,
+					partialPercent,
+					SYNC_CREATOR_RECORDING_BACKGROUND,
+					baseBackground || 'transparent'
+				);
+				el.style.color = 'var(--spice-text)';
 			} else {
-				el.style.background = el.dataset.ivSyncCreatorBaseBackground || '';
+				el.style.background = baseBackground;
 				el.style.color = el.dataset.ivSyncCreatorBaseColor || '';
 			}
 		}
 	}, [currentLineChars.length, currentLineDirection, useCurrentLineTextRun]);
 
+	const cancelRecordingProgressAnimation = useCallback(() => {
+		if (recordingVisualFrameRef.current === null) return;
+		if (typeof cancelAnimationFrame === 'function') {
+			cancelAnimationFrame(recordingVisualFrameRef.current);
+		} else {
+			clearTimeout(recordingVisualFrameRef.current);
+		}
+		recordingVisualFrameRef.current = null;
+		recordingVisualFrameTimeRef.current = 0;
+	}, []);
+
+	const scheduleRecordingProgressAnimation = useCallback(() => {
+		if (recordingVisualFrameRef.current !== null) return;
+
+		const requestFrame = typeof requestAnimationFrame === 'function'
+			? requestAnimationFrame
+			: (callback) => setTimeout(() => callback(Date.now()), 16);
+
+		const paint = (timestamp) => {
+			recordingVisualFrameRef.current = null;
+
+			const targetIndex = recordingVisualTargetIndexRef.current;
+			let visualIndex = Number(recordingVisualIndexRef.current);
+			if (!Number.isFinite(visualIndex)) {
+				visualIndex = targetIndex >= 0 ? Math.max(-1, targetIndex - 1) : -1;
+			}
+
+			if (targetIndex < 0 || mode !== 'record') {
+				visualIndex = targetIndex;
+			} else {
+				const previousTimestamp = recordingVisualFrameTimeRef.current || timestamp;
+				const deltaMs = Math.min(50, Math.max(8, timestamp - previousTimestamp));
+				const distance = targetIndex - visualIndex;
+				const maxStep = Math.max(0.18, deltaMs / 22);
+
+				if (Math.abs(distance) <= maxStep) {
+					visualIndex = targetIndex;
+				} else {
+					visualIndex += Math.sign(distance) * maxStep;
+				}
+				recordingVisualFrameTimeRef.current = timestamp;
+			}
+
+			recordingVisualIndexRef.current = visualIndex;
+			applyRecordingProgressVisual(visualIndex);
+
+			if (mode === 'record' && Math.abs(recordingVisualTargetIndexRef.current - visualIndex) > 0.01) {
+				recordingVisualFrameRef.current = requestFrame(paint);
+			} else {
+				recordingVisualFrameTimeRef.current = 0;
+			}
+		};
+
+		recordingVisualFrameRef.current = requestFrame(paint);
+	}, [applyRecordingProgressVisual, mode]);
+
 	const setRecordingProgressIndex = useCallback((nextIndex, options = {}) => {
 		const normalizedIndex = Number.isInteger(nextIndex) ? nextIndex : -1;
 		recordingCharIndexRef.current = normalizedIndex;
-		applyRecordingProgressVisual(normalizedIndex);
+		recordingVisualTargetIndexRef.current = normalizedIndex;
+
+		const shouldAnimate = mode === 'record'
+			&& normalizedIndex >= 0
+			&& options.animate !== false
+			&& normalizedIndex >= recordingVisualIndexRef.current;
+
+		if (shouldAnimate) {
+			if (recordingVisualIndexRef.current < -0.5) {
+				recordingVisualIndexRef.current = Math.max(-1, normalizedIndex - 1);
+			}
+			scheduleRecordingProgressAnimation();
+		} else {
+			cancelRecordingProgressAnimation();
+			recordingVisualIndexRef.current = normalizedIndex;
+			applyRecordingProgressVisual(normalizedIndex);
+		}
+
 		if (options.commitState !== false) {
 			setRecordingCharIndex(normalizedIndex);
 		}
-	}, [applyRecordingProgressVisual]);
+	}, [applyRecordingProgressVisual, cancelRecordingProgressAnimation, mode, scheduleRecordingProgressAnimation]);
 
 	useEffect(() => {
+		cancelRecordingProgressAnimation();
+		const nextVisualIndex = mode === 'record' ? recordingCharIndexRef.current : -1;
+		recordingVisualTargetIndexRef.current = nextVisualIndex;
+		recordingVisualIndexRef.current = nextVisualIndex;
 		lastPaintedRecordingIndexRef.current = -2;
-		applyRecordingProgressVisual(mode === 'record' ? recordingCharIndexRef.current : -1);
-	}, [mode, currentLineIndex, activeParallelTargetId, lyricsText, applyRecordingProgressVisual]);
+		applyRecordingProgressVisual(nextVisualIndex);
+	}, [mode, currentLineIndex, activeParallelTargetId, lyricsText, applyRecordingProgressVisual, cancelRecordingProgressAnimation]);
+
+	useEffect(() => () => {
+		cancelRecordingProgressAnimation();
+	}, [cancelRecordingProgressAnimation]);
 
 	const cacheCharHitBoxes = useCallback(() => {
 		if (useCurrentLineTextRun) {

@@ -338,7 +338,116 @@ if (!window.OverlaySender) {
 const react = Spicetify.React;
 const { useState, useEffect, useCallback, useMemo, useRef } = react;
 
+const getCurrentTranslationTargetLanguage = () => {
+  const targetLanguage =
+    window.CONFIG?.visual?.["translate:target-language"] ||
+    localStorage.getItem("ivLyrics:visual:translate:target-language");
+
+  if (targetLanguage && targetLanguage !== "auto") {
+    return targetLanguage;
+  }
+
+  return (
+    window.I18n?.getCurrentLanguage?.() ||
+    Spicetify.Locale?.getLocale?.()?.split("-")[0] ||
+    "en"
+  );
+};
+
+const getTranslationPartText = (part) => {
+  const directText = typeof part?.text === "string" ? part.text.trim() : "";
+  if (directText) {
+    return directText;
+  }
+
+  if (Array.isArray(part?.syllables)) {
+    return part.syllables.map((syllable) => syllable?.text || "").join("").trim();
+  }
+
+  return "";
+};
+
+const getDisplayedVocalParts = (line) => {
+  if (!Array.isArray(line?.vocals?.lead?.syllables) || line.vocals.lead.syllables.length === 0) {
+    return null;
+  }
+
+  const parts = [];
+  const leadText = getTranslationPartText(line.vocals.lead);
+  if (leadText) {
+    parts.push({
+      role: "lead",
+      index: -1,
+      text: leadText,
+    });
+  }
+
+  if (Array.isArray(line.vocals.background)) {
+    line.vocals.background.forEach((part, index) => {
+      if (!Array.isArray(part?.syllables) || part.syllables.length === 0) {
+        return;
+      }
+
+      const text = getTranslationPartText(part);
+      if (text) {
+        parts.push({
+          role: "background",
+          index,
+          text,
+        });
+      }
+    });
+  }
+
+  return parts.length > 1 ? parts : null;
+};
+
+const buildTranslationLineRequests = (lyrics = [], options = {}) => {
+  if (!Array.isArray(lyrics)) {
+    return [];
+  }
+
+  const splitVocalParts = options?.splitVocalParts !== false;
+  const requests = [];
+  lyrics.forEach((line, lineIndex) => {
+    const lineText = line?.originalText || line?.text || "";
+    if (!lineText || Utils.isSectionHeader(lineText)) {
+      return;
+    }
+
+    const trimmedLineText = String(lineText).trim();
+    if (!trimmedLineText) {
+      return;
+    }
+
+    const vocalParts = splitVocalParts ? getDisplayedVocalParts(line) : null;
+    if (vocalParts) {
+      vocalParts.forEach((vocalPart) => {
+        requests.push({
+          lineIndex,
+          vocalPart,
+          text: vocalPart.text,
+        });
+      });
+      return;
+    }
+
+    requests.push({
+      lineIndex,
+      vocalPart: null,
+      text: trimmedLineText,
+    });
+  });
+
+  return requests;
+};
+
 const getNonSectionLyricsText = (lyrics = []) =>
+  buildTranslationLineRequests(lyrics)
+    .map((request) => request.text || "")
+    .join("\n");
+
+const getLegacyNonSectionLyricsText = (lyrics = []) =>
   lyrics
     .map((line) => line?.originalText || line?.text || "")
     .filter((line) => line && !Utils.isSectionHeader(line))
@@ -354,6 +463,26 @@ const getTranslationSourceCacheHash = (text) => {
   return `src-${(hash >>> 0).toString(36)}-${value.length.toString(36)}`;
 };
 
+const getCachedTranslationForText = async ({
+  trackId,
+  lang,
+  isPhonetic = false,
+  provider = null,
+  text,
+}) => {
+  const cacheApi = window.LyricsCache || (typeof LyricsCache !== "undefined" ? LyricsCache : null);
+  if (!cacheApi?.getTranslation || !trackId || !lang || !String(text || "").trim()) {
+    return null;
+  }
+
+  try {
+    const sourceHash = getTranslationSourceCacheHash(text);
+    return await cacheApi.getTranslation(trackId, lang, isPhonetic, provider, sourceHash);
+  } catch (error) {
+    return null;
+  }
+};
+
 const normalizeTranslationOutputLines = (outText) => {
   if (Array.isArray(outText)) {
     return outText;
@@ -364,14 +493,108 @@ const normalizeTranslationOutputLines = (outText) => {
   return null;
 };
 
-const mapTranslationLinesToLyrics = (lyrics = [], linesInput = []) => {
+const cloneTranslationVocals = (vocals) => {
+  if (!vocals?.lead) {
+    return vocals;
+  }
+
+  return {
+    ...vocals,
+    lead: { ...vocals.lead },
+    background: Array.isArray(vocals.background)
+      ? vocals.background.map((part) => ({ ...part }))
+      : vocals.background,
+  };
+};
+
+const assignTranslationVocalResult = (vocals, vocalPart, targetField, value) => {
+  if (!vocals || !vocalPart || !targetField || !value) {
+    return;
+  }
+
+  const target = vocalPart.role === "lead"
+    ? vocals.lead
+    : vocals.background?.[vocalPart.index];
+  if (!target) {
+    return;
+  }
+
+  target[targetField] = value;
+};
+
+const mergeVocalTranslationFields = (baseVocals, modeVocals, targetField, transformValue = (value) => value) => {
+  if (!baseVocals?.lead || !modeVocals?.lead || !targetField) {
+    return baseVocals;
+  }
+
+  let nextVocals = baseVocals;
+  const ensureVocals = () => {
+    if (nextVocals === baseVocals) {
+      nextVocals = cloneTranslationVocals(baseVocals);
+    }
+    return nextVocals;
+  };
+  const applyPart = (sourcePart, getTargetPart) => {
+    const rawValue = sourcePart?.[targetField];
+    const transformedValue = transformValue(typeof rawValue === "string" ? rawValue : String(rawValue || ""));
+    const value = typeof transformedValue === "string" ? transformedValue.trim() : String(transformedValue || "").trim();
+    if (!value) {
+      return;
+    }
+
+    const targetPart = getTargetPart(ensureVocals());
+    if (targetPart) {
+      targetPart[targetField] = value;
+    }
+  };
+
+  applyPart(modeVocals.lead, (vocals) => vocals.lead);
+
+  if (Array.isArray(modeVocals.background) && Array.isArray(baseVocals.background)) {
+    modeVocals.background.forEach((part, index) => {
+      applyPart(part, (vocals) => vocals.background?.[index]);
+    });
+  }
+
+  return nextVocals;
+};
+
+const mapTranslationLinesToLyrics = (lyrics = [], linesInput = [], options = {}) => {
   if (!Array.isArray(lyrics) || !Array.isArray(linesInput)) {
     return null;
   }
 
+  const targetField = options?.targetField || null;
+  const splitVocalParts = options?.splitVocalParts !== false;
+  const translationRequests = buildTranslationLineRequests(lyrics, { splitVocalParts });
+  const requestResultsByLine = new Map();
   let resultLineIndex = 0;
-  return lyrics.map((line) => {
-    const originalText = line?.text || "";
+
+  const readNextResultLine = () => {
+    while (
+      resultLineIndex < linesInput.length &&
+      linesInput[resultLineIndex] !== undefined &&
+      linesInput[resultLineIndex] !== null &&
+      Utils.isSectionHeader(String(linesInput[resultLineIndex]).trim())
+    ) {
+      resultLineIndex++;
+    }
+
+    return String(linesInput[resultLineIndex++] ?? "").trim();
+  };
+
+  translationRequests.forEach((request) => {
+    const entry = {
+      ...request,
+      resultText: readNextResultLine(),
+    };
+    const entries = requestResultsByLine.get(request.lineIndex) || [];
+    entries.push(entry);
+    requestResultsByLine.set(request.lineIndex, entries);
+  });
+
+  return lyrics.map((line, lineIndex) => {
+    const originalText = line?.originalText || line?.text || "";
 
     if (Utils.isSectionHeader(originalText)) {
       return {
@@ -389,18 +612,24 @@ const mapTranslationLinesToLyrics = (lyrics = [], linesInput = []) => {
       };
     }
 
-    while (
-      resultLineIndex < linesInput.length &&
-      linesInput[resultLineIndex] !== undefined &&
-      linesInput[resultLineIndex] !== null &&
-      Utils.isSectionHeader(String(linesInput[resultLineIndex]).trim())
-    ) {
-      resultLineIndex++;
+    const requestEntries = requestResultsByLine.get(lineIndex) || [];
+    const translatedText = requestEntries
+      .map((entry) => entry.resultText)
+      .filter(Boolean)
+      .join(" / ");
+
+    const vocalEntries = requestEntries.filter((entry) => entry.vocalPart);
+    let vocals = line?.vocals;
+    if (targetField && vocalEntries.length > 0 && line?.vocals?.lead) {
+      vocals = cloneTranslationVocals(line.vocals);
+      vocalEntries.forEach((entry) => {
+        assignTranslationVocalResult(vocals, entry.vocalPart, targetField, entry.resultText);
+      });
     }
 
-    const translatedText = String(linesInput[resultLineIndex++] ?? "").trim();
     return {
       ...line,
+      vocals,
       text: translatedText || line?.text || "",
       originalText,
     };
@@ -2577,6 +2806,8 @@ const Prefetcher = {
 
     // Section header 제외한 텍스트 추출
     const text = getNonSectionLyricsText(lyricsArray);
+    const legacyText = getLegacyNonSectionLyricsText(lyricsArray);
+    const userLang = getCurrentTranslationTargetLanguage();
 
     if (!text.trim()) return;
 
@@ -2590,31 +2821,48 @@ const Prefetcher = {
         ivLyricsDebug(`[Prefetcher] Fetching translation for: ${trackInfo.title} (phonetic: ${needPhonetic}, translation: ${needTranslation})`);
 
         // CacheManager에도 저장 (getGeminiTranslation에서 사용)
-        const processTranslationResult = (outText) => {
+        const processTranslationResult = (outText, targetField, splitVocalParts = true) => {
           if (!outText) return null;
 
           const lines = normalizeTranslationOutputLines(outText);
-          return mapTranslationLinesToLyrics(lyricsArray, lines);
+          return mapTranslationLinesToLyrics(lyricsArray, lines, { targetField, splitVocalParts });
+        };
+        const getLegacyCachedResult = async (isPhonetic) => {
+          const cached = await getCachedTranslationForText({
+            trackId,
+            lang: userLang,
+            isPhonetic,
+            provider: lyrics.provider,
+            text: legacyText,
+          });
+          const outText = isPhonetic ? cached?.phonetic : (cached?.translation || cached?.vi);
+          return processTranslationResult(outText, isPhonetic ? "phonetic" : "translation", false);
         };
 
         // 발음 요청 (wantSmartPhonetic = true)
         if (needPhonetic) {
           try {
-            const phoneticResponse = await window.Translator.callGemini({
-              trackId,
-              artist: trackInfo.artist,
-              title: trackInfo.title,
-              text,
-              wantSmartPhonetic: true,
-              provider: lyrics.provider,
-              ignoreCache: false,
-            });
+            const legacyMapped = await getLegacyCachedResult(true);
+            if (legacyMapped) {
+              CacheManager.set(getDisplayModeCacheKey(lyrics, "gemini_romaji"), legacyMapped);
+              ivLyricsDebug(`[Prefetcher] Phonetic loaded from existing cache for: ${trackInfo.title} (provider: ${lyrics.provider})`);
+            } else {
+              const phoneticResponse = await window.Translator.callGemini({
+                trackId,
+                artist: trackInfo.artist,
+                title: trackInfo.title,
+                text,
+                wantSmartPhonetic: true,
+                provider: lyrics.provider,
+                ignoreCache: false,
+              });
 
-            if (phoneticResponse.phonetic) {
-              const mapped = processTranslationResult(phoneticResponse.phonetic);
-              if (mapped) {
-                CacheManager.set(getDisplayModeCacheKey(lyrics, "gemini_romaji"), mapped);
-                ivLyricsDebug(`[Prefetcher] Phonetic cached for: ${trackInfo.title} (provider: ${lyrics.provider})`);
+              if (phoneticResponse.phonetic) {
+                const mapped = processTranslationResult(phoneticResponse.phonetic, "phonetic");
+                if (mapped) {
+                  CacheManager.set(getDisplayModeCacheKey(lyrics, "gemini_romaji"), mapped);
+                  ivLyricsDebug(`[Prefetcher] Phonetic cached for: ${trackInfo.title} (provider: ${lyrics.provider})`);
+                }
               }
             }
           } catch (error) {
@@ -2625,27 +2873,38 @@ const Prefetcher = {
         // 번역 요청 (wantSmartPhonetic = false)
         if (needTranslation) {
           try {
-            const translationResponse = await window.Translator.callGemini({
-              trackId,
-              artist: trackInfo.artist,
-              title: trackInfo.title,
-              text,
-              wantSmartPhonetic: false,
-              provider: lyrics.provider,
-              ignoreCache: false,
-            });
+            const legacyMapped = await getLegacyCachedResult(false);
+            if (legacyMapped) {
+              if (displayMode1 && displayMode1 !== "none" && displayMode1 !== "gemini_romaji") {
+                CacheManager.set(getDisplayModeCacheKey(lyrics, displayMode1), legacyMapped);
+              }
+              if (displayMode2 && displayMode2 !== "none" && displayMode2 !== "gemini_romaji") {
+                CacheManager.set(getDisplayModeCacheKey(lyrics, displayMode2), legacyMapped);
+              }
+              ivLyricsDebug(`[Prefetcher] Translation loaded from existing cache for: ${trackInfo.title} (provider: ${lyrics.provider})`);
+            } else {
+              const translationResponse = await window.Translator.callGemini({
+                trackId,
+                artist: trackInfo.artist,
+                title: trackInfo.title,
+                text,
+                wantSmartPhonetic: false,
+                provider: lyrics.provider,
+                ignoreCache: false,
+              });
 
-            if (translationResponse.translation) {
-              const mapped = processTranslationResult(translationResponse.translation);
-              if (mapped) {
-                // mode1, mode2 중 번역이 필요한 것에 캐시 저장
-                if (displayMode1 && displayMode1 !== "none" && displayMode1 !== "gemini_romaji") {
-                  CacheManager.set(getDisplayModeCacheKey(lyrics, displayMode1), mapped);
+              if (translationResponse.translation) {
+                const mapped = processTranslationResult(translationResponse.translation, "translation");
+                if (mapped) {
+                  // mode1, mode2 중 번역이 필요한 것에 캐시 저장
+                  if (displayMode1 && displayMode1 !== "none" && displayMode1 !== "gemini_romaji") {
+                    CacheManager.set(getDisplayModeCacheKey(lyrics, displayMode1), mapped);
+                  }
+                  if (displayMode2 && displayMode2 !== "none" && displayMode2 !== "gemini_romaji") {
+                    CacheManager.set(getDisplayModeCacheKey(lyrics, displayMode2), mapped);
+                  }
+                  ivLyricsDebug(`[Prefetcher] Translation cached for: ${trackInfo.title} (provider: ${lyrics.provider})`);
                 }
-                if (displayMode2 && displayMode2 !== "none" && displayMode2 !== "gemini_romaji") {
-                  CacheManager.set(getDisplayModeCacheKey(lyrics, displayMode2), mapped);
-                }
-                ivLyricsDebug(`[Prefetcher] Translation cached for: ${trackInfo.title} (provider: ${lyrics.provider})`);
               }
             }
           } catch (error) {
@@ -3575,7 +3834,7 @@ class LyricsContainer extends react.Component {
 
   async openLyricsEditModal() {
     const sourceLines = this.getEditableCacheSourceLines();
-    const sourceText = getNonSectionLyricsText(this.getEditingBaseLyrics());
+    const sourceText = getLegacyNonSectionLyricsText(this.getEditingBaseLyrics());
     const sourceHash = getTranslationSourceCacheHash(sourceText);
     const trackId = Utils.extractTrackId(this.state.uri);
 
@@ -4155,8 +4414,8 @@ class LyricsContainer extends react.Component {
       this._dmResults[currentUri].lastProvider = currentProvider;
       this._dmResults[currentUri].lastRendererVersion = getSyncDataRendererCacheVersion(lyricsState);
 
-      const mapResultLinesToLyrics = (linesInput) => {
-        return mapTranslationLinesToLyrics(originalLyrics, linesInput);
+      const mapResultLinesToLyrics = (linesInput, targetField) => {
+        return mapTranslationLinesToLyrics(originalLyrics, linesInput, { targetField });
       };
 
       const extractGeminiOutput = (response, wantSmartPhonetic) => {
@@ -4229,7 +4488,7 @@ class LyricsContainer extends react.Component {
           streamedPhoneticLines[lineIndex] =
             typeof lineText === "string" ? lineText : String(lineText ?? "");
 
-          const partialMapped = mapResultLinesToLyrics(streamedPhoneticLines);
+          const partialMapped = mapResultLinesToLyrics(streamedPhoneticLines, "phonetic");
           if (!partialMapped) {
             return;
           }
@@ -4256,7 +4515,7 @@ class LyricsContainer extends react.Component {
           streamedTranslationLines[lineIndex] =
             typeof lineText === "string" ? lineText : String(lineText ?? "");
 
-          const partialMapped = mapResultLinesToLyrics(streamedTranslationLines);
+          const partialMapped = mapResultLinesToLyrics(streamedTranslationLines, "translation");
           if (!partialMapped) {
             return;
           }
@@ -4311,11 +4570,11 @@ class LyricsContainer extends react.Component {
       }
 
       // 번역 결과를 getGeminiTranslation과 동일한 방식으로 처리하는 함수
-      const processTranslationResult = (outText, lyrics) => {
+      const processTranslationResult = (outText, lyrics, targetField) => {
         if (!outText) return null;
 
         const lines = normalizeTranslationOutputLines(outText);
-        return mapTranslationLinesToLyrics(lyrics, lines);
+        return mapTranslationLinesToLyrics(lyrics, lines, { targetField });
       };
 
       // mode1과 mode2 각각 처리 - 둘 다 활성화된 경우 각각의 결과를 올바르게 할당
@@ -4328,16 +4587,16 @@ class LyricsContainer extends react.Component {
       // mode1 처리
       // mode1 처리
       if (mode1 === "gemini_romaji" && phoneticOutput) {
-        translatedLyrics1 = processTranslationResult(phoneticOutput, originalLyrics);
+        translatedLyrics1 = processTranslationResult(phoneticOutput, originalLyrics, "phonetic");
       } else if (mode1 === "gemini_ko" && translationOutput) {
-        translatedLyrics1 = processTranslationResult(translationOutput, originalLyrics);
+        translatedLyrics1 = processTranslationResult(translationOutput, originalLyrics, "translation");
       }
 
       // mode2 처리 (mode1과 독립적으로)
       if (mode2 === "gemini_romaji" && phoneticOutput) {
-        translatedLyrics2 = processTranslationResult(phoneticOutput, originalLyrics);
+        translatedLyrics2 = processTranslationResult(phoneticOutput, originalLyrics, "phonetic");
       } else if (mode2 === "gemini_ko" && translationOutput) {
-        translatedLyrics2 = processTranslationResult(translationOutput, originalLyrics);
+        translatedLyrics2 = processTranslationResult(translationOutput, originalLyrics, "translation");
       }
 
       // _dmResults에 번역 결과 저장
@@ -5451,9 +5710,34 @@ class LyricsContainer extends react.Component {
         }
       }
 
+      let finalVocals = line?.vocals;
+      const mergeModeVocalResults = (modeLine, isPhoneticMode) => {
+        const targetField = isPhoneticMode ? "phonetic" : "translation";
+        finalVocals = mergeVocalTranslationFields(
+          finalVocals,
+          modeLine?.vocals,
+          targetField,
+          (value) => {
+            const processedValue = isPhoneticMode
+              ? processPhoneticHyphen(value)
+              : value;
+            const text = String(processedValue || "").trim();
+            return isNoteLine(text) ? "" : text;
+          }
+        );
+      };
+
+      if (mode1 && Array.isArray(mode1) && i < mode1.length && mode1[i]) {
+        mergeModeVocalResults(mode1[i], mode1IsPhonetic);
+      }
+      if (mode2 && Array.isArray(mode2) && i < mode2.length && mode2[i]) {
+        mergeModeVocalResults(mode2[i], mode2IsPhonetic);
+      }
+
       // Create safe line object ensuring all properties are valid
       const safeLine = {
         ...(line && typeof line === "object" ? line : {}),
+        vocals: finalVocals,
         originalText: String(originalText),
         phoneticText: finalText ? String(finalText) : (line?.phoneticText || null),
         text: finalText ? String(finalText) : null,
@@ -5536,23 +5820,17 @@ class LyricsContainer extends react.Component {
           .catch(reject);
       }
 
-      // Use optimized rate limiter with separate keys for each translation type
-      const rateLimitKey = mode.replace("gemini_", "gemini-");
-      if (!RateLimiter.canMakeCall(rateLimitKey, 5, 2000)) {
-        const modeName =
-          mode === "gemini_romaji" ? "Romaji, Romaja, Pinyin" : "Korean";
-        return reject(
-          new Error(
-            I18n.t("notifications.tooManyTranslationRequests")
-          )
-        );
-      }
-
       // Filter out section headers before sending to Gemini for translation
       const text = getNonSectionLyricsText(lyrics);
+      const legacyText = getLegacyNonSectionLyricsText(lyrics);
+      const trackId = Utils.extractTrackId(lyricsState.uri || this.state.uri);
+      const userLang = this.getTranslationTargetLanguage();
 
-      const mapResultLinesToLyrics = (linesInput) => {
-        return mapTranslationLinesToLyrics(lyrics, linesInput);
+      const mapResultLinesToLyrics = (linesInput, splitVocalParts = true) => {
+        return mapTranslationLinesToLyrics(lyrics, linesInput, {
+          targetField: wantSmartPhonetic ? "phonetic" : "translation",
+          splitVocalParts,
+        });
       };
 
       const streamedLines = [];
@@ -5572,61 +5850,86 @@ class LyricsContainer extends react.Component {
         ? this.startPhoneticLoading()
         : this.startTranslationLoading();
 
-      const inflightPromise = window.Translator.callGemini({
-        apiKey,
-        artist: this.state.artist || lyricsState.artist,
-        title: this.state.title || lyricsState.title,
-        text,
-        wantSmartPhonetic,
-        provider: lyricsState.provider,
-        onLine: handleStreamLine,
-      })
-        .then((response) => {
-          let outText;
+      const inflightPromise = (async () => {
+        let splitVocalParts = true;
+        const legacyCached = await getCachedTranslationForText({
+          trackId,
+          lang: userLang,
+          isPhonetic: wantSmartPhonetic,
+          provider: lyricsState.provider,
+          text: legacyText,
+        });
+
+        let outText;
+        if (legacyCached) {
+          splitVocalParts = false;
+          outText = wantSmartPhonetic
+            ? legacyCached.phonetic
+            : legacyCached.translation || legacyCached.vi;
+        } else {
+          // Use optimized rate limiter with separate keys only when a real AI call is needed.
+          const rateLimitKey = mode.replace("gemini_", "gemini-");
+          if (!RateLimiter.canMakeCall(rateLimitKey, 5, 2000)) {
+            throw new Error(
+              I18n.t("notifications.tooManyTranslationRequests")
+            );
+          }
+
+          const response = await window.Translator.callGemini({
+            apiKey,
+            artist: this.state.artist || lyricsState.artist,
+            title: this.state.title || lyricsState.title,
+            text,
+            wantSmartPhonetic,
+            provider: lyricsState.provider,
+            onLine: handleStreamLine,
+          });
+
           if (wantSmartPhonetic) {
             outText = response.phonetic;
           } else {
             outText = response.translation || response.vi;
           }
+        }
 
-          if (!outText) throw new Error("Empty result from Gemini.");
+        if (!outText) throw new Error("Empty result from Gemini.");
 
-          // Handle nested JSON packaging (API issue workaround)
-          if (Array.isArray(outText) && outText.length === 1 && typeof outText[0] === 'string') {
-            try {
-              if (outText[0].trim().startsWith('{')) {
-                const parsed = JSON.parse(outText[0]);
-                if (wantSmartPhonetic && Array.isArray(parsed.phonetic)) {
-                  outText = parsed.phonetic;
-                } else if (!wantSmartPhonetic && Array.isArray(parsed.translation)) {
-                  outText = parsed.translation;
-                } else if (parsed.translation && Array.isArray(parsed.translation)) {
-                  // Fallback: request was phonetic but response came as translation?
-                  // or just general structure match
-                  outText = parsed.translation;
-                }
+        // Handle nested JSON packaging (API issue workaround)
+        if (Array.isArray(outText) && outText.length === 1 && typeof outText[0] === 'string') {
+          try {
+            if (outText[0].trim().startsWith('{')) {
+              const parsed = JSON.parse(outText[0]);
+              if (wantSmartPhonetic && Array.isArray(parsed.phonetic)) {
+                outText = parsed.phonetic;
+              } else if (!wantSmartPhonetic && Array.isArray(parsed.translation)) {
+                outText = parsed.translation;
+              } else if (parsed.translation && Array.isArray(parsed.translation)) {
+                // Fallback: request was phonetic but response came as translation?
+                // or just general structure match
+                outText = parsed.translation;
               }
-            } catch (e) {
-              // Not valid JSON, process as standard array
             }
+          } catch (e) {
+            // Not valid JSON, process as standard array
           }
+        }
 
-          // Handle both array and string formats
-          let lines;
-          if (Array.isArray(outText)) {
-            lines = outText;
-          } else if (typeof outText === "string") {
-            lines = outText.split("\n");
-          } else {
-            throw new Error("Invalid translation format received from Gemini.");
-          }
-          const mapped = mapResultLinesToLyrics(lines);
-          if (!mapped) {
-            throw new Error("Failed to map streamed translation lines.");
-          }
-          CacheManager.set(cacheKey2, mapped);
-          return mapped;
-        })
+        // Handle both array and string formats
+        let lines;
+        if (Array.isArray(outText)) {
+          lines = outText;
+        } else if (typeof outText === "string") {
+          lines = outText.split("\n");
+        } else {
+          throw new Error("Invalid translation format received from Gemini.");
+        }
+        const mapped = mapResultLinesToLyrics(lines, splitVocalParts);
+        if (!mapped) {
+          throw new Error("Failed to map streamed translation lines.");
+        }
+        CacheManager.set(cacheKey2, mapped);
+        return mapped;
+      })()
         .finally(() => {
           // Clear appropriate loading indicator based on mode type
           if (wantSmartPhonetic) {

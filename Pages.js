@@ -4239,6 +4239,45 @@ const applyKaraokeWhitespaceCompensation = (timedChars) => {
 	return didChange ? compensatedChars : timedChars;
 };
 
+const getActiveKaraokeTimedCharIndex = (timedChars, position) => {
+	if (!Array.isArray(timedChars) || timedChars.length === 0) {
+		return -1;
+	}
+
+	let activeCharIndex = -1;
+	let lastPassedCharIndex = -1;
+	let lastPassedCharEndTime = 0;
+	let lastPassedCharDuration = 100;
+
+	timedChars.forEach((charInfo, index) => {
+		const charStart = Number.isFinite(charInfo?.startTime) ? charInfo.startTime : 0;
+		const charEnd = Number.isFinite(charInfo?.endTime) ? charInfo.endTime : charStart;
+		const charDuration = Math.max(1, charEnd - charStart);
+
+		if (position >= charStart && position < charEnd) {
+			activeCharIndex = index;
+		}
+
+		if (position >= charEnd && charEnd > lastPassedCharEndTime) {
+			lastPassedCharEndTime = charEnd;
+			lastPassedCharIndex = index;
+			lastPassedCharDuration = charDuration || 100;
+		}
+	});
+
+	if (activeCharIndex === -1 && lastPassedCharIndex !== -1) {
+		const timeDiff = position - lastPassedCharEndTime;
+		const simulateDuration = Math.max(40, lastPassedCharDuration * 0.01);
+		const virtualProgress = Math.floor(timeDiff / simulateDuration);
+
+		if (timeDiff < 2000) {
+			activeCharIndex = lastPassedCharIndex + 1 + virtualProgress;
+		}
+	}
+
+	return activeCharIndex;
+};
+
 const KARAOKE_FILL_STEPS = 25;
 const KARAOKE_BOUNCE_IDLE = { offsetY: 0, scale: 1, active: false };
 const KARAOKE_BOUNCE_MAX_CHAR_DISTANCE = 3;
@@ -4352,6 +4391,9 @@ const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0
 			].filter(Boolean);
 			const currentOffset = rowGlobalCharOffset;
 			rowGlobalCharOffset += getKaraokeSyllableCharCount(row.syllables);
+			const rowTimedChars = applyKaraokeWhitespaceCompensation(buildKaraokeTimedChars(rowLine));
+			const rowActiveCharIndex = getActiveKaraokeTimedCharIndex(rowTimedChars, position);
+			const rowActiveGlobalCharIndex = rowActiveCharIndex >= 0 ? currentOffset + rowActiveCharIndex : -1;
 			const rowPhonetic = row.phonetic || rowPhonetics[rowIndex] || "";
 			const rowTranslation = row.translation || rowTranslations[rowIndex] || "";
 
@@ -4367,7 +4409,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0
 					isActive,
 					settingsRevision,
 					globalCharOffset: currentOffset,
-					activeGlobalCharIndex,
+					activeGlobalCharIndex: rowActiveGlobalCharIndex,
 				}),
 				rowPhonetic && react.createElement(
 					"span",

@@ -1838,26 +1838,26 @@ const CONFIG = {
       "Pretendard Variable",
     "original-font-weight":
       StorageManager.getItem("ivLyrics:visual:original-font-weight") ||
-      "400",
+      "600",
     "original-font-size":
-      StorageManager.getItem("ivLyrics:visual:original-font-size") || "32",
+      StorageManager.getItem("ivLyrics:visual:original-font-size") || "44",
     "translation-font-weight":
       StorageManager.getItem("ivLyrics:visual:translation-font-weight") ||
       "300",
     "translation-font-size":
       StorageManager.getItem("ivLyrics:visual:translation-font-size") ||
-      "24",
+      "22",
     "translation-spacing":
-      StorageManager.getItem("ivLyrics:visual:translation-spacing") || "8",
+      StorageManager.getItem("ivLyrics:visual:translation-spacing") || "0",
     "phonetic-font-weight":
       StorageManager.getItem("ivLyrics:visual:phonetic-font-weight") ||
-      "400",
+      "100",
     "phonetic-font-size":
-      StorageManager.getItem("ivLyrics:visual:phonetic-font-size") || "20",
+      StorageManager.getItem("ivLyrics:visual:phonetic-font-size") || "16",
     "phonetic-opacity":
       StorageManager.getItem("ivLyrics:visual:phonetic-opacity") || "70",
     "phonetic-spacing":
-      StorageManager.getItem("ivLyrics:visual:phonetic-spacing") || "4",
+      StorageManager.getItem("ivLyrics:visual:phonetic-spacing") || "-1",
     "phonetic-hyphen-replace":
       StorageManager.getItem("ivLyrics:visual:phonetic-hyphen-replace") || "keep",
     "original-letter-spacing":
@@ -1887,7 +1887,7 @@ const CONFIG = {
     "text-shadow-blur":
       StorageManager.getItem("ivLyrics:visual:text-shadow-blur") || "2",
     "original-opacity":
-      StorageManager.getItem("ivLyrics:visual:original-opacity") || "100",
+      StorageManager.getItem("ivLyrics:visual:original-opacity") || "95",
     "translation-opacity":
       StorageManager.getItem("ivLyrics:visual:translation-opacity") || "85",
     "translate:translated-lyrics-source":

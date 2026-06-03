@@ -1085,9 +1085,12 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			|| !Array.isArray(part.join)
 			|| part.join.length !== part.ranges.length - 1
 			|| !part.join.every(joinMode => Number.isInteger(joinMode) && joinMode >= 0 && joinMode <= 2)
-			|| !Array.isArray(part.chars)
-			|| part.chars.length !== countRangeChars(part.ranges)
 		) {
+			return null;
+		}
+
+		const hasSyncedChars = Array.isArray(part.chars);
+		if (hasSyncedChars && part.chars.length !== countRangeChars(part.ranges)) {
 			return null;
 		}
 
@@ -1114,13 +1117,18 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			const id = index === 0 ? part.id : getNextSyncCreatorPartId(usedIds);
 			if (!id) return null;
 
-			splitParts.push({
+			const splitPart = {
 				...part,
 				id,
 				ranges: [{ ...range }],
-				join: [],
-				chars: part.chars.slice(charOffset, charOffset + charCount)
-			});
+				join: []
+			};
+			if (hasSyncedChars) {
+				splitPart.chars = part.chars.slice(charOffset, charOffset + charCount);
+			} else {
+				delete splitPart.chars;
+			}
+			splitParts.push(splitPart);
 			charOffset += charCount;
 		}
 
@@ -2276,6 +2284,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const hasManualDraft = Array.isArray(manualParallelSplitDrafts[lineStart])
 			&& manualParallelSplitDrafts[lineStart].length > 0;
 		if (!hasManualDraft && Array.isArray(lineData?.parallel?.parts) && lineData.parallel.parts.length > 1) {
+			const textTemplate = getParallelTemplateForLine(lineChars, lineStart);
+			if (textTemplate && textTemplate.parts.length > lineData.parallel.parts.length) {
+				return textTemplate;
+			}
 			return lineData.parallel;
 		}
 
@@ -3577,22 +3589,25 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			const parts = currentParallelData.parts
 				.map((part) => {
 					const existingPart = existingParts.find(item => item.id === part.id);
-					const chars = part.id === activeParallelPart.id
+					const expectedChars = countRangeChars(part.ranges);
+					const syncedChars = part.id === activeParallelPart.id
 						? normalizedRawChars.map((time) => roundSyncTime(time))
 						: (Array.isArray(existingPart?.chars) ? existingPart.chars : undefined);
-					const expectedChars = countRangeChars(part.ranges);
-					if (!Array.isArray(chars) || chars.length !== expectedChars) {
+					if (part.id === activeParallelPart.id && (!Array.isArray(syncedChars) || syncedChars.length !== expectedChars)) {
 						return null;
 					}
-					return {
-							id: part.id,
-							role: part.role,
-							speaker: part.speaker,
-							kind: part.kind,
-							ranges: part.ranges,
-							join: part.join || [],
-							chars
+					const nextPart = {
+						id: part.id,
+						role: part.role,
+						speaker: part.speaker,
+						kind: part.kind,
+						ranges: part.ranges,
+						join: part.join || []
 					};
+					if (Array.isArray(syncedChars) && syncedChars.length === expectedChars) {
+						nextPart.chars = syncedChars;
+					}
+					return nextPart;
 				})
 				.filter(Boolean);
 

@@ -389,6 +389,11 @@ window.LANG_FR = {
       "autoBoundaryChars": {
         "label": "Gérer automatiquement les espaces et la ponctuation",
         "desc": "Pendant la synchronisation au clavier, les espaces et signes de ponctuation proches sont inclus automatiquement. Désactivez cette option pour minuter ces caractères manuellement."
+      },
+      "fillCurve": {
+        "label": "Courbe de correction du remplissage karaoké",
+        "desc": "Faites glisser les trois points du milieu pour régler la progression du remplissage des mots et caractères pendant la lecture karaoké. La diagonale par défaut conserve le minutage actuel.",
+        "reset": "Réinitialiser"
       }
     },
     "aiProviders": {

@@ -1800,6 +1800,9 @@ const CONFIG = {
       "ivLyrics:visual:sync-creator-auto-boundary-chars",
       true
     ),
+    "karaoke-fill-correction-curve":
+      StorageManager.getItem("ivLyrics:visual:karaoke-fill-correction-curve") ||
+      "[[0,0],[0.25,0.25],[0.5,0.5],[0.75,0.75],[1,1]]",
     "spotify-fake-karaoke-enabled": StorageManager.get(
       "ivLyrics:visual:spotify-fake-karaoke-enabled",
       false

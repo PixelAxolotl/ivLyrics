@@ -389,6 +389,11 @@ window.LANG_EN = {
       "autoBoundaryChars": {
         "label": "Auto-handle spaces and punctuation",
         "desc": "When using keyboard sync, automatically include nearby spaces and punctuation. Turn this off to time those characters manually."
+      },
+      "fillCurve": {
+        "label": "Karaoke fill correction curve",
+        "desc": "Drag the three middle points to adjust how word and character fill progresses during karaoke playback. The default diagonal line keeps the current timing.",
+        "reset": "Reset"
       }
     },
     "aiProviders": {

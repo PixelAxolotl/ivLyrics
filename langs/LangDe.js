@@ -389,6 +389,11 @@ window.LANG_DE = {
       "autoBoundaryChars": {
         "label": "Leerzeichen und Satzzeichen automatisch behandeln",
         "desc": "Bei der Tastatur-Synchronisierung werden nahe Leerzeichen und Satzzeichen automatisch einbezogen. Deaktiviere dies, um diese Zeichen manuell zu timen."
+      },
+      "fillCurve": {
+        "label": "Karaoke-Füllkorrekturkurve",
+        "desc": "Ziehe die drei mittleren Punkte, um anzupassen, wie Wort- und Zeichenfüllung bei der Karaoke-Wiedergabe fortschreiten. Die diagonale Standardlinie behält das aktuelle Timing bei.",
+        "reset": "Zurücksetzen"
       }
     },
     "aiProviders": {

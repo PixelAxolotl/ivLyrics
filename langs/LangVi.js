@@ -389,6 +389,11 @@ window.LANG_VI = {
       "autoBoundaryChars": {
         "label": "Tự xử lý khoảng trắng và dấu câu",
         "desc": "Khi đồng bộ bằng bàn phím, các khoảng trắng và dấu câu gần đó sẽ được đưa vào tự động. Tắt tùy chọn này để canh thời gian các ký tự đó thủ công."
+      },
+      "fillCurve": {
+        "label": "Đường cong hiệu chỉnh tô màu karaoke",
+        "desc": "Kéo ba điểm ở giữa để điều chỉnh tiến trình tô màu từ và ký tự trong khi phát karaoke. Đường chéo mặc định giữ nguyên thời gian hiện tại.",
+        "reset": "Đặt lại"
       }
     },
     "aiProviders": {

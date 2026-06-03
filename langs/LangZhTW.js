@@ -389,6 +389,11 @@ window.LANG_ZH_TW = {
       "autoBoundaryChars": {
         "label": "自動處理空格與標點",
         "desc": "使用鍵盤同步時，會自動包含相鄰的空格與標點。關閉後，可以手動為這些字元打點。"
+      },
+      "fillCurve": {
+        "label": "卡拉 OK 填色校正曲線",
+        "desc": "拖曳中間三個點，調整卡拉 OK 播放時單字與字元的填色進度。預設對角線會維持目前時序。",
+        "reset": "重設"
       }
     },
     "aiProviders": {

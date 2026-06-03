@@ -389,6 +389,11 @@ window.LANG_ZH_CN = {
       "autoBoundaryChars": {
         "label": "自动处理空格和标点",
         "desc": "使用键盘同步时，自动包含相邻的空格和标点。关闭后，可以手动为这些字符打点。"
+      },
+      "fillCurve": {
+        "label": "卡拉 OK 填充校正曲线",
+        "desc": "拖动中间三个点，调整卡拉 OK 播放时单词和字符的填充进度。默认对角线会保持当前计时。",
+        "reset": "重置"
       }
     },
     "aiProviders": {

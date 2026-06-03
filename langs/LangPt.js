@@ -389,6 +389,11 @@ window.LANG_PT = {
       "autoBoundaryChars": {
         "label": "Tratar espaços e pontuação automaticamente",
         "desc": "Ao sincronizar pelo teclado, espaços e sinais de pontuação próximos são incluídos automaticamente. Desative para marcar o tempo desses caracteres manualmente."
+      },
+      "fillCurve": {
+        "label": "Curva de correção do preenchimento de karaokê",
+        "desc": "Arraste os três pontos centrais para ajustar como o preenchimento de palavras e caracteres avança durante a reprodução de karaokê. A linha diagonal padrão mantém o tempo atual.",
+        "reset": "Redefinir"
       }
     },
     "aiProviders": {

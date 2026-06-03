@@ -389,6 +389,11 @@ window.LANG_ID = {
       "autoBoundaryChars": {
         "label": "Tangani spasi dan tanda baca otomatis",
         "desc": "Saat memakai sinkronisasi keyboard, spasi dan tanda baca terdekat akan ikut otomatis. Matikan ini untuk mengatur waktu karakter tersebut secara manual."
+      },
+      "fillCurve": {
+        "label": "Kurva koreksi pengisian karaoke",
+        "desc": "Seret tiga titik tengah untuk mengatur progres pengisian kata dan karakter saat karaoke diputar. Garis diagonal bawaan mempertahankan timing saat ini.",
+        "reset": "Reset"
       }
     },
     "aiProviders": {

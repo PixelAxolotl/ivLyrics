@@ -4221,6 +4221,260 @@ const ConfigAdjust = ({
   );
 };
 
+const KARAOKE_FILL_CURVE_DEFAULT_POINTS = [
+  { x: 0, y: 0 },
+  { x: 0.25, y: 0.25 },
+  { x: 0.5, y: 0.5 },
+  { x: 0.75, y: 0.75 },
+  { x: 1, y: 1 },
+];
+
+const clampKaraokeCurveValue = (value, fallback = 0) => {
+  const numberValue = Number(value);
+  if (!Number.isFinite(numberValue)) {
+    return fallback;
+  }
+  return Math.max(0, Math.min(1, numberValue));
+};
+
+const normalizeKaraokeFillCurvePoints = (value) => {
+  let parsed = value;
+  if (typeof value === "string") {
+    try {
+      parsed = JSON.parse(value);
+    } catch {
+      parsed = null;
+    }
+  }
+
+  const points = KARAOKE_FILL_CURVE_DEFAULT_POINTS.map((defaultPoint, index) => {
+    const source = Array.isArray(parsed) ? parsed[index] : null;
+    const sourceX = Array.isArray(source) ? source[0] : source?.x;
+    const sourceY = Array.isArray(source) ? source[1] : source?.y;
+    return {
+      x: defaultPoint.x,
+      y: clampKaraokeCurveValue(sourceY, defaultPoint.y),
+    };
+  });
+
+  points[0].y = 0;
+  points[points.length - 1].y = 1;
+  for (let index = 1; index < points.length - 1; index += 1) {
+    points[index].y = Math.max(points[index - 1].y, points[index].y);
+  }
+  for (let index = points.length - 2; index > 0; index -= 1) {
+    points[index].y = Math.min(points[index + 1].y, points[index].y);
+  }
+
+  return points;
+};
+
+const serializeKaraokeFillCurvePoints = (points) => JSON.stringify(
+  normalizeKaraokeFillCurvePoints(points).map((point) => [
+    Math.round(point.x * 1000) / 1000,
+    Math.round(point.y * 1000) / 1000,
+  ])
+);
+
+const evaluateKaraokeFillCurvePoints = (points, inputValue) => {
+  const normalizedValue = clampKaraokeCurveValue(inputValue);
+  const safePoints = normalizeKaraokeFillCurvePoints(points);
+  if (normalizedValue <= 0) return 0;
+  if (normalizedValue >= 1) return 1;
+
+  let segmentIndex = 0;
+  for (let index = 0; index < safePoints.length - 1; index += 1) {
+    if (normalizedValue >= safePoints[index].x && normalizedValue <= safePoints[index + 1].x) {
+      segmentIndex = index;
+      break;
+    }
+  }
+
+  const p0 = safePoints[Math.max(0, segmentIndex - 1)];
+  const p1 = safePoints[segmentIndex];
+  const p2 = safePoints[segmentIndex + 1];
+  const p3 = safePoints[Math.min(safePoints.length - 1, segmentIndex + 2)];
+  const localProgress = (normalizedValue - p1.x) / Math.max(0.0001, p2.x - p1.x);
+  const controlY = (p1.y + p2.y) / 2 + (p2.y - p0.y + p3.y - p1.y) / 8;
+  const oneMinusProgress = 1 - localProgress;
+  const curvedValue =
+    oneMinusProgress * oneMinusProgress * p1.y +
+    2 * oneMinusProgress * localProgress * controlY +
+    localProgress * localProgress * p2.y;
+
+  return clampKaraokeCurveValue(curvedValue);
+};
+
+const ConfigKaraokeFillCurveEditor = ({
+  name,
+  settingKey,
+  defaultValue,
+  info,
+  disabled = false,
+  onChange = () => { },
+}) => {
+  const graphRef = useRef(null);
+  const [points, setPoints] = useState(() => normalizeKaraokeFillCurvePoints(defaultValue));
+  const pendingPointsRef = useRef(points);
+
+  useEffect(() => {
+    const nextPoints = normalizeKaraokeFillCurvePoints(defaultValue);
+    pendingPointsRef.current = nextPoints;
+    setPoints(nextPoints);
+  }, [defaultValue]);
+
+  const viewBox = { width: 320, height: 180, padding: 22 };
+  const plotWidth = viewBox.width - viewBox.padding * 2;
+  const plotHeight = viewBox.height - viewBox.padding * 2;
+  const toSvgPoint = (point) => ({
+    x: viewBox.padding + point.x * plotWidth,
+    y: viewBox.padding + (1 - point.y) * plotHeight,
+  });
+  const curvePath = Array.from({ length: 49 }, (_, index) => {
+    const x = index / 48;
+    const y = evaluateKaraokeFillCurvePoints(points, x);
+    const svgX = viewBox.padding + x * plotWidth;
+    const svgY = viewBox.padding + (1 - y) * plotHeight;
+    return `${index === 0 ? "M" : "L"} ${svgX.toFixed(2)} ${svgY.toFixed(2)}`;
+  }).join(" ");
+  const defaultPath = `M ${viewBox.padding} ${viewBox.height - viewBox.padding} L ${viewBox.width - viewBox.padding} ${viewBox.padding}`;
+
+  const commitPoints = (nextPoints) => {
+    const normalizedPoints = normalizeKaraokeFillCurvePoints(nextPoints);
+    pendingPointsRef.current = normalizedPoints;
+    setPoints(normalizedPoints);
+    onChange(settingKey || "karaoke-fill-correction-curve", serializeKaraokeFillCurvePoints(normalizedPoints));
+  };
+
+  const updatePointFromPointer = (pointIndex, event) => {
+    if (disabled || pointIndex <= 0 || pointIndex >= points.length - 1 || !graphRef.current) {
+      return;
+    }
+
+    const rect = graphRef.current.getBoundingClientRect();
+    const basePoints = pendingPointsRef.current || points;
+    const rawY = 1 - ((event.clientY - rect.top - viewBox.padding * (rect.height / viewBox.height)) /
+      Math.max(1, plotHeight * (rect.height / viewBox.height)));
+    const minY = basePoints[pointIndex - 1].y;
+    const maxY = basePoints[pointIndex + 1].y;
+    const nextPoints = basePoints.map((point, index) => (
+      index === pointIndex
+        ? { ...point, y: Math.max(minY, Math.min(maxY, clampKaraokeCurveValue(rawY, point.y))) }
+        : point
+    ));
+    const normalizedPoints = normalizeKaraokeFillCurvePoints(nextPoints);
+    pendingPointsRef.current = normalizedPoints;
+    setPoints(normalizedPoints);
+  };
+
+  const startDrag = (pointIndex, event) => {
+    if (disabled || pointIndex <= 0 || pointIndex >= points.length - 1) {
+      return;
+    }
+
+    event.preventDefault();
+    updatePointFromPointer(pointIndex, event);
+
+    const handlePointerMove = (moveEvent) => updatePointFromPointer(pointIndex, moveEvent);
+    const handlePointerUp = () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      commitPoints(pendingPointsRef.current);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+  };
+
+  const resetCurve = () => {
+    commitPoints(KARAOKE_FILL_CURVE_DEFAULT_POINTS);
+  };
+
+  return react.createElement(
+    "div",
+    {
+      className: "setting-row karaoke-fill-curve-row",
+      "data-setting-key": settingKey,
+      style: disabled ? { opacity: 0.5, pointerEvents: "none" } : {},
+    },
+    react.createElement(
+      "div",
+      { className: "setting-row-content" },
+      react.createElement(
+        "div",
+        { className: "setting-row-left" },
+        react.createElement("div", { className: "setting-name" }, name),
+        info && react.createElement("div", { className: "setting-description" }, info)
+      ),
+      react.createElement(
+        "div",
+        { className: "setting-row-right karaoke-fill-curve-control" },
+        react.createElement(
+          "svg",
+          {
+            ref: graphRef,
+            className: "karaoke-fill-curve-graph",
+            viewBox: `0 0 ${viewBox.width} ${viewBox.height}`,
+            role: "img",
+            "aria-label": name,
+          },
+          [0, 0.25, 0.5, 0.75, 1].map((tick) => react.createElement("line", {
+            key: `grid-x-${tick}`,
+            className: "karaoke-fill-curve-grid-line",
+            x1: viewBox.padding + tick * plotWidth,
+            y1: viewBox.padding,
+            x2: viewBox.padding + tick * plotWidth,
+            y2: viewBox.height - viewBox.padding,
+          })),
+          [0, 0.25, 0.5, 0.75, 1].map((tick) => react.createElement("line", {
+            key: `grid-y-${tick}`,
+            className: "karaoke-fill-curve-grid-line",
+            x1: viewBox.padding,
+            y1: viewBox.padding + tick * plotHeight,
+            x2: viewBox.width - viewBox.padding,
+            y2: viewBox.padding + tick * plotHeight,
+          })),
+          react.createElement("path", {
+            className: "karaoke-fill-curve-default-path",
+            d: defaultPath,
+          }),
+          react.createElement("path", {
+            className: "karaoke-fill-curve-path",
+            d: curvePath,
+          }),
+          points.map((point, index) => {
+            const svgPoint = toSvgPoint(point);
+            return react.createElement("g", {
+              key: `point-${index}`,
+              className: `karaoke-fill-curve-point${index === 0 || index === points.length - 1 ? " is-fixed" : ""}`,
+              onPointerDown: (event) => startDrag(index, event),
+            },
+              react.createElement("circle", {
+                cx: svgPoint.x,
+                cy: svgPoint.y,
+                r: index === 0 || index === points.length - 1 ? 5 : 7,
+              }),
+              react.createElement("text", {
+                x: svgPoint.x,
+                y: Math.max(13, svgPoint.y - 10),
+              }, `${Math.round(point.y * 100)}%`)
+            );
+          })
+        ),
+        react.createElement(
+          "button",
+          {
+            className: "btn karaoke-fill-curve-reset",
+            type: "button",
+            onClick: resetCurve,
+          },
+          getSettingsText("settings.syncCreatorSettings.fillCurve.reset", "Reset")
+        )
+      )
+    )
+  );
+};
+
 const ConfigHotkey = ({ name, settingKey, defaultValue, onChange = () => { } }) => {
   const [value, setValue] = useState(defaultValue);
   const [trap] = useState(new Spicetify.Mousetrap());
@@ -4418,6 +4672,7 @@ const OptionList = ({ type, items, onChange }) => {
       item.type === ConfigKeyList ||
       item.type === ConfigFontSelector ||
       item.type === ConfigInstrumentalBreakIconPicker ||
+      item.type === ConfigKaraokeFillCurveEditor ||
       item.type === VideoHelperToggle ||
       item.type === LyricsHelperToggle
     ) {
@@ -5071,9 +5326,12 @@ const ConfigModal = ({
         "settings.syncCreatorSettings.title",
         "settings.syncCreatorSettings.subtitle",
         "settings.syncCreatorSettings.autoBoundaryChars.label",
-        "settings.syncCreatorSettings.autoBoundaryChars.desc"
+        "settings.syncCreatorSettings.autoBoundaryChars.desc",
+        "settings.syncCreatorSettings.fillCurve.label",
+        "settings.syncCreatorSettings.fillCurve.desc",
+        "settings.syncCreatorSettings.fillCurve.reset"
       ],
-      keywords: ["sync creator shortcuts hotkeys keybinds karaoke recording syllable word character drag slash punctuation space special characters"]
+      keywords: ["sync creator shortcuts hotkeys keybinds karaoke recording syllable word character drag slash punctuation space special characters fill curve graph correction easing quadratic"]
     },
     {
       section: I18n.t("tabs.behavior"),
@@ -7817,6 +8075,81 @@ const ConfigModal = ({
     color: currentColor;
 }
 
+#${APP_NAME}-config-container .karaoke-fill-curve-row .setting-row-content {
+    grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);
+    align-items: start;
+}
+
+#${APP_NAME}-config-container .karaoke-fill-curve-control {
+    display: grid;
+    grid-template-columns: minmax(240px, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+}
+
+#${APP_NAME}-config-container .karaoke-fill-curve-graph {
+    width: 100%;
+    min-height: 150px;
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-md);
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.02));
+    touch-action: none;
+    user-select: none;
+}
+
+#${APP_NAME}-config-container .karaoke-fill-curve-grid-line {
+    stroke: rgba(255, 255, 255, 0.08);
+    stroke-width: 1;
+}
+
+#${APP_NAME}-config-container .karaoke-fill-curve-default-path {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.24);
+    stroke-width: 2;
+    stroke-dasharray: 6 6;
+}
+
+#${APP_NAME}-config-container .karaoke-fill-curve-path {
+    fill: none;
+    stroke: var(--accent-primary);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    filter: drop-shadow(0 0 10px var(--accent-primary-light));
+}
+
+#${APP_NAME}-config-container .karaoke-fill-curve-point {
+    cursor: ns-resize;
+}
+
+#${APP_NAME}-config-container .karaoke-fill-curve-point.is-fixed {
+    cursor: default;
+    opacity: 0.72;
+}
+
+#${APP_NAME}-config-container .karaoke-fill-curve-point circle {
+    fill: var(--accent-primary);
+    stroke: rgba(255, 255, 255, 0.9);
+    stroke-width: 2;
+}
+
+#${APP_NAME}-config-container .karaoke-fill-curve-point text {
+    fill: var(--text-primary);
+    font-size: 10px;
+    font-weight: 700;
+    text-anchor: middle;
+    paint-order: stroke;
+    stroke: rgba(0, 0, 0, 0.58);
+    stroke-width: 3px;
+    pointer-events: none;
+}
+
+#${APP_NAME}-config-container .karaoke-fill-curve-reset {
+    min-width: 72px;
+    white-space: nowrap;
+}
+
 /* 슬라이더 컨트롤 */
 #${APP_NAME}-config-container .slider-container {
     display: flex;
@@ -10383,6 +10716,15 @@ const ConfigModal = ({
         grid-template-columns: 1fr;
     }
 
+    #${APP_NAME}-config-container .karaoke-fill-curve-row .setting-row-content {
+        grid-template-columns: 1fr;
+    }
+
+    #${APP_NAME}-config-container .karaoke-fill-curve-control {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
     #${APP_NAME}-config-container .setting-row-right {
         width: 100%;
         max-width: none;
@@ -11939,6 +12281,13 @@ const ConfigModal = ({
               key: "sync-creator-auto-boundary-chars",
               type: ConfigSlider,
               defaultValue: CONFIG.visual["sync-creator-auto-boundary-chars"] ?? true,
+            },
+            {
+              desc: getSettingsText("settings.syncCreatorSettings.fillCurve.label", "Karaoke fill correction curve"),
+              info: getSettingsText("settings.syncCreatorSettings.fillCurve.desc", "Drag the three middle points to adjust how word and character fill progresses during karaoke playback. The default diagonal line keeps the current timing."),
+              key: "karaoke-fill-correction-curve",
+              type: ConfigKaraokeFillCurveEditor,
+              defaultValue: CONFIG.visual["karaoke-fill-correction-curve"],
             },
             {
               desc: `${getSettingsText("syncCreator.shortcuts.charForward", "Advance one character")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,

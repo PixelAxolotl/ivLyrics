@@ -389,6 +389,11 @@ window.LANG_MS = {
       "autoBoundaryChars": {
         "label": "Kendalikan ruang dan tanda baca secara automatik",
         "desc": "Semasa menggunakan penyegerakan papan kekunci, ruang dan tanda baca berdekatan akan disertakan secara automatik. Matikan pilihan ini untuk menetapkan masa aksara tersebut secara manual."
+      },
+      "fillCurve": {
+        "label": "Lengkung pembetulan isian karaoke",
+        "desc": "Seret tiga titik tengah untuk melaras kemajuan isian perkataan dan aksara semasa main balik karaoke. Garis pepenjuru lalai mengekalkan pemasaan semasa.",
+        "reset": "Tetapkan semula"
       }
     },
     "aiProviders": {

@@ -389,6 +389,11 @@ window.LANG_IT = {
       "autoBoundaryChars": {
         "label": "Gestisci automaticamente spazi e punteggiatura",
         "desc": "Durante la sincronizzazione da tastiera, spazi e segni di punteggiatura vicini vengono inclusi automaticamente. Disattiva questa opzione per temporizzare quei caratteri manualmente."
+      },
+      "fillCurve": {
+        "label": "Curva di correzione riempimento karaoke",
+        "desc": "Trascina i tre punti centrali per regolare l’avanzamento del riempimento di parole e caratteri durante la riproduzione karaoke. La diagonale predefinita mantiene il timing attuale.",
+        "reset": "Ripristina"
       }
     },
     "aiProviders": {

@@ -389,6 +389,11 @@ window.LANG_ES = {
       "autoBoundaryChars": {
         "label": "Gestionar automáticamente espacios y puntuación",
         "desc": "Al sincronizar con el teclado, incluye automáticamente los espacios y signos de puntuación cercanos. Desactívalo para marcar esos caracteres manualmente."
+      },
+      "fillCurve": {
+        "label": "Curva de corrección de relleno de karaoke",
+        "desc": "Arrastra los tres puntos centrales para ajustar cómo avanza el relleno de palabras y caracteres durante la reproducción de karaoke. La línea diagonal predeterminada conserva el tiempo actual.",
+        "reset": "Restablecer"
       }
     },
     "aiProviders": {

@@ -389,6 +389,11 @@ window.LANG_SV = {
       "autoBoundaryChars": {
         "label": "Hantera blanksteg och skiljetecken automatiskt",
         "desc": "När du synkar med tangentbordet inkluderas närliggande blanksteg och skiljetecken automatiskt. Stäng av detta för att tajma dessa tecken manuellt."
+      },
+      "fillCurve": {
+        "label": "Korrigeringskurva för karaokefyllning",
+        "desc": "Dra de tre mittpunkterna för att justera hur ord- och teckenfyllningen går framåt under karaokeuppspelning. Den diagonala standardlinjen behåller nuvarande timing.",
+        "reset": "Återställ"
       }
     },
     "aiProviders": {

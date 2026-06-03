@@ -1661,6 +1661,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const rtlTextRunRef = useRef(null);
 	const recordingCharIndexRef = useRef(-1);
 	const lastPaintedRecordingIndexRef = useRef(-1);
+	const lastPaintedPlaybackIndexRef = useRef(-1);
 	const preventNextTrackRef = useRef(false);
 
 	// 트랙 정보
@@ -5502,9 +5503,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		return lineData?.chars?.[charIndex] ?? null;
 	}, [syncLinesByStart, lineCharOffsets, activeParallelPart]);
 
-	const getPreviewCharIndex = useCallback((lineIndex) => {
+	const getPreviewCharIndexAtTime = useCallback((lineIndex, currentTimeSec) => {
 		if (!syncLinesByStart) return -1;
-		const currentTimeSec = position / 1000;
 		const lineStart = lineCharOffsets[lineIndex];
 		const lineData = syncLinesByStart.get(lineStart);
 		const chars = activeParallelPart
@@ -5515,12 +5515,93 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			if (currentTimeSec >= chars[i]) return i;
 		}
 		return -1;
-	}, [syncLinesByStart, position, lineCharOffsets, activeParallelPart]);
+	}, [syncLinesByStart, lineCharOffsets, activeParallelPart]);
+
+	const getPreviewCharIndex = useCallback((lineIndex) => (
+		getPreviewCharIndexAtTime(lineIndex, position / 1000)
+	), [getPreviewCharIndexAtTime, position]);
+
+	const applyPlaybackProgressVisual = useCallback((nextIndex) => {
+		const normalizedIndex = Number.isInteger(nextIndex) ? nextIndex : -1;
+		if (lastPaintedPlaybackIndexRef.current === normalizedIndex) return;
+		lastPaintedPlaybackIndexRef.current = normalizedIndex;
+
+		if (useCurrentLineTextRun && rtlTextRunRef.current) {
+			const percent = currentLineChars.length > 0 && normalizedIndex >= 0
+				? Math.max(0, Math.min(100, ((normalizedIndex + 1) / currentLineChars.length) * 100))
+				: 0;
+			rtlTextRunRef.current.style.backgroundImage = getSyncCreatorProgressGradient(
+				currentLineDirection,
+				percent,
+				SYNC_CREATOR_PROGRESS_COLOR
+			);
+			return;
+		}
+
+		for (let index = 0; index < currentLineChars.length; index++) {
+			const el = charElementsRef.current[index];
+			if (!el) continue;
+
+			const isSynced = el.dataset.ivSyncCreatorSynced === '1';
+			if (isSynced && normalizedIndex >= 0 && index <= normalizedIndex) {
+				el.style.background = SYNC_CREATOR_PROGRESS_COLOR;
+				el.style.color = '#fff';
+			} else {
+				el.style.background = isSynced ? 'rgba(49, 130, 246, 0.20)' : '';
+				el.style.color = '';
+			}
+		}
+	}, [currentLineChars.length, currentLineDirection, useCurrentLineTextRun]);
 
 	useEffect(() => {
 		charElementsRef.current = [];
 		charHitBoxesRef.current = [];
+		lastPaintedPlaybackIndexRef.current = -2;
 	}, [currentLineIndex, lyricsText, activeParallelPartId]);
+
+	useEffect(() => {
+		if (mode === 'record' || !syncLinesByStart || currentLineIndex >= lyricsLines.length) {
+			applyPlaybackProgressVisual(-1);
+			return;
+		}
+
+		let frameId = 0;
+		let lastCheckedAt = 0;
+		let disposed = false;
+		const scheduleFrame = typeof requestAnimationFrame === 'function'
+			? requestAnimationFrame
+			: (callback) => setTimeout(() => callback(Date.now()), 33);
+		const cancelFrame = typeof cancelAnimationFrame === 'function'
+			? cancelAnimationFrame
+			: clearTimeout;
+
+		lastPaintedPlaybackIndexRef.current = -2;
+		const paint = (timestamp) => {
+			if (disposed) return;
+			if (!lastCheckedAt || timestamp - lastCheckedAt >= 33) {
+				lastCheckedAt = timestamp;
+				const pos = Number(Spicetify.Player?.getProgress?.() || 0);
+				const nextIndex = Number.isFinite(pos)
+					? getPreviewCharIndexAtTime(currentLineIndex, pos / 1000)
+					: -1;
+				applyPlaybackProgressVisual(nextIndex);
+			}
+			frameId = scheduleFrame(paint);
+		};
+
+		frameId = scheduleFrame(paint);
+		return () => {
+			disposed = true;
+			if (frameId) cancelFrame(frameId);
+		};
+	}, [
+		mode,
+		syncLinesByStart,
+		currentLineIndex,
+		lyricsLines.length,
+		getPreviewCharIndexAtTime,
+		applyPlaybackProgressVisual
+	]);
 
 	const TOSS_BLUE = '#3182f6';
 	const TOSS_BLUE_DEEP = '#1b64da';
@@ -6383,17 +6464,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const currentLineTimingLabel = hasCurrentLineTiming
 		? `${formatSeconds(Math.min(...currentLineTimes))} - ${formatSeconds(Math.max(...currentLineTimes))}`
 		: (I18n.t('syncCreator.lineOffsetUnavailable') || '싱크 후 조정 가능');
-	const currentLineActivePartData = activeParallelPart
-		? currentLineData?.parallel?.parts?.find(part => part.id === activeParallelPart.id)
-		: null;
 	const currentLinePreviewIndex = currentLineText ? getPreviewCharIndex(currentLineIndex) : -1;
-	const currentLineSyncedIndex = ((currentLineActivePartData || currentLineData)?.chars?.length || 0) - 1;
 	const currentRecordingCharIndex = recordingCharIndexRef.current;
-	const currentLineProgressIndex = mode === 'preview'
-		? currentLinePreviewIndex
-		: mode === 'record' && currentRecordingCharIndex >= 0
-			? currentRecordingCharIndex
-			: currentLineSyncedIndex;
+	const currentLineProgressIndex = mode === 'record' && currentRecordingCharIndex >= 0
+		? currentRecordingCharIndex
+		: currentLinePreviewIndex;
 	const currentLineProgressPercent = currentLineChars.length > 0 && currentLineProgressIndex >= 0
 		? Math.max(0, Math.min(100, ((currentLineProgressIndex + 1) / currentLineChars.length) * 100))
 		: 0;
@@ -6408,7 +6483,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const renderCharacterSpan = (char, i, options = {}) => {
 		const isSynced = isCharSynced(currentLineIndex, i);
 		const isRec = mode === 'record' && currentRecordingCharIndex >= 0 && i <= currentRecordingCharIndex;
-		const previewIdx = getPreviewCharIndex(currentLineIndex);
+		const previewIdx = currentLinePreviewIndex;
 		const isPlayed = isSynced && previewIdx >= i;
 		const charTime = getCharSyncTime(currentLineIndex, i);
 		const furigana = currentLineFuriganaMap.get(i);
@@ -6455,6 +6530,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			style,
 			ref: (el) => { charElementsRef.current[i] = el; },
 			'data-char-index': i,
+			'data-iv-sync-creator-synced': !options.wordSpacer && isSynced ? '1' : '0',
 			'data-iv-sync-creator-base-background': baseBackground,
 			'data-iv-sync-creator-base-color': baseColor
 		},

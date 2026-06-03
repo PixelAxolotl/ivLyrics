@@ -1795,6 +1795,100 @@
             }
         },
 
+        async searchCandidatesByQuery(queryText, info = {}) {
+            try {
+                const queryValue = String(queryText || '').trim();
+                if (!queryValue) {
+                    return {
+                        success: false,
+                        error: 'Missing search query',
+                        candidates: [],
+                        selectedCandidateKey: null
+                    };
+                }
+
+                const headers = { 'x-user-agent': `spicetify v${Spicetify.Config?.version || 'unknown'}` };
+                const query = new URLSearchParams({ q: queryValue });
+                const response = await fetchWithTimeout(`${LRCLIB_API_BASE}/search?${query.toString()}`, { headers }, 35000);
+
+                if (!response) {
+                    return {
+                        success: false,
+                        error: 'Network request failed',
+                        candidates: [],
+                        selectedCandidateKey: null,
+                        searchMode: 'manual',
+                        totalResults: 0
+                    };
+                }
+
+                if (!response.ok) {
+                    return {
+                        success: false,
+                        error: response.status === 404 ? 'No lyrics found' : `API error: ${response.status}`,
+                        candidates: [],
+                        selectedCandidateKey: null,
+                        searchMode: 'manual',
+                        totalResults: 0
+                    };
+                }
+
+                const data = await response.json();
+                if (!Array.isArray(data)) {
+                    return {
+                        success: false,
+                        error: 'Invalid LRCLIB response',
+                        candidates: [],
+                        selectedCandidateKey: null,
+                        searchMode: 'manual',
+                        totalResults: 0
+                    };
+                }
+
+                const trackDuration = Number(info?.duration || 0);
+                const trackDurationSec = trackDuration > 0 ? trackDuration / 1000 : 0;
+                const candidates = data
+                    .filter(candidate => candidate?.syncedLyrics || candidate?.plainLyrics || candidate?.instrumental)
+                    .map((candidate, index) => {
+                        const preferredLyricsSource = candidate?.syncedLyrics ? 'synced' : (candidate?.plainLyrics ? 'plain' : 'instrumental');
+                        const previewText = getCandidateLyricsText(candidate, preferredLyricsSource);
+                        const previewLines = getComparableLyricsLines(previewText);
+                        return {
+                            ...candidate,
+                            candidateKey: buildLrclibCandidateKey(candidate, 'manual', index),
+                            searchSource: 'manual',
+                            preferredLyricsSource,
+                            previewText,
+                            previewLineCount: previewLines.length,
+                            hasSyncedLyrics: !!candidate?.syncedLyrics,
+                            hasPlainLyrics: !!candidate?.plainLyrics,
+                            artistScore: info?.artist ? getBestArtistScore(splitArtists(info.artist), splitArtists(candidate?.artistName || '')) : 0,
+                            titleScore: info?.title ? getTitleScore(info.title, candidate?.trackName || candidate?.name || '') : 0,
+                            durationDiff: trackDurationSec > 0 ? Math.abs(Number(candidate?.duration || 0) - trackDurationSec) : 0,
+                            isSelectedByDefault: index === 0
+                        };
+                    });
+
+                return {
+                    success: candidates.length > 0,
+                    error: candidates.length > 0 ? null : 'No lyrics found',
+                    candidates,
+                    selectedCandidateKey: candidates[0]?.candidateKey || null,
+                    selectedSource: 'manual',
+                    searchMode: 'manual',
+                    totalResults: candidates.length,
+                    usedFallbackQuery: false
+                };
+            } catch (e) {
+                return {
+                    success: false,
+                    error: e?.message || 'LRCLIB candidate search failed',
+                    candidates: [],
+                    selectedCandidateKey: null
+                };
+            }
+        },
+
         /**
          * 【설정 UI 메서드】
          * 사용자 설정 화면에 표시될 React 컴포넌트를 반환합니다.

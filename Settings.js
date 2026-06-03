@@ -5063,15 +5063,15 @@ const ConfigModal = ({
     {
       section: I18n.t("tabs.behavior"),
       sectionKey: "lyrics",
-      settingKey: "sync-creator-shortcuts",
-      name: getSettingsText("settings.syncCreatorShortcuts.title", "Sync Creator Shortcuts"),
-      desc: getSettingsText("settings.syncCreatorShortcuts.subtitle", "Configure primary and secondary recording keys for Sync Creator."),
+      settingKey: "sync-creator-settings",
+      name: getSettingsText("settings.syncCreatorSettings.title", "Sync Creator Settings"),
+      desc: getSettingsText("settings.syncCreatorSettings.subtitle", "Configure Sync Creator keyboard behavior and recording shortcuts."),
       i18nKeys: [
         "tabs.behavior",
-        "settings.syncCreatorShortcuts.title",
-        "settings.syncCreatorShortcuts.subtitle",
-        "settings.syncCreatorShortcuts.autoBoundaryChars.label",
-        "settings.syncCreatorShortcuts.autoBoundaryChars.desc"
+        "settings.syncCreatorSettings.title",
+        "settings.syncCreatorSettings.subtitle",
+        "settings.syncCreatorSettings.autoBoundaryChars.label",
+        "settings.syncCreatorSettings.autoBoundaryChars.desc"
       ],
       keywords: ["sync creator shortcuts hotkeys keybinds karaoke recording syllable word character drag slash punctuation space special characters"]
     },
@@ -11927,15 +11927,15 @@ const ConfigModal = ({
           },
         }),
         react.createElement(SectionTitle, {
-          title: getSettingsText("settings.syncCreatorShortcuts.title", "Sync Creator Shortcuts"),
-          subtitle: getSettingsText("settings.syncCreatorShortcuts.subtitle", "Configure primary and secondary recording keys for Sync Creator."),
-          sectionKey: "sync-creator-shortcuts",
+          title: getSettingsText("settings.syncCreatorSettings.title", "Sync Creator Settings"),
+          subtitle: getSettingsText("settings.syncCreatorSettings.subtitle", "Configure Sync Creator keyboard behavior and recording shortcuts."),
+          sectionKey: "sync-creator-settings",
         }),
         react.createElement(OptionList, {
           items: [
             {
-              desc: getSettingsText("settings.syncCreatorShortcuts.autoBoundaryChars.label", "Auto-handle spaces and punctuation"),
-              info: getSettingsText("settings.syncCreatorShortcuts.autoBoundaryChars.desc", "When using keyboard sync, automatically include nearby spaces and punctuation. Turn this off to time those characters manually."),
+              desc: getSettingsText("settings.syncCreatorSettings.autoBoundaryChars.label", "Auto-handle spaces and punctuation"),
+              info: getSettingsText("settings.syncCreatorSettings.autoBoundaryChars.desc", "When using keyboard sync, automatically include nearby spaces and punctuation. Turn this off to time those characters manually."),
               key: "sync-creator-auto-boundary-chars",
               type: ConfigSlider,
               defaultValue: CONFIG.visual["sync-creator-auto-boundary-chars"] ?? true,

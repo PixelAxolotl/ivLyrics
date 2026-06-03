@@ -1602,6 +1602,14 @@ const ICONS = {
   display: `<path d="M1.5 2.5h13v11h-13v-11Zm1 1v9h11v-9h-11Zm1.5 1.5h3v3h-3v-3Zm4 0h4v1h-4v-1Zm0 2h4v1h-4V7Zm-4 2h8v1h-8V9Zm0 2h6v1h-6v-1Z"/>`,
   mode: `<path d="M2 4.5h7v1H2v-1Zm0 6h12v1H2v-1Zm9-7h3v3h-3v-3Zm-4 5h3v3H7v-3Z"/>`,
   language: `<path d="M8 1.25a6.75 6.75 0 1 1 0 13.5 6.75 6.75 0 0 1 0-13.5Zm0 1a5.75 5.75 0 0 0-4.61 9.18h1.44c-.2-.6-.33-1.27-.38-1.97H2.83v-1h1.6c.06-.98.29-1.9.65-2.7H3.86v-1h1.8A5.73 5.73 0 0 1 8 2.25Zm1.34 2.5H6.66c-.42.8-.69 1.72-.76 2.7h4.2c-.07-.98-.34-1.9-.76-2.7Zm.99 3.7H5.67c.06.7.2 1.37.42 1.97h3.82c.22-.6.36-1.27.42-1.97Zm-.58 2.97H6.25c.49.88 1.12 1.33 1.75 1.33s1.26-.45 1.75-1.33Zm2.86-1.97h-1.62c-.05.7-.18 1.37-.38 1.97h1.44a5.72 5.72 0 0 0 .56-1.97Zm-.02-1c-.07-.98-.3-1.9-.66-2.7h1.22a5.72 5.72 0 0 1 .68 2.7H12.6Zm-1.66-3.7c-.5-.98-1.16-1.5-1.93-1.5s-1.43.52-1.93 1.5h3.86Z"/>`,
+  localLyrics: `<path d="M3 1.5h6.5L13 5v9.5H3v-13Zm1 1v11h8V5.5H9V2.5H4Zm6 .7V4.5h1.3L10 3.2ZM5.25 7.5h5.5v1h-5.5v-1Zm0 2h5.5v1h-5.5v-1Zm0 2h3.5v1h-3.5v-1Z"/>`,
+  search: `<path d="M6.75 1.75a4.75 4.75 0 0 1 3.8 7.6l3.2 3.2-.7.7-3.2-3.2a4.75 4.75 0 1 1-3.1-8.3Zm0 1a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Z"/>`,
+  file: `<path d="M3 1.5h6.5L13 5v9.5H3v-13Zm1 1v11h8V5.5H9V2.5H4Zm6 .7V4.5h1.3L10 3.2ZM5 7.5h6v1H5v-1Zm0 2h6v1H5v-1Zm0 2h4v1H5v-1Z"/>`,
+};
+
+const getOptionsText = (key, fallback) => {
+  const value = I18n?.t?.(key);
+  return value && value !== key ? value : fallback;
 };
 
 // 최적화 #5 - 재사용 가능한 Adjust 버튼 컴포넌트
@@ -1797,6 +1805,325 @@ function openOptionsModal(title, items, onChange, eventType = null) {
 
   reactDom.render(container, body);
   return host.closeModal;
+}
+
+const formatLrclibCandidateDuration = (duration) => {
+  const seconds = Number(duration);
+  if (!Number.isFinite(seconds) || seconds <= 0) {
+    return "";
+  }
+  const totalSeconds = Math.round(seconds);
+  const minutes = Math.floor(totalSeconds / 60);
+  const remainingSeconds = totalSeconds % 60;
+  return `${minutes}:${String(remainingSeconds).padStart(2, "0")}`;
+};
+
+const getLrclibCandidatePreviewLines = (candidate) => {
+  const text = candidate?.previewText || candidate?.syncedLyrics || candidate?.plainLyrics || "";
+  return String(text)
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\[[^\]]+\]/g, "").replace(/<[^>]+>/g, "").trim())
+    .filter(Boolean)
+    .slice(0, 3);
+};
+
+const getLrclibLocalSearchAddon = () => {
+  const manager = window.LyricsAddonManager;
+  const addon = manager?.getAddon?.("lrclib");
+  if (addon?.searchCandidatesByQuery) {
+    return addon;
+  }
+  const addons = manager?.getAddons?.() || [];
+  return addons.find((item) => item?.id === "lrclib" && item?.searchCandidatesByQuery) || null;
+};
+
+const LocalLyricsLrclibSearchModal = ({ trackInfo = {}, onApplyLocalLyrics, onClose }) => {
+  const initialQuery = react.useMemo(() => {
+    return [trackInfo?.title, trackInfo?.artist].filter(Boolean).join(" ").trim();
+  }, [trackInfo?.title, trackInfo?.artist]);
+  const [query, setQuery] = react.useState(initialQuery);
+  const [candidates, setCandidates] = react.useState([]);
+  const [statusText, setStatusText] = react.useState("");
+  const [isSearching, setIsSearching] = react.useState(false);
+  const [applyingKey, setApplyingKey] = react.useState(null);
+
+  const performSearch = react.useCallback(async () => {
+    const searchValue = String(query || "").trim();
+    if (!searchValue) {
+      setStatusText(getOptionsText("menu.localLyricsSearchEmpty", "검색어를 입력해 주세요."));
+      return;
+    }
+
+    const addon = getLrclibLocalSearchAddon();
+    if (!addon?.searchCandidatesByQuery) {
+      setCandidates([]);
+      setStatusText(getOptionsText("menu.localLyricsLrclibUnavailable", "LRCLIB provider를 사용할 수 없습니다."));
+      return;
+    }
+
+    setIsSearching(true);
+    setStatusText("");
+    try {
+      const result = await addon.searchCandidatesByQuery(searchValue, trackInfo || {});
+      const nextCandidates = Array.isArray(result?.candidates) ? result.candidates : [];
+      setCandidates(nextCandidates);
+      setStatusText(
+        nextCandidates.length
+          ? getOptionsText("menu.localLyricsSearchResultCount", "{count}개 결과").replace("{count}", nextCandidates.length)
+          : (result?.error || getOptionsText("menu.localLyricsSearchNoResults", "검색 결과가 없습니다."))
+      );
+    } catch (error) {
+      console.error("[ivLyrics] LRCLIB local lyrics search failed:", error);
+      setCandidates([]);
+      setStatusText(error?.message || getOptionsText("menu.localLyricsSearchFailed", "가사 검색에 실패했습니다."));
+    } finally {
+      setIsSearching(false);
+    }
+  }, [query, trackInfo]);
+
+  const applyCandidate = react.useCallback(async (candidate) => {
+    if (!candidate || applyingKey) {
+      return;
+    }
+
+    const candidateKey = candidate.candidateKey || `${candidate.id || "candidate"}`;
+    setApplyingKey(candidateKey);
+    try {
+      await onApplyLocalLyrics?.(candidate, { source: "lrclib-local-search", query });
+      onClose?.();
+    } catch (error) {
+      console.error("[ivLyrics] Failed to apply local LRCLIB lyrics:", error);
+      Toast.error(error?.message || getOptionsText("menu.localLyricsApplyFailed", "가사를 적용하지 못했습니다."));
+    } finally {
+      setApplyingKey(null);
+    }
+  }, [applyingKey, onApplyLocalLyrics, onClose, query]);
+
+  const handleKeyDown = (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      void performSearch();
+    }
+  };
+
+  return react.createElement(
+    react.Fragment,
+    null,
+    react.createElement(
+      "div",
+      { className: "ivlyrics-fluent-header" },
+      react.createElement(
+        "div",
+        { className: "ivlyrics-fluent-title-wrap" },
+        react.createElement("h2", { className: "ivlyrics-fluent-title" }, getOptionsText("menu.localLyricsLrclibSearch", "LRCLIB 가사 검색")),
+        react.createElement(
+          "p",
+          { className: "ivlyrics-fluent-subtitle" },
+          getOptionsText("menu.localLyricsLrclibSearchSubtitle", "로컬 곡에는 ivLyrics 서버를 사용하지 않고 선택한 가사만 이 기기에 저장합니다.")
+        )
+      ),
+      react.createElement(
+        "button",
+        {
+          className: "ivlyrics-fluent-close",
+          type: "button",
+          onClick: onClose,
+        },
+        react.createElement("svg", {
+          viewBox: "0 0 16 16",
+          fill: "currentColor",
+          dangerouslySetInnerHTML: {
+            __html: '<path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>',
+          },
+        })
+      )
+    ),
+    react.createElement(
+      "div",
+      { className: "ivlyrics-fluent-body ivlyrics-options-modal-body" },
+      react.createElement(
+        "div",
+        {
+          style: {
+            display: "flex",
+            gap: "8px",
+            alignItems: "stretch",
+            marginBottom: "12px",
+          },
+        },
+        react.createElement("input", {
+          value: query,
+          onChange: (event) => setQuery(event.target.value),
+          onKeyDown: handleKeyDown,
+          placeholder: getOptionsText("menu.localLyricsSearchPlaceholder", "곡명 또는 아티스트 검색"),
+          style: {
+            flex: "1 1 auto",
+            minWidth: 0,
+            height: "38px",
+            padding: "0 12px",
+            border: "1px solid rgba(255,255,255,0.14)",
+            background: "rgba(255,255,255,0.06)",
+            color: "inherit",
+            borderRadius: "0",
+          },
+        }),
+        react.createElement(
+          "button",
+          {
+            className: "ivlyrics-fluent-btn",
+            type: "button",
+            onClick: () => void performSearch(),
+            disabled: isSearching,
+          },
+          isSearching
+            ? getOptionsText("menu.localLyricsSearching", "검색 중")
+            : getOptionsText("menu.search", "검색")
+        )
+      ),
+      statusText && react.createElement(
+        "div",
+        {
+          style: {
+            marginBottom: "12px",
+            color: "rgba(255,255,255,0.68)",
+            fontSize: "13px",
+          },
+        },
+        statusText
+      ),
+      react.createElement(
+        "div",
+        {
+          style: {
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+          },
+        },
+        candidates.map((candidate, index) => {
+          const candidateKey = candidate.candidateKey || `${candidate.id || "candidate"}-${index}`;
+          const title = candidate.trackName || candidate.name || getOptionsText("menu.unknownTitle", "Unknown title");
+          const artist = candidate.artistName || getOptionsText("menu.unknownArtist", "Unknown artist");
+          const album = candidate.albumName || "";
+          const duration = formatLrclibCandidateDuration(candidate.duration);
+          const previewLines = getLrclibCandidatePreviewLines(candidate);
+          const badges = [
+            (candidate.hasSyncedLyrics || candidate.syncedLyrics) && getOptionsText("syncCreator.lrclibBadgeSynced", "Synced"),
+            (candidate.hasPlainLyrics || candidate.plainLyrics) && getOptionsText("syncCreator.lrclibBadgePlain", "Plain"),
+            candidate.instrumental && getOptionsText("syncCreator.lrclibBadgeInstrumental", "Instrumental"),
+          ].filter(Boolean);
+
+          return react.createElement(
+            "div",
+            {
+              key: candidateKey,
+              style: {
+                display: "grid",
+                gridTemplateColumns: "minmax(0, 1fr) auto",
+                gap: "12px",
+                padding: "12px",
+                border: "1px solid rgba(255,255,255,0.1)",
+                background: "rgba(255,255,255,0.04)",
+              },
+            },
+            react.createElement(
+              "div",
+              { style: { minWidth: 0 } },
+              react.createElement(
+                "div",
+                {
+                  style: {
+                    fontWeight: 700,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  },
+                  title,
+                },
+                title
+              ),
+              react.createElement(
+                "div",
+                {
+                  style: {
+                    marginTop: "3px",
+                    color: "rgba(255,255,255,0.7)",
+                    fontSize: "13px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  },
+                  title: [artist, album, duration].filter(Boolean).join(" · "),
+                },
+                [artist, album, duration].filter(Boolean).join(" · ")
+              ),
+              badges.length > 0 && react.createElement(
+                "div",
+                {
+                  style: {
+                    display: "flex",
+                    gap: "6px",
+                    flexWrap: "wrap",
+                    marginTop: "8px",
+                  },
+                },
+                badges.map((badge) => react.createElement(
+                  "span",
+                  {
+                    key: badge,
+                    style: {
+                      padding: "2px 6px",
+                      border: "1px solid rgba(255,255,255,0.12)",
+                      fontSize: "11px",
+                      color: "rgba(255,255,255,0.78)",
+                    },
+                  },
+                  badge
+                ))
+              ),
+              previewLines.length > 0 && react.createElement(
+                "div",
+                {
+                  style: {
+                    marginTop: "8px",
+                    color: "rgba(255,255,255,0.58)",
+                    fontSize: "12px",
+                    lineHeight: 1.45,
+                  },
+                },
+                previewLines.join(" / ")
+              )
+            ),
+            react.createElement(
+              "button",
+              {
+                className: "ivlyrics-fluent-btn",
+                type: "button",
+                onClick: () => void applyCandidate(candidate),
+                disabled: !!applyingKey,
+                style: { alignSelf: "start" },
+              },
+              applyingKey === candidateKey
+                ? getOptionsText("menu.localLyricsApplying", "적용 중")
+                : getOptionsText("menu.apply", "적용")
+            )
+          );
+        })
+      )
+    )
+  );
+};
+
+function openLocalLyricsLrclibSearchModal({ trackInfo, onApplyLocalLyrics }) {
+  return openFluentReactModal({
+    overlayId: "ivLyrics-local-lyrics-lrclib-overlay",
+    shellClassName: "ivlyrics-options-modal-shell",
+    render: (closeModal) => react.createElement(LocalLyricsLrclibSearchModal, {
+      trackInfo,
+      onApplyLocalLyrics,
+      onClose: closeModal,
+    }),
+  });
 }
 
 // Debounce handle for adjustments modal
@@ -2164,7 +2491,16 @@ const TranslationMenu = react.memo(({ friendlyLanguage, hasTranslation }) => {
 });
 
 const LyricsProviderSelectButton = react.memo(
-  ({ currentProvider, selectedProvider, isLoading, onSelectProvider }) => {
+  ({
+    currentProvider,
+    selectedProvider,
+    isLoading,
+    onSelectProvider,
+    isLocalTrack = false,
+    trackInfo = null,
+    onImportLocalLyricsFile,
+    onApplyLocalLyrics,
+  }) => {
     const open = () => {
       const providers = window.LyricsAddonManager?.getEnabledProviders?.() || [];
       const providerOptions = [
@@ -2190,12 +2526,66 @@ const LyricsProviderSelectButton = react.memo(
         providerOptions.find((option) => option.key === selectedValue) ||
         providerOptions[0];
       const currentProviderLabel =
-        providers.find((provider) => provider.id === currentProvider)?.name ||
-        currentProvider ||
-        I18n.t("menu.unknownLanguage");
+        isLocalTrack
+          ? getOptionsText("menu.localLyricsProvider", "Local")
+          : (
+            providers.find((provider) => provider.id === currentProvider)?.name ||
+            currentProvider ||
+            I18n.t("menu.unknownLanguage")
+          );
 
-      const items = [
-        {
+      let closeModal = null;
+      const items = [];
+      if (isLocalTrack) {
+        items.push({
+          section: getOptionsText("menu.localLyricsTools", "로컬 가사"),
+          subtitle: getOptionsText(
+            "menu.localLyricsToolsSubtitle",
+            "로컬 곡은 ivLyrics 서버와 분리됩니다. LRC 파일을 가져오거나 LRCLIB에서 직접 검색해 이 기기에 저장합니다."
+          ),
+          items: [
+            {
+              desc: react.createElement(SettingRowDescription, {
+                icon: ICONS.localLyrics,
+                text: getOptionsText("menu.localLyricsCurrent", "현재 로컬 가사"),
+              }),
+              key: "current-local-lyrics-provider",
+              type: "info",
+              info: currentProviderLabel || "local",
+            },
+            {
+              desc: react.createElement(SettingRowDescription, {
+                icon: ICONS.file,
+                text: getOptionsText("menu.importLrcFile", "LRC 파일 가져오기"),
+              }),
+              key: "local-lyrics-import",
+              type: IvConfigButton,
+              text: getOptionsText("menu.import", "가져오기"),
+              onChange: () => {
+                closeModal?.();
+                onImportLocalLyricsFile?.();
+              },
+            },
+            {
+              desc: react.createElement(SettingRowDescription, {
+                icon: ICONS.search,
+                text: getOptionsText("menu.searchLrclibLocal", "LRCLIB에서 검색"),
+              }),
+              key: "local-lyrics-lrclib-search",
+              type: IvConfigButton,
+              text: getOptionsText("menu.search", "검색"),
+              onChange: () => {
+                closeModal?.();
+                openLocalLyricsLrclibSearchModal({
+                  trackInfo,
+                  onApplyLocalLyrics,
+                });
+              },
+            },
+          ],
+        });
+      } else {
+        items.push({
           section: I18n.t("menu.lyricsProviderSelect"),
           subtitle: I18n.t("menu.lyricsProviderSelectSubtitle"),
           items: [
@@ -2220,15 +2610,19 @@ const LyricsProviderSelectButton = react.memo(
               info: I18n.t("menu.lyricsProviderSelectSubtitle"),
             },
           ],
-        },
-      ];
+        });
+      }
 
-      let closeModal = null;
       closeModal = openOptionsModal(
-        I18n.t("menu.lyricsProviderSelect"),
+        isLocalTrack
+          ? getOptionsText("menu.localLyricsTools", "로컬 가사")
+          : I18n.t("menu.lyricsProviderSelect"),
         items,
         async (name, value) => {
           if (name !== "track-lyrics-provider") {
+            return;
+          }
+          if (isLocalTrack) {
             return;
           }
           await onSelectProvider?.(value === "auto" ? null : value);
@@ -2239,20 +2633,20 @@ const LyricsProviderSelectButton = react.memo(
 
     return react.createElement(
       Spicetify.ReactComponent.TooltipWrapper,
-      { label: I18n.t("menu.lyricsProviderSelect") },
+      { label: isLocalTrack ? getOptionsText("menu.localLyricsTools", "로컬 가사") : I18n.t("menu.lyricsProviderSelect") },
       react.createElement(
         "button",
         {
           className: "lyrics-config-button",
           onClick: open,
-          disabled: isLoading,
+          disabled: isLoading && !isLocalTrack,
         },
         react.createElement("svg", {
           width: 20,
           height: 20,
           viewBox: "0 0 16 16",
           fill: "currentColor",
-          dangerouslySetInnerHTML: { __html: ICONS.provider },
+          dangerouslySetInnerHTML: { __html: isLocalTrack ? ICONS.localLyrics : ICONS.provider },
         })
       )
     );

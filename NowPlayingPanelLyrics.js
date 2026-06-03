@@ -78,6 +78,32 @@
     const DEFAULT_FONT_SCALE = 100; // 폰트 크기 배율 (50% ~ 200%)
     const DEFAULT_FONT_FAMILY = "Pretendard Variable";
     const DEFAULT_PANEL_WIDTH = 280;
+
+    const getPanelTrackId = (uri) => {
+        if (!uri) return null;
+        if (typeof Utils !== "undefined" && Utils?.extractTrackId) {
+            return Utils.extractTrackId(uri);
+        }
+        return uri.startsWith("spotify:track:") ? uri.split(":")[2] : null;
+    };
+
+    const getSavedPanelLocalLyrics = (uri) => {
+        if (!uri) return null;
+        try {
+            const raw = localStorage.getItem("ivLyrics:local-lyrics");
+            const localLyrics = raw ? JSON.parse(raw) : {};
+            const savedLyrics = localLyrics?.[uri];
+            if (!savedLyrics) return null;
+            return {
+                ...savedLyrics,
+                provider: "local",
+                uri,
+            };
+        } catch (error) {
+            console.warn("[PanelLyrics] Failed to read local lyrics:", error);
+            return null;
+        }
+    };
     const DEFAULT_ORIGINAL_SIZE = 26;
     const DEFAULT_PHONETIC_SIZE = 13;
     const DEFAULT_TRANSLATION_SIZE = 13;
@@ -2669,23 +2695,13 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             // 이미 로딩 중이면 스킵
             if (loadingRef.current && !forceReload) return;
 
-            // LyricsService Extension이 로드될 때까지 대기
-            let retries = 0;
-            while (!window.LyricsService && retries < 20) {
-                await new Promise(resolve => setTimeout(resolve, 300));
-                retries++;
-            }
-
-            if (!window.LyricsService) {
-                console.warn("[PanelLyrics] LyricsService Extension not loaded");
-                return;
-            }
-
             // 현재 트랙 정보 가져오기
             const item = Spicetify.Player.data?.item;
             if (!item) return;
 
             const trackUri = item.uri;
+            const trackId = getPanelTrackId(trackUri);
+            const isLocalTrack = !!trackUri && !trackId;
 
             // requestedTrackUri가 제공된 경우, 현재 재생 중인 트랙과 일치하는지 확인
             // (곡이 빠르게 변경될 때 이전 요청을 무시하기 위함)
@@ -2712,17 +2728,34 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 artist: item.artists?.map(a => a.name).join(', ') || '',
                 album: item.album?.name || '',
                 duration: item.duration?.milliseconds || 0,
-                trackId: trackUri?.split(':')[2]
+                trackId
             };
 
             panelDebug("[PanelLyrics] Loading lyrics for:", trackInfo.title);
+
+            if (!isLocalTrack) {
+                // LyricsService Extension이 로드될 때까지 대기
+                let retries = 0;
+                while (!window.LyricsService && retries < 20) {
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    retries++;
+                }
+
+                if (!window.LyricsService) {
+                    console.warn("[PanelLyrics] LyricsService Extension not loaded");
+                    loadingRef.current = false;
+                    return;
+                }
+            }
 
             try {
                 // ==========================================
                 // 1단계: 가사만 먼저 로드 (빠르게 표시)
                 // ==========================================
-                // LyricsAddonManager를 통해 가사 로드
-                const result = await window.LyricsService.getLyricsFromProviders(trackInfo);
+                // Spotify 트랙은 LyricsAddonManager를 통해 로드하고, 로컬 곡은 저장된 로컬 가사만 사용한다.
+                const result = isLocalTrack
+                    ? getSavedPanelLocalLyrics(trackUri)
+                    : await window.LyricsService.getLyricsFromProviders(trackInfo);
                 if (!isActiveLoad(loadSeq, loadingForTrackUri)) {
                     panelDebug("[PanelLyrics] Track changed during lyrics fetch, discarding result for:", loadingForTrackUri);
                     return;
@@ -3074,6 +3107,18 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 loadLyricsFromExtension(true, currentUri);
             };
 
+            const handleLocalLyricsUpdated = (event) => {
+                const currentUri = Spicetify.Player.data?.item?.uri;
+                const detail = event.detail || {};
+                if (!currentUri || (detail.trackUri && detail.trackUri !== currentUri)) {
+                    return;
+                }
+                loadSeqRef.current += 1;
+                loadingRef.current = false;
+                lastTrackUri.current = null;
+                loadLyricsFromExtension(true, currentUri);
+            };
+
             const handlePlaybackChange = () => {
                 setIsPlaybackPaused(getPlaybackPaused());
             };
@@ -3086,6 +3131,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             window.addEventListener('ivLyrics:offset-changed', handleOffsetChange);
             window.addEventListener('ivLyrics:global-offset-changed', handleGlobalOffsetChange);
             window.addEventListener('ivLyrics:sync-data-updated', handleSyncDataUpdated);
+            window.addEventListener('ivLyrics:local-lyrics-updated', handleLocalLyricsUpdated);
 
             // 초기 로드 (현재 재생 중인 곡)
             loadLyricsFromExtension();
@@ -3098,6 +3144,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 window.removeEventListener('ivLyrics:offset-changed', handleOffsetChange);
                 window.removeEventListener('ivLyrics:global-offset-changed', handleGlobalOffsetChange);
                 window.removeEventListener('ivLyrics:sync-data-updated', handleSyncDataUpdated);
+                window.removeEventListener('ivLyrics:local-lyrics-updated', handleLocalLyricsUpdated);
             };
         }, [loadLyricsFromExtension]);
 

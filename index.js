@@ -3418,6 +3418,9 @@ class LyricsContainer extends react.Component {
     this.regenerateTranslation = this.regenerateTranslation.bind(this);
     this.handleRegenerateTranslationRequest = this.handleRegenerateTranslationRequest.bind(this);
     this.selectLyricsProviderForCurrentTrack = this.selectLyricsProviderForCurrentTrack.bind(this);
+    this.importLocalLyricsFile = this.importLocalLyricsFile.bind(this);
+    this.applyLocalLyrics = this.applyLocalLyrics.bind(this);
+    this.applyLocalLyricsFromLrclibCandidate = this.applyLocalLyricsFromLrclibCandidate.bind(this);
   }
 
   shouldReduceMotion() {
@@ -4590,6 +4593,7 @@ class LyricsContainer extends react.Component {
 
       const requestSeq = ++this._lyricsFetchSeq;
       const requestUri = info.uri;
+      const hasSpotifyTrackId = !!Utils.extractTrackId(info.uri);
       this._activeLyricsFetchSeq = requestSeq;
       this.currentTrackUri = requestUri;
       isLatestLyricsRequest = () =>
@@ -4619,6 +4623,9 @@ class LyricsContainer extends react.Component {
         return;
       }
       this.trackLanguageOverride = trackLanguageOverride;
+      if (!hasSpotifyTrackId) {
+        trackLyricsProviderOverride = null;
+      }
       this.trackLyricsProviderOverride = trackLyricsProviderOverride;
 
       // keep artist/title for prompts
@@ -4637,11 +4644,23 @@ class LyricsContainer extends react.Component {
       if (refresh && CACHE[info.uri]) {
         delete CACHE[info.uri];
       }
-      if (CACHE[info.uri] && (CACHE[info.uri].trackLyricsProviderOverride || null) !== (trackLyricsProviderOverride || null)) {
+      if (hasSpotifyTrackId && CACHE[info.uri] && (CACHE[info.uri].trackLyricsProviderOverride || null) !== (trackLyricsProviderOverride || null)) {
         delete CACHE[info.uri];
       }
 
       let isCached = this.lyricsSaved(info.uri);
+      if (!hasSpotifyTrackId) {
+        const savedLocalLyrics = this.getSavedLocalLyrics(info.uri);
+        if (savedLocalLyrics) {
+          CACHE[info.uri] = {
+            ...savedLocalLyrics,
+            provider: "local",
+            uri: info.uri,
+            trackLyricsProviderOverride: null,
+          };
+          isCached = true;
+        }
+      }
 
       if (CONFIG.visual.colorful || CONFIG.visual["gradient-background"] || CONFIG.visual["blur-gradient-background"]) {
         this.fetchColors(info.uri);
@@ -4672,6 +4691,22 @@ class LyricsContainer extends react.Component {
         if (typeof cachedMode === "number" && cachedMode !== -1) {
           tempState = { ...tempState, mode: cachedMode };
         }
+      } else if (!hasSpotifyTrackId) {
+        tempState = {
+          ...emptyState,
+          uri: requestUri,
+          lyricsRequestSeq: requestSeq,
+          artist: info.artist,
+          title: info.title,
+          coverUrl: info.image,
+          provider: "local",
+          contributors: null,
+          trackLyricsProviderOverride: null,
+          isLoading: false,
+          isCached: false,
+          error: null,
+          currentLyrics: [],
+        };
       } else {
         // Save current mode before loading to maintain UI consistency
         const currentMode = this.getCurrentMode();
@@ -5905,6 +5940,29 @@ class LyricsContainer extends react.Component {
     };
   }
 
+  getText(key, fallback) {
+    const value = I18n?.t?.(key);
+    return value && value !== key ? value : fallback;
+  }
+
+  getLocalLyricsStore() {
+    try {
+      const localLyrics = JSON.parse(StorageManager.getItem(`${APP_NAME}:local-lyrics`) || "{}");
+      return localLyrics && typeof localLyrics === "object" ? localLyrics : {};
+    } catch (error) {
+      console.warn("[ivLyrics] Failed to parse local lyrics store:", error);
+      return {};
+    }
+  }
+
+  getSavedLocalLyrics(uri) {
+    if (!uri) {
+      return null;
+    }
+    const localLyrics = this.getLocalLyricsStore();
+    return localLyrics[uri] || null;
+  }
+
   saveLocalLyrics(uri, lyrics) {
     // Include translations and phonetic conversions in cache
     const fullLyricsData = {
@@ -5912,8 +5970,7 @@ class LyricsContainer extends react.Component {
       ...this.getTranslationStates(),
     };
 
-    const localLyrics =
-      JSON.parse(StorageManager.getItem(`${APP_NAME}:local-lyrics`)) || {};
+    const localLyrics = this.getLocalLyricsStore();
     localLyrics[uri] = fullLyricsData;
     StorageManager.setItem(
       `${APP_NAME}:local-lyrics`,
@@ -5923,8 +5980,7 @@ class LyricsContainer extends react.Component {
   }
 
   deleteLocalLyrics(uri) {
-    const localLyrics =
-      JSON.parse(StorageManager.getItem(`${APP_NAME}:local-lyrics`)) || {};
+    const localLyrics = this.getLocalLyricsStore();
     delete localLyrics[uri];
     StorageManager.setItem(
       `${APP_NAME}:local-lyrics`,
@@ -5934,9 +5990,7 @@ class LyricsContainer extends react.Component {
   }
 
   lyricsSaved(uri) {
-    const localLyrics =
-      JSON.parse(StorageManager.getItem(`${APP_NAME}:local-lyrics`)) || {};
-    return !!localLyrics[uri];
+    return !!this.getSavedLocalLyrics(uri);
   }
 
   resetTranslationCache(uri) {
@@ -5995,6 +6049,119 @@ class LyricsContainer extends react.Component {
     }
   }
 
+  getParsedLocalLyricsTypes(localLyrics) {
+    return ["karaoke", "synced", "unsynced"]
+      .filter((key) => Array.isArray(localLyrics?.[key]) && localLyrics[key].length > 0)
+      .map((key) => key[0].toUpperCase() + key.slice(1));
+  }
+
+  applyLocalLyrics(localLyrics, { sourceLabel = "local", successMessage = null } = {}) {
+    const currentUri = this.currentTrackUri || this.state.uri;
+    if (!currentUri) {
+      Toast.error(this.getText("notifications.noTrackPlaying", "No track playing"));
+      return false;
+    }
+
+    const parsedKeys = this.getParsedLocalLyricsTypes(localLyrics);
+    if (!parsedKeys.length) {
+      Toast.error(this.getText("notifications.noValidLyricsInFile", "No valid lyrics found"));
+      return false;
+    }
+
+    const nextLyrics = {
+      karaoke: Array.isArray(localLyrics.karaoke) && localLyrics.karaoke.length ? localLyrics.karaoke : null,
+      synced: Array.isArray(localLyrics.synced) && localLyrics.synced.length ? localLyrics.synced : null,
+      unsynced: Array.isArray(localLyrics.unsynced) && localLyrics.unsynced.length ? localLyrics.unsynced : null,
+      provider: "local",
+      uri: currentUri,
+      localLyricsSource: sourceLabel,
+    };
+    const resetTranslations = {
+      romaji: null,
+      furigana: null,
+      hiragana: null,
+      katakana: null,
+      hangul: null,
+      romaja: null,
+      cn: null,
+      hk: null,
+      tw: null,
+      currentLyrics: null,
+      language: null,
+    };
+
+    this.lastProcessedUri = null;
+    this.lastProcessedMode = null;
+    CacheManager.clearByUri(currentUri);
+    if (this._dmResults?.[currentUri]) {
+      delete this._dmResults[currentUri];
+    }
+
+    CACHE[currentUri] = {
+      ...nextLyrics,
+      trackLyricsProviderOverride: null,
+    };
+
+    this.setState(
+      {
+        ...resetTranslations,
+        ...nextLyrics,
+        ...this.applyTranslationStates(nextLyrics),
+        isLoading: false,
+        isCached: true,
+        error: null,
+      },
+      () => {
+        const mode = this.getCurrentMode();
+        this.lyricsSource(this.state, mode);
+        this.saveLocalLyrics(currentUri, nextLyrics);
+        window.dispatchEvent(new CustomEvent("ivLyrics:local-lyrics-updated", {
+          detail: { trackUri: currentUri },
+        }));
+      }
+    );
+
+    const defaultSuccessMessage = this
+      .getText("notifications.lyricsLoadedFromFile", "Lyrics loaded: {types}")
+      .replace("{types}", parsedKeys.join(", "));
+    Toast.success(successMessage || defaultSuccessMessage);
+    return true;
+  }
+
+  importLocalLyricsFile() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".lrc,.txt,text/plain";
+    input.onchange = (event) => this.processLyricsFromFile(event);
+    input.click();
+  }
+
+  applyLocalLyricsFromLrclibCandidate(candidate, options = {}) {
+    const rawLyrics = String(
+      candidate?.syncedLyrics ||
+      candidate?.plainLyrics ||
+      candidate?.previewText ||
+      (candidate?.instrumental ? "[00:00.00]♪" : "")
+    )
+      .replace(/\[(\d+:\d+),(\d+)\]/g, "[$1.$2]")
+      .replace(/<(\d+:\d+),(\d+)>/g, "<$1.$2>")
+      .trim();
+
+    if (!rawLyrics) {
+      throw new Error(this.getText("menu.localLyricsNoCandidateLyrics", "No lyrics available in this result"));
+    }
+
+    const localLyrics = Utils.parseLocalLyrics(rawLyrics);
+    const applied = this.applyLocalLyrics(localLyrics, {
+      sourceLabel: options?.source || "lrclib",
+      successMessage: this.getText("notifications.lyricsLoadedFromLrclib", "LRCLIB에서 가사를 가져왔습니다."),
+    });
+
+    if (!applied) {
+      throw new Error(this.getText("notifications.lyricsLoadFailed", "Failed to load lyrics"));
+    }
+  }
+
   processLyricsFromFile(event) {
     const file = event.target.files;
     if (!file.length) return;
@@ -6008,34 +6175,13 @@ class LyricsContainer extends react.Component {
     reader.onload = (e) => {
       try {
         const localLyrics = Utils.parseLocalLyrics(e.target.result);
-        const parsedKeys = Object.keys(localLyrics)
-          .filter((key) => localLyrics[key])
-          .map((key) => key[0].toUpperCase() + key.slice(1));
-
-        if (!parsedKeys.length) {
-          Toast.error(I18n.t("notifications.noValidLyricsInFile"));
-          return;
-        }
-
-        this.setState({
-          ...localLyrics,
-          provider: "local",
-          ...this.applyTranslationStates(localLyrics),
-        });
-        CACHE[this.currentTrackUri] = {
-          ...localLyrics,
-          provider: "local",
-          uri: this.currentTrackUri,
-        };
-        this.saveLocalLyrics(this.currentTrackUri, localLyrics);
-
-        Toast.success(I18n.t("notifications.lyricsLoadedFromFile").replace("{types}", parsedKeys.join(", ")));
+        this.applyLocalLyrics(localLyrics, { sourceLabel: "file" });
       } catch (e) {
         Toast.error(I18n.t("notifications.lyricsLoadFailed"));
       }
     };
 
-    reader.onerror = (e) => {
+    reader.onerror = () => {
       Toast.error(I18n.t("notifications.fileReadFailed"));
     };
 
@@ -7084,6 +7230,17 @@ class LyricsContainer extends react.Component {
       !this.state.isFullscreen ||
       this.state.isFloatingMenuOpen ||
       this.state.isFloatingMenuClosing;
+    const currentPlayerItem = Spicetify.Player.data?.item;
+    const currentTrackInfo = this.infoFromTrack(currentPlayerItem) || {
+      duration: Number(currentPlayerItem?.metadata?.duration || 0),
+      album: currentPlayerItem?.metadata?.album_title || "",
+      artist: this.state.artist || currentPlayerItem?.metadata?.artist_name || "",
+      title: this.state.title || currentPlayerItem?.metadata?.title || "",
+      uri: this.currentTrackUri || this.state.uri || currentPlayerItem?.uri || "",
+      image: this.state.coverUrl || currentPlayerItem?.metadata?.image_url || "",
+    };
+    const renderTrackUri = currentTrackInfo?.uri || this.currentTrackUri || this.state.uri || "";
+    const isLocalTrack = !!renderTrackUri && !Utils.extractTrackId(renderTrackUri);
     const floatingToolbarStyle = this.state.isFullscreen
       ? { "--iv-floating-menu-content-top-offset": `${this.getFloatingMenuContentTopOffset()}px` }
       : undefined;
@@ -7406,6 +7563,10 @@ class LyricsContainer extends react.Component {
             selectedProvider: this.state.trackLyricsProviderOverride,
             isLoading: this.state.isLoading,
             onSelectProvider: this.selectLyricsProviderForCurrentTrack,
+            isLocalTrack,
+            trackInfo: currentTrackInfo,
+            onImportLocalLyricsFile: this.importLocalLyricsFile,
+            onApplyLocalLyrics: this.applyLocalLyricsFromLrclibCandidate,
           }),
           react.createElement(RegenerateTranslationButton, {
             onRegenerate: this.handleRegenerateTranslationRequest,

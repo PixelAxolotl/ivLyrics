@@ -264,6 +264,18 @@ const getSyncCreatorSpeakerTextColor = (value) => {
 		|| 'var(--spice-text)';
 };
 
+const getSyncCreatorHexColorWithAlpha = (color, alpha) => {
+	const normalized = String(color || '').trim();
+	const match = /^#([0-9a-f]{6})$/i.exec(normalized);
+	if (!match) return '';
+
+	const hex = match[1];
+	const red = parseInt(hex.slice(0, 2), 16);
+	const green = parseInt(hex.slice(2, 4), 16);
+	const blue = parseInt(hex.slice(4, 6), 16);
+	return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+};
+
 const isSyncCreatorDuetSpeaker = (value) => (
 	String(value || '').trim().toUpperCase().startsWith('DUET ')
 );
@@ -6677,44 +6689,62 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const getSpeakerTone = (speaker) => {
 		const value = String(speaker || '').toUpperCase();
 		const text = getSyncCreatorSpeakerTextColor(value);
+		const colorTone = {
+			text,
+			dot: text,
+			background: getSyncCreatorHexColorWithAlpha(text, 0.12),
+			border: getSyncCreatorHexColorWithAlpha(text, 0.34),
+			borderActive: getSyncCreatorHexColorWithAlpha(text, 0.78),
+			ring: getSyncCreatorHexColorWithAlpha(text, 0.22)
+		};
+		const withActualColor = (fallback) => ({
+			...fallback,
+			text,
+			dot: text,
+			background: colorTone.background || fallback.background,
+			border: colorTone.border || fallback.border,
+			borderActive: colorTone.borderActive || fallback.borderActive,
+			ring: colorTone.ring || fallback.ring
+		});
+
 		if (value.startsWith('NORMAL')) {
-			return {
+			return withActualColor({
 				text,
 				dot: text,
 				background: 'rgba(148, 163, 184, 0.105)',
 				border: 'rgba(148, 163, 184, 0.25)',
 				borderActive: 'rgba(148, 163, 184, 0.58)',
 				ring: 'rgba(148, 163, 184, 0.16)'
-			};
+			});
 		}
 		if (value.startsWith('FEMALE')) {
-			return {
+			return withActualColor({
 				text,
 				dot: text,
 				background: 'rgba(255, 122, 168, 0.105)',
 				border: 'rgba(255, 122, 168, 0.25)',
 				borderActive: 'rgba(255, 122, 168, 0.58)',
 				ring: 'rgba(255, 122, 168, 0.16)'
-			};
+			});
 		}
 		if (value.startsWith('DUET')) {
-			return {
+			return withActualColor({
 				text,
 				dot: text,
 				background: 'rgba(180, 147, 255, 0.105)',
 				border: 'rgba(180, 147, 255, 0.25)',
 				borderActive: 'rgba(180, 147, 255, 0.58)',
 				ring: 'rgba(180, 147, 255, 0.16)'
-			};
+			});
 		}
-		return {
+		return withActualColor({
 			text,
 			dot: text,
 			background: 'rgba(49, 130, 246, 0.105)',
 			border: 'rgba(49, 130, 246, 0.25)',
 			borderActive: TOSS_BLUE_BORDER,
 			ring: TOSS_BLUE_RING
-		};
+		});
 	};
 
 	const renderSpeakerPicker = (selectedSpeaker, onSelect) => {

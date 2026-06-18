@@ -3802,6 +3802,7 @@ class LyricsContainer extends react.Component {
       versionIndex: 0,
       versionIndex2: 0,
       isFullscreen: false,
+      fullscreenLyricsHidden: false,
       isFloatingMenuOpen: false,
       isFloatingMenuClosing: false,
       isFADMode: false,
@@ -3915,6 +3916,7 @@ class LyricsContainer extends react.Component {
     this.handleRegenerateTranslationRequest = this.handleRegenerateTranslationRequest.bind(this);
     this.selectLyricsProviderForCurrentTrack = this.selectLyricsProviderForCurrentTrack.bind(this);
     this.selectBackgroundForCurrentTrack = this.selectBackgroundForCurrentTrack.bind(this);
+    this.toggleFullscreenLyricsHidden = this.toggleFullscreenLyricsHidden.bind(this);
     this.importLocalLyricsFile = this.importLocalLyricsFile.bind(this);
     this.applyLocalLyrics = this.applyLocalLyrics.bind(this);
     this.applyLocalLyricsFromLrclibCandidate = this.applyLocalLyricsFromLrclibCandidate.bind(this);
@@ -3937,6 +3939,27 @@ class LyricsContainer extends react.Component {
       CONFIG.visual["fullscreen-browser-fullscreen"] === true ||
       !!document.fullscreenElement;
     return isBrowserFullscreen ? 0 : 130;
+  }
+
+  isShortcutInputFocused() {
+    const activeElement = document.activeElement;
+    const tagName = activeElement?.tagName?.toLowerCase();
+    return (
+      tagName === "input" ||
+      tagName === "textarea" ||
+      tagName === "select" ||
+      activeElement?.isContentEditable
+    );
+  }
+
+  toggleFullscreenLyricsHidden() {
+    if (!this.state.isFullscreen) {
+      return;
+    }
+
+    this.setState((prevState) => ({
+      fullscreenLyricsHidden: !prevState.fullscreenLyricsHidden,
+    }));
   }
 
   clearFloatingMenuCloseTimer() {
@@ -7108,12 +7131,30 @@ class LyricsContainer extends react.Component {
         this.fullscreenContainer.style.setProperty("--fullscreen-tmi-font-size", tmiScale);
         document.body.append(this.fullscreenContainer);
         this.mousetrap.bind("esc", this.toggleFullscreen);
-        // ESC 키 직접 리스너 추가 (Mousetrap이 캡처하지 못할 경우 대비)
+        // 전체화면 키 직접 리스너 추가 (Mousetrap이 캡처하지 못할 경우 대비)
         this._escHandler = (e) => {
           if (e.key === "Escape" && this.state.isFullscreen) {
             e.preventDefault();
             e.stopPropagation();
             this.toggleFullscreen();
+            return;
+          }
+
+          const isLyricsHideToggleKey =
+            e.code === "KeyL" ||
+            String(e.key || "").toLowerCase() === "l";
+          if (
+            isLyricsHideToggleKey &&
+            this.state.isFullscreen &&
+            !e.repeat &&
+            !e.metaKey &&
+            !e.ctrlKey &&
+            !e.altKey &&
+            !this.isShortcutInputFocused()
+          ) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.toggleFullscreenLyricsHidden();
           }
         };
         document.addEventListener("keydown", this._escHandler);
@@ -7172,6 +7213,7 @@ class LyricsContainer extends react.Component {
       // 먼저 상태를 업데이트하여 React가 Portal 렌더링을 중단하게 함
       this.setState({
         isFullscreen: isEnabled,
+        fullscreenLyricsHidden: isEnabled ? this.state.fullscreenLyricsHidden : false,
         justEnteredFullscreen: isEnabled, // 전체화면 진입 시 true로 설정하여 축소 아이콘 대신 메뉴 아이콘 표시
         isFloatingMenuOpen: isEnabled ? this.state.isFloatingMenuOpen : false,
         isFloatingMenuClosing: false,
@@ -7853,6 +7895,15 @@ class LyricsContainer extends react.Component {
     const isTwoColumn = CONFIG.visual["fullscreen-two-column"] !== false;
     const isLayoutReversed = CONFIG.visual["fullscreen-layout-reverse"] === true;
     const centerWhenNoLyrics = CONFIG.visual["fullscreen-center-when-no-lyrics"] !== false;
+    const shouldHideFullscreenLyrics =
+      this.state.isFullscreen &&
+      this.state.fullscreenLyricsHidden &&
+      hasLyrics &&
+      !this.state.showMarketplace &&
+      !isSyncCreatorActive;
+    const shouldUseFullscreenNoLyricsLayout =
+      shouldHideFullscreenLyrics ||
+      (!hasLyrics && centerWhenNoLyrics);
     const shouldReduceMotion = this.shouldReduceMotion();
     const isFullscreenMarketplace = this.state.isFullscreen && this.state.showMarketplace;
     const shouldRenderFloatingMenu =
@@ -7971,7 +8022,7 @@ class LyricsContainer extends react.Component {
       if (isLayoutReversed && isTwoColumn) {
         fullscreenClasses += " layout-reversed";
       }
-      if (!hasLyrics && centerWhenNoLyrics) {
+      if (shouldUseFullscreenNoLyricsLayout) {
         fullscreenClasses += " fullscreen-no-lyrics";
       }
       // Portrait mode class (not in TV mode)
@@ -8019,8 +8070,12 @@ class LyricsContainer extends react.Component {
         title: this.state.title,
         artist: this.state.artist,
         isFullscreen: this.state.isFullscreen,
-        currentLyricIndex: this.state.currentLyricIndex || 0,
-        totalLyrics: Array.isArray(this.state.currentLyrics) ? this.state.currentLyrics.length : 0,
+        currentLyricIndex: shouldHideFullscreenLyrics ? 0 : this.state.currentLyricIndex || 0,
+        totalLyrics: shouldHideFullscreenLyrics
+          ? 0
+          : Array.isArray(this.state.currentLyrics)
+            ? this.state.currentLyrics.length
+            : 0,
         translatedMetadata: this.state.translatedMetadata,
         trackUri: this.state.uri,
         onExitFullscreen: this.toggleFullscreen
@@ -8374,8 +8429,9 @@ class LyricsContainer extends react.Component {
         )
       ),
       cacheEditModal,
-      activeLyricsPage,
+      !shouldHideFullscreenLyrics && activeLyricsPage,
       !this.state.showMarketplace &&
+      !shouldHideFullscreenLyrics &&
       window.IvLyricsLearningMode?.StudyPanel &&
       react.createElement(window.IvLyricsLearningMode.StudyPanel, {
         trackUri: this.state.uri,

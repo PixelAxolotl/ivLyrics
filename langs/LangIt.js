@@ -225,6 +225,10 @@ window.LANG_IT = {
       "label": "Riempi schermo con video",
       "desc": "Ingrandisce il video per riempire lo schermo (potrebbe tagliare bordi)"
     },
+    "videoScale": {
+      "label": "Scala video",
+      "desc": "Regola il livello di zoom dello sfondo video (50-200%)"
+    },
     "backgroundBrightness": {
       "label": "Luminosità sfondo",
       "desc": "Regola il livello di luminosità dello sfondo (0-100%)"

@@ -225,6 +225,10 @@ window.LANG_ES = {
       "label": "Rellenar pantalla con video",
       "desc": "Amplía el video para llenar la pantalla (puede recortar bordes)"
     },
+    "videoScale": {
+      "label": "Escala del video",
+      "desc": "Ajusta el nivel de zoom del fondo de video (50-200%)"
+    },
     "backgroundBrightness": {
       "label": "Brillo del fondo",
       "desc": "Ajusta el nivel de brillo del fondo (0-100%)"

@@ -225,6 +225,10 @@ window.LANG_PT = {
       "label": "Preencher Tela com Vídeo",
       "desc": "Amplia o vídeo para preencher a tela (pode cortar as bordas)"
     },
+    "videoScale": {
+      "label": "Escala do vídeo",
+      "desc": "Ajuste o nível de zoom do fundo de vídeo (50-200%)"
+    },
     "backgroundBrightness": {
       "label": "Brilho do Fundo",
       "desc": "Ajusta o nível de brilho do fundo (0-100%)"

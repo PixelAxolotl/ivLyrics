@@ -225,6 +225,10 @@ window.LANG_DE = {
       "label": "Video füllen",
       "desc": "Vergrößert das Video, um den Bildschirm zu füllen (Kann oben/unten oder links/rechts beschnitten werden)"
     },
+    "videoScale": {
+      "label": "Video-Skalierung",
+      "desc": "Passe die Zoomstufe des Videohintergrunds an (50-200%)"
+    },
     "backgroundBrightness": {
       "label": "Hintergrundhelligkeit",
       "desc": "Passt die Helligkeit des Hintergrunds an (0-100%)"

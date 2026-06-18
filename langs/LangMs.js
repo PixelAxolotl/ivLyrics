@@ -225,6 +225,10 @@ window.LANG_MS = {
       "label": "Isikan Skrin Video",
       "desc": "Besarkan video untuk memenuhi skrin (bahagian atas/bawah atau kiri/kanan mungkin terpotong)"
     },
+    "videoScale": {
+      "label": "Skala Video",
+      "desc": "Laraskan tahap zum latar belakang video (50-200%)"
+    },
     "backgroundBrightness": {
       "label": "Kecerahan Latar Belakang",
       "desc": "Laraskan tahap kecerahan latar belakang (0-100%)"

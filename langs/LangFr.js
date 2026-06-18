@@ -225,6 +225,10 @@ window.LANG_FR = {
       "label": "Remplissage vidéo",
       "desc": "Agrandit la vidéo pour remplir l'écran (peut rogner les bords)"
     },
+    "videoScale": {
+      "label": "Échelle de la vidéo",
+      "desc": "Ajustez le niveau de zoom de l’arrière-plan vidéo (50-200%)"
+    },
     "backgroundBrightness": {
       "label": "Luminosité du fond",
       "desc": "Ajuste le niveau de luminosité de l'arrière-plan (0-100%)"

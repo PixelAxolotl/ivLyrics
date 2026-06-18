@@ -225,6 +225,10 @@ window.LANG_ID = {
       "label": "Isi Layar dengan Video",
       "desc": "Perbesar video untuk memenuhi layar (bagian atas/bawah atau kiri/kanan mungkin terpotong)"
     },
+    "videoScale": {
+      "label": "Skala Video",
+      "desc": "Atur tingkat zoom latar belakang video (50-200%)"
+    },
     "backgroundBrightness": {
       "label": "Kecerahan Latar Belakang",
       "desc": "Atur tingkat kecerahan latar belakang (0-100%)"

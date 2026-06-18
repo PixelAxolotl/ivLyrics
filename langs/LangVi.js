@@ -225,6 +225,10 @@ window.LANG_VI = {
       "label": "Lấp đầy màn hình video",
       "desc": "Phóng to video để lấp đầy màn hình (có thể bị cắt trên/dưới hoặc trái/phải)"
     },
+    "videoScale": {
+      "label": "Tỷ lệ video",
+      "desc": "Điều chỉnh mức thu phóng của nền video (50-200%)"
+    },
     "backgroundBrightness": {
       "label": "Độ sáng nền",
       "desc": "Điều chỉnh mức độ sáng của nền (0-100%)"

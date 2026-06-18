@@ -225,6 +225,10 @@ window.LANG_EN = {
       "label": "Video Fill Screen",
       "desc": "Zoom the video to fill the screen (Top/bottom or sides may be cropped)"
     },
+    "videoScale": {
+      "label": "Video Scale",
+      "desc": "Adjust the video background zoom level (50-200%)"
+    },
     "backgroundBrightness": {
       "label": "Background Brightness",
       "desc": "Adjust the brightness level of the background (0-100%)"

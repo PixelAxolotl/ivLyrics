@@ -225,6 +225,10 @@ window.LANG_ZH_TW = {
       "label": "影片填滿畫面",
       "desc": "將影片放大至填滿畫面（可能會裁切掉上下或左右部分）"
     },
+    "videoScale": {
+      "label": "影片縮放",
+      "desc": "調整影片背景的縮放級別 (50-200%)"
+    },
     "backgroundBrightness": {
       "label": "背景亮度",
       "desc": "調整背景的亮度等級 (0-100%)"

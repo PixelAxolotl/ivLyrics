@@ -225,6 +225,10 @@ window.LANG_TR = {
       "label": "Videoyu Ekrana Sığdır",
       "desc": "Videoyu ekranı dolduracak şekilde yakınlaştır (Üst/alt veya yanlar kırpılabilir)"
     },
+    "videoScale": {
+      "label": "Video Ölçeği",
+      "desc": "Video arka planının yakınlaştırma düzeyini ayarlayın (50-200%)"
+    },
     "backgroundBrightness": {
       "label": "Arka Plan Parlaklığı",
       "desc": "Arka plan parlaklık seviyesini ayarla (0-100%)"

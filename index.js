@@ -1801,6 +1801,8 @@ const CONFIG = {
       "ivLyrics:visual:video-cover",
       false
     ),
+    "video-scale":
+      StorageManager.getItem("ivLyrics:visual:video-scale") || "105",
     "solid-background-color":
       StorageManager.getItem("ivLyrics:visual:solid-background-color") ||
       "#1e3a8a",
@@ -2305,6 +2307,7 @@ CONFIG.visual["translation-opacity"] = Number.parseInt(
 CONFIG.visual["background-brightness"] = Number.parseInt(
   CONFIG.visual["background-brightness"]
 );
+CONFIG.visual["video-scale"] = Number.parseInt(CONFIG.visual["video-scale"]) || 105;
 CONFIG.visual["ja-detect-threshold"] = Number.parseInt(
   CONFIG.visual["ja-detect-threshold"]
 );
@@ -7805,6 +7808,7 @@ class LyricsContainer extends react.Component {
         brightness: CONFIG.visual["background-brightness"],
         blurAmount: CONFIG.visual["video-blur"],
         coverMode: CONFIG.visual["video-cover"],
+        videoScale: CONFIG.visual["video-scale"],
         externalVideoInfo: this.state.videoInfo
       }),
       shouldRenderStaticBackground && react.createElement("div", {

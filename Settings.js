@@ -6741,6 +6741,16 @@ const ConfigModal = ({
           info: I18n.t("settings.videoCover.desc"),
           key: "video-cover",
           type: ConfigSlider,
+        },
+        {
+          desc: I18n.t("settings.videoScale.label"),
+          info: I18n.t("settings.videoScale.desc"),
+          key: "video-scale",
+          type: ConfigSliderRange,
+          min: 50,
+          max: 200,
+          step: 1,
+          unit: "%",
         }
       );
     }

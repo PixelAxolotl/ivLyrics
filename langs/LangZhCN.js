@@ -225,6 +225,10 @@ window.LANG_ZH_CN = {
       "label": "视频填充屏幕",
       "desc": "放大视频以填满屏幕（可能会裁剪顶部或底部/左右两侧）"
     },
+    "videoScale": {
+      "label": "视频缩放",
+      "desc": "调整视频背景的缩放级别 (50-200%)"
+    },
     "backgroundBrightness": {
       "label": "背景亮度",
       "desc": "调节背景的亮度水平 (0-100%)"

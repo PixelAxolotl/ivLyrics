@@ -38,7 +38,7 @@ const disableYouTubeCaptions = (player) => {
     } catch (e) { }
 };
 
-const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, coverMode, externalVideoInfo }) => {
+const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, coverMode, videoScale, externalVideoInfo }) => {
     const { useState, useEffect, useRef, useCallback } = react;
     const VIDEO_BACKGROUND_DEBUG = false;
     const videoBackgroundDebug = (...args) => {
@@ -115,6 +115,9 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
     const brightnessRatio = brightnessValue / 100;
     const blurValue = Math.min(Math.max(Number(blurAmount) || 0, 0), 80);
     const useCoverMode = coverMode === true;
+    const videoScaleValue = Math.min(Math.max(Number(videoScale) || 105, 50), 200);
+    const videoScaleRatio = videoScaleValue / 100;
+    const videoScaleTransform = videoScaleRatio !== 1 ? ` scale(${videoScaleRatio})` : "";
     const blurCompositeStyle = blurValue ? {
         willChange: "filter, transform, opacity",
         backfaceVisibility: "hidden",
@@ -122,8 +125,8 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
         contain: "paint",
     } : {};
     const videoTransform = useCoverMode
-        ? `translate3d(-50%, -50%, 0)${blurValue ? " scale(1.05)" : ""}`
-        : (blurValue ? "translateZ(0) scale(1.05)" : undefined);
+        ? `translate3d(-50%, -50%, 0)${videoScaleTransform}`
+        : (blurValue || videoScaleTransform ? `translateZ(0)${videoScaleTransform}` : undefined);
 
     // 헬퍼 모드 설정 확인
     useEffect(() => {

@@ -225,6 +225,10 @@ window.LANG_SV = {
       "label": "Videofyllningsskärm",
       "desc": "Zooma videon för att fylla skärmen (överst/botten eller sidorna kan vara beskurna)"
     },
+    "videoScale": {
+      "label": "Videoskala",
+      "desc": "Justera zoomnivån för videobakgrunden (50-200%)"
+    },
     "backgroundBrightness": {
       "label": "Bakgrundsljusstyrka",
       "desc": "Justera bakgrundens ljusstyrka (0-100 %)"

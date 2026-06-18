@@ -961,6 +961,53 @@ const ivLyricsDebug = (...args) => {
   window.__ivLyricsDebugLog?.(...args);
 };
 
+const IVLYRICS_BACKGROUND_MODE_IDS = [
+  "none",
+  "colorful",
+  "gradient-background",
+  "blur-gradient-background",
+  "solid-background",
+  "video-background",
+];
+const IVLYRICS_BACKGROUND_FLAG_IDS = IVLYRICS_BACKGROUND_MODE_IDS.filter(
+  (modeId) => modeId !== "none"
+);
+
+function getIvLyricsGlobalBackgroundMode(visual = window.CONFIG?.visual || {}) {
+  if (visual["video-background"]) return "video-background";
+  if (visual["solid-background"]) return "solid-background";
+  if (visual["blur-gradient-background"]) return "blur-gradient-background";
+  if (visual["gradient-background"]) return "gradient-background";
+  if (visual.colorful) return "colorful";
+  return "none";
+}
+
+function normalizeIvLyricsTrackBackgroundOverride(value) {
+  if (!value) return null;
+  const mode = typeof value === "string" ? value : value.mode;
+  if (!IVLYRICS_BACKGROUND_MODE_IDS.includes(mode)) {
+    return null;
+  }
+  return { mode };
+}
+
+function getIvLyricsTrackBackgroundMode(value) {
+  return normalizeIvLyricsTrackBackgroundOverride(value)?.mode || null;
+}
+
+function shouldFetchIvLyricsBackgroundColors(mode) {
+  return (
+    mode === "colorful" ||
+    mode === "gradient-background" ||
+    mode === "blur-gradient-background"
+  );
+}
+
+window.ivLyricsBackgroundModeIds = IVLYRICS_BACKGROUND_MODE_IDS;
+window.ivLyricsBackgroundFlagIds = IVLYRICS_BACKGROUND_FLAG_IDS;
+window.ivLyricsGetGlobalBackgroundMode = getIvLyricsGlobalBackgroundMode;
+window.ivLyricsNormalizeTrackBackgroundOverride = normalizeIvLyricsTrackBackgroundOverride;
+
 // IndexedDB for track sync offsets
 const DB_NAME = "ivLyrics-db";
 const DB_VERSION = 1;
@@ -1354,6 +1401,138 @@ const TrackLyricsProviderDB = {
 
 window.TrackLyricsProviderDB = TrackLyricsProviderDB;
 
+// IndexedDB for track background overrides (곡별 배경 오버라이드)
+const BACKGROUND_DB_NAME = "ivLyrics-background-db";
+const BACKGROUND_DB_VERSION = 1;
+const BACKGROUND_STORE_NAME = "track-background-overrides";
+
+let backgroundDbInstance = null;
+
+const initBackgroundDB = () => {
+  return new Promise((resolve, reject) => {
+    if (backgroundDbInstance) {
+      resolve(backgroundDbInstance);
+      return;
+    }
+
+    const request = indexedDB.open(BACKGROUND_DB_NAME, BACKGROUND_DB_VERSION);
+
+    request.onerror = () => {
+      console.error("[ivLyrics] Background IndexedDB error:", request.error);
+      reject(request.error);
+    };
+
+    request.onsuccess = () => {
+      backgroundDbInstance = request.result;
+      ivLyricsDebug("[ivLyrics] Background IndexedDB initialized");
+      resolve(backgroundDbInstance);
+    };
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(BACKGROUND_STORE_NAME)) {
+        db.createObjectStore(BACKGROUND_STORE_NAME);
+        ivLyricsDebug("[ivLyrics] Background IndexedDB object store created");
+      }
+    };
+  });
+};
+
+const TrackBackgroundDB = {
+  async getOverride(trackUri) {
+    try {
+      const db = await initBackgroundDB();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([BACKGROUND_STORE_NAME], "readonly");
+        const store = transaction.objectStore(BACKGROUND_STORE_NAME);
+        const request = store.get(trackUri);
+
+        request.onsuccess = () =>
+          resolve(normalizeIvLyricsTrackBackgroundOverride(request.result));
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error("[ivLyrics] Failed to get background override:", error);
+      return null;
+    }
+  },
+
+  async setOverride(trackUri, override) {
+    try {
+      const normalizedOverride = normalizeIvLyricsTrackBackgroundOverride(override);
+      if (!normalizedOverride) {
+        await this.clearOverride(trackUri);
+        return;
+      }
+
+      const db = await initBackgroundDB();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([BACKGROUND_STORE_NAME], "readwrite");
+        const store = transaction.objectStore(BACKGROUND_STORE_NAME);
+        const request = store.put(normalizedOverride, trackUri);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error("[ivLyrics] Failed to set background override:", error);
+    }
+  },
+
+  async clearOverride(trackUri) {
+    try {
+      const db = await initBackgroundDB();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([BACKGROUND_STORE_NAME], "readwrite");
+        const store = transaction.objectStore(BACKGROUND_STORE_NAME);
+        const request = store.delete(trackUri);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error("[ivLyrics] Failed to clear background override:", error);
+    }
+  },
+
+  async getAllOverrides() {
+    try {
+      const db = await initBackgroundDB();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction([BACKGROUND_STORE_NAME], "readonly");
+        const store = transaction.objectStore(BACKGROUND_STORE_NAME);
+        const request = store.getAllKeys();
+
+        request.onsuccess = () => {
+          const keys = request.result;
+          const getAllRequest = store.getAll();
+
+          getAllRequest.onsuccess = () => {
+            const values = getAllRequest.result;
+            const result = {};
+            keys.forEach((key, index) => {
+              const override = normalizeIvLyricsTrackBackgroundOverride(values[index]);
+              if (override) {
+                result[key] = override;
+              }
+            });
+            resolve(result);
+          };
+
+          getAllRequest.onerror = () => reject(getAllRequest.error);
+        };
+
+        request.onerror = () => reject(request.error);
+      });
+    } catch (error) {
+      console.error("[ivLyrics] Failed to get all background overrides:", error);
+      return {};
+    }
+  },
+};
+
+window.TrackBackgroundDB = TrackBackgroundDB;
+
 // Migrate from localStorage to IndexedDB
 (async () => {
   try {
@@ -1551,6 +1730,7 @@ const StorageManager = {
 const DB_EXPORT_TARGETS = [
   { name: "ivLyrics-db", version: 1, stores: ["track-sync-offsets"] },
   { name: "ivLyrics-lang-db", version: 1, stores: ["track-language-overrides"] },
+  { name: "ivLyrics-background-db", version: 1, stores: ["track-background-overrides"] },
   { name: "ivLyricsCache", version: 6, stores: ["lyrics", "translations", "youtube", "metadata", "sync", "tmi"] },
   { name: "ivLyricsSelectedVideos", version: 1, stores: ["selectedVideos"] },
 ];
@@ -3607,6 +3787,7 @@ class LyricsContainer extends react.Component {
       uri: "",
       provider: "",
       trackLyricsProviderOverride: null,
+      trackBackgroundOverride: null,
       contributors: null,
       colors: {
         background: "",
@@ -3665,6 +3846,7 @@ class LyricsContainer extends react.Component {
     // 트랙별 언어 오버라이드 (IndexedDB에서 로드)
     this.trackLanguageOverride = null;
     this.trackLyricsProviderOverride = null;
+    this.trackBackgroundOverride = null;
     this.reRenderLyricsPage = false;
     this.displayMode = null;
 
@@ -3732,6 +3914,7 @@ class LyricsContainer extends react.Component {
     this.regenerateTranslation = this.regenerateTranslation.bind(this);
     this.handleRegenerateTranslationRequest = this.handleRegenerateTranslationRequest.bind(this);
     this.selectLyricsProviderForCurrentTrack = this.selectLyricsProviderForCurrentTrack.bind(this);
+    this.selectBackgroundForCurrentTrack = this.selectBackgroundForCurrentTrack.bind(this);
     this.importLocalLyricsFile = this.importLocalLyricsFile.bind(this);
     this.applyLocalLyrics = this.applyLocalLyrics.bind(this);
     this.applyLocalLyricsFromLrclibCandidate = this.applyLocalLyricsFromLrclibCandidate.bind(this);
@@ -4133,6 +4316,7 @@ class LyricsContainer extends react.Component {
       language: null,
       translatedMetadata: null,
       trackLyricsProviderOverride: null,
+      trackBackgroundOverride: null,
       isLoading: true,
       isCached: false,
       error: null,
@@ -4751,6 +4935,52 @@ class LyricsContainer extends react.Component {
     }
   }
 
+  getEffectiveBackgroundMode(override = this.trackBackgroundOverride) {
+    return (
+      getIvLyricsTrackBackgroundMode(override) ||
+      getIvLyricsGlobalBackgroundMode(CONFIG.visual)
+    );
+  }
+
+  async selectBackgroundForCurrentTrack(mode) {
+    const trackUri = this.state.uri || this.currentTrackUri || Spicetify.Player.data?.item?.uri;
+    if (!trackUri) {
+      Toast.error(I18n.t("notifications.noTrackPlaying"));
+      return;
+    }
+
+    try {
+      const normalizedOverride = mode
+        ? normalizeIvLyricsTrackBackgroundOverride({ mode })
+        : null;
+
+      if (normalizedOverride) {
+        await TrackBackgroundDB.setOverride(trackUri, normalizedOverride);
+      } else {
+        await TrackBackgroundDB.clearOverride(trackUri);
+      }
+
+      this.trackBackgroundOverride = normalizedOverride;
+      const nextMode = this.getEffectiveBackgroundMode(normalizedOverride);
+      if (shouldFetchIvLyricsBackgroundColors(nextMode)) {
+        this.fetchColors(trackUri);
+      }
+
+      this.setState({ trackBackgroundOverride: normalizedOverride }, () => {
+        this.updateVisualOnConfigChange();
+        this.forceUpdate();
+      });
+
+      window.dispatchEvent(new CustomEvent("ivLyrics:track-background-changed", {
+        detail: { trackUri, override: normalizedOverride, effectiveMode: nextMode },
+      }));
+      Toast.success(I18n.t("messages.saved"));
+    } catch (error) {
+      console.error("[ivLyrics] Failed to save track background override:", error);
+      Toast.error(I18n.t("messages.error"));
+    }
+  }
+
   infoFromTrack(track) {
     const meta = track?.metadata;
     if (!meta) {
@@ -4794,7 +5024,7 @@ class LyricsContainer extends react.Component {
       vibrant = 8747370;
     }
 
-    if (CONFIG.visual["blur-gradient-background"]) {
+    if (this.getEffectiveBackgroundMode() === "blur-gradient-background") {
       try {
         const coverUrl =
           Spicetify.Player.data?.item?.metadata?.image_xlarge_url ||
@@ -4945,21 +5175,25 @@ class LyricsContainer extends react.Component {
       // 트랙별 언어 오버라이드 로드 (IndexedDB)
       let trackLanguageOverride = null;
       let trackLyricsProviderOverride = null;
+      let trackBackgroundOverride = null;
       try {
-        [trackLanguageOverride, trackLyricsProviderOverride] = await Promise.all([
+        [trackLanguageOverride, trackLyricsProviderOverride, trackBackgroundOverride] = await Promise.all([
           TrackLanguageDB.getLanguage(info.uri),
           TrackLyricsProviderDB.getProvider(info.uri),
+          TrackBackgroundDB.getOverride(info.uri),
         ]);
       } catch (e) {
         console.warn("[ivLyrics] Failed to load track overrides:", e);
         trackLanguageOverride = null;
         trackLyricsProviderOverride = null;
+        trackBackgroundOverride = null;
       }
 
       if (!isLatestLyricsRequest()) {
         return;
       }
       this.trackLanguageOverride = trackLanguageOverride;
+      this.trackBackgroundOverride = trackBackgroundOverride;
       if (!hasSpotifyTrackId) {
         trackLyricsProviderOverride = null;
       }
@@ -4972,6 +5206,7 @@ class LyricsContainer extends react.Component {
         coverUrl: info.image,
         translatedMetadata: null,
         trackLyricsProviderOverride,
+        trackBackgroundOverride,
       });
 
       // 메타데이터 번역 요청 (백그라운드에서 비동기로)
@@ -4999,7 +5234,8 @@ class LyricsContainer extends react.Component {
         }
       }
 
-      if (CONFIG.visual.colorful || CONFIG.visual["gradient-background"] || CONFIG.visual["blur-gradient-background"]) {
+      const effectiveBackgroundMode = this.getEffectiveBackgroundMode(trackBackgroundOverride);
+      if (shouldFetchIvLyricsBackgroundColors(effectiveBackgroundMode)) {
         this.fetchColors(info.uri);
       }
 
@@ -5020,6 +5256,7 @@ class LyricsContainer extends react.Component {
           contributors: null,
           ...CACHE[info.uri],
           trackLyricsProviderOverride,
+          trackBackgroundOverride,
           lyricsRequestSeq: requestSeq,
           isLoading: false,
           isCached,
@@ -5039,6 +5276,7 @@ class LyricsContainer extends react.Component {
           provider: "local",
           contributors: null,
           trackLyricsProviderOverride: null,
+          trackBackgroundOverride,
           isLoading: false,
           isCached: false,
           error: null,
@@ -5058,6 +5296,7 @@ class LyricsContainer extends react.Component {
           provider: "",
           contributors: null,
           trackLyricsProviderOverride,
+          trackBackgroundOverride,
           isLoading: true,
           isCached: false,
         });
@@ -5098,6 +5337,7 @@ class LyricsContainer extends react.Component {
             contributors: null,
             ...resp,
             trackLyricsProviderOverride,
+            trackBackgroundOverride,
             lyricsRequestSeq: requestSeq,
             isLoading: false,
             isCached,
@@ -6675,6 +6915,7 @@ class LyricsContainer extends react.Component {
         this.currentTrackUri = newUri;
         this.trackLanguageOverride = null;
         this.trackLyricsProviderOverride = null;
+        this.trackBackgroundOverride = null;
         this.clearPendingLyricsUpdates();
         this.setState({
           ...this.getLoadingLyricsState(transitionInfo, transitionSeq),
@@ -7187,6 +7428,7 @@ class LyricsContainer extends react.Component {
 
     this.state.isFADMode = !!fadLyricsContainer;
     const isSyncCreatorActive = this.state.isSyncCreatorActive === true;
+    const effectiveBackgroundMode = this.getEffectiveBackgroundMode(this.state.trackBackgroundOverride);
 
     if (isSyncCreatorActive) {
       this.styleVariables = {
@@ -7200,7 +7442,7 @@ class LyricsContainer extends react.Component {
       // Text colors will be set by FAD extension
       // Disable colorful backgrounds in FAD mode
       this.styleVariables = {};
-    } else if (CONFIG.visual.colorful && this.state.colors.background) {
+    } else if (effectiveBackgroundMode === "colorful" && this.state.colors.background) {
       const isLight = Utils.isColorLight(this.state.colors.background);
       this.styleVariables = {
         "--lyrics-color-active": isLight ? "black" : "white",
@@ -7213,7 +7455,7 @@ class LyricsContainer extends react.Component {
           ? "var(--background-noise)"
           : "unset",
       };
-    } else if (CONFIG.visual["solid-background"]) {
+    } else if (effectiveBackgroundMode === "solid-background") {
       const isLight = Utils.isColorLight(
         CONFIG.visual["solid-background-color"]
       );
@@ -7244,9 +7486,9 @@ class LyricsContainer extends react.Component {
     if (isSyncCreatorActive) {
       backgroundStyle.backgroundColor = "var(--spice-main, #121212)";
       backgroundStyle.filter = "none";
-    } else if (!this.state.isFADMode && CONFIG.visual["video-background"]) {
+    } else if (!this.state.isFADMode && effectiveBackgroundMode === "video-background") {
       // Video background is handled by the component
-    } else if (!this.state.isFADMode && CONFIG.visual["gradient-background"]) {
+    } else if (!this.state.isFADMode && effectiveBackgroundMode === "gradient-background") {
       const brightness = CONFIG.visual["background-brightness"] / 100;
       const blurAmount = CONFIG.visual["album-bg-blur"] ?? 20;
       // 앨범 커버 이미지 가져오기
@@ -7263,7 +7505,7 @@ class LyricsContainer extends react.Component {
         backgroundStyle.backgroundSize = "cover";
         backgroundStyle.backgroundPosition = "center";
       }
-    } else if (!this.state.isFADMode && CONFIG.visual["blur-gradient-background"]) {
+    } else if (!this.state.isFADMode && effectiveBackgroundMode === "blur-gradient-background") {
       const brightness = CONFIG.visual["background-brightness"] / 100;
 
       // hex/rgb 문자열에서 RGB 값 추출
@@ -7299,13 +7541,13 @@ class LyricsContainer extends react.Component {
       backgroundStyle.filter = `brightness(${brightness}) saturate(2.5)`;
     } else if (
       !this.state.isFADMode &&
-      CONFIG.visual.colorful &&
+      effectiveBackgroundMode === "colorful" &&
       this.state.colors.background
     ) {
       const brightness = CONFIG.visual["background-brightness"] / 100;
       backgroundStyle.backgroundColor = this.state.colors.background;
       backgroundStyle.filter = `brightness(${brightness})`;
-    } else if (!this.state.isFADMode && CONFIG.visual["solid-background"]) {
+    } else if (!this.state.isFADMode && effectiveBackgroundMode === "solid-background") {
       const brightness = CONFIG.visual["background-brightness"] / 100;
       backgroundStyle.backgroundColor = CONFIG.visual["solid-background-color"];
       backgroundStyle.filter = `brightness(${brightness})`;
@@ -7632,7 +7874,7 @@ class LyricsContainer extends react.Component {
       ? { "--iv-floating-menu-content-top-offset": `${this.getFloatingMenuContentTopOffset()}px` }
       : undefined;
     const shouldUseVideoBackground =
-      !isSyncCreatorActive && !this.state.isFADMode && CONFIG.visual["video-background"];
+      !isSyncCreatorActive && !this.state.isFADMode && effectiveBackgroundMode === "video-background";
     const shouldRenderStaticBackground = !shouldUseVideoBackground;
     const modeButtons = [
       this.state.karaoke &&
@@ -7789,11 +8031,11 @@ class LyricsContainer extends react.Component {
       updateBanner,
       shouldRenderStaticBackground && react.createElement("div", {
         id: "ivLyrics-gradient-background",
-        className: !isSyncCreatorActive && CONFIG.visual["blur-gradient-background"] ? "color-gradient-bg" : "",
+        className: !isSyncCreatorActive && effectiveBackgroundMode === "blur-gradient-background" ? "color-gradient-bg" : "",
         style: backgroundStyle,
       },
         // 블러 그라데이션일 때 여러 블롭 생성
-        !isSyncCreatorActive && CONFIG.visual["blur-gradient-background"] && [
+        !isSyncCreatorActive && effectiveBackgroundMode === "blur-gradient-background" && [
           react.createElement("div", { key: "blob1", className: "gradient-blob blob-1" }),
           react.createElement("div", { key: "blob2", className: "gradient-blob blob-2" }),
           react.createElement("div", { key: "blob3", className: "gradient-blob blob-3" }),
@@ -7956,6 +8198,12 @@ class LyricsContainer extends react.Component {
             onImportLocalLyricsFile: this.importLocalLyricsFile,
             onApplyLocalLyrics: this.applyLocalLyricsFromLrclibCandidate,
           }),
+          react.createElement(TrackBackgroundButton, {
+            trackUri: this.currentTrackUri,
+            overrideMode: getIvLyricsTrackBackgroundMode(this.state.trackBackgroundOverride),
+            effectiveMode: effectiveBackgroundMode,
+            onSelectBackground: this.selectBackgroundForCurrentTrack,
+          }),
           react.createElement(RegenerateTranslationButton, {
             onRegenerate: this.handleRegenerateTranslationRequest,
             isEnabled: canRegenerateTranslation,
@@ -7974,6 +8222,7 @@ class LyricsContainer extends react.Component {
           }),
           react.createElement(CommunityVideoButton, {
             trackUri: this.currentTrackUri,
+            enabled: effectiveBackgroundMode === "video-background",
             videoInfo: this.state.videoInfo,
             defaultStartTime: defaultCommunityVideoStartTime,
             onVideoSelect: async (newVideoInfo) => {

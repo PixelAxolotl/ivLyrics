@@ -1602,6 +1602,7 @@ const ICONS = {
   display: `<path d="M1.5 2.5h13v11h-13v-11Zm1 1v9h11v-9h-11Zm1.5 1.5h3v3h-3v-3Zm4 0h4v1h-4v-1Zm0 2h4v1h-4V7Zm-4 2h8v1h-8V9Zm0 2h6v1h-6v-1Z"/>`,
   mode: `<path d="M2 4.5h7v1H2v-1Zm0 6h12v1H2v-1Zm9-7h3v3h-3v-3Zm-4 5h3v3H7v-3Z"/>`,
   language: `<path d="M8 1.25a6.75 6.75 0 1 1 0 13.5 6.75 6.75 0 0 1 0-13.5Zm0 1a5.75 5.75 0 0 0-4.61 9.18h1.44c-.2-.6-.33-1.27-.38-1.97H2.83v-1h1.6c.06-.98.29-1.9.65-2.7H3.86v-1h1.8A5.73 5.73 0 0 1 8 2.25Zm1.34 2.5H6.66c-.42.8-.69 1.72-.76 2.7h4.2c-.07-.98-.34-1.9-.76-2.7Zm.99 3.7H5.67c.06.7.2 1.37.42 1.97h3.82c.22-.6.36-1.27.42-1.97Zm-.58 2.97H6.25c.49.88 1.12 1.33 1.75 1.33s1.26-.45 1.75-1.33Zm2.86-1.97h-1.62c-.05.7-.18 1.37-.38 1.97h1.44a5.72 5.72 0 0 0 .56-1.97Zm-.02-1c-.07-.98-.3-1.9-.66-2.7h1.22a5.72 5.72 0 0 1 .68 2.7H12.6Zm-1.66-3.7c-.5-.98-1.16-1.5-1.93-1.5s-1.43.52-1.93 1.5h3.86Z"/>`,
+  background: `<path d="M2 3h12v10H2V3Zm1 1v8h10V4H3Zm1.5 6.25 2.1-2.6 1.55 1.8 1.05-1.25 2.3 2.05H4.5Zm6.25-4.75a1.25 1.25 0 1 1-2.5 0 1.25 1.25 0 0 1 2.5 0Z"/>`,
   localLyrics: `<path d="M3 1.5h6.5L13 5v9.5H3v-13Zm1 1v11h8V5.5H9V2.5H4Zm6 .7V4.5h1.3L10 3.2ZM5.25 7.5h5.5v1h-5.5v-1Zm0 2h5.5v1h-5.5v-1Zm0 2h3.5v1h-3.5v-1Z"/>`,
   search: `<path d="M6.75 1.75a4.75 4.75 0 0 1 3.8 7.6l3.2 3.2-.7.7-3.2-3.2a4.75 4.75 0 1 1-3.1-8.3Zm0 1a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Z"/>`,
   file: `<path d="M3 1.5h6.5L13 5v9.5H3v-13Zm1 1v11h8V5.5H9V2.5H4Zm6 .7V4.5h1.3L10 3.2ZM5 7.5h6v1H5v-1Zm0 2h6v1H5v-1Zm0 2h4v1H5v-1Z"/>`,
@@ -1610,6 +1611,41 @@ const ICONS = {
 const getOptionsText = (key, fallback) => {
   const value = I18n?.t?.(key);
   return value && value !== key ? value : fallback;
+};
+
+const FALLBACK_BACKGROUND_PRESETS = [
+  { id: "none", labelKey: "settingsUi.background.none", fallbackLabel: "Minimal" },
+  { id: "colorful", labelKey: "settings.colorful.label", fallbackLabel: "Colorful" },
+  { id: "gradient-background", labelKey: "settings.gradientBackground.label", fallbackLabel: "Album Gradient" },
+  { id: "blur-gradient-background", labelKey: "settings.blurGradientBackground.label", fallbackLabel: "Blur Gradient" },
+  { id: "solid-background", labelKey: "settings.solidBackground.label", fallbackLabel: "Solid Color" },
+  { id: "video-background", labelKey: "settings.videoBackground.label", fallbackLabel: "Community Video" },
+];
+
+const getBackgroundPresetLabel = (modeId) => {
+  if (typeof window.ivLyricsGetBackgroundPresetLabel === "function") {
+    return window.ivLyricsGetBackgroundPresetLabel(modeId);
+  }
+
+  const presets = window.ivLyricsBackgroundPresets || FALLBACK_BACKGROUND_PRESETS;
+  const preset = presets.find((item) => item.id === modeId);
+  return preset
+    ? getOptionsText(preset.labelKey, preset.fallbackLabel)
+    : modeId;
+};
+
+const getTrackBackgroundOptions = () => {
+  const presets = window.ivLyricsBackgroundPresets || FALLBACK_BACKGROUND_PRESETS;
+  return [
+    {
+      key: "inherit",
+      value: getOptionsText("menu.trackBackgroundUseGlobal", "기본 설정 사용"),
+    },
+    ...presets.map((preset) => ({
+      key: preset.id,
+      value: getBackgroundPresetLabel(preset.id),
+    })),
+  ];
 };
 
 // 최적화 #5 - 재사용 가능한 Adjust 버튼 컴포넌트
@@ -2723,6 +2759,90 @@ const RegenerateTranslationButton = react.memo(
   }
 );
 
+const TrackBackgroundButton = react.memo(
+  ({ trackUri, overrideMode, effectiveMode, onSelectBackground }) => {
+    const open = () => {
+      if (!trackUri) {
+        Toast.error(I18n.t("notifications.noTrackPlaying"));
+        return;
+      }
+
+      const backgroundOptions = getTrackBackgroundOptions();
+      const selectedKey = overrideMode || "inherit";
+      const selectedOption =
+        backgroundOptions.find((option) => option.key === selectedKey) ||
+        backgroundOptions[0];
+      const effectiveLabel = getBackgroundPresetLabel(effectiveMode || "none");
+
+      const items = [
+        {
+          section: getOptionsText("menu.trackBackgroundTitle", "개별 배경"),
+          subtitle: getOptionsText(
+            "menu.trackBackgroundSubtitle",
+            "이 곡에서만 사용할 배경 종류를 선택합니다. 블러, 밝기, 영상 배율 같은 세부 옵션은 기본 배경 설정을 따릅니다."
+          ),
+          items: [
+            {
+              desc: react.createElement(SettingRowDescription, {
+                icon: ICONS.background,
+                text: getOptionsText("menu.trackBackgroundCurrent", "현재 적용 배경"),
+              }),
+              key: "current-track-background",
+              type: "info",
+              info: effectiveLabel,
+            },
+            {
+              desc: react.createElement(SettingRowDescription, {
+                icon: ICONS.background,
+                text: getOptionsText("menu.trackBackgroundSelect", "이 곡의 배경"),
+              }),
+              key: "track-background-mode",
+              type: OptionsMenu,
+              options: backgroundOptions,
+              defaultValue: selectedOption,
+              info: getOptionsText(
+                "menu.trackBackgroundSelectInfo",
+                "기본 설정 사용을 선택하면 설정 > 외관 > 시각효과의 배경을 그대로 사용합니다."
+              ),
+            },
+          ],
+        },
+      ];
+
+      openOptionsModal(
+        getOptionsText("menu.trackBackgroundTitle", "개별 배경"),
+        items,
+        async (name, value) => {
+          if (name !== "track-background-mode") {
+            return;
+          }
+          await onSelectBackground?.(value === "inherit" ? null : value);
+        }
+      );
+    };
+
+    return react.createElement(
+      Spicetify.ReactComponent.TooltipWrapper,
+      { label: getOptionsText("menu.trackBackground", "개별 배경") },
+      react.createElement(
+        "button",
+        {
+          className: "lyrics-config-button lyrics-track-background-button",
+          onClick: open,
+          "data-active": overrideMode ? "true" : "false",
+        },
+        react.createElement("svg", {
+          width: 20,
+          height: 20,
+          viewBox: "0 0 16 16",
+          fill: "currentColor",
+          dangerouslySetInnerHTML: { __html: ICONS.background },
+        })
+      )
+    );
+  }
+);
+
 const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [offset, setOffset] = useState(0);
@@ -3264,9 +3384,9 @@ function openCommunityVideoSelector(trackUri, currentVideoId, onVideoSelect, def
 }
 
 // Community Video Selector Button
-const CommunityVideoButton = react.memo(({ trackUri, videoInfo, onVideoSelect, defaultStartTime = 0 }) => {
+const CommunityVideoButton = react.memo(({ trackUri, videoInfo, onVideoSelect, defaultStartTime = 0, enabled = CONFIG.visual["video-background"] }) => {
   // 비디오 배경이 비활성화되어 있으면 버튼 숨김
-  if (!CONFIG.visual["video-background"]) {
+  if (!enabled) {
     return null;
   }
 

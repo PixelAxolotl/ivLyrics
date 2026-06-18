@@ -4867,6 +4867,15 @@ const getCurrentSettingsBackgroundMode = () => {
   return "none";
 };
 
+window.ivLyricsBackgroundPresets = SETTINGS_BACKGROUND_PRESETS;
+window.ivLyricsGetBackgroundPresetLabel = (modeId) => {
+  const preset = SETTINGS_BACKGROUND_PRESETS.find((item) => item.id === modeId);
+  return preset
+    ? getSettingsText(preset.labelKey, preset.fallbackLabel)
+    : modeId;
+};
+window.ivLyricsGetCurrentSettingsBackgroundMode = getCurrentSettingsBackgroundMode;
+
 const applySettingsMotionClasses = () => {
   const reduceMotion = getEffectiveReducedMotionPreference();
   document

@@ -6869,6 +6869,7 @@ class LyricsContainer extends react.Component {
     this.handleSyncCreatorVisibility = (event) => {
       const active = event?.detail?.active ?? !!document.getElementById("ivLyrics-sync-creator-overlay");
       if (this.state.isSyncCreatorActive !== active) {
+        this.lastProcessedMode = null;
         this.setState({ isSyncCreatorActive: active });
       }
     };
@@ -7469,8 +7470,21 @@ class LyricsContainer extends react.Component {
     }
 
     this.state.isFADMode = !!fadLyricsContainer;
-    const isSyncCreatorActive = this.state.isSyncCreatorActive === true;
+    const isSyncCreatorOverlayPresent =
+      typeof document !== "undefined" &&
+      !!document.getElementById("ivLyrics-sync-creator-overlay");
+    const isSyncCreatorActive =
+      this.state.isSyncCreatorActive === true && isSyncCreatorOverlayPresent;
     const effectiveBackgroundMode = this.getEffectiveBackgroundMode(this.state.trackBackgroundOverride);
+    const baseLyricsStyleVariables = {
+      "--lyrics-color-active": CONFIG.visual["active-color"],
+      "--lyrics-color-inactive": CONFIG.visual["inactive-color"],
+      "--lyrics-color-background": CONFIG.visual["background-color"] || "transparent",
+      "--lyrics-highlight-background": CONFIG.visual["highlight-color"],
+      "--lyrics-background-noise": CONFIG.visual.noise
+        ? "var(--background-noise)"
+        : "unset",
+    };
 
     if (isSyncCreatorActive) {
       this.styleVariables = {
@@ -7514,6 +7528,8 @@ class LyricsContainer extends react.Component {
           ? "var(--background-noise)"
           : "unset",
       };
+    } else {
+      this.styleVariables = baseLyricsStyleVariables;
     }
 
     const backgroundStyle = {};

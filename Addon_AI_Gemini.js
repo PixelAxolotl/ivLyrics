@@ -273,17 +273,17 @@ CRITICAL RULES:
 INPUT:
 ${text}
 
-Example:
+Alignment example (format only; use the target language above for the real output):
 Input:
-Hello mr my
-yesterday
+生きていることとは
+変わり続けることだ
 
 Correct output:
-안녕 나의
-어제여
+To live is
+to keep changing
 
 Wrong output:
-안녕 나의 어제여
+To live is to keep changing
 
 OUTPUT (${lineCount} lines in ${langInfo.native}):`;
     }

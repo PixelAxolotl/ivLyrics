@@ -2278,21 +2278,6 @@ const CONFIG = {
       "ivLyrics:visual:prefetch-video-enabled",
       true
     ),
-    // Community sync settings
-    "community-sync-enabled": StorageManager.get(
-      "ivLyrics:visual:community-sync-enabled",
-      true
-    ),
-    "community-sync-auto-apply": StorageManager.get(
-      "ivLyrics:visual:community-sync-auto-apply",
-      true
-    ),
-    "community-sync-min-confidence":
-      Number(StorageManager.getItem("ivLyrics:visual:community-sync-min-confidence")) || 0.5,
-    "community-sync-auto-submit": StorageManager.get(
-      "ivLyrics:visual:community-sync-auto-submit",
-      false
-    ),
     "global-sync-offset":
       Number(StorageManager.getItem("ivLyrics:visual:global-sync-offset")) || 0,
     "fullscreen-key":
@@ -3219,7 +3204,7 @@ const Prefetcher = {
 
         const userHash = Utils.getUserHash();
         // 서버 캐시/추천 정확도를 위해 현재 가진 트랙 메타데이터를 함께 전달
-        const youtubeApiUrlObject = new URL('https://lyrics.api.ivl.is/lyrics/youtube');
+        const youtubeApiUrlObject = new URL('https://ivlis.kr/ivLyrics/openvideo/youtube');
         youtubeApiUrlObject.searchParams.set('isrc', isrc);
         youtubeApiUrlObject.searchParams.set('trackId', trackId);
         youtubeApiUrlObject.searchParams.set('userHash', userHash);
@@ -6507,47 +6492,6 @@ class LyricsContainer extends react.Component {
     }
   }
 
-  /**
-   * 커뮤니티 싱크 오프셋 자동 적용
-   */
-  async applyCommunityOffset(trackUri) {
-    try {
-      if (!Utils.extractTrackId(trackUri)) {
-        return;
-      }
-
-      // 이미 로컬에 저장된 오프셋이 있으면 스킵
-      const localOffset = await Utils.getTrackSyncOffset(trackUri);
-      if (localOffset && localOffset !== 0) {
-        ivLyricsDebug(`[ivLyrics] Using local offset: ${localOffset}ms`);
-        return;
-      }
-
-      // 커뮤니티 오프셋 조회
-      const communityData = await Utils.getCommunityOffset(trackUri);
-      if (!communityData) return;
-
-      const minConfidence = CONFIG.visual["community-sync-min-confidence"] || 0.5;
-
-      // 신뢰도가 최소값 이상인 경우에만 적용
-      if ((communityData.confidence ?? 0) >= minConfidence) {
-        const offsetToApply = communityData.medianOffsetMs ?? communityData.offsetMs ?? 0;
-
-        if (offsetToApply !== 0) {
-          await Utils.setTrackSyncOffset(trackUri, offsetToApply);
-          ivLyricsDebug(`[ivLyrics] Applied community offset: ${offsetToApply}ms (confidence: ${communityData.confidence})`);
-
-          // UI 업데이트를 위해 이벤트 발생
-          window.dispatchEvent(new CustomEvent('ivLyrics:offset-changed', {
-            detail: { trackUri, offset: offsetToApply }
-          }));
-        }
-      }
-    } catch (error) {
-      console.error("[ivLyrics] Failed to apply community offset:", error);
-    }
-  }
-
   resetDelay() {
     CONFIG.visual.delay =
       Number(
@@ -6953,10 +6897,6 @@ class LyricsContainer extends react.Component {
         this.setState({ videoInfo: null });
         this.loadSavedVideoForTrack(newUri);
 
-        // 커뮤니티 싱크 오프셋 자동 적용
-        if (CONFIG.visual["community-sync-enabled"] && CONFIG.visual["community-sync-auto-apply"]) {
-          this.applyCommunityOffset(newUri);
-        }
       }
 
       // 다음 곡의 모든 요소 프리페치 (가사 → 번역/발음 → 영상 배경)

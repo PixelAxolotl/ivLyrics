@@ -804,135 +804,6 @@ function ensureFluentModalStyles() {
   color: rgba(15, 23, 42, 0.58);
 }
 
-.lyrics-sync-adjust-modal .lyrics-sync-adjust-community-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.ivlyrics-fluent-shell[data-ui-theme="light"] .lyrics-sync-adjust-modal .lyrics-sync-adjust-community-section {
-  border-top-color: rgba(15, 23, 42, 0.08);
-}
-
-.lyrics-sync-adjust-community-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #f8fafc;
-}
-
-.ivlyrics-fluent-shell[data-ui-theme="light"] .lyrics-sync-adjust-community-header {
-  color: #0f172a;
-}
-
-.lyrics-sync-adjust-community-header svg {
-  opacity: 0.72;
-}
-
-.lyrics-sync-adjust-loading,
-.lyrics-sync-adjust-empty {
-  color: rgba(248, 250, 252, 0.58);
-  font-size: 12px;
-}
-
-.ivlyrics-fluent-shell[data-ui-theme="light"] .lyrics-sync-adjust-loading,
-.ivlyrics-fluent-shell[data-ui-theme="light"] .lyrics-sync-adjust-empty {
-  color: rgba(15, 23, 42, 0.58);
-}
-
-.lyrics-sync-adjust-empty-row,
-.lyrics-sync-adjust-community-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-}
-
-.lyrics-sync-adjust-community-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  flex: 1 1 auto;
-}
-
-.lyrics-sync-adjust-stat {
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.03);
-}
-
-.ivlyrics-fluent-shell[data-ui-theme="light"] .lyrics-sync-adjust-stat {
-  border-color: rgba(15, 23, 42, 0.08);
-  background: rgba(15, 23, 42, 0.03);
-}
-
-.lyrics-sync-adjust-stat-value {
-  display: block;
-  font-size: 16px;
-  font-weight: 700;
-  color: #f8fafc;
-}
-
-.ivlyrics-fluent-shell[data-ui-theme="light"] .lyrics-sync-adjust-stat-value {
-  color: #0f172a;
-}
-
-.lyrics-sync-adjust-stat-label {
-  display: block;
-  margin-top: 2px;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: rgba(248, 250, 252, 0.52);
-}
-
-.ivlyrics-fluent-shell[data-ui-theme="light"] .lyrics-sync-adjust-stat-label {
-  color: rgba(15, 23, 42, 0.52);
-}
-
-.lyrics-sync-adjust-community-actions,
-.lyrics-sync-adjust-community-footer {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.lyrics-sync-adjust-community-footer {
-  justify-content: flex-end;
-}
-
-.lyrics-sync-adjust-feedback-btn,
-.lyrics-sync-adjust-action-btn {
-  min-height: 36px;
-}
-
-.lyrics-sync-adjust-feedback-btn.active-positive {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.12);
-  color: #f8fafc;
-}
-
-.lyrics-sync-adjust-feedback-btn.active-negative {
-  border-color: rgba(239, 68, 68, 0.38);
-  background: rgba(239, 68, 68, 0.12);
-  color: #fca5a5;
-}
-
-.lyrics-sync-adjust-auto-submit {
-  padding: 10px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(248, 250, 252, 0.72);
-  font-size: 12px;
-  text-align: center;
-}
-
 .share-image-modal {
   display: flex;
   flex-direction: column;
@@ -1346,21 +1217,13 @@ function ensureFluentModalStyles() {
   }
 
   .lyrics-sync-adjust-side,
-  .lyrics-sync-adjust-track,
-  .lyrics-sync-adjust-community-row,
-  .lyrics-sync-adjust-empty-row {
+  .lyrics-sync-adjust-track {
     width: 100%;
   }
 
-  .lyrics-sync-adjust-track,
-  .lyrics-sync-adjust-community-row,
-  .lyrics-sync-adjust-empty-row {
+  .lyrics-sync-adjust-track {
     flex-direction: column;
     align-items: stretch;
-  }
-
-  .lyrics-sync-adjust-community-stats {
-    grid-template-columns: 1fr;
   }
 
   .lyrics-sync-adjust-quick {
@@ -2847,15 +2710,9 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
   const [isOpen, setIsOpen] = useState(false);
   const [offset, setOffset] = useState(0);
   const [globalOffset, setGlobalOffset] = useState(() => Utils.getGlobalSyncOffset?.() || 0);
-  const [communityData, setCommunityData] = useState(null);
-  const [isLoadingCommunity, setIsLoadingCommunity] = useState(false);
-  const [feedbackStatus, setFeedbackStatus] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const submitTimeoutRef = useRef(null);
   const triggerRef = useRef(null);
   const panelRef = useRef(null);
   const reactDom = window.Spicetify?.ReactDOM ?? window.ReactDOM ?? null;
-  const hasTrackId = !!Utils.extractTrackId(trackUri);
 
   useEffect(() => {
     ensureFluentModalStyles();
@@ -2869,34 +2726,6 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
     };
     loadOffset();
   }, [trackUri]);
-
-  const loadCommunityData = async () => {
-    if (!hasTrackId) {
-      setCommunityData(null);
-      setFeedbackStatus(null);
-      setIsLoadingCommunity(false);
-      return;
-    }
-
-    setIsLoadingCommunity(true);
-    try {
-      const data = await Utils.getCommunityOffset(trackUri, provider);
-      setCommunityData(data);
-      if (data?.user?.userFeedback !== null && data?.user?.userFeedback !== undefined) {
-        setFeedbackStatus(data.user.userFeedback ? "positive" : "negative");
-      }
-    } catch (error) {
-      console.error("[ivLyrics] Failed to load community data:", error);
-    } finally {
-      setIsLoadingCommunity(false);
-    }
-  };
-
-  useEffect(() => {
-    if (isOpen && CONFIG.visual["community-sync-enabled"] && hasTrackId) {
-      loadCommunityData();
-    }
-  }, [isOpen, trackUri, provider, hasTrackId]);
 
   useEffect(() => {
     const handleCommunityOffsetChange = (event) => {
@@ -2918,14 +2747,6 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
     window.addEventListener("ivLyrics:global-offset-changed", handleGlobalOffsetChange);
     return () => {
       window.removeEventListener("ivLyrics:global-offset-changed", handleGlobalOffsetChange);
-    };
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (submitTimeoutRef.current) {
-        clearTimeout(submitTimeoutRef.current);
-      }
     };
   }, []);
 
@@ -2959,20 +2780,6 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
     setOffset(newOffset);
     await Utils.setTrackSyncOffset(trackUri, newOffset);
     onOffsetChange?.(newOffset);
-
-    if (CONFIG.visual["community-sync-enabled"] && CONFIG.visual["community-sync-auto-submit"] && hasTrackId) {
-      if (submitTimeoutRef.current) {
-        clearTimeout(submitTimeoutRef.current);
-      }
-      submitTimeoutRef.current = setTimeout(async () => {
-        try {
-          await Utils.submitCommunityOffset(trackUri, newOffset, provider);
-          loadCommunityData();
-        } catch (error) {
-          console.error("[ivLyrics] Failed to auto-submit offset:", error);
-        }
-      }, 1000);
-    }
   };
 
   const handleGlobalOffsetChange = (newOffset) => {
@@ -2980,63 +2787,6 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
     setGlobalOffset(safeOffset);
     Utils.setGlobalSyncOffset?.(safeOffset);
   };
-
-  const submitOffset = async () => {
-    if (!CONFIG.visual["community-sync-enabled"]) return;
-    if (!hasTrackId) {
-      Toast.error(I18n.t("syncAdjust.communityUnavailableLocal") || "Spotify trackId가 없는 로컬 곡은 커뮤니티 오프셋을 등록할 수 없습니다.");
-      return;
-    }
-    setIsSubmitting(true);
-    try {
-      await Utils.submitCommunityOffset(trackUri, offset, provider);
-      const trackId = Utils.extractTrackId(trackUri);
-      if (trackId) {
-        await LyricsCache.deleteSync(trackId);
-      }
-      Toast.success(I18n.t("syncAdjust.submitSuccess"));
-      loadCommunityData();
-    } catch (error) {
-      Toast.error(I18n.t("syncAdjust.submitFailed"));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const submitFeedback = async (isPositive) => {
-    if (!CONFIG.visual["community-sync-enabled"]) return;
-    if (!hasTrackId) {
-      Toast.error(I18n.t("syncAdjust.communityUnavailableLocal") || "Spotify trackId가 없는 로컬 곡은 커뮤니티 오프셋을 등록할 수 없습니다.");
-      return;
-    }
-    if (communityData?.user?.hasSubmitted) {
-      Toast.error(I18n.t("syncAdjust.cannotFeedbackOwnSubmission"));
-      return;
-    }
-    try {
-      await Utils.submitCommunityFeedback(trackUri, isPositive, provider);
-      setFeedbackStatus(isPositive ? "positive" : "negative");
-      Toast.success(
-        isPositive
-          ? I18n.t("syncAdjust.feedbackPositiveSuccess")
-          : I18n.t("syncAdjust.feedbackNegativeSuccess")
-      );
-    } catch (error) {
-      console.error("[ivLyrics] Failed to submit feedback:", error);
-      Toast.error(I18n.t("syncAdjust.feedbackFailed"));
-    }
-  };
-
-  const getConfidenceColor = (confidence) => {
-    if (confidence >= 0.8) return "#86efac";
-    if (confidence >= 0.5) return "#fde68a";
-    return "#fca5a5";
-  };
-
-  const communityOffset = communityData?.medianOffsetMs ?? communityData?.offsetMs ?? 0;
-  const confidence = communityData?.confidence ?? 0;
-  const isCommunityEnabled = CONFIG.visual["community-sync-enabled"];
-  const canUseCommunitySync = isCommunityEnabled && hasTrackId;
 
   const modalOverlay = isOpen
     ? react.createElement(
@@ -3202,113 +2952,7 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
                   )
                 )
               )
-            ),
-            isCommunityEnabled && !hasTrackId &&
-              react.createElement(
-                "div",
-                { className: "lyrics-sync-adjust-community-section" },
-                react.createElement("div", { className: "lyrics-sync-adjust-community-header" }, I18n.t("syncAdjust.communityTitle")),
-                react.createElement(
-                  "div",
-                  { className: "lyrics-sync-adjust-empty-row" },
-                  react.createElement("span", { className: "lyrics-sync-adjust-empty" }, I18n.t("syncAdjust.communityUnavailableLocal") || "Spotify trackId가 없는 로컬 곡은 커뮤니티 오프셋을 등록할 수 없습니다.")
-                )
-              ),
-            canUseCommunitySync &&
-              react.createElement(
-                "div",
-                { className: "lyrics-sync-adjust-community-section" },
-                react.createElement("div", { className: "lyrics-sync-adjust-community-header" }, I18n.t("syncAdjust.communityTitle")),
-                isLoadingCommunity
-                  ? react.createElement("div", { className: "lyrics-sync-adjust-loading" }, I18n.t("syncAdjust.loading"))
-                  : communityData
-                    ? react.createElement(
-                        "div",
-                        { className: "lyrics-sync-adjust-community-row" },
-                        react.createElement(
-                          "div",
-                          { className: "lyrics-sync-adjust-community-stats" },
-                          react.createElement(
-                            "div",
-                            { className: "lyrics-sync-adjust-stat" },
-                            react.createElement("span", { className: "lyrics-sync-adjust-stat-value" }, `${communityOffset}ms`),
-                            react.createElement("span", { className: "lyrics-sync-adjust-stat-label" }, I18n.t("syncAdjust.communityOffset"))
-                          ),
-                          react.createElement(
-                            "div",
-                            { className: "lyrics-sync-adjust-stat" },
-                            react.createElement("span", { className: "lyrics-sync-adjust-stat-value" }, communityData.submissionCount ?? 0),
-                            react.createElement("span", { className: "lyrics-sync-adjust-stat-label" }, I18n.t("syncAdjust.submissions"))
-                          ),
-                          react.createElement(
-                            "div",
-                            { className: "lyrics-sync-adjust-stat" },
-                            react.createElement("span", { className: "lyrics-sync-adjust-stat-value", style: { color: getConfidenceColor(confidence) } }, `${Math.round(confidence * 100)}%`),
-                            react.createElement("span", { className: "lyrics-sync-adjust-stat-label" }, confidence >= 0.8 ? I18n.t("syncAdjust.confidenceHigh") : confidence >= 0.5 ? I18n.t("syncAdjust.confidenceMedium") : I18n.t("syncAdjust.confidenceLow"))
-                          )
-                        ),
-                        react.createElement(
-                          "div",
-                          { className: "lyrics-sync-adjust-community-actions" },
-                          react.createElement(
-                            "button",
-                            {
-                              className: `ivlyrics-fluent-btn lyrics-sync-adjust-feedback-btn${feedbackStatus === "positive" ? " active-positive" : ""}`,
-                              onClick: () => submitFeedback(true),
-                              disabled: communityData?.user?.hasSubmitted,
-                            },
-                            I18n.t("syncAdjust.feedbackGood")
-                          ),
-                          react.createElement(
-                            "button",
-                            {
-                              className: `ivlyrics-fluent-btn lyrics-sync-adjust-feedback-btn${feedbackStatus === "negative" ? " active-negative" : ""}`,
-                              onClick: () => submitFeedback(false),
-                              disabled: communityData?.user?.hasSubmitted,
-                            },
-                            I18n.t("syncAdjust.feedbackBad")
-                          ),
-                          react.createElement(
-                            "button",
-                            {
-                              className: "ivlyrics-fluent-btn primary lyrics-sync-adjust-action-btn",
-                              onClick: () => handleOffsetChange(communityOffset),
-                            },
-                            I18n.t("syncAdjust.applyCommunity")
-                          )
-                        )
-                      )
-                    : react.createElement(
-                        "div",
-                        { className: "lyrics-sync-adjust-empty-row" },
-                        react.createElement("span", { className: "lyrics-sync-adjust-empty" }, I18n.t("syncAdjust.noData")),
-                        react.createElement(
-                          "button",
-                          {
-                            className: "ivlyrics-fluent-btn primary lyrics-sync-adjust-action-btn",
-                            onClick: submitOffset,
-                            disabled: isSubmitting || offset === 0,
-                          },
-                          isSubmitting ? I18n.t("syncAdjust.submitting") : I18n.t("syncAdjust.submitMine")
-                        )
-                      ),
-                CONFIG.visual["community-sync-auto-submit"] &&
-                  react.createElement("div", { className: "lyrics-sync-adjust-auto-submit" }, I18n.t("syncAdjust.autoSubmitEnabled")),
-                communityData &&
-                  react.createElement(
-                    "div",
-                    { className: "lyrics-sync-adjust-community-footer" },
-                    react.createElement(
-                      "button",
-                      {
-                        className: "ivlyrics-fluent-btn lyrics-sync-adjust-action-btn",
-                        onClick: submitOffset,
-                        disabled: isSubmitting,
-                      },
-                      isSubmitting ? I18n.t("syncAdjust.submitting") : I18n.t("syncAdjust.submitMine")
-                    )
-                  )
-              )
+            )
           )
         )
       )

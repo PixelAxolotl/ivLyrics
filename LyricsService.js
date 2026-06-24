@@ -1589,9 +1589,16 @@
         const _trackCacheGenerations = new Map(); // 캐시 삭제 전 시작된 요청의 재저장을 방지
         const SERVER_CACHE_BYPASS_MS = 30 * 1000;
         const ISRC_LOOKUP_SUCCESS_TTL_MS = 24 * 60 * 60 * 1000;
+        const OPENDB_BASE_URL = 'https://ivlis.kr/ivLyrics/opendb/';
+        const OPENDB_MANIFEST_URL = `${OPENDB_BASE_URL}data/manifest.json`;
+        const OPENDB_STORAGE_KEY = 'ivLyrics:sync-data-opendb:v1';
+        const OPENDB_FRESH_MS = 24 * 60 * 60 * 1000;
+        const OPENDB_UNAVAILABLE_RETRY_MS = 5 * 60 * 1000;
         let _serverCacheBypassAllUntil = 0;
         let _syncDataCacheGeneration = 0;
         let _spotifyProfilePromise = null;
+        let _openDbState = null;
+        let _openDbLoadPromise = null;
 
         function syncDataConsoleLog(message, details = null, level = 'info') {
             const prefix = '[ivLyrics sync-data]';
@@ -2160,6 +2167,270 @@
             return '이 곡의 ISRC를 확인할 수 없어 sync-data를 사용할 수 없습니다.';
         }
 
+        function getOpenDbStorage() {
+            try {
+                return window.localStorage || localStorage || null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function readOpenDbStorage() {
+            try {
+                const storage = getOpenDbStorage();
+                if (!storage) return null;
+                const raw = storage.getItem(OPENDB_STORAGE_KEY);
+                if (!raw) return null;
+                const parsed = JSON.parse(raw);
+                return parsed && typeof parsed === 'object' ? parsed : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function writeOpenDbStorage(state) {
+            try {
+                const storage = getOpenDbStorage();
+                if (!storage || !state?.providerMap) return;
+                storage.setItem(OPENDB_STORAGE_KEY, JSON.stringify({
+                    fetchedAt: state.fetchedAt || Date.now(),
+                    signature: state.signature || '',
+                    baseDate: state.baseDate || '',
+                    providerMap: state.providerMap
+                }));
+            } catch (e) {
+            }
+        }
+
+        function isOpenDbStateFresh(state) {
+            if (!state || !Number.isFinite(Number(state.fetchedAt))) {
+                return false;
+            }
+            const age = Date.now() - Number(state.fetchedAt);
+            return state.unavailable
+                ? age < OPENDB_UNAVAILABLE_RETRY_MS
+                : age < OPENDB_FRESH_MS;
+        }
+
+        function normalizeOpenDbProviderMap(value) {
+            if (!value || typeof value !== 'object' || Array.isArray(value)) {
+                return {};
+            }
+
+            const map = {};
+            for (const [providerValue, listValue] of Object.entries(value)) {
+                const provider = typeof providerValue === 'string' ? providerValue.trim() : '';
+                if (!provider || !Array.isArray(listValue)) continue;
+                const items = listValue
+                    .map(normalizeSyncDataIsrc)
+                    .filter(Boolean);
+                map[provider] = Array.from(new Set(items)).sort();
+            }
+            return map;
+        }
+
+        function mergeOpenDbProviderMap(target, source, mode = 'add') {
+            const sourceMap = normalizeOpenDbProviderMap(source);
+            for (const [provider, list] of Object.entries(sourceMap)) {
+                const items = new Set(Array.isArray(target[provider]) ? target[provider] : []);
+                for (const isrc of list) {
+                    if (mode === 'remove') {
+                        items.delete(isrc);
+                    } else {
+                        items.add(isrc);
+                    }
+                }
+                target[provider] = Array.from(items).sort();
+            }
+            return target;
+        }
+
+        function applyOpenDbPayload(providerMap, payload) {
+            if (!payload || typeof payload !== 'object') return providerMap;
+            mergeOpenDbProviderMap(providerMap, payload.items, 'add');
+            mergeOpenDbProviderMap(providerMap, payload.add, 'add');
+            mergeOpenDbProviderMap(providerMap, payload.remove, 'remove');
+            return providerMap;
+        }
+
+        function getOpenDbFileUrl(value) {
+            return new URL(String(value || ''), OPENDB_BASE_URL).toString();
+        }
+
+        function getOpenDbManifestSignature(manifest) {
+            const deltas = Array.isArray(manifest?.deltas) ? manifest.deltas : [];
+            return JSON.stringify({
+                schema: manifest?.schema || 0,
+                base: manifest?.base?.sha256 || manifest?.base?.url || '',
+                deltas: deltas.map(delta => delta?.sha256 || delta?.url || delta?.date || ''),
+                current: manifest?.current?.sha256 || manifest?.current?.updatedAt || manifest?.current?.url || ''
+            });
+        }
+
+        async function fetchOpenDbJson(url) {
+            const response = await fetch(url, {
+                headers: { Accept: 'application/json' }
+            });
+            if (!response.ok) {
+                throw new Error(`OpenDB request failed: ${response.status}`);
+            }
+            return await response.json();
+        }
+
+        async function loadOpenDbState(force = false) {
+            if (!force && isOpenDbStateFresh(_openDbState)) {
+                return _openDbState;
+            }
+
+            const cached = readOpenDbStorage();
+            if (!force && isOpenDbStateFresh(cached)) {
+                _openDbState = { ...cached, providerMap: normalizeOpenDbProviderMap(cached.providerMap) };
+                return _openDbState;
+            }
+
+            if (_openDbLoadPromise) {
+                return await _openDbLoadPromise;
+            }
+
+            _openDbLoadPromise = (async () => {
+                try {
+                    const manifest = await fetchOpenDbJson(OPENDB_MANIFEST_URL);
+                    const signature = getOpenDbManifestSignature(manifest);
+                    const stored = readOpenDbStorage();
+                    if (stored?.signature === signature && stored?.providerMap) {
+                        _openDbState = {
+                            ...stored,
+                            fetchedAt: Date.now(),
+                            stale: false,
+                            unavailable: false,
+                            providerMap: normalizeOpenDbProviderMap(stored.providerMap)
+                        };
+                        writeOpenDbStorage(_openDbState);
+                        return _openDbState;
+                    }
+
+                    const providerMap = {};
+                    if (manifest?.base?.url) {
+                        applyOpenDbPayload(providerMap, await fetchOpenDbJson(getOpenDbFileUrl(manifest.base.url)));
+                    }
+                    for (const delta of Array.isArray(manifest?.deltas) ? manifest.deltas : []) {
+                        if (delta?.url) {
+                            applyOpenDbPayload(providerMap, await fetchOpenDbJson(getOpenDbFileUrl(delta.url)));
+                        }
+                    }
+                    if (manifest?.current?.url) {
+                        applyOpenDbPayload(providerMap, await fetchOpenDbJson(getOpenDbFileUrl(manifest.current.url)));
+                    }
+
+                    _openDbState = {
+                        fetchedAt: Date.now(),
+                        signature,
+                        baseDate: manifest?.base?.date || '',
+                        stale: false,
+                        unavailable: false,
+                        providerMap: normalizeOpenDbProviderMap(providerMap)
+                    };
+                    writeOpenDbStorage(_openDbState);
+                    return _openDbState;
+                } catch (error) {
+                    syncDataConsoleLog('opendb:load-failed', {
+                        message: error?.message || String(error)
+                    }, 'warn');
+                    const stored = readOpenDbStorage();
+                    if (stored?.providerMap) {
+                        _openDbState = {
+                            ...stored,
+                            fetchedAt: Date.now(),
+                            stale: true,
+                            unavailable: true,
+                            providerMap: normalizeOpenDbProviderMap(stored.providerMap)
+                        };
+                        return _openDbState;
+                    }
+                    _openDbState = {
+                        fetchedAt: Date.now(),
+                        stale: true,
+                        unavailable: true,
+                        providerMap: {}
+                    };
+                    return _openDbState;
+                } finally {
+                    _openDbLoadPromise = null;
+                }
+            })();
+
+            return await _openDbLoadPromise;
+        }
+
+        function getOpenDbProvidersFromState(state, isrcValue) {
+            const isrc = normalizeSyncDataIsrc(isrcValue);
+            if (!isrc || !state?.providerMap) return [];
+            return Object.entries(state.providerMap)
+                .filter(([, list]) => Array.isArray(list) && list.includes(isrc))
+                .map(([provider]) => ({
+                    provider,
+                    trackId: null,
+                    createdAt: null,
+                    updatedAt: null,
+                    source: 'opendb'
+                }));
+        }
+
+        async function getOpenDbProvidersForIsrc(isrcValue) {
+            const state = await loadOpenDbState();
+            if (state?.unavailable) return [];
+            const providers = getOpenDbProvidersFromState(state, isrcValue);
+            if (state?.stale && providers.length === 0) {
+                return [];
+            }
+            return providers;
+        }
+
+        function openDbStateHasProvider(state, isrcValue, providerValue) {
+            const isrc = normalizeSyncDataIsrc(isrcValue);
+            const provider = typeof providerValue === 'string' ? providerValue.trim() : '';
+            if (!isrc || !provider || !state?.providerMap) return false;
+            const hasExact = Array.isArray(state.providerMap[provider])
+                && state.providerMap[provider].includes(isrc);
+            if (hasExact) return true;
+            return provider.startsWith('spotify-')
+                && Array.isArray(state.providerMap.spotify)
+                && state.providerMap.spotify.includes(isrc);
+        }
+
+        async function hasOpenDbSyncDataEntry(isrcValue, providerValue) {
+            const state = await loadOpenDbState();
+            if (state?.unavailable) return false;
+            const found = openDbStateHasProvider(state, isrcValue, providerValue);
+            if (state?.stale && !found) return false;
+            return found;
+        }
+
+        async function isOpenDbUnavailable() {
+            const state = await loadOpenDbState();
+            return !!state?.unavailable;
+        }
+
+        function rememberOpenDbSyncDataEntry(isrcValue, providerValue) {
+            const isrc = normalizeSyncDataIsrc(isrcValue);
+            const provider = typeof providerValue === 'string' ? providerValue.trim() : '';
+            if (!isrc || !provider) return;
+
+            const state = _openDbState?.providerMap
+                ? _openDbState
+                : (readOpenDbStorage() || { fetchedAt: Date.now(), signature: '', providerMap: {} });
+            const providerMap = normalizeOpenDbProviderMap(state.providerMap);
+            mergeOpenDbProviderMap(providerMap, { [provider]: [isrc] }, 'add');
+            _openDbState = {
+                ...state,
+                fetchedAt: Date.now(),
+                stale: false,
+                unavailable: false,
+                providerMap
+            };
+            writeOpenDbStorage(_openDbState);
+        }
+
         async function getAvailableProviders(trackId, metadata = {}) {
             const identity = await resolveSyncDataIdentity(trackId, metadata);
             if (!identity) {
@@ -2172,11 +2443,40 @@
             const cacheKey = `${identityKey}:providers`;
 
             if (_syncDataCache.has(cacheKey)) {
-                syncDataConsoleLog('providers:cache-hit', {
+                const cachedProviders = _syncDataCache.get(cacheKey);
+                if (Array.isArray(cachedProviders) && cachedProviders.length === 0) {
+                    _syncDataCache.delete(cacheKey);
+                } else {
+                    syncDataConsoleLog('providers:cache-hit', {
+                        isrc: identity.isrc || null,
+                        trackId: identity.trackId || null
+                    });
+                    return cachedProviders;
+                }
+            }
+
+            const bypassServerCache = shouldBypassServerCache(identity.isrc);
+            if (bypassServerCache && await isOpenDbUnavailable()) {
+                syncDataConsoleLog('providers:opendb-unavailable-skip', {
                     isrc: identity.isrc || null,
                     trackId: identity.trackId || null
-                });
-                return _syncDataCache.get(cacheKey);
+                }, 'warn');
+                return [];
+            }
+
+            if (!bypassServerCache) {
+                const openDbProviders = await getOpenDbProvidersForIsrc(identity.isrc);
+                if (openDbProviders) {
+                    syncDataConsoleLog('providers:opendb', {
+                        isrc: identity.isrc || null,
+                        trackId: identity.trackId || null,
+                        count: openDbProviders.length
+                    });
+                    if (openDbProviders.length > 0) {
+                        _syncDataCache.set(cacheKey, openDbProviders);
+                    }
+                    return openDbProviders;
+                }
             }
 
             try {
@@ -2256,6 +2556,28 @@
                     provider: queryProvider
                 });
                 return _syncDataCache.get(specificKey);
+            }
+
+            const bypassServerCache = shouldBypassServerCache(identity.isrc);
+            if (bypassServerCache && await isOpenDbUnavailable()) {
+                syncDataConsoleLog('getSyncData:opendb-unavailable-skip', {
+                    isrc: identity.isrc || null,
+                    trackId: identity.trackId || null,
+                    provider: queryProvider
+                }, 'warn');
+                return null;
+            }
+
+            if (!bypassServerCache) {
+                const openDbHasEntry = await hasOpenDbSyncDataEntry(identity.isrc, queryProvider);
+                if (openDbHasEntry === false) {
+                    syncDataConsoleLog('getSyncData:opendb-skip', {
+                        isrc: identity.isrc || null,
+                        trackId: identity.trackId || null,
+                        provider: queryProvider
+                    });
+                    return null;
+                }
             }
 
             try {
@@ -2573,6 +2895,7 @@
                     expiresAt: Date.now() + ISRC_LOOKUP_SUCCESS_TTL_MS
                 });
             }
+            rememberOpenDbSyncDataEntry(resolvedResultIsrc || identity.isrc, provider);
             clearCache(resolvedResultIsrc || identity.isrc);
             return result;
         }
@@ -3417,6 +3740,7 @@
             rememberTrackIsrc,
             getSyncDataTrackMetadata,
             normalizeSyncDataIsrc,
+            hasOpenDbSyncDataEntry,
             shouldBypassServerCache,
             clearCache
         };

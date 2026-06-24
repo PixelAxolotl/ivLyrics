@@ -298,7 +298,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                     window.CONFIG?.version ||
                     "unknown";
                 const useCommunity = true;
-                const youtubeApiUrl = new URL('https://lyrics.api.ivl.is/lyrics/youtube');
+                const youtubeApiUrl = new URL('https://ivlis.kr/ivLyrics/openvideo/youtube');
                 youtubeApiUrl.searchParams.set('isrc', trackIsrc);
                 youtubeApiUrl.searchParams.set('trackId', trackId);
                 youtubeApiUrl.searchParams.set('useCommunity', useCommunity ? "true" : "false");

@@ -43,15 +43,48 @@ const FullscreenOverlay = (() => {
             (title === '' && artist === '');
     };
 
-    const createQueueTrackInfo = (meta, track, fallbackContextUri = "", index = 0) => ({
-        title: meta?.title || "Unknown",
-        artist: meta?.artist_name || "Unknown",
-        image: meta?.image_url || "",
-        uri: track?.uri || "",
-        uid: track?.uid || "",
-        contextUri: fallbackContextUri || meta?.context_uri || "",
-        index
-    });
+    const QUEUE_EMPTY_GRACE_MS = 1500;
+
+    const getNonEmptyString = (...values) => {
+        for (const value of values) {
+            if (typeof value === "string" && value.trim()) {
+                return value.trim();
+            }
+        }
+        return "";
+    };
+
+    const createQueueTrackInfo = (meta, track, options = {}) => {
+        const uri = getNonEmptyString(track?.uri, meta?.uri);
+        const uid = getNonEmptyString(track?.uid, meta?.uid);
+        const explicitContextUri = getNonEmptyString(
+            meta?.context_uri,
+            track?.contextUri,
+            track?.context_uri,
+            track?.context?.uri
+        );
+        const contextUri = explicitContextUri || (options.allowFallbackContext ? options.fallbackContextUri : "");
+        const queueSource = options.source || "";
+        const canPlayInContext = Boolean(
+            uri &&
+            contextUri &&
+            contextUri !== uri &&
+            options.allowContextPlayback !== false
+        );
+
+        return {
+            title: meta?.title || "Unknown",
+            artist: meta?.artist_name || "Unknown",
+            image: meta?.image_url || "",
+            uri,
+            uid,
+            contextUri,
+            queueSource,
+            canPlayInContext,
+            index: options.index || 0,
+            key: `${queueSource}:${uid || uri || "unknown"}:${options.index || 0}`
+        };
+    };
 
     const areTrackInfoEqual = (prev, next) => {
         if (prev === next) return true;
@@ -63,6 +96,8 @@ const FullscreenOverlay = (() => {
             prev.uri === next.uri &&
             prev.uid === next.uid &&
             prev.contextUri === next.contextUri &&
+            prev.queueSource === next.queueSource &&
+            prev.canPlayInContext === next.canPlayInContext &&
             prev.index === next.index;
     };
 
@@ -84,15 +119,6 @@ const FullscreenOverlay = (() => {
     const PLAYLIST_ADD_ICON_PATH = '<path d="M5 6h8"/><path d="M5 12h8"/><path d="M5 18h6"/><path d="M17 10v8"/><path d="M13 14h8"/>';
     const PLAYLIST_METADATA_BATCH_SIZE = 12;
     const PLAYLIST_STATUS_BATCH_SIZE = 4;
-
-    const getNonEmptyString = (...values) => {
-        for (const value of values) {
-            if (typeof value === "string" && value.trim()) {
-                return value.trim();
-            }
-        }
-        return "";
-    };
 
     const getPlaylistIdFromUri = (uri) => {
         const uriString = String(uri || "");
@@ -1424,6 +1450,31 @@ const FullscreenOverlay = (() => {
         const [nextTracks, setNextTracks] = useState([]);
         const [recentTracks, setRecentTracks] = useState([]);
         const [activeTab, setActiveTab] = useState('queue'); // 'queue' or 'recent'
+        const nextTracksRef = useRef([]);
+        const emptyQueueTimerRef = useRef(null);
+        const queuePlayRequestSeqRef = useRef(0);
+
+        const commitNextTracks = useCallback((tracks, { deferEmpty = false } = {}) => {
+            const next = Array.isArray(tracks) ? tracks : [];
+            if (deferEmpty && next.length === 0 && nextTracksRef.current.length > 0) {
+                if (emptyQueueTimerRef.current) {
+                    clearTimeout(emptyQueueTimerRef.current);
+                }
+                emptyQueueTimerRef.current = setTimeout(() => {
+                    emptyQueueTimerRef.current = null;
+                    nextTracksRef.current = [];
+                    setNextTracks((prev) => prev.length === 0 ? prev : []);
+                }, QUEUE_EMPTY_GRACE_MS);
+                return;
+            }
+
+            if (emptyQueueTimerRef.current) {
+                clearTimeout(emptyQueueTimerRef.current);
+                emptyQueueTimerRef.current = null;
+            }
+            nextTracksRef.current = next;
+            setNextTracks((prev) => areTrackListsEqual(prev, next) ? prev : next);
+        }, []);
 
         // 재생 대기열 업데이트
         useEffect(() => {
@@ -1453,7 +1504,7 @@ const FullscreenOverlay = (() => {
 
                     // 다음 곡들 (최대 15곡) - Unknown 트랙 이후 필터링
                     const next = [];
-                    const appendNextTracks = (items) => {
+                    const appendNextTracks = (items, source, allowContextPlayback = true) => {
                         if (!Array.isArray(items) || next.length >= 15) {
                             return false;
                         }
@@ -1470,10 +1521,23 @@ const FullscreenOverlay = (() => {
                                 meta,
                                 {
                                     uri: contextTrack.uri || track?.uri || "",
-                                    uid: contextTrack.uid || track?.uid || ""
+                                    uid: contextTrack.uid || track?.uid || "",
+                                    contextUri:
+                                        contextTrack.contextUri ||
+                                        contextTrack.context_uri ||
+                                        contextTrack.context?.uri ||
+                                        track?.contextUri ||
+                                        track?.context_uri ||
+                                        track?.context?.uri ||
+                                        ""
                                 },
-                                currentContextUri,
-                                next.length + 1
+                                {
+                                    source,
+                                    fallbackContextUri: currentContextUri,
+                                    allowFallbackContext: false,
+                                    allowContextPlayback,
+                                    index: next.length + 1
+                                }
                             ));
 
                             if (next.length >= 15) {
@@ -1486,14 +1550,14 @@ const FullscreenOverlay = (() => {
                     const hasModernQueueShape =
                         Array.isArray(queueState?.queued) || Array.isArray(queueState?.nextUp);
                     if (hasModernQueueShape) {
-                        const stopped = appendNextTracks(queueState.queued || []);
+                        const stopped = appendNextTracks(queueState.queued || [], "queued", false);
                         if (!stopped) {
-                            appendNextTracks(queueState.nextUp || []);
+                            appendNextTracks(queueState.nextUp || [], "nextUp", true);
                         }
                     } else {
-                        appendNextTracks(queueState.nextTracks || []);
+                        appendNextTracks(queueState.nextTracks || [], "nextTracks", true);
                     }
-                    setNextTracks((prev) => areTrackListsEqual(prev, next) ? prev : next);
+                    commitNextTracks(next, { deferEmpty: true });
 
                     // 최근 재생 곡들 (이전 곡 기록)
                     if (prevSource.length > 0) {
@@ -1506,10 +1570,23 @@ const FullscreenOverlay = (() => {
                                 meta,
                                 {
                                     uri: contextTrack.uri || track?.uri || "",
-                                    uid: contextTrack.uid || track?.uid || ""
+                                    uid: contextTrack.uid || track?.uid || "",
+                                    contextUri:
+                                        contextTrack.contextUri ||
+                                        contextTrack.context_uri ||
+                                        contextTrack.context?.uri ||
+                                        track?.contextUri ||
+                                        track?.context_uri ||
+                                        track?.context?.uri ||
+                                        ""
                                 },
-                                currentContextUri,
-                                prev.length + 1
+                                {
+                                    source: "recent",
+                                    fallbackContextUri: currentContextUri,
+                                    allowFallbackContext: false,
+                                    allowContextPlayback: false,
+                                    index: prev.length + 1
+                                }
                             ));
                         }
                         setRecentTracks((current) => areTrackListsEqual(current, prev) ? current : prev);
@@ -1533,10 +1610,14 @@ const FullscreenOverlay = (() => {
 
             return () => {
                 clearInterval(interval);
+                if (emptyQueueTimerRef.current) {
+                    clearTimeout(emptyQueueTimerRef.current);
+                    emptyQueueTimerRef.current = null;
+                }
                 Spicetify.Player.removeEventListener("songchange", songChangeHandler);
                 Spicetify.Player.origin?._events?.removeListener?.("queue_update", queueUpdateHandler);
             };
-        }, [show, isFullscreen]);
+        }, [show, isFullscreen, commitNextTracks]);
 
         // 곡 클릭 시 재생
         const handleTrackClick = useCallback((track) => {
@@ -1555,30 +1636,35 @@ const FullscreenOverlay = (() => {
                     };
                     setCurrentTrack((prev) => areTrackInfoEqual(prev, selectedTrackData) ? prev : selectedTrackData);
                     const remainingTracks = nextTracks.slice(selectedIndex + 1);
-                    setNextTracks((prev) => areTrackListsEqual(prev, remainingTracks) ? prev : remainingTracks);
+                    commitNextTracks(remainingTracks);
                 }
-                // URI로 직접 재생 (불필요한 스킵 요청 방지)
-                const currentContextUri =
-                    Spicetify.Player.data?.context?.uri ||
-                    Spicetify.Player.data?.item?.metadata?.context_uri ||
-                    "";
-                const contextUri = currentContextUri || track.contextUri;
-                const canKeepContext = contextUri && contextUri !== track.uri;
+                const contextUri = track.canPlayInContext ? track.contextUri : "";
+                const playDirectly = () => Spicetify.Player.playUri(track.uri);
+                const playRequestSeq = ++queuePlayRequestSeqRef.current;
 
-                if (canKeepContext) {
+                if (contextUri) {
                     const options = { skipTo: { uri: track.uri } };
                     if (track.uid) {
                         options.skipTo.uid = track.uid;
                     }
                     Spicetify.Player.playUri(contextUri, {}, options);
+                    setTimeout(() => {
+                        if (queuePlayRequestSeqRef.current !== playRequestSeq) {
+                            return;
+                        }
+                        const activeUri = Spicetify.Player.data?.item?.uri || "";
+                        if (activeUri !== track.uri) {
+                            playDirectly();
+                        }
+                    }, 900);
                     return;
                 }
 
-                Spicetify.Player.playUri(track.uri);
+                playDirectly();
             } catch (e) {
                 console.warn('[FullscreenOverlay] Failed to play track:', e);
             }
-        }, [nextTracks]);
+        }, [nextTracks, commitNextTracks]);
 
         if (!show || !isFullscreen) return null;
 
@@ -1630,7 +1716,7 @@ const FullscreenOverlay = (() => {
                             react.createElement("div", { className: "fullscreen-queue-list" },
                                 nextTracks.map((track, idx) =>
                                     react.createElement("div", {
-                                        key: `next-${idx}`,
+                                        key: track.key || `next-${track.uid || track.uri || idx}`,
                                         className: "fullscreen-queue-item",
                                         onClick: () => handleTrackClick(track)
                                     },

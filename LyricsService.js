@@ -1579,6 +1579,7 @@
     // ============================================
     const SyncDataService = (() => {
         const API_BASE = 'https://lyrics.api.ivl.is';
+        const SYNC_DATA_REQUEST_VERSION = '20260701';
         const _syncDataCache = new Map();
         const _inflightRequests = new Map(); // 진행 중인 요청 추적
         const _isrcLookupCache = new Map(); // trackId -> { isrc, expiresAt }
@@ -2121,6 +2122,7 @@
                 throw new Error(getMissingIsrcMessage());
             }
             url.searchParams.set('isrc', isrc);
+            url.searchParams.set('request-version', SYNC_DATA_REQUEST_VERSION);
             if (provider) {
                 url.searchParams.set('provider', provider);
             }
@@ -2868,6 +2870,7 @@
                 },
                 body: JSON.stringify({
                     isrc: identity.isrc,
+                    'request-version': SYNC_DATA_REQUEST_VERSION,
                     ...(identity.trackId ? { trackId: identity.trackId } : {}),
                     provider,
                     syncData,
@@ -5920,6 +5923,7 @@
 
                 const url = new URL('https://lyrics.api.ivl.is/lyrics/sync-data');
                 url.searchParams.set('isrc', isrc);
+                url.searchParams.set('request-version', '20260701');
                 url.searchParams.set('trackId', trackId);
                 url.searchParams.set('provider', provider);
                 if (metadata?.title || metadata?.trackName || metadata?.name) {

@@ -5746,6 +5746,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			} else {
 				const fallbackPayload = {
 					isrc: resolvedTrackIsrc,
+					'request-version': '20260701',
 					provider,
 					syncData: syncDataToSubmit,
 					...submitMetadata,

@@ -13341,6 +13341,13 @@ const ConfigModal = ({
               defaultValue: CONFIG.visual["fullscreen-browser-fullscreen"] ?? false,
             },
             {
+              desc: I18n.t("settingsAdvanced.fullscreenMode.pageUiOnly.desc"),
+              info: I18n.t("settingsAdvanced.fullscreenMode.pageUiOnly.info"),
+              key: "fullscreen-page-ui-only",
+              type: ConfigSlider,
+              defaultValue: CONFIG.visual["fullscreen-page-ui-only"] ?? false,
+            },
+            {
               desc: I18n.t("settingsAdvanced.fullscreenMode.hideOverlay.desc"),
               info: I18n.t("settingsAdvanced.fullscreenMode.hideOverlay.info"),
               key: "fullscreen-hide-overlay",

@@ -1393,6 +1393,10 @@ window.LANG_ZH_CN = {
         "desc": "使用 Spotify 全屏",
         "info": "进入全屏模式时，将 Spotify 切换为全屏以占满显示器"
       },
+      "pageUiOnly": {
+        "desc": "仅在歌词页面使用全屏 UI",
+        "info": "不覆盖整个 Spotify 窗口，而是在歌词页面内显示全屏布局。"
+      },
       "hideOverlay": {
         "desc": "在 ivLyrics 全屏时隐藏覆盖层",
         "info": "ivLyrics 全屏打开时向覆盖层应用发送暂停播放状态，让桌面覆盖歌词自动淡出"

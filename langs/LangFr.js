@@ -1393,6 +1393,10 @@ window.LANG_FR = {
         "desc": "Plein écran navigateur",
         "info": "Passe aussi le navigateur en plein écran (F11)"
       },
+      "pageUiOnly": {
+        "desc": "Utiliser l’interface plein écran uniquement dans la page paroles",
+        "info": "Affiche la mise en page plein écran dans la page paroles sans couvrir toute la fenêtre Spotify."
+      },
       "hideOverlay": {
         "desc": "Masquer l'overlay en plein écran ivLyrics",
         "info": "Envoie à l'application d'overlay un état de lecture en pause tant que le plein écran ivLyrics est ouvert afin de faire disparaître les paroles de l'overlay du bureau"

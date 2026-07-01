@@ -1393,6 +1393,10 @@ window.LANG_EN = {
         "desc": "Use Browser Fullscreen",
         "info": "Switch browser to fullscreen mode to fill the entire monitor when entering lyrics fullscreen"
       },
+      "pageUiOnly": {
+        "desc": "Use Fullscreen UI in Lyrics Page Only",
+        "info": "Show the fullscreen layout inside the lyrics page instead of covering the whole Spotify window."
+      },
       "hideOverlay": {
         "desc": "Hide Overlay in ivLyrics Fullscreen",
         "info": "Send the overlay app a paused playback state while ivLyrics fullscreen is open so desktop overlay lyrics fade out"

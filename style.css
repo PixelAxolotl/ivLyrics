@@ -4369,6 +4369,50 @@ ruby rt {
   padding: 50vh 0 50vh;
 }
 
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui {
+  inset: 0;
+  width: 100%;
+  height: 100% !important;
+  min-height: 0;
+  max-height: 100%;
+}
+
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui:has(.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active) {
+  overflow: hidden;
+}
+
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .lyrics-lyricsContainer-SyncedLyricsPage,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .lyrics-lyricsContainer-UnsyncedLyricsPage {
+  height: 100% !important;
+  min-height: 0;
+}
+
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .fullscreen-bottom-left,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .fullscreen-top-right,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .fullscreen-bottom,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .fullscreen-lyrics-progress-container,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .fullscreen-queue-wrapper,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .fullscreen-queue-trigger-area,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .fullscreen-queue-panel,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .fullscreen-tv-tmi-overlay,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .fullscreen-tv-song-info,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .fullscreen-tv-controls-wrapper,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .portrait-overlay-top,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .portrait-overlay-bottom,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .lyrics-config-button-container {
+  position: absolute !important;
+}
+
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .fullscreen-queue-wrapper,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .fullscreen-queue-trigger-area,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .fullscreen-queue-panel {
+  height: 100%;
+}
+
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .fullscreen-tv-tmi-overlay {
+  inset: 0;
+}
+
 /* Hide other elements in fullscreen */
 .lyrics-lyricsContainer-LyricsContainer.fullscreen-active .lyrics-tabBar-header {
   display: none;

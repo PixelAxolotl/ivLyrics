@@ -1393,6 +1393,10 @@ window.LANG_VI = {
         "desc": "Sử dụng Spotify toàn màn hình",
         "info": "Khi vào chế độ toàn màn hình, chuyển Spotify sang chế độ toàn màn hình để lấp đầy màn hình"
       },
+      "pageUiOnly": {
+        "desc": "Chỉ dùng UI toàn màn hình trong trang lời bài hát",
+        "info": "Hiển thị bố cục toàn màn hình bên trong trang lời bài hát mà không phủ toàn bộ cửa sổ Spotify."
+      },
       "hideOverlay": {
         "desc": "Ẩn overlay khi ivLyrics toàn màn hình",
         "info": "Gửi trạng thái phát đã tạm dừng tới ứng dụng overlay khi ivLyrics đang mở toàn màn hình để lời bài hát trên overlay desktop mờ đi"

@@ -1393,6 +1393,10 @@ window.LANG_TR = {
       "desc": "Tarayıcı Tam Ekranını Kullan",
       "info": "Sözler tam ekranına girildiğinde tüm monitörü doldurmak için tarayıcıyı tam ekran moduna geçirir"
     },
+    "pageUiOnly": {
+      "desc": "Tam ekran arayüzünü yalnızca sözler sayfasında kullan",
+      "info": "Tüm Spotify penceresini kaplamadan tam ekran düzenini sözler sayfasının içinde gösterir."
+    },
     "hideOverlay": {
       "desc": "ivLyrics Tam Ekranında Katmanı Gizle",
       "info": "ivLyrics tam ekranı açıkken masaüstü katman uygulamasına duraklatılmış çalma durumu göndererek masaüstü sözlerinin kaybolmasını sağlar"

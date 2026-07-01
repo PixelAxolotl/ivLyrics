@@ -2382,6 +2382,10 @@ const CONFIG = {
       "ivLyrics:visual:fullscreen-browser-fullscreen",
       false
     ),
+    "fullscreen-page-ui-only": StorageManager.get(
+      "ivLyrics:visual:fullscreen-page-ui-only",
+      false
+    ),
     "fullscreen-hide-overlay": StorageManager.get(
       "ivLyrics:visual:fullscreen-hide-overlay",
       true
@@ -3823,6 +3827,7 @@ class LyricsContainer extends react.Component {
     this.styleVariables = {};
     this.fullscreenContainer = document.createElement("div");
     this.fullscreenContainer.id = "lyrics-fullscreen-container";
+    this.fullscreenUsesPageUi = false;
     this.mousetrap = null;
     this.containerRef = react.createRef(null);
     this.translator = null;
@@ -7056,21 +7061,30 @@ class LyricsContainer extends react.Component {
 
     this.toggleFullscreen = () => {
       const isEnabled = !this.state.isFullscreen;
-      const useBrowserFullscreen = CONFIG.visual["fullscreen-browser-fullscreen"] === true;
+      const usePageFullscreenUi = isEnabled
+        ? CONFIG.visual["fullscreen-page-ui-only"] === true
+        : this.fullscreenUsesPageUi === true;
+      const useBrowserFullscreen =
+        !usePageFullscreenUi && CONFIG.visual["fullscreen-browser-fullscreen"] === true;
       if (isEnabled) {
+        this.fullscreenUsesPageUi = usePageFullscreenUi;
         // 기존 컨테이너가 DOM에 남아있으면 제거
         const existingContainer = document.getElementById("lyrics-fullscreen-container");
         if (existingContainer) {
           existingContainer.innerHTML = '';
           existingContainer.remove();
         }
-        // 새로운 전체화면 컨테이너 생성
-        this.fullscreenContainer = document.createElement("div");
-        this.fullscreenContainer.id = "lyrics-fullscreen-container";
-        // TMI 폰트 크기 CSS 변수 설정
-        const tmiScale = (CONFIG.visual["fullscreen-tmi-font-size"] || 100) / 100;
-        this.fullscreenContainer.style.setProperty("--fullscreen-tmi-font-size", tmiScale);
-        document.body.append(this.fullscreenContainer);
+        if (usePageFullscreenUi) {
+          this.fullscreenContainer = null;
+        } else {
+          // 새로운 전체화면 컨테이너 생성
+          this.fullscreenContainer = document.createElement("div");
+          this.fullscreenContainer.id = "lyrics-fullscreen-container";
+          // TMI 폰트 크기 CSS 변수 설정
+          const tmiScale = (CONFIG.visual["fullscreen-tmi-font-size"] || 100) / 100;
+          this.fullscreenContainer.style.setProperty("--fullscreen-tmi-font-size", tmiScale);
+          document.body.append(this.fullscreenContainer);
+        }
         this.mousetrap.bind("esc", this.toggleFullscreen);
         // 전체화면 키 직접 리스너 추가 (Mousetrap이 캡처하지 못할 경우 대비)
         this._escHandler = (e) => {
@@ -7116,6 +7130,7 @@ class LyricsContainer extends react.Component {
           });
         }
       } else {
+        this.fullscreenUsesPageUi = false;
         // 먼저 setState를 호출하여 React가 Portal 렌더링을 중단하도록 함
         // (이렇게 하면 React가 자연스럽게 컴포넌트를 언마운트함)
 
@@ -7862,6 +7877,7 @@ class LyricsContainer extends react.Component {
       (!hasLyrics && centerWhenNoLyrics);
     const shouldReduceMotion = this.shouldReduceMotion();
     const isFullscreenMarketplace = this.state.isFullscreen && this.state.showMarketplace;
+    const isFullscreenPageUi = this.state.isFullscreen && this.fullscreenUsesPageUi === true;
     const shouldRenderFloatingMenu =
       !this.state.isFullscreen ||
       this.state.isFloatingMenuOpen ||
@@ -7991,6 +8007,9 @@ class LyricsContainer extends react.Component {
       }
       if (this.state.showMarketplace) {
         fullscreenClasses += " marketplace-active";
+      }
+      if (isFullscreenPageUi) {
+        fullscreenClasses += " fullscreen-page-ui";
       }
       // TMI 폰트 크기 CSS 변수 업데이트
       if (this.fullscreenContainer) {
@@ -8402,6 +8421,7 @@ class LyricsContainer extends react.Component {
     const dom = ensureReactDOM();
     if (
       this.state.isFullscreen &&
+      !isFullscreenPageUi &&
       dom?.createPortal &&
       this.fullscreenContainer
     ) {

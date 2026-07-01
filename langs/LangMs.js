@@ -1393,6 +1393,10 @@ window.LANG_MS = {
         "desc": "Gunakan Skrin Penuh Spotify",
         "info": "Tukar Spotify ke skrin penuh apabila memasuki mod skrin penuh untuk memenuhi monitor"
       },
+      "pageUiOnly": {
+        "desc": "Guna UI skrin penuh hanya dalam halaman lirik",
+        "info": "Memaparkan reka letak skrin penuh di dalam halaman lirik tanpa menutup seluruh tetingkap Spotify."
+      },
       "hideOverlay": {
         "desc": "Sembunyikan Tindihan dalam Skrin Penuh ivLyrics",
         "info": "Menghantar status jeda ke aplikasi tindihan semasa skrin penuh ivLyrics dibuka untuk menyembunyikan lirik tindihan desktop secara lut sinar"

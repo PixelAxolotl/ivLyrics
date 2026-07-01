@@ -1393,6 +1393,10 @@ window.LANG_PT = {
         "desc": "Spotify em Tela Cheia",
         "info": "Coloca o navegador/Spotify em tela cheia ao entrar no modo tela cheia da extensão"
       },
+      "pageUiOnly": {
+        "desc": "Usar UI de tela cheia apenas na página de letras",
+        "info": "Mostra o layout de tela cheia dentro da página de letras sem cobrir toda a janela do Spotify."
+      },
       "hideOverlay": {
         "desc": "Ocultar overlay na tela cheia do ivLyrics",
         "info": "Envia ao app de overlay um estado de reprodução pausada enquanto a tela cheia do ivLyrics estiver aberta, para que as letras do overlay da área de trabalho desapareçam"

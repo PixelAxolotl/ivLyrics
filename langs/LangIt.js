@@ -1393,6 +1393,10 @@ window.LANG_IT = {
         "desc": "Usa schermo intero Spotify",
         "info": "Passa Spotify a schermo intero occupando tutto il monitor"
       },
+      "pageUiOnly": {
+        "desc": "Usa l'interfaccia a schermo intero solo nella pagina dei testi",
+        "info": "Mostra il layout a schermo intero dentro la pagina dei testi senza coprire tutta la finestra di Spotify."
+      },
       "hideOverlay": {
         "desc": "Nascondi overlay nello schermo intero ivLyrics",
         "info": "Invia all'app overlay uno stato di riproduzione in pausa mentre lo schermo intero ivLyrics è aperto, così i testi dell'overlay desktop svaniscono"

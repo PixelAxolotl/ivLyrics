@@ -376,7 +376,7 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
   flex-direction: column !important;
   gap: var(--ivlyrics-panel-line-stack-gap, 10px) !important;
   transform: translateY(var(--ivlyrics-panel-stack-y, 0px)) !important;
-  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+  transition: transform 520ms cubic-bezier(0.16, 1, 0.3, 1) !important;
   will-change: transform !important;
 }
 
@@ -1906,6 +1906,61 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         return rows.length > 1 ? rows : null;
     };
 
+    const VOCAL_STACK_CENTER_THRESHOLD = 4;
+
+    const getVocalRowTimeBounds = (row) => {
+        const syllables = Array.isArray(row?.syllables) ? row.syllables : [];
+        let startTime = Infinity;
+        let endTime = -Infinity;
+
+        syllables.forEach((syllable) => {
+            const syllableStart = toFiniteTime(syllable?.startTime);
+            const syllableEnd = toFiniteTime(syllable?.endTime) ?? syllableStart;
+            if (syllableStart !== null) {
+                startTime = Math.min(startTime, syllableStart);
+                endTime = Math.max(endTime, syllableEnd ?? syllableStart);
+            }
+        });
+
+        if (!Number.isFinite(startTime)) startTime = 0;
+        if (!Number.isFinite(endTime)) endTime = startTime;
+        return { startTime, endTime };
+    };
+
+    const getActiveVocalRowIndex = (vocalRows, currentTime) => {
+        if (!Array.isArray(vocalRows) || vocalRows.length === 0 || !Number.isFinite(currentTime)) {
+            return -1;
+        }
+
+        let nearestRowIndex = 0;
+        let nearestDistance = Infinity;
+        let latestStartedRowIndex = -1;
+        let latestStartedTime = -Infinity;
+
+        for (let rowIndex = 0; rowIndex < vocalRows.length; rowIndex++) {
+            const { startTime, endTime } = getVocalRowTimeBounds(vocalRows[rowIndex]);
+
+            if (currentTime >= startTime && currentTime <= endTime) {
+                return rowIndex;
+            }
+
+            if (currentTime >= startTime && startTime > latestStartedTime) {
+                latestStartedRowIndex = rowIndex;
+                latestStartedTime = startTime;
+            }
+
+            const distance = currentTime < startTime
+                ? startTime - currentTime
+                : currentTime - endTime;
+            if (distance >= 0 && distance < nearestDistance) {
+                nearestRowIndex = rowIndex;
+                nearestDistance = distance;
+            }
+        }
+
+        return latestStartedRowIndex >= 0 ? latestStartedRowIndex : nearestRowIndex;
+    };
+
     const splitLineByParallelShape = (text, rowCount) => {
         const value = typeof text === 'string' ? text.trim() : '';
         if (!value || rowCount <= 1) return [];
@@ -2380,12 +2435,51 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     // ============================================
     const KaraokeLine = memo(({ syllables, vocalRows, isActive, isPast, phonetic, translation, lineClass, textEffectRevision = 0 }) => {
         const isVocalStack = Array.isArray(vocalRows) && vocalRows.length > 1;
+        const shouldUseVocalRowAnchor = isActive && isVocalStack && vocalRows.length >= VOCAL_STACK_CENTER_THRESHOLD;
+        const vocalStackRef = useRef(null);
         const rowPhonetics = isVocalStack ? splitLineByVocalRowShape(phonetic, vocalRows) : [];
         const rowTranslations = isVocalStack ? splitLineByVocalRowShape(translation, vocalRows) : [];
         const hasRowPhoneticSubline = isVocalStack && vocalRows.some((row, rowIndex) => row.phonetic || rowPhonetics[rowIndex]);
         const hasRowTranslationSubline = isVocalStack && vocalRows.some((row, rowIndex) => row.translation || rowTranslations[rowIndex]);
         const stackPhonetic = isVocalStack && !hasRowPhoneticSubline && typeof phonetic === "string" ? phonetic.trim() : "";
         const stackTranslation = isVocalStack && !hasRowTranslationSubline && typeof translation === "string" ? translation.trim() : "";
+
+        useEffect(() => {
+            const stackElement = vocalStackRef.current;
+            if (!stackElement) return undefined;
+
+            const updateAnchorRow = () => {
+                const activeRowIndex = shouldUseVocalRowAnchor
+                    ? getActiveVocalRowIndex(vocalRows, window._ivLyricsPanelCurrentTime || 0)
+                    : -1;
+                stackElement.querySelectorAll('[data-panel-vocal-row-index]').forEach((rowElement) => {
+                    rowElement.classList.toggle(
+                        'ivlyrics-panel-current-anchor',
+                        Number(rowElement.getAttribute('data-panel-vocal-row-index')) === activeRowIndex
+                    );
+                });
+                window.dispatchEvent(new Event('ivlyrics-panel-anchor-update'));
+            };
+
+            updateAnchorRow();
+
+            if (!shouldUseVocalRowAnchor) {
+                return () => {
+                    stackElement.querySelectorAll('.ivlyrics-panel-current-anchor').forEach((rowElement) => {
+                        rowElement.classList.remove('ivlyrics-panel-current-anchor');
+                    });
+                };
+            }
+
+            window.addEventListener('ivlyrics-panel-time-update', updateAnchorRow);
+            return () => {
+                window.removeEventListener('ivlyrics-panel-time-update', updateAnchorRow);
+                stackElement.querySelectorAll('.ivlyrics-panel-current-anchor').forEach((rowElement) => {
+                    rowElement.classList.remove('ivlyrics-panel-current-anchor');
+                });
+            };
+        }, [shouldUseVocalRowAnchor, vocalRows, textEffectRevision]);
+
         const renderKaraokeSyllables = (items, keyPrefix, className) => {
             const joinedText = getKaraokeSyllablesText(items);
 
@@ -2440,7 +2534,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
 
             return react.createElement("div", {
                 key: rowKey,
-                className: partClassName
+                className: partClassName,
+                "data-panel-vocal-row-index": rowIndex
             },
                 renderKaraokeSyllables(row.syllables, rowKey, rowClassName),
                 (row.phonetic || rowPhonetics[rowIndex]) && react.createElement("div", {
@@ -2467,7 +2562,11 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         }
 
         const karaokeContent = isVocalStack
-            ? react.createElement("div", { className: "ivlyrics-panel-line-karaoke ivlyrics-panel-line-karaoke-stack" }, stackChildren)
+            ? react.createElement("div", {
+                className: "ivlyrics-panel-line-karaoke ivlyrics-panel-line-karaoke-stack",
+                ref: vocalStackRef,
+                "data-panel-vocal-row-count": vocalRows.length
+            }, stackChildren)
             : renderKaraokeSyllables(syllables, "main", "ivlyrics-panel-line-karaoke");
 
         return react.createElement("div", { className: lineClass },
@@ -3676,7 +3775,10 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 if (!stack || !currentCell) return;
 
                 const wrapperCenter = wrapper.clientHeight / 2;
-                const currentCenter = currentCell.offsetTop + (currentCell.offsetHeight / 2);
+                const currentAnchor = currentCell.querySelector('.ivlyrics-panel-current-anchor');
+                const currentCenter = currentAnchor
+                    ? currentCell.offsetTop + currentAnchor.offsetTop + (currentAnchor.offsetHeight / 2)
+                    : currentCell.offsetTop + (currentCell.offsetHeight / 2);
                 const translateY = Math.round(wrapperCenter - currentCenter);
                 stack.style.setProperty('--ivlyrics-panel-stack-y', `${translateY}px`);
             };
@@ -3694,13 +3796,16 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 observer.observe(wrapper);
                 const stack = wrapper.querySelector('.ivlyrics-panel-lines-stack');
                 const currentCell = wrapper.querySelector('.ivlyrics-panel-line-cell.current');
+                const currentAnchor = currentCell?.querySelector?.('.ivlyrics-panel-current-anchor');
                 if (stack) observer.observe(stack);
                 if (currentCell) observer.observe(currentCell);
+                if (currentAnchor) observer.observe(currentAnchor);
             }
             if (document.fonts?.ready) {
                 document.fonts.ready.then(scheduleUpdate).catch(() => {});
             }
             window.addEventListener('resize', scheduleUpdate);
+            window.addEventListener('ivlyrics-panel-anchor-update', scheduleUpdate);
 
             return () => {
                 if (frameId !== null) {
@@ -3708,6 +3813,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 }
                 observer?.disconnect?.();
                 window.removeEventListener('resize', scheduleUpdate);
+                window.removeEventListener('ivlyrics-panel-anchor-update', scheduleUpdate);
             };
         }, [visibleLines, currentVisibleIndex, fontScale, panelLineSlotHeight, instrumentalBreakRevision, textEffectRevision]);
         const renderVisibleLine = (visLine, idx, keyPrefix) => react.createElement(LyricLine, {

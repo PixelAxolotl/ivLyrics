@@ -1916,20 +1916,21 @@ const renderLyricSubLine = (className, text, onContextMenu = null) => {
 };
 
 const renderLyricMainContent = ({
-	isKara = false,
-	mainText,
-	line,
-	position,
+  isKara = false,
+  mainText,
+  line,
+  position,
 	isActive,
 	settingsRevision = 0,
 	globalCharOffset = 0,
-	activeGlobalCharIndex = -1,
-	subText = null,
-	subText2 = null,
+  activeGlobalCharIndex = -1,
+  subText = null,
+  subText2 = null,
+  vocalAnchorRef = null,
 }) => {
-	if (isKara) {
-		return react.createElement(KaraokeLine, {
-			line,
+  if (isKara) {
+          return react.createElement(KaraokeLine, {
+                  line,
 			// Pin inactive lines to position 0. getKaraokeCharFill already returns 0
 			// when isActive is false, so the position value is unused there. Keeping it
 			// stable lets KaraokeLine's react.memo skip the re-render for every line
@@ -1938,11 +1939,12 @@ const renderLyricMainContent = ({
 			isActive,
 			settingsRevision,
 			globalCharOffset,
-			activeGlobalCharIndex,
-			phonetic: subText,
-			translation: subText2,
-		});
-	}
+                  activeGlobalCharIndex,
+                  phonetic: subText,
+                  translation: subText2,
+                  vocalAnchorRef,
+          });
+  }
 
 	if (typeof mainText === "string") {
 		return null;
@@ -2697,25 +2699,47 @@ const createCopyHandler = (text, successMessageKey, failureMessageKey) => (event
 };
 
 const getLyricsAnchorRatio = (container) => {
-	if (!container) {
-		return 0.5;
-	}
+  if (!container) {
+          return 0.5;
+  }
 
 	const rawAnchorRatio = window.getComputedStyle(container).getPropertyValue("--ivfs-lyrics-anchor-ratio").trim();
 	const parsedAnchorRatio = Number.parseFloat(rawAnchorRatio);
 
 	return Number.isFinite(parsedAnchorRatio)
-		? Math.min(0.95, Math.max(0.05, parsedAnchorRatio))
-		: 0.5;
+          ? Math.min(0.95, Math.max(0.05, parsedAnchorRatio))
+          : 0.5;
+};
+
+const getElementOffsetTopWithin = (element, container) => {
+  if (!element || !container) {
+          return 0;
+  }
+
+  let top = 0;
+  let node = element;
+  while (node && node !== container) {
+          top += Number(node.offsetTop) || 0;
+          node = node.offsetParent;
+  }
+
+  if (node === container) {
+          return top;
+  }
+
+  const elementRect = element.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+  return (elementRect.top - containerRect.top) + (container.scrollTop || 0);
 };
 
 const scrollSyncedContainerToActiveLine = (container, activeLine, behavior = "smooth") => {
-	if (!container || !activeLine) return;
+  if (!container || !activeLine) return;
 
-	const anchorRatio = getLyricsAnchorRatio(container);
-	const containerHeight = container.clientHeight || 0;
-	const lineHeight = activeLine.clientHeight || activeLine.getBoundingClientRect().height || 0;
-	const targetTop = activeLine.offsetTop - (containerHeight * anchorRatio - lineHeight / 2);
+  const anchorRatio = getLyricsAnchorRatio(container);
+  const containerHeight = container.clientHeight || 0;
+  const lineHeight = activeLine.clientHeight || activeLine.getBoundingClientRect().height || 0;
+  const activeLineTop = getElementOffsetTopWithin(activeLine, container);
+  const targetTop = activeLineTop - (containerHeight * anchorRatio - lineHeight / 2);
 	const maxScrollTop = Math.max(0, container.scrollHeight - containerHeight);
 	const nextTop = Math.max(0, Math.min(targetTop, maxScrollTop));
 
@@ -2732,9 +2756,11 @@ const getCompactSyncedOffset = (container, activeLine, isScrolling) => {
 		return 0;
 	}
 
-	const anchorRatio = getLyricsAnchorRatio(container);
-	const anchorOffset = container.clientHeight * anchorRatio;
-	return anchorOffset - (activeLine.offsetTop + activeLine.clientHeight / 2);
+  const anchorRatio = getLyricsAnchorRatio(container);
+  const anchorOffset = container.clientHeight * anchorRatio;
+  const activeLineTop = getElementOffsetTopWithin(activeLine, container);
+  const activeLineHeight = activeLine.clientHeight || activeLine.getBoundingClientRect().height || 0;
+  return anchorOffset - (activeLineTop + activeLineHeight / 2);
 };
 
 const useSyncedLayoutEffect = react.useLayoutEffect || useEffect;
@@ -3240,9 +3266,12 @@ const LyricsLineBlock = react.memo(({
 		text: mainText,
 		originalText,
 		text2: subText2,
-	});
-	const hasParallelKaraokeRows = isKara && hasKaraokeVocalRows(mainLine);
-	const interludeInfo = mainLine?.interludeInfo || getInterludeInfo(mainLine);
+  });
+  const hasParallelKaraokeRows = isKara && hasKaraokeVocalRows(mainLine);
+  const vocalRowsForAnchor = isActive && isKara ? getKaraokeVocalRows(mainLine) : null;
+  const shouldUseVocalRowAnchor = Array.isArray(vocalRowsForAnchor)
+          && vocalRowsForAnchor.length >= KARAOKE_VOCAL_STACK_CENTER_THRESHOLD;
+  const interludeInfo = mainLine?.interludeInfo || getInterludeInfo(mainLine);
 	const shouldRenderInterlude = interludeInfo.isInterlude;
 	const shouldShowInterlude = shouldRenderInterlude && isCurrentLine;
 	const lineClassName = shouldRenderInterlude
@@ -3273,11 +3302,11 @@ const LyricsLineBlock = react.memo(({
 	return react.createElement(
 		"div",
 		{
-			className: lineClassName,
-			style,
-			dir,
-			ref: lineRef,
-			onClick: Number.isFinite(seekTime) ? handleClick : null,
+                  className: lineClassName,
+                  style,
+                  dir,
+                  ref: shouldUseVocalRowAnchor ? null : lineRef,
+                  onClick: Number.isFinite(seekTime) ? handleClick : null,
 		},
 		react.createElement(
 			"p",
@@ -3296,11 +3325,12 @@ const LyricsLineBlock = react.memo(({
 					isActive,
 					settingsRevision,
 					globalCharOffset,
-					activeGlobalCharIndex,
-					subText,
-					subText2,
-				})
-		),
+                                  activeGlobalCharIndex,
+                                  subText,
+                                  subText2,
+                                  vocalAnchorRef: shouldUseVocalRowAnchor ? lineRef : null,
+                          })
+          ),
 		!shouldRenderInterlude && !hasParallelKaraokeRows && renderLyricSubLine(
 			"lyrics-lyricsContainer-LyricsLine-phonetic",
 			subText,
@@ -3457,10 +3487,11 @@ const useSyncedLyricsEngine = ({
 	compact = false,
 	isKara = false,
 	containerRef,
-	activeLineRef,
-	lyricsId,
-	containerReady = true,
-	settingsRevision = 0,
+  activeLineRef,
+  lyricsId,
+  containerReady = true,
+  settingsRevision = 0,
+  anchorRevision = 0,
 }) => {
 	const leadingEmptyLines = compact ? 2 : 1;
 	const { isScrolling, handleContainerClick } = useScrollActivity(
@@ -3575,9 +3606,9 @@ const useSyncedLyricsEngine = ({
 		));
 	}, [compact, containerRef, activeLineRef, isScrolling]);
 
-	useSyncedLayoutEffect(() => {
-		syncCompactOffset();
-	}, [syncCompactOffset, activeLineIndex, activeTrailingInterludeKey, containerReady, lyricsId, preparedLyrics, settingsRevision]);
+  useSyncedLayoutEffect(() => {
+          syncCompactOffset();
+  }, [syncCompactOffset, activeLineIndex, activeTrailingInterludeKey, containerReady, lyricsId, preparedLyrics, settingsRevision, anchorRevision]);
 
 	useSyncedLayoutEffect(() => {
 		if (!compact || isScrolling || typeof ResizeObserver === "undefined") {
@@ -3618,7 +3649,7 @@ const useSyncedLyricsEngine = ({
 				cancelRaf(frameId);
 			}
 		};
-	}, [compact, isScrolling, activeLineIndex, activeTrailingInterludeKey, containerReady, lyricsId, preparedLyrics, settingsRevision, syncCompactOffset]);
+  }, [compact, isScrolling, activeLineIndex, activeTrailingInterludeKey, containerReady, lyricsId, preparedLyrics, settingsRevision, anchorRevision, syncCompactOffset]);
 
 	useEffect(() => {
 		const actualIndex = Math.max(0, activeLineIndex - leadingEmptyLines);
@@ -4242,9 +4273,9 @@ const applyKaraokeWhitespaceCompensation = (timedChars) => {
 };
 
 const getActiveKaraokeTimedCharIndex = (timedChars, position) => {
-	if (!Array.isArray(timedChars) || timedChars.length === 0) {
-		return -1;
-	}
+  if (!Array.isArray(timedChars) || timedChars.length === 0) {
+          return -1;
+  }
 
 	let activeCharIndex = -1;
 	let lastPassedCharIndex = -1;
@@ -4277,7 +4308,60 @@ const getActiveKaraokeTimedCharIndex = (timedChars, position) => {
 		}
 	}
 
-	return activeCharIndex;
+  return activeCharIndex;
+};
+
+const KARAOKE_VOCAL_STACK_CENTER_THRESHOLD = 4;
+
+const buildKaraokeVocalRowLine = (line, row) => ({
+  ...line,
+  text: row.text,
+  originalText: row.text,
+  syllables: row.syllables,
+  vocals: undefined,
+  speaker: row.speaker,
+  kind: row.kind,
+});
+
+const getActiveKaraokeVocalRowIndex = (vocalRows, line, position) => {
+  if (!Array.isArray(vocalRows) || vocalRows.length === 0 || !Number.isFinite(position)) {
+          return -1;
+  }
+
+  let nearestRowIndex = 0;
+  let nearestDistance = Infinity;
+  let latestStartedRowIndex = -1;
+  let latestStartedTime = -Infinity;
+
+  for (let rowIndex = 0; rowIndex < vocalRows.length; rowIndex++) {
+          const rowLine = buildKaraokeVocalRowLine(line, vocalRows[rowIndex]);
+          const rowTimedChars = applyKaraokeWhitespaceCompensation(buildKaraokeTimedChars(rowLine));
+          const activeCharIndex = getActiveKaraokeTimedCharIndex(rowTimedChars, position);
+
+          if (activeCharIndex >= 0 && activeCharIndex < rowTimedChars.length) {
+                  return rowIndex;
+          }
+
+          const { startTime, endTime } = getKaraokeLineBounds(rowLine);
+          if (position >= startTime && position <= endTime) {
+                  return rowIndex;
+          }
+
+          if (position >= startTime && startTime > latestStartedTime) {
+                  latestStartedRowIndex = rowIndex;
+                  latestStartedTime = startTime;
+          }
+
+          const distance = position < startTime
+                  ? startTime - position
+                  : position - endTime;
+          if (distance >= 0 && distance < nearestDistance) {
+                  nearestRowIndex = rowIndex;
+                  nearestDistance = distance;
+          }
+  }
+
+  return latestStartedRowIndex >= 0 ? latestStartedRowIndex : nearestRowIndex;
 };
 
 const KARAOKE_FILL_STEPS = 25;
@@ -4361,38 +4445,38 @@ const getKaraokeBounceValues = (position, isActive, startTime, endTime, attenuat
 	};
 };
 
-const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0, globalCharOffset = 0, activeGlobalCharIndex = -1, phonetic = null, translation = null }) => {
-	if (!line) {
-		return "";
-	}
+const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0, globalCharOffset = 0, activeGlobalCharIndex = -1, phonetic = null, translation = null, vocalAnchorRef = null }) => {
+  if (!line) {
+          return "";
+  }
 
-	const vocalRows = getKaraokeVocalRows(line);
-	if (vocalRows) {
-		const rowPhonetics = splitLineByVocalRowShape(phonetic, vocalRows);
-		const rowTranslations = splitLineByVocalRowShape(translation, vocalRows);
-		const hasRowPhoneticSubline = vocalRows.some((row, rowIndex) => row.phonetic || rowPhonetics[rowIndex]);
-		const hasRowTranslationSubline = vocalRows.some((row, rowIndex) => row.translation || rowTranslations[rowIndex]);
+  const vocalRows = getKaraokeVocalRows(line);
+  const shouldUseVocalRowAnchor = isActive
+          && Array.isArray(vocalRows)
+          && vocalRows.length >= KARAOKE_VOCAL_STACK_CENTER_THRESHOLD;
+  const activeVocalRowIndex = shouldUseVocalRowAnchor
+          ? getActiveKaraokeVocalRowIndex(vocalRows, line, position)
+          : -1;
+
+  if (vocalRows) {
+          const rowPhonetics = splitLineByVocalRowShape(phonetic, vocalRows);
+          const rowTranslations = splitLineByVocalRowShape(translation, vocalRows);
+          const hasRowPhoneticSubline = vocalRows.some((row, rowIndex) => row.phonetic || rowPhonetics[rowIndex]);
+          const hasRowTranslationSubline = vocalRows.some((row, rowIndex) => row.translation || rowTranslations[rowIndex]);
 		const stackPhonetic = !hasRowPhoneticSubline && typeof phonetic === "string" ? phonetic.trim() : "";
 		const stackTranslation = !hasRowTranslationSubline && typeof translation === "string" ? translation.trim() : "";
-		let rowGlobalCharOffset = globalCharOffset;
-		const stackChildren = vocalRows.map((row, rowIndex) => {
-			const rowLine = {
-				...line,
-				text: row.text,
-				originalText: row.text,
-				syllables: row.syllables,
-				vocals: undefined,
-				speaker: row.speaker,
-				kind: row.kind,
-			};
-			const classParts = [
-				"lyrics-karaoke-part",
-				row.role === "background" ? "background" : "lead",
-				...getKaraokeKindClassParts(row.kind || "vocal"),
-				row.speakerClass ? `speaker-${row.speakerClass}` : "",
-			].filter(Boolean);
-			const currentOffset = rowGlobalCharOffset;
-			rowGlobalCharOffset += getKaraokeSyllableCharCount(row.syllables);
+          let rowGlobalCharOffset = globalCharOffset;
+          const stackChildren = vocalRows.map((row, rowIndex) => {
+                  const rowLine = buildKaraokeVocalRowLine(line, row);
+                  const classParts = [
+                          "lyrics-karaoke-part",
+                          row.role === "background" ? "background" : "lead",
+                          ...getKaraokeKindClassParts(row.kind || "vocal"),
+                          shouldUseVocalRowAnchor && rowIndex === activeVocalRowIndex ? "active-vocal-row" : "",
+                          row.speakerClass ? `speaker-${row.speakerClass}` : "",
+                  ].filter(Boolean);
+                  const currentOffset = rowGlobalCharOffset;
+                  rowGlobalCharOffset += getKaraokeSyllableCharCount(row.syllables);
 			const rowTimedChars = applyKaraokeWhitespaceCompensation(buildKaraokeTimedChars(rowLine));
 			const rowActiveCharIndex = getActiveKaraokeTimedCharIndex(rowTimedChars, position);
 			const rowActiveGlobalCharIndex = rowActiveCharIndex >= 0 ? currentOffset + rowActiveCharIndex : -1;
@@ -4400,14 +4484,16 @@ const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0
 			const rowTranslation = row.translation || rowTranslations[rowIndex] || "";
 
 			return react.createElement(
-				"span",
-				{
-					key: row.key || rowIndex,
-					className: classParts.join(" "),
-				},
-				react.createElement(KaraokeLine, {
-					line: rowLine,
-					position,
+                          "span",
+                          {
+                                  key: row.key || rowIndex,
+                                  className: classParts.join(" "),
+                                  ref: shouldUseVocalRowAnchor && rowIndex === activeVocalRowIndex ? vocalAnchorRef : null,
+                                  "data-karaoke-vocal-row-index": rowIndex,
+                          },
+                          react.createElement(KaraokeLine, {
+                                  line: rowLine,
+                                  position,
 					isActive,
 					settingsRevision,
 					globalCharOffset: currentOffset,
@@ -4442,12 +4528,16 @@ const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0
 			));
 		}
 
-		return react.createElement(
-			"span",
-			{ className: "lyrics-karaoke-stack" },
-			stackChildren
-		);
-	}
+          return react.createElement(
+                  "span",
+                  {
+                          className: "lyrics-karaoke-stack",
+                          "data-karaoke-vocal-row-count": vocalRows.length,
+                          "data-active-karaoke-vocal-row-index": shouldUseVocalRowAnchor ? activeVocalRowIndex : undefined,
+                  },
+                  stackChildren
+          );
+  }
 
 	const furiganaEnabled = CONFIG?.visual?.["furigana-enabled"] === true;
 	const furiganaReady = window.FuriganaConverter?.isAvailable?.() === true;
@@ -4570,14 +4660,25 @@ const SyncedLyricsPage = react.memo(({ lyrics = [], provider, contributors, copy
 	const karaokeLineTransitionClass = isKara && CONFIG.visual["karaoke-line-transition"]
 		? " karaoke-line-transition-enabled"
 		: "";
-	const [containerReady, setContainerReady] = useState(false);
-	const compactActiveLineEle = useRef();
-	const lyricContainerEle = useRef();
-	const lyricsId = useMemo(() => lyrics[0]?.text || "no-lyrics", [lyrics]);
+  const [containerReady, setContainerReady] = useState(false);
+  const compactActiveLineEle = useRef();
+  const [activeAnchorRevision, setActiveAnchorRevision] = useState(0);
+  const lyricContainerEle = useRef();
+  const lyricsId = useMemo(() => lyrics[0]?.text || "no-lyrics", [lyrics]);
 
-	const containerRefCallback = useCallback((node) => {
-		lyricContainerEle.current = node;
-		if (node) {
+  const setCompactActiveLineAnchor = useCallback((node) => {
+          if (compactActiveLineEle.current === node) {
+                  return;
+          }
+          compactActiveLineEle.current = node;
+          if (node) {
+                  setActiveAnchorRevision((revision) => revision + 1);
+          }
+  }, []);
+
+  const containerRefCallback = useCallback((node) => {
+          lyricContainerEle.current = node;
+          if (node) {
 			setContainerReady(true);
 		}
 	}, []);
@@ -4596,10 +4697,11 @@ const SyncedLyricsPage = react.memo(({ lyrics = [], provider, contributors, copy
 		isKara,
 		containerRef: lyricContainerEle,
 		activeLineRef: compactActiveLineEle,
-		lyricsId,
-		containerReady,
-		settingsRevision: reRenderLyricsPage,
-	});
+          lyricsId,
+          containerReady,
+          settingsRevision: reRenderLyricsPage,
+          anchorRevision: activeAnchorRevision,
+  });
 
 	const prevScrollModeRef = useRef(false);
 	useEffect(() => {
@@ -4662,13 +4764,13 @@ const SyncedLyricsPage = react.memo(({ lyrics = [], provider, contributors, copy
 				key: lyricsId,
 			},
 			...renderLyricsItems({
-				items: renderItems,
-				isKara,
-				position: karaokePosition,
-				activeLineRef: compactActiveLineEle,
-				settingsRevision: reRenderLyricsPage,
-			})
-		)
+                          items: renderItems,
+                          isKara,
+                          position: karaokePosition,
+                          activeLineRef: setCompactActiveLineAnchor,
+                          settingsRevision: reRenderLyricsPage,
+                  })
+          )
 	);
 });
 

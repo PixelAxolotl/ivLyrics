@@ -1137,6 +1137,14 @@ div.lyrics-tabBar-headerItemLink {
   padding-block: 0.08em;
 }
 
+.lyrics-lyricsContainer-SyncedLyricsPage.is-karaoke
+  .lyrics-lyricsContainer-SyncedLyrics:has(.lyrics-karaoke-part.active-vocal-row)
+  > .lyrics-lyricsContainer-LyricsLine {
+  transition-property: transform, color, opacity;
+  transition-duration: 520ms !important;
+  transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
 .lyrics-karaoke-part {
   display: block;
   width: 100%;

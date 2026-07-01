@@ -613,7 +613,21 @@ window.LANG_HI = {
       "mute": "म्यूट",
       "unmute": "अनम्यूट",
       "share": "साझा लिंक कॉपी करें",
-      "shareCopied": "🔗 साझा लिंक कॉपी किया गया"
+      "shareCopied": "🔗 साझा लिंक कॉपी किया गया",
+      "addToPlaylist": "प्लेलिस्ट में जोड़ें",
+      "playlistLoading": "प्लेलिस्ट लोड हो रही हैं...",
+      "playlistEmpty": "संपादित की जा सकने वाली कोई प्लेलिस्ट नहीं मिली.",
+      "playlistLoadFailed": "प्लेलिस्ट लोड करने में विफल.",
+      "playlistNoTrack": "केवल Spotify ट्रैक प्लेलिस्ट में जोड़े जा सकते हैं.",
+      "playlistAdded": "{playlist} में जोड़ा गया.",
+      "playlistAlreadyContains": "{playlist} में यह ट्रैक पहले से है.",
+      "playlistChecking": "जाँच हो रही है...",
+      "playlistAlreadyInList": "पहले से है",
+      "playlistRemove": "हटाएं",
+      "playlistRemoved": "{playlist} से हटाया गया.",
+      "playlistAddFailed": "प्लेलिस्ट में जोड़ने में विफल.",
+      "playlistRemoveFailed": "प्लेलिस्ट से हटाने में विफल.",
+      "playlistTracks": "ट्रैक"
     },
     "queue": {
       "title": "प्लेलिस्ट",

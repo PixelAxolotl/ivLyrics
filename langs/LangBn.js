@@ -613,7 +613,21 @@ window.LANG_BN = {
       "mute": "মিউট",
       "unmute": "আনমিউট",
       "share": "শেয়ার লিংক কপি",
-      "shareCopied": "🔗 শেয়ার লিংক কপি করা হয়েছে"
+      "shareCopied": "🔗 শেয়ার লিংক কপি করা হয়েছে",
+      "addToPlaylist": "প্লেলিস্টে যোগ করুন",
+      "playlistLoading": "প্লেলিস্ট লোড হচ্ছে...",
+      "playlistEmpty": "সম্পাদনাযোগ্য কোনো প্লেলিস্ট পাওয়া যায়নি.",
+      "playlistLoadFailed": "প্লেলিস্ট লোড করতে ব্যর্থ.",
+      "playlistNoTrack": "শুধু Spotify ট্র্যাক প্লেলিস্টে যোগ করা যাবে.",
+      "playlistAdded": "{playlist}-এ যোগ করা হয়েছে.",
+      "playlistAlreadyContains": "{playlist}-এ এই ট্র্যাকটি ইতিমধ্যেই আছে.",
+      "playlistChecking": "পরীক্ষা করা হচ্ছে...",
+      "playlistAlreadyInList": "আগেই আছে",
+      "playlistRemove": "সরান",
+      "playlistRemoved": "{playlist} থেকে সরানো হয়েছে.",
+      "playlistAddFailed": "প্লেলিস্টে যোগ করতে ব্যর্থ.",
+      "playlistRemoveFailed": "প্লেলিস্ট থেকে সরাতে ব্যর্থ.",
+      "playlistTracks": "ট্র্যাক"
     },
     "queue": {
       "title": "প্লেলিস্ট",

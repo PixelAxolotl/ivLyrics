@@ -613,7 +613,21 @@ window.LANG_TH = {
       "mute": "ปิดเสียง",
       "unmute": "เปิดเสียง",
       "share": "คัดลอกลิงก์แชร์",
-      "shareCopied": "🔗 คัดลอกลิงก์แชร์แล้ว"
+      "shareCopied": "🔗 คัดลอกลิงก์แชร์แล้ว",
+      "addToPlaylist": "เพิ่มไปยังเพลย์ลิสต์",
+      "playlistLoading": "กำลังโหลดเพลย์ลิสต์...",
+      "playlistEmpty": "ไม่พบเพลย์ลิสต์ที่แก้ไขได้",
+      "playlistLoadFailed": "โหลดเพลย์ลิสต์ไม่สำเร็จ",
+      "playlistNoTrack": "เพิ่มได้เฉพาะแทร็ก Spotify ลงในเพลย์ลิสต์เท่านั้น",
+      "playlistAdded": "เพิ่มไปยัง {playlist} แล้ว",
+      "playlistAlreadyContains": "{playlist} มีแทร็กนี้อยู่แล้ว",
+      "playlistChecking": "กำลังตรวจสอบ...",
+      "playlistAlreadyInList": "มีอยู่แล้ว",
+      "playlistRemove": "ลบ",
+      "playlistRemoved": "นำออกจาก {playlist} แล้ว",
+      "playlistAddFailed": "เพิ่มไปยังเพลย์ลิสต์ไม่สำเร็จ",
+      "playlistRemoveFailed": "นำออกจากเพลย์ลิสต์ไม่สำเร็จ",
+      "playlistTracks": "แทร็ก"
     },
     "queue": {
       "title": "คิวเพลง",

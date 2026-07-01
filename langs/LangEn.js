@@ -613,7 +613,21 @@ window.LANG_EN = {
       "mute": "Mute",
       "unmute": "Unmute",
       "share": "Copy Share Link",
-      "shareCopied": "🔗 Share link copied"
+      "shareCopied": "🔗 Share link copied",
+      "addToPlaylist": "Add to playlist",
+      "playlistLoading": "Loading playlists...",
+      "playlistEmpty": "No editable playlists found.",
+      "playlistLoadFailed": "Failed to load playlists.",
+      "playlistNoTrack": "Only Spotify tracks can be added to playlists.",
+      "playlistAdded": "Added to {playlist}.",
+      "playlistAlreadyContains": "{playlist} already contains this track.",
+      "playlistChecking": "Checking...",
+      "playlistAlreadyInList": "Already in",
+      "playlistRemove": "Remove",
+      "playlistRemoved": "Removed from {playlist}.",
+      "playlistAddFailed": "Failed to add to playlist.",
+      "playlistRemoveFailed": "Failed to remove from playlist.",
+      "playlistTracks": "tracks"
     },
     "queue": {
       "title": "Queue",

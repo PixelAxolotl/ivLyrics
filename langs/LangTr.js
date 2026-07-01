@@ -613,7 +613,21 @@ window.LANG_TR = {
       "mute": "Sessiz",
       "unmute": "Sesi Aç",
       "share": "Paylaşma Bağlantısını Kopyala",
-      "shareCopied": "🔗 Paylaşma bağlantısı kopyalandı"
+      "shareCopied": "🔗 Paylaşma bağlantısı kopyalandı",
+      "addToPlaylist": "Çalma listesine ekle",
+      "playlistLoading": "Çalma listeleri yükleniyor...",
+      "playlistEmpty": "Düzenlenebilir çalma listesi bulunamadı.",
+      "playlistLoadFailed": "Çalma listeleri yüklenemedi.",
+      "playlistNoTrack": "Çalma listelerine yalnızca Spotify parçaları eklenebilir.",
+      "playlistAdded": "{playlist} listesine eklendi.",
+      "playlistAlreadyContains": "{playlist} zaten bu parçayı içeriyor.",
+      "playlistChecking": "Kontrol ediliyor...",
+      "playlistAlreadyInList": "Zaten var",
+      "playlistRemove": "Sil",
+      "playlistRemoved": "{playlist} listesinden kaldırıldı.",
+      "playlistAddFailed": "Çalma listesine eklenemedi.",
+      "playlistRemoveFailed": "Çalma listesinden kaldırılamadı.",
+      "playlistTracks": "parça"
     },
     "queue": {
       "title": "Sıra",

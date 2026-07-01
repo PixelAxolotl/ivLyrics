@@ -613,7 +613,21 @@ window.LANG_ID = {
       "mute": "Bisukan",
       "unmute": "Bunyikan",
       "share": "Salin Tautan Berbagi",
-      "shareCopied": "🔗 Tautan berbagi disalin"
+      "shareCopied": "🔗 Tautan berbagi disalin",
+      "addToPlaylist": "Tambahkan ke playlist",
+      "playlistLoading": "Memuat playlist...",
+      "playlistEmpty": "Tidak ada playlist yang dapat diedit.",
+      "playlistLoadFailed": "Gagal memuat playlist.",
+      "playlistNoTrack": "Hanya track Spotify yang dapat ditambahkan ke playlist.",
+      "playlistAdded": "Ditambahkan ke {playlist}.",
+      "playlistAlreadyContains": "{playlist} sudah berisi track ini.",
+      "playlistChecking": "Memeriksa...",
+      "playlistAlreadyInList": "Sudah ada",
+      "playlistRemove": "Hapus",
+      "playlistRemoved": "Dihapus dari {playlist}.",
+      "playlistAddFailed": "Gagal menambahkan ke playlist.",
+      "playlistRemoveFailed": "Gagal menghapus dari playlist.",
+      "playlistTracks": "track"
     },
     "queue": {
       "title": "Antrean",

@@ -613,7 +613,21 @@ window.LANG_KO = {
       "mute": "음소거",
       "unmute": "음소거 해제",
       "share": "공유 링크 복사",
-      "shareCopied": "🔗 공유 링크가 복사되었습니다"
+      "shareCopied": "🔗 공유 링크가 복사되었습니다",
+      "addToPlaylist": "플레이리스트에 추가",
+      "playlistLoading": "플레이리스트 불러오는 중...",
+      "playlistEmpty": "수정 가능한 플레이리스트가 없습니다.",
+      "playlistLoadFailed": "플레이리스트를 불러오지 못했습니다.",
+      "playlistNoTrack": "Spotify 트랙만 플레이리스트에 추가할 수 있습니다.",
+      "playlistAdded": "{playlist}에 추가했습니다.",
+      "playlistAlreadyContains": "{playlist}에 이미 이 곡이 있습니다.",
+      "playlistChecking": "확인 중...",
+      "playlistAlreadyInList": "이미 있음",
+      "playlistRemove": "삭제",
+      "playlistRemoved": "{playlist}에서 제거했습니다.",
+      "playlistAddFailed": "플레이리스트에 추가하지 못했습니다.",
+      "playlistRemoveFailed": "플레이리스트에서 제거하지 못했습니다.",
+      "playlistTracks": "곡"
     },
     "queue": {
       "title": "재생목록",

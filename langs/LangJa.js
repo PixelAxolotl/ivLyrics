@@ -613,7 +613,21 @@ window.LANG_JA = {
       "mute": "ミュート",
       "unmute": "ミュート解除",
       "share": "共有リンクをコピー",
-      "shareCopied": "🔗 共有リンクがコピーされました"
+      "shareCopied": "🔗 共有リンクがコピーされました",
+      "addToPlaylist": "プレイリストに追加",
+      "playlistLoading": "プレイリストを読み込み中...",
+      "playlistEmpty": "編集可能なプレイリストが見つかりません。",
+      "playlistLoadFailed": "プレイリストを読み込めませんでした。",
+      "playlistNoTrack": "Spotifyの曲のみプレイリストに追加できます。",
+      "playlistAdded": "{playlist}に追加しました。",
+      "playlistAlreadyContains": "{playlist}にはこの曲がすでにあります。",
+      "playlistChecking": "確認中...",
+      "playlistAlreadyInList": "追加済み",
+      "playlistRemove": "削除",
+      "playlistRemoved": "{playlist}から削除しました。",
+      "playlistAddFailed": "プレイリストに追加できませんでした。",
+      "playlistRemoveFailed": "プレイリストから削除できませんでした。",
+      "playlistTracks": "曲"
     },
     "queue": {
       "title": "再生リスト",

@@ -4793,7 +4793,9 @@ ruby rt {
   flex-direction: column;
   align-items: center;
   gap: 0;
-  overflow: hidden;
+  overflow: visible;
+  position: relative;
+  z-index: 70;
   transform-origin: top center;
   max-height: var(--iv-fullscreen-controls-height);
   transition:
@@ -4812,6 +4814,7 @@ ruby rt {
   transform: translateY(var(--iv-motion-distance-md)) scale(0.985);
   margin-top: 0;
   max-height: 0;
+  overflow: hidden;
   pointer-events: none;
 }
 
@@ -5015,6 +5018,171 @@ ruby rt {
   filter: drop-shadow(0 0 4px rgba(29, 185, 84, 0.5));
 }
 
+.fullscreen-playlist-control {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fullscreen-playlist-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 12px);
+  width: min(280px, 78vw);
+  max-height: 320px;
+  padding: 10px;
+  overflow: auto;
+  z-index: 1000;
+  background: rgba(18, 18, 18, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.fullscreen-left-controls:has(.fullscreen-playlist-popover),
+.portrait-overlay-bottom:has(.fullscreen-playlist-popover) {
+  z-index: 140;
+  overflow: visible;
+}
+
+.fullscreen-playlist-popover-title {
+  padding: 6px 8px 10px;
+  color: var(--spice-text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.fullscreen-playlist-state {
+  padding: 14px 10px;
+  color: var(--spice-subtext);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.fullscreen-playlist-state.error {
+  color: #ff9b9b;
+}
+
+.fullscreen-playlist-item {
+  width: 100%;
+  min-height: 46px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--spice-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.fullscreen-playlist-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.fullscreen-playlist-item.contains-current-track {
+  background: rgba(29, 185, 84, 0.08);
+}
+
+.fullscreen-playlist-item.contains-current-track:hover {
+  background: rgba(255, 82, 82, 0.10);
+}
+
+.fullscreen-playlist-item:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.fullscreen-playlist-item-image,
+.fullscreen-playlist-item-fallback {
+  width: 34px;
+  height: 34px;
+  border-radius: 4px;
+  flex: 0 0 auto;
+}
+
+.fullscreen-playlist-item-image {
+  object-fit: cover;
+}
+
+.fullscreen-playlist-item-fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.10);
+  color: var(--spice-subtext);
+  font-size: 16px;
+}
+
+.fullscreen-playlist-item-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fullscreen-playlist-item-name {
+  overflow: hidden;
+  color: var(--spice-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fullscreen-playlist-item-count,
+.fullscreen-playlist-item-loading {
+  color: var(--spice-subtext);
+  font-size: 11px;
+}
+
+.fullscreen-playlist-item-status {
+  justify-self: end;
+  max-width: 84px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fullscreen-playlist-item-status.checking {
+  background: rgba(255, 255, 255, 0.10);
+  color: var(--spice-subtext);
+}
+
+.fullscreen-playlist-item-status.contains {
+  background: rgba(29, 185, 84, 0.18);
+  color: #1ed760;
+}
+
+.fullscreen-playlist-item-status-remove {
+  display: none;
+}
+
+.fullscreen-playlist-item.contains-current-track:hover .fullscreen-playlist-item-status.contains {
+  background: rgba(255, 82, 82, 0.18);
+  color: #ff6b6b;
+}
+
+.fullscreen-playlist-item.contains-current-track:hover .fullscreen-playlist-item-status-default {
+  display: none;
+}
+
+.fullscreen-playlist-item.contains-current-track:hover .fullscreen-playlist-item-status-remove {
+  display: inline;
+}
+
 /* Volume wrapper */
 .fullscreen-volume-wrapper {
   display: flex;
@@ -5158,6 +5326,7 @@ ruby rt {
   transform: translateY(var(--iv-motion-distance-md)) scale(0.985);
   margin-top: 0;
   max-height: 0;
+  overflow: hidden;
   pointer-events: none;
 }
 

@@ -613,7 +613,21 @@ window.LANG_AR = {
       "mute": "كتم الصوت",
       "unmute": "إلغاء الكتم",
       "share": "نسخ رابط المشاركة",
-      "shareCopied": "🔗 تم نسخ رابط المشاركة"
+      "shareCopied": "🔗 تم نسخ رابط المشاركة",
+      "addToPlaylist": "إضافة إلى قائمة تشغيل",
+      "playlistLoading": "جارٍ تحميل قوائم التشغيل...",
+      "playlistEmpty": "لم يتم العثور على قوائم تشغيل قابلة للتعديل.",
+      "playlistLoadFailed": "تعذر تحميل قوائم التشغيل.",
+      "playlistNoTrack": "يمكن إضافة مقاطع Spotify فقط إلى قوائم التشغيل.",
+      "playlistAdded": "تمت الإضافة إلى {playlist}.",
+      "playlistAlreadyContains": "تحتوي {playlist} على هذا المقطع بالفعل.",
+      "playlistChecking": "جارٍ التحقق...",
+      "playlistAlreadyInList": "موجودة",
+      "playlistRemove": "حذف",
+      "playlistRemoved": "تمت الإزالة من {playlist}.",
+      "playlistAddFailed": "تعذرت الإضافة إلى قائمة التشغيل.",
+      "playlistRemoveFailed": "تعذرت الإزالة من قائمة التشغيل.",
+      "playlistTracks": "مقاطع"
     },
     "queue": {
       "title": "قائمة التشغيل",

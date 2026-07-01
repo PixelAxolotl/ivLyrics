@@ -613,7 +613,21 @@ window.LANG_FA = {
       "mute": "بی‌صدا",
       "unmute": "باصدا",
       "share": "کپی لینک اشتراک‌گذاری",
-      "shareCopied": "🔗 لینک اشتراک‌گذاری کپی شد"
+      "shareCopied": "🔗 لینک اشتراک‌گذاری کپی شد",
+      "addToPlaylist": "افزودن به پلی‌لیست",
+      "playlistLoading": "در حال بارگذاری پلی‌لیست‌ها...",
+      "playlistEmpty": "هیچ پلی‌لیست قابل ویرایشی پیدا نشد.",
+      "playlistLoadFailed": "بارگذاری پلی‌لیست‌ها ناموفق بود.",
+      "playlistNoTrack": "فقط ترک‌های Spotify را می‌توان به پلی‌لیست‌ها افزود.",
+      "playlistAdded": "به {playlist} افزوده شد.",
+      "playlistAlreadyContains": "{playlist} از قبل این ترک را دارد.",
+      "playlistChecking": "در حال بررسی...",
+      "playlistAlreadyInList": "موجود است",
+      "playlistRemove": "حذف",
+      "playlistRemoved": "از {playlist} حذف شد.",
+      "playlistAddFailed": "افزودن به پلی‌لیست ناموفق بود.",
+      "playlistRemoveFailed": "حذف از پلی‌لیست ناموفق بود.",
+      "playlistTracks": "ترک"
     },
     "queue": {
       "title": "صف پخش",

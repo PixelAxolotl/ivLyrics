@@ -613,7 +613,21 @@ window.LANG_FR = {
       "mute": "Muet",
       "unmute": "Son activé",
       "share": "Copier lien de partage",
-      "shareCopied": "🔗 Lien de partage copié"
+      "shareCopied": "🔗 Lien de partage copié",
+      "addToPlaylist": "Ajouter à la playlist",
+      "playlistLoading": "Chargement des playlists...",
+      "playlistEmpty": "Aucune playlist modifiable trouvée.",
+      "playlistLoadFailed": "Impossible de charger les playlists.",
+      "playlistNoTrack": "Seuls les titres Spotify peuvent être ajoutés aux playlists.",
+      "playlistAdded": "Ajouté à {playlist}.",
+      "playlistAlreadyContains": "{playlist} contient déjà ce titre.",
+      "playlistChecking": "Vérification...",
+      "playlistAlreadyInList": "Déjà présent",
+      "playlistRemove": "Supprimer",
+      "playlistRemoved": "Retiré de {playlist}.",
+      "playlistAddFailed": "Impossible d’ajouter à la playlist.",
+      "playlistRemoveFailed": "Impossible de retirer de la playlist.",
+      "playlistTracks": "titres"
     },
     "queue": {
       "title": "File d'attente",

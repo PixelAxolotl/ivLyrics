@@ -613,7 +613,21 @@ window.LANG_MS = {
       "mute": "Senyap",
       "unmute": "Nyahsenyap",
       "share": "Salin Pautan Kongsi",
-      "shareCopied": "🔗 Pautan kongsi telah disalin"
+      "shareCopied": "🔗 Pautan kongsi telah disalin",
+      "addToPlaylist": "Tambah ke senarai main",
+      "playlistLoading": "Memuatkan senarai main...",
+      "playlistEmpty": "Tiada senarai main boleh diedit ditemui.",
+      "playlistLoadFailed": "Gagal memuatkan senarai main.",
+      "playlistNoTrack": "Hanya trek Spotify boleh ditambahkan ke senarai main.",
+      "playlistAdded": "Ditambahkan ke {playlist}.",
+      "playlistAlreadyContains": "{playlist} sudah mengandungi trek ini.",
+      "playlistChecking": "Menyemak...",
+      "playlistAlreadyInList": "Sudah ada",
+      "playlistRemove": "Buang",
+      "playlistRemoved": "Dibuang daripada {playlist}.",
+      "playlistAddFailed": "Gagal menambahkan ke senarai main.",
+      "playlistRemoveFailed": "Gagal membuang daripada senarai main.",
+      "playlistTracks": "trek"
     },
     "queue": {
       "title": "Senarai Main",

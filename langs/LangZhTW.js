@@ -613,7 +613,21 @@ window.LANG_ZH_TW = {
       "mute": "靜音",
       "unmute": "取消靜音",
       "share": "複製分享連結",
-      "shareCopied": "🔗 分享連結已複製"
+      "shareCopied": "🔗 分享連結已複製",
+      "addToPlaylist": "加入播放清單",
+      "playlistLoading": "正在載入播放清單...",
+      "playlistEmpty": "找不到可編輯的播放清單。",
+      "playlistLoadFailed": "無法載入播放清單。",
+      "playlistNoTrack": "只能將 Spotify 曲目加入播放清單。",
+      "playlistAdded": "已加入 {playlist}。",
+      "playlistAlreadyContains": "{playlist} 已包含這首歌。",
+      "playlistChecking": "正在檢查...",
+      "playlistAlreadyInList": "已存在",
+      "playlistRemove": "刪除",
+      "playlistRemoved": "已從 {playlist} 移除。",
+      "playlistAddFailed": "無法加入播放清單。",
+      "playlistRemoveFailed": "無法從播放清單移除。",
+      "playlistTracks": "首"
     },
     "queue": {
       "title": "播放清單",

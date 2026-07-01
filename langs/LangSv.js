@@ -613,7 +613,21 @@ window.LANG_SV = {
       "mute": "Ljud av",
       "unmute": "Slå på ljudet",
       "share": "Kopiera dela länk",
-      "shareCopied": "🔗 Delningslänken har kopierats"
+      "shareCopied": "🔗 Delningslänken har kopierats",
+      "addToPlaylist": "Lägg till i spellista",
+      "playlistLoading": "Läser in spellistor...",
+      "playlistEmpty": "Inga redigerbara spellistor hittades.",
+      "playlistLoadFailed": "Det gick inte att läsa in spellistor.",
+      "playlistNoTrack": "Endast Spotify-spår kan läggas till i spellistor.",
+      "playlistAdded": "Tillagd i {playlist}.",
+      "playlistAlreadyContains": "{playlist} innehåller redan det här spåret.",
+      "playlistChecking": "Kontrollerar...",
+      "playlistAlreadyInList": "Finns redan",
+      "playlistRemove": "Ta bort",
+      "playlistRemoved": "Borttagen från {playlist}.",
+      "playlistAddFailed": "Det gick inte att lägga till i spellistan.",
+      "playlistRemoveFailed": "Det gick inte att ta bort från spellistan.",
+      "playlistTracks": "spår"
     },
     "queue": {
       "title": "Kö",

@@ -613,7 +613,21 @@ window.LANG_RU = {
       "mute": "Без звука",
       "unmute": "Включить звук",
       "share": "Копировать ссылку",
-      "shareCopied": "🔗 Ссылка скопирована"
+      "shareCopied": "🔗 Ссылка скопирована",
+      "addToPlaylist": "Добавить в плейлист",
+      "playlistLoading": "Загрузка плейлистов...",
+      "playlistEmpty": "Редактируемые плейлисты не найдены.",
+      "playlistLoadFailed": "Не удалось загрузить плейлисты.",
+      "playlistNoTrack": "В плейлисты можно добавлять только треки Spotify.",
+      "playlistAdded": "Добавлено в {playlist}.",
+      "playlistAlreadyContains": "{playlist} уже содержит этот трек.",
+      "playlistChecking": "Проверка...",
+      "playlistAlreadyInList": "Уже есть",
+      "playlistRemove": "Удалить",
+      "playlistRemoved": "Удалено из {playlist}.",
+      "playlistAddFailed": "Не удалось добавить в плейлист.",
+      "playlistRemoveFailed": "Не удалось удалить из плейлиста.",
+      "playlistTracks": "треков"
     },
     "queue": {
       "title": "Очередь",

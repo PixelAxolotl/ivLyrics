@@ -613,7 +613,21 @@ window.LANG_VI = {
       "mute": "Tắt tiếng",
       "unmute": "Bật tiếng",
       "share": "Sao chép liên kết chia sẻ",
-      "shareCopied": "🔗 Đã sao chép liên kết chia sẻ"
+      "shareCopied": "🔗 Đã sao chép liên kết chia sẻ",
+      "addToPlaylist": "Thêm vào danh sách phát",
+      "playlistLoading": "Đang tải danh sách phát...",
+      "playlistEmpty": "Không tìm thấy danh sách phát có thể chỉnh sửa.",
+      "playlistLoadFailed": "Không tải được danh sách phát.",
+      "playlistNoTrack": "Chỉ có thể thêm bài hát Spotify vào danh sách phát.",
+      "playlistAdded": "Đã thêm vào {playlist}.",
+      "playlistAlreadyContains": "{playlist} đã có bài này.",
+      "playlistChecking": "Đang kiểm tra...",
+      "playlistAlreadyInList": "Đã có",
+      "playlistRemove": "Xóa",
+      "playlistRemoved": "Đã xóa khỏi {playlist}.",
+      "playlistAddFailed": "Không thể thêm vào danh sách phát.",
+      "playlistRemoveFailed": "Không thể xóa khỏi danh sách phát.",
+      "playlistTracks": "bài"
     },
     "queue": {
       "title": "Danh sách phát",

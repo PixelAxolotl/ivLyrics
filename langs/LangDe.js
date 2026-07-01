@@ -613,7 +613,21 @@ window.LANG_DE = {
       "mute": "Stummschalten",
       "unmute": "Stummschaltung aufheben",
       "share": "Link teilen",
-      "shareCopied": "🔗 Link in Zwischenablage kopiert"
+      "shareCopied": "🔗 Link in Zwischenablage kopiert",
+      "addToPlaylist": "Zur Playlist hinzufügen",
+      "playlistLoading": "Playlists werden geladen...",
+      "playlistEmpty": "Keine bearbeitbaren Playlists gefunden.",
+      "playlistLoadFailed": "Playlists konnten nicht geladen werden.",
+      "playlistNoTrack": "Nur Spotify-Titel können zu Playlists hinzugefügt werden.",
+      "playlistAdded": "Zu {playlist} hinzugefügt.",
+      "playlistAlreadyContains": "{playlist} enthält diesen Titel bereits.",
+      "playlistChecking": "Wird geprüft...",
+      "playlistAlreadyInList": "Bereits drin",
+      "playlistRemove": "Entfernen",
+      "playlistRemoved": "Aus {playlist} entfernt.",
+      "playlistAddFailed": "Zur Playlist konnte nicht hinzugefügt werden.",
+      "playlistRemoveFailed": "Aus Playlist konnte nicht entfernt werden.",
+      "playlistTracks": "Titel"
     },
     "queue": {
       "title": "Warteschlange",

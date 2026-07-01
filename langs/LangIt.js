@@ -613,7 +613,21 @@ window.LANG_IT = {
       "mute": "Muto",
       "unmute": "Riattiva audio",
       "share": "Copia link condivisione",
-      "shareCopied": "🔗 Link condivisione copiato"
+      "shareCopied": "🔗 Link condivisione copiato",
+      "addToPlaylist": "Aggiungi alla playlist",
+      "playlistLoading": "Caricamento playlist...",
+      "playlistEmpty": "Nessuna playlist modificabile trovata.",
+      "playlistLoadFailed": "Impossibile caricare le playlist.",
+      "playlistNoTrack": "Solo i brani Spotify possono essere aggiunti alle playlist.",
+      "playlistAdded": "Aggiunto a {playlist}.",
+      "playlistAlreadyContains": "{playlist} contiene già questo brano.",
+      "playlistChecking": "Controllo...",
+      "playlistAlreadyInList": "Già presente",
+      "playlistRemove": "Rimuovi",
+      "playlistRemoved": "Rimosso da {playlist}.",
+      "playlistAddFailed": "Impossibile aggiungere alla playlist.",
+      "playlistRemoveFailed": "Impossibile rimuovere dalla playlist.",
+      "playlistTracks": "brani"
     },
     "queue": {
       "title": "Coda",

@@ -613,7 +613,21 @@ window.LANG_PT = {
       "mute": "Mudo",
       "unmute": "Com Som",
       "share": "Copiar Link de Compartilhamento",
-      "shareCopied": "🔗 Link de compartilhamento copiado"
+      "shareCopied": "🔗 Link de compartilhamento copiado",
+      "addToPlaylist": "Adicionar à playlist",
+      "playlistLoading": "Carregando playlists...",
+      "playlistEmpty": "Nenhuma playlist editável encontrada.",
+      "playlistLoadFailed": "Falha ao carregar playlists.",
+      "playlistNoTrack": "Apenas faixas do Spotify podem ser adicionadas às playlists.",
+      "playlistAdded": "Adicionado a {playlist}.",
+      "playlistAlreadyContains": "{playlist} já contém esta faixa.",
+      "playlistChecking": "Verificando...",
+      "playlistAlreadyInList": "Já está",
+      "playlistRemove": "Remover",
+      "playlistRemoved": "Removido de {playlist}.",
+      "playlistAddFailed": "Falha ao adicionar à playlist.",
+      "playlistRemoveFailed": "Falha ao remover da playlist.",
+      "playlistTracks": "faixas"
     },
     "queue": {
       "title": "Fila",

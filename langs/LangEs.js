@@ -613,7 +613,21 @@ window.LANG_ES = {
       "mute": "Silenciar",
       "unmute": "Activar sonido",
       "share": "Copiar enlace",
-      "shareCopied": "🔗 Enlace de compartir copiado"
+      "shareCopied": "🔗 Enlace de compartir copiado",
+      "addToPlaylist": "Añadir a playlist",
+      "playlistLoading": "Cargando playlists...",
+      "playlistEmpty": "No se encontraron playlists editables.",
+      "playlistLoadFailed": "No se pudieron cargar las playlists.",
+      "playlistNoTrack": "Solo se pueden añadir canciones de Spotify a playlists.",
+      "playlistAdded": "Añadido a {playlist}.",
+      "playlistAlreadyContains": "{playlist} ya contiene esta canción.",
+      "playlistChecking": "Comprobando...",
+      "playlistAlreadyInList": "Ya está",
+      "playlistRemove": "Eliminar",
+      "playlistRemoved": "Eliminado de {playlist}.",
+      "playlistAddFailed": "No se pudo añadir a la playlist.",
+      "playlistRemoveFailed": "No se pudo eliminar de la playlist.",
+      "playlistTracks": "canciones"
     },
     "queue": {
       "title": "Cola de reproducción",

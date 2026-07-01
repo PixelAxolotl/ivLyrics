@@ -4328,6 +4328,7 @@ const getActiveKaraokeVocalRowIndex = (vocalRows, line, position) => {
           return -1;
   }
 
+  let activeRowIndex = -1;
   let nearestRowIndex = 0;
   let nearestDistance = Infinity;
   let latestStartedRowIndex = -1;
@@ -4339,12 +4340,14 @@ const getActiveKaraokeVocalRowIndex = (vocalRows, line, position) => {
           const activeCharIndex = getActiveKaraokeTimedCharIndex(rowTimedChars, position);
 
           if (activeCharIndex >= 0 && activeCharIndex < rowTimedChars.length) {
-                  return rowIndex;
+                  activeRowIndex = rowIndex;
+                  continue;
           }
 
           const { startTime, endTime } = getKaraokeLineBounds(rowLine);
           if (position >= startTime && position <= endTime) {
-                  return rowIndex;
+                  activeRowIndex = rowIndex;
+                  continue;
           }
 
           if (position >= startTime && startTime > latestStartedTime) {
@@ -4359,6 +4362,10 @@ const getActiveKaraokeVocalRowIndex = (vocalRows, line, position) => {
                   nearestRowIndex = rowIndex;
                   nearestDistance = distance;
           }
+  }
+
+  if (activeRowIndex >= 0) {
+          return activeRowIndex;
   }
 
   return latestStartedRowIndex >= 0 ? latestStartedRowIndex : nearestRowIndex;

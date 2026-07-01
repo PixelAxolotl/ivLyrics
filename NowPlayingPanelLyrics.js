@@ -1973,6 +1973,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             return -1;
         }
 
+        let activeRowIndex = -1;
         let nearestRowIndex = 0;
         let nearestDistance = Infinity;
         let latestStartedRowIndex = -1;
@@ -1982,7 +1983,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             const { startTime, endTime } = getVocalRowTimeBounds(vocalRows[rowIndex]);
 
             if (currentTime >= startTime && currentTime <= endTime) {
-                return rowIndex;
+                activeRowIndex = rowIndex;
+                continue;
             }
 
             if (currentTime >= startTime && startTime > latestStartedTime) {
@@ -1997,6 +1999,10 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 nearestRowIndex = rowIndex;
                 nearestDistance = distance;
             }
+        }
+
+        if (activeRowIndex >= 0) {
+            return activeRowIndex;
         }
 
         return latestStartedRowIndex >= 0 ? latestStartedRowIndex : nearestRowIndex;

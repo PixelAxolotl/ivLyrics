@@ -2910,38 +2910,37 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
 
             const trackInfo = {
                 uri: trackUri,
-                title: item.name,
-                artist: item.artists?.map(a => a.name).join(', ') || '',
-                album: item.album?.name || '',
-                duration: item.duration?.milliseconds || 0,
+                title: item.name || item.metadata?.title || '',
+                artist: item.artists?.map(a => a.name).join(', ') || item.metadata?.artist_name || '',
+                album: item.album?.name || item.metadata?.album_title || '',
+                duration: item.duration?.milliseconds || Number(item.metadata?.duration || 0),
                 trackId
             };
 
             panelDebug("[PanelLyrics] Loading lyrics for:", trackInfo.title);
 
-            if (!isLocalTrack) {
-                // LyricsService Extension이 로드될 때까지 대기
-                let retries = 0;
-                while (!window.LyricsService && retries < 20) {
-                    await new Promise(resolve => setTimeout(resolve, 300));
-                    retries++;
-                }
+            // 자동 제공자 조회와 가상 노래방 처리를 위해 LyricsService 로드를 기다린다.
+            let retries = 0;
+            while (!window.LyricsService && retries < 20) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+                retries++;
+            }
 
-                if (!window.LyricsService) {
-                    console.warn("[PanelLyrics] LyricsService Extension not loaded");
-                    loadingRef.current = false;
-                    return;
-                }
+            if (!window.LyricsService) {
+                console.warn("[PanelLyrics] LyricsService Extension not loaded");
+                loadingRef.current = false;
+                return;
             }
 
             try {
                 // ==========================================
                 // 1단계: 가사만 먼저 로드 (빠르게 표시)
                 // ==========================================
-                // Spotify 트랙은 LyricsAddonManager를 통해 로드하고, 로컬 곡은 저장된 로컬 가사만 사용한다.
-                let result = isLocalTrack
-                    ? getSavedPanelLocalLyrics(trackUri)
-                    : await window.LyricsService.getLyricsFromProviders(trackInfo);
+                // 로컬 곡은 저장된 LRC를 우선하고, 없으면 로컬 조회 지원 provider를 사용한다.
+                let result = isLocalTrack ? getSavedPanelLocalLyrics(trackUri) : null;
+                if (!result) {
+                    result = await window.LyricsService.getLyricsFromProviders(trackInfo);
+                }
                 if (isLocalTrack && result && window.PseudoKaraokeService?.applyToResult) {
                     result = await window.PseudoKaraokeService.applyToResult(result, trackInfo);
                 }

@@ -262,6 +262,9 @@
             unsynced: true    // 일반 가사 (텍스트만) - 지원
         },
 
+        // Spotify 트랙 ID 없이 제목/아티스트/앨범/재생 시간으로 검색 가능
+        supportsLocalTracks: true,
+
         // 【ivLyrics Sync 통합】 true면 커뮤니티 싱크 데이터 자동 적용
         useIvLyricsSync: true,
 

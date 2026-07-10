@@ -149,6 +149,7 @@
          * - description: string | { en: string, ko: string, ... } (설명)
          * - version: string (버전)
          * - supports: { karaoke: boolean, synced: boolean, unsynced: boolean } (지원 가사 유형)
+         * - supportsLocalTracks: boolean (선택, Spotify 트랙 ID 없이 조회 가능 여부)
          *
          * 필수 메서드:
          * - getLyrics(info): Promise<LyricsResult> (가사 가져오기)
@@ -487,14 +488,18 @@
          * @returns {Promise<LyricsResult|null>}
          */
         async getLyrics(info, forcedProviderId = null) {
-            const allEnabledProviders = this.getEnabledProviders();
-            const enabledProviders = forcedProviderId
-                ? allEnabledProviders.filter(provider => provider.id === forcedProviderId)
-                : allEnabledProviders;
             const trackId = window.LyricsService?.extractTrackId?.(info.uri)
                 || window.ivLyricsTrackIdentity?.extractTrackId?.(info.uri)
                 || '';
-            const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, info)
+            const lyricsCacheId = trackId || (info?.uri ? `local-uri:${info.uri}` : '');
+            const allEnabledProviders = this.getEnabledProviders();
+            const availableProviders = trackId
+                ? allEnabledProviders
+                : allEnabledProviders.filter(provider => provider.supportsLocalTracks === true);
+            const enabledProviders = forcedProviderId
+                ? availableProviders.filter(provider => provider.id === forcedProviderId)
+                : availableProviders;
+            const trackIsrc = (trackId ? await window.SyncDataService?.resolveTrackIsrc?.(trackId, info) : null)
                 || window.SyncDataService?.getTrackIsrc?.(trackId, info)
                 || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);
             console.info('[ivLyrics sync-data]', 'LyricsAddonManager:getLyrics:start', {
@@ -555,9 +560,9 @@
 
                     // 0. IndexedDB 캐시 확인
                     let result = null;
-                    if (trackId && window.LyricsService?.getCachedLyrics) {
+                    if (lyricsCacheId && window.LyricsService?.getCachedLyrics) {
                         try {
-                            const cached = await window.LyricsService.getCachedLyrics(trackId, provider.id);
+                            const cached = await window.LyricsService.getCachedLyrics(lyricsCacheId, provider.id);
                             const isProviderCacheCurrent = cached && (!provider.cacheVersion || cached.cacheVersion === provider.cacheVersion);
                             const isSyncDataRendererCurrent = !cached?.syncDataApplied
                                 || cached.syncDataRendererVersion === SYNC_DATA_RENDERER_VERSION;
@@ -616,7 +621,7 @@
                         window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Karaoke needed but not available, checking sync-data for ${provider.id}...`);
 
                         // sync-data 조회 시도
-                        if (window.SyncDataService?.getSyncData) {
+                        if ((trackId || trackIsrc) && window.SyncDataService?.getSyncData) {
                             try {
                                 const syncProvider = result.provider || provider.id;
                                 window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Fetching sync-data for isrc=${trackIsrc || 'missing'}, provider=${syncProvider}`);
@@ -736,10 +741,10 @@
                         });
 
                         // IndexedDB에 캐시 저장
-                        if (trackId && window.LyricsService?.cacheLyrics && !finalResult.skipCache) {
+                        if (lyricsCacheId && window.LyricsService?.cacheLyrics && !finalResult.skipCache) {
                             const cachePayload = { ...finalResult };
                             delete cachePayload.skipCache;
-                            window.LyricsService.cacheLyrics(trackId, provider.id, cachePayload);
+                            window.LyricsService.cacheLyrics(lyricsCacheId, provider.id, cachePayload);
                         }
 
                         return finalResult;

@@ -5282,23 +5282,6 @@ class LyricsContainer extends react.Component {
         if (typeof cachedMode === "number" && cachedMode !== -1) {
           tempState = { ...tempState, mode: cachedMode };
         }
-      } else if (!hasSpotifyTrackId) {
-        tempState = {
-          ...emptyState,
-          uri: requestUri,
-          lyricsRequestSeq: requestSeq,
-          artist: info.artist,
-          title: info.title,
-          coverUrl: info.image,
-          provider: "local",
-          contributors: null,
-          trackLyricsProviderOverride: null,
-          trackBackgroundOverride,
-          isLoading: false,
-          isCached: false,
-          error: null,
-          currentLyrics: [],
-        };
       } else {
         // Save current mode before loading to maintain UI consistency
         const currentMode = this.getCurrentMode();
@@ -6958,7 +6941,8 @@ class LyricsContainer extends react.Component {
       // 현재 트랙 정보
       const item = Spicetify.Player.data?.item;
       const trackUri = item?.uri;
-      const trackId = trackUri?.split(":").pop();
+      const spotifyTrackId = Utils.extractTrackId(trackUri);
+      const lyricsCacheId = spotifyTrackId || (trackUri ? `local-uri:${trackUri}` : null);
 
       if (item && trackUri) {
         const reloadInfo = this.infoFromTrack(item) || { uri: trackUri };
@@ -6994,13 +6978,15 @@ class LyricsContainer extends react.Component {
         }
       }
 
-      // clearCache가 true이고 트랙 정보가 있으면 로컬 캐시도 삭제
-      if (clearCache && trackId) {
-        ivLyricsDebug("[ivLyrics] Clearing track cache for:", trackId);
-        await LyricsCache.clearTrack(trackId);
-        window.Translator?.clearMemoryCache?.(trackId);
-        window.Translator?.clearInflightRequests?.(trackId);
-        const clearSyncDataIsrc = window.SyncDataService?.getTrackIsrc?.(trackId, {
+      // clearCache가 true이고 트랙 정보가 있으면 가사 캐시도 삭제
+      if (clearCache && lyricsCacheId) {
+        ivLyricsDebug("[ivLyrics] Clearing track cache for:", lyricsCacheId);
+        await LyricsCache.clearTrack(lyricsCacheId);
+      }
+      if (clearCache && spotifyTrackId) {
+        window.Translator?.clearMemoryCache?.(spotifyTrackId);
+        window.Translator?.clearInflightRequests?.(spotifyTrackId);
+        const clearSyncDataIsrc = window.SyncDataService?.getTrackIsrc?.(spotifyTrackId, {
           item,
           title: item?.name,
           artist: item?.artists,

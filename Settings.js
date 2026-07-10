@@ -5219,8 +5219,10 @@ const ConfigModal = ({
         "settingsAdvanced.multiVocalColors.title",
         "settingsAdvanced.multiVocalColors.subtitle",
         "settingsAdvanced.multiVocalColors.description",
+        "settingsAdvanced.multiVocalColors.useCreatorColors.label",
+        "settingsAdvanced.multiVocalColors.useCreatorColors.desc",
       ],
-      keywords: ["multi vocal speaker color male female duet karaoke"]
+      keywords: ["multi vocal speaker color male female duet karaoke creator custom sync data"]
     },
 
     // 외관 탭
@@ -11194,6 +11196,25 @@ const ConfigModal = ({
           title: I18n.t("settingsAdvanced.multiVocalColors.title") || "Multi-vocal Colors",
           subtitle: I18n.t("settingsAdvanced.multiVocalColors.subtitle") || "Customize male, female, and duet speaker colors.",
           sectionKey: "multi-vocal-colors",
+        }),
+        react.createElement(OptionList, {
+          items: [
+            {
+              desc: I18n.t("settingsAdvanced.multiVocalColors.useCreatorColors.label") || "Use sync creator custom colors",
+              key: "sync-data-custom-speaker-colors-enabled",
+              info: I18n.t("settingsAdvanced.multiVocalColors.useCreatorColors.desc") || "Use custom speaker colors embedded by sync creators. When disabled, CUSTOM speakers use color 1 from their category.",
+              type: ConfigSlider,
+              defaultValue: CONFIG.visual["sync-data-custom-speaker-colors-enabled"] ?? true,
+            },
+          ],
+          onChange: (name, value) => {
+            CONFIG.visual[name] = value;
+            StorageManager.saveConfig(name, value);
+            lyricContainerUpdate?.();
+            window.dispatchEvent(new CustomEvent("ivLyrics", {
+              detail: { type: "config", name, value },
+            }));
+          },
         }),
         react.createElement(ConfigMultiVocalColorSettings),
         react.createElement(SectionTitle, {

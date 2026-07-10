@@ -839,6 +839,10 @@ window.LANG_ID = {
       "maleGroup": "Pria",
       "femaleGroup": "Wanita",
       "duetGroup": "Duet",
+      "useCreatorColors": {
+        "label": "Gunakan warna kustom pembuat sinkronisasi",
+        "desc": "Gunakan warna vokal yang disematkan pembuat sinkronisasi dalam data. Jika dimatikan, vokal CUSTOM memakai warna 1 dari kategorinya."
+      },
       "reset": "Reset warna",
       "resetDone": "Warna multi-vokal telah direset.",
       "invalidColor": "Masukkan warna HEX yang valid."
@@ -2297,6 +2301,9 @@ window.LANG_ID = {
     "kindPop": "Pop",
     "select": "Pilih",
     "speakerLabel": "Penyanyi",
+    "speakerCustomColor": "Warna vokal kustom",
+    "speakerCustomColorDesc": "Warna ini disimpan dalam data sinkronisasi dan ditampilkan kepada pengguna yang mengizinkan warna pembuat.",
+    "speakerCustomColorInvalid": "Masukkan warna HEX yang valid.",
     "typeLabel": "Efek teks",
     "unselectedType": "Efek teks belum dipilih",
     "allLine": "Seluruh baris",

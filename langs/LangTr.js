@@ -839,6 +839,10 @@ window.LANG_TR = {
     "maleGroup": "Erkek",
     "femaleGroup": "Kadın",
     "duetGroup": "Düet",
+    "useCreatorColors": {
+      "label": "Senkronizasyon oluşturucunun özel renklerini kullan",
+      "desc": "Senkronizasyon oluşturucunun veriye eklediği vokal renklerini kullanır. Kapatıldığında CUSTOM vokaller kendi kategorisinin 1. rengini kullanır."
+    },
     "reset": "Renkleri sıfırla",
     "resetDone": "Çoklu vokal renkleri sıfırlandı.",
     "invalidColor": "Geçerli bir HEX renk kodu girin."
@@ -2298,6 +2302,9 @@ window.LANG_TR = {
     "kindPop": "Patlama",
     "select": "Seç",
     "speakerLabel": "Şarkıcı",
+    "speakerCustomColor": "Özel vokal rengi",
+    "speakerCustomColorDesc": "Bu renk senkronizasyon verisine kaydedilir ve oluşturucu renklerine izin veren kullanıcılara gösterilir.",
+    "speakerCustomColorInvalid": "Geçerli bir HEX renk kodu girin.",
     "typeLabel": "Metin efekti",
     "unselectedType": "Metin efekti seçilmedi",
     "allLine": "Tam satır",

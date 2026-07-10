@@ -839,6 +839,10 @@ window.LANG_VI = {
       "maleGroup": "Nam",
       "femaleGroup": "Nữ",
       "duetGroup": "Song ca",
+      "useCreatorColors": {
+        "label": "Dùng màu tùy chỉnh của người tạo đồng bộ",
+        "desc": "Dùng màu giọng hát do người tạo đồng bộ nhúng vào dữ liệu. Khi tắt, giọng CUSTOM dùng màu số 1 của nhóm tương ứng."
+      },
       "reset": "Đặt lại màu",
       "resetDone": "Đã đặt lại màu nhiều giọng hát.",
       "invalidColor": "Nhập màu HEX hợp lệ."
@@ -2298,6 +2302,9 @@ window.LANG_VI = {
     "kindPop": "Pop",
     "select": "Chọn",
     "speakerLabel": "Người hát",
+    "speakerCustomColor": "Màu giọng hát tùy chỉnh",
+    "speakerCustomColorDesc": "Màu này được lưu trong dữ liệu đồng bộ và hiển thị cho người dùng cho phép màu của người tạo.",
+    "speakerCustomColorInvalid": "Nhập màu HEX hợp lệ.",
     "typeLabel": "Hiệu ứng chữ",
     "unselectedType": "Chưa chọn hiệu ứng chữ",
     "allLine": "Toàn bộ dòng",

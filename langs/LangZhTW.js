@@ -839,6 +839,10 @@ window.LANG_ZH_TW = {
       "maleGroup": "男聲",
       "femaleGroup": "女聲",
       "duetGroup": "合唱",
+      "useCreatorColors": {
+        "label": "使用同步製作者的自訂顏色",
+        "desc": "使用同步製作者嵌入資料的聲部顏色。關閉後，CUSTOM 聲部將使用對應分類的第 1 種顏色。"
+      },
       "reset": "重設顏色",
       "resetDone": "多聲部顏色已重設。",
       "invalidColor": "請輸入有效的 HEX 顏色。"
@@ -2298,6 +2302,9 @@ window.LANG_ZH_TW = {
     "kindPop": "彈出",
     "select": "選擇",
     "speakerLabel": "演唱者",
+    "speakerCustomColor": "自訂聲部顏色",
+    "speakerCustomColorDesc": "此顏色會存入同步資料，並向允許製作者顏色的使用者顯示。",
+    "speakerCustomColorInvalid": "請輸入有效的 HEX 顏色。",
     "typeLabel": "文字效果",
     "unselectedType": "未選擇文字效果",
     "allLine": "整行",

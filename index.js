@@ -1912,6 +1912,10 @@ const CONFIG = {
       StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-4") || "#dec9ff",
     "multi-vocal-speaker-color-duet-5":
       StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-5") || "#e9dcff",
+    "sync-data-custom-speaker-colors-enabled": StorageManager.get(
+      "ivLyrics:visual:sync-data-custom-speaker-colors-enabled",
+      true
+    ),
     colorful: StorageManager.get("ivLyrics:visual:colorful", false),
     "gradient-background": StorageManager.get(
       "ivLyrics:visual:gradient-background"

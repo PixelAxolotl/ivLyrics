@@ -839,6 +839,10 @@ window.LANG_IT = {
       "maleGroup": "Maschile",
       "femaleGroup": "Femminile",
       "duetGroup": "Duetto",
+      "useCreatorColors": {
+        "label": "Usa i colori personalizzati del creatore della sincronizzazione",
+        "desc": "Usa i colori delle voci incorporati dal creatore della sincronizzazione. Se disattivato, le voci CUSTOM usano il colore 1 della propria categoria."
+      },
       "reset": "Reimposta colori",
       "resetDone": "I colori multi-vocale sono stati reimpostati.",
       "invalidColor": "Inserisci un colore HEX valido."
@@ -2298,6 +2302,9 @@ window.LANG_IT = {
     "kindPop": "Pop",
     "select": "Seleziona",
     "speakerLabel": "Interprete",
+    "speakerCustomColor": "Colore voce personalizzato",
+    "speakerCustomColorDesc": "Questo colore viene salvato nei dati di sincronizzazione e mostrato agli utenti che consentono i colori del creatore.",
+    "speakerCustomColorInvalid": "Inserisci un colore HEX valido.",
     "typeLabel": "Effetto testo",
     "unselectedType": "Effetto testo non selezionato",
     "allLine": "Riga intera",

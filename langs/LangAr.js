@@ -839,6 +839,10 @@ window.LANG_AR = {
       "maleGroup": "ذكر",
       "femaleGroup": "أنثى",
       "duetGroup": "ثنائي",
+      "useCreatorColors": {
+        "label": "استخدام الألوان المخصصة لمنشئ المزامنة",
+        "desc": "يستخدم ألوان الأصوات التي يضمّنها منشئ المزامنة في البيانات. عند إيقافه، تستخدم أصوات CUSTOM اللون الأول من فئتها."
+      },
       "reset": "إعادة ضبط الألوان",
       "resetDone": "تمت إعادة ضبط ألوان الأصوات المتعددة.",
       "invalidColor": "أدخل لون HEX صالحًا."
@@ -2297,6 +2301,9 @@ window.LANG_AR = {
     "kindPop": "فرقعة",
     "select": "اختر",
     "speakerLabel": "المؤدي",
+    "speakerCustomColor": "لون صوت مخصص",
+    "speakerCustomColorDesc": "يُحفظ هذا اللون في بيانات المزامنة ويظهر للمستخدمين الذين يسمحون بألوان المنشئ.",
+    "speakerCustomColorInvalid": "أدخل لون HEX صالحًا.",
     "typeLabel": "تأثير النص",
     "unselectedType": "لم يتم اختيار تأثير النص",
     "allLine": "السطر الكامل",

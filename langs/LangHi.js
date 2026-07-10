@@ -839,6 +839,10 @@ window.LANG_HI = {
       "maleGroup": "पुरुष",
       "femaleGroup": "महिला",
       "duetGroup": "डुएट",
+      "useCreatorColors": {
+        "label": "सिंक निर्माता के कस्टम रंग उपयोग करें",
+        "desc": "सिंक निर्माता द्वारा डेटा में जोड़े गए वोकल रंग उपयोग करता है। बंद होने पर CUSTOM वोकल अपनी श्रेणी का रंग 1 उपयोग करते हैं।"
+      },
       "reset": "रंग रीसेट करें",
       "resetDone": "मल्टी-वोकल रंग रीसेट कर दिए गए।",
       "invalidColor": "मान्य HEX रंग दर्ज करें।"
@@ -2297,6 +2301,9 @@ window.LANG_HI = {
     "kindPop": "पॉप",
     "select": "चुनें",
     "speakerLabel": "गायक",
+    "speakerCustomColor": "कस्टम वोकल रंग",
+    "speakerCustomColorDesc": "यह रंग सिंक डेटा में सहेजा जाता है और निर्माता के रंगों की अनुमति देने वाले उपयोगकर्ताओं को दिखाया जाता है।",
+    "speakerCustomColorInvalid": "मान्य HEX रंग दर्ज करें।",
     "typeLabel": "टेक्स्ट प्रभाव",
     "unselectedType": "टेक्स्ट प्रभाव चयनित नहीं",
     "allLine": "पूरी पंक्ति",

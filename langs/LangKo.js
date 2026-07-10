@@ -839,6 +839,10 @@ window.LANG_KO = {
       "maleGroup": "남성",
       "femaleGroup": "여성",
       "duetGroup": "듀엣",
+      "useCreatorColors": {
+        "label": "싱크 제작자 커스텀 색상 사용",
+        "desc": "싱크 제작자가 데이터에 지정한 보컬 색상을 사용합니다. 끄면 CUSTOM 스피커는 해당 분류의 1번 색상을 사용합니다."
+      },
       "reset": "색상 초기화",
       "resetDone": "멀티 보컬 색상을 초기화했습니다.",
       "invalidColor": "올바른 HEX 색상을 입력하세요."
@@ -2298,6 +2302,9 @@ window.LANG_KO = {
     "kindPop": "팝",
     "select": "선택",
     "speakerLabel": "스피커",
+    "speakerCustomColor": "커스텀 보컬 색상",
+    "speakerCustomColorDesc": "이 색상은 싱크 데이터에 저장되며 제작자 색상을 허용한 사용자에게 표시됩니다.",
+    "speakerCustomColorInvalid": "올바른 HEX 색상을 입력하세요.",
     "typeLabel": "텍스트 효과",
     "unselectedType": "텍스트 효과 미선택",
     "allLine": "전체 줄",

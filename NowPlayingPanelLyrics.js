@@ -1896,6 +1896,37 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
 
     const areTextEffectsEnabled = () => getVisualSetting('karaoke-text-effects', true) !== false;
 
+    const getPanelSpeakerPresentation = (speaker, speakerColor = '') => {
+        const presentation = window.ivLyricsSpeakerColors?.getPresentation?.(speaker, speakerColor);
+        if (presentation) return presentation;
+        const normalized = String(speaker || '').trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').toUpperCase();
+        const effectiveSpeaker = {
+            'MALE CUSTOM': 'MALE 1',
+            'FEMALE CUSTOM': 'FEMALE 1',
+            'DUET CUSTOM': 'DUET 1'
+        }[normalized] || normalized;
+        const normalizedColor = /^#[0-9a-f]{6}$/i.test(String(speakerColor || '').trim())
+            ? String(speakerColor).trim().toLowerCase()
+            : '';
+        const creatorColorEnabled = getVisualSetting('sync-data-custom-speaker-colors-enabled', true) !== false;
+        return {
+            effectiveSpeaker,
+            speakerClass: String(effectiveSpeaker || '').trim().toLowerCase().replace(/[_\s]+/g, '-').replace(/[^a-z0-9-]/g, ''),
+            creatorColor: normalized.endsWith(' CUSTOM') && creatorColorEnabled ? normalizedColor : ''
+        };
+    };
+
+    const getPanelSpeakerStyle = (speaker, speakerColor = '') => {
+        const presentation = getPanelSpeakerPresentation(speaker, speakerColor);
+        if (!presentation.creatorColor) return {};
+        const cssVariable = window.ivLyricsSpeakerColors?.getCssVariableName?.(presentation.effectiveSpeaker)
+            || (presentation.speakerClass ? `--ivlyrics-multi-vocal-speaker-color-${presentation.speakerClass}` : '');
+        return {
+            ...(cssVariable ? { [cssVariable]: presentation.creatorColor } : {}),
+            '--ivlyrics-panel-vocal-color': presentation.creatorColor
+        };
+    };
+
     const getTextEffectKindClassParts = (kind) => {
         const kindClass = String(kind || '').trim().toLowerCase();
         if (!kindClass) return [];
@@ -1909,17 +1940,14 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
 
     const getVocalRowsFromLine = (line) => {
         if (!line?.vocals?.lead?.syllables) return null;
-        const normalizeSpeakerClass = (speaker) => String(speaker || '')
-            .trim()
-            .toLowerCase()
-            .replace(/[_\s]+/g, '-')
-            .replace(/[^a-z0-9-]/g, '');
         const rows = [{
             key: line.vocals.lead.id || 'lead',
             role: line.vocals.lead.role || 'lead',
             speaker: line.vocals.lead.speaker || '',
+            speakerColor: line.vocals.lead['speaker-color'] || '',
             kind: line.vocals.lead.kind || 'vocal',
-            speakerClass: normalizeSpeakerClass(line.vocals.lead.speaker),
+            speakerClass: getPanelSpeakerPresentation(line.vocals.lead.speaker, line.vocals.lead['speaker-color']).speakerClass,
+            speakerStyle: getPanelSpeakerStyle(line.vocals.lead.speaker, line.vocals.lead['speaker-color']),
             phonetic: line.vocals.lead.phonetic || '',
             translation: line.vocals.lead.translation || '',
             text: line.vocals.lead.text || '',
@@ -1933,8 +1961,10 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                         key: part.id || `background-${index}`,
                         role: part.role || 'background',
                         speaker: part.speaker || '',
+                        speakerColor: part['speaker-color'] || '',
                         kind: part.kind || 'vocal',
-                        speakerClass: normalizeSpeakerClass(part.speaker),
+                        speakerClass: getPanelSpeakerPresentation(part.speaker, part['speaker-color']).speakerClass,
+                        speakerStyle: getPanelSpeakerStyle(part.speaker, part['speaker-color']),
                         phonetic: part.phonetic || '',
                         translation: part.translation || '',
                         text: part.text || '',
@@ -2505,7 +2535,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     // ============================================
     // 노래방 라인 컴포넌트 (syllables 포함)
     // ============================================
-    const KaraokeLine = memo(({ syllables, vocalRows, isActive, isPast, phonetic, translation, lineClass, textEffectRevision = 0 }) => {
+    const KaraokeLine = memo(({ syllables, vocalRows, isActive, isPast, phonetic, translation, lineClass, lineStyle, textEffectRevision = 0 }) => {
         const isVocalStack = Array.isArray(vocalRows) && vocalRows.length > 1;
         const shouldUseVocalRowAnchor = isActive && isVocalStack && vocalRows.length >= VOCAL_STACK_CENTER_THRESHOLD;
         const vocalStackRef = useRef(null);
@@ -2622,6 +2652,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             return react.createElement("div", {
                 key: rowKey,
                 className: partClassName,
+                style: row.speakerStyle,
                 "data-panel-vocal-row-index": rowIndex
             },
                 renderKaraokeSyllables(row.syllables, rowKey, rowClassName),
@@ -2656,7 +2687,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             }, stackChildren)
             : renderKaraokeSyllables(syllables, "main", "ivlyrics-panel-line-karaoke");
 
-        return react.createElement("div", { className: lineClass },
+        return react.createElement("div", { className: lineClass, style: lineStyle },
             // 노래방 가사 (글자별 타이밍)
             karaokeContent,
             // 발음
@@ -2673,6 +2704,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         return prevProps.isActive === nextProps.isActive &&
             prevProps.isPast === nextProps.isPast &&
             prevProps.lineClass === nextProps.lineClass &&
+            prevProps.lineStyle === nextProps.lineStyle &&
             prevProps.textEffectRevision === nextProps.textEffectRevision &&
             prevProps.phonetic === nextProps.phonetic &&
             prevProps.translation === nextProps.translation &&
@@ -2754,8 +2786,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     // ============================================
     // 일반 가사 라인 컴포넌트
     // ============================================
-    const NormalLine = memo(({ displayText, phonetic, translation, lineClass }) => {
-        return react.createElement("div", { className: lineClass },
+    const NormalLine = memo(({ displayText, phonetic, translation, lineClass, lineStyle }) => {
+        return react.createElement("div", { className: lineClass, style: lineStyle },
             react.createElement("div", {
                 className: "ivlyrics-panel-line-text",
                 dangerouslySetInnerHTML: displayText ? { __html: displayText } : undefined
@@ -2769,6 +2801,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         );
     }, (prevProps, nextProps) => {
         return prevProps.lineClass === nextProps.lineClass &&
+            prevProps.lineStyle === nextProps.lineStyle &&
             prevProps.displayText === nextProps.displayText &&
             prevProps.phonetic === nextProps.phonetic &&
             prevProps.translation === nextProps.translation;
@@ -2781,11 +2814,9 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     const LyricLine = memo(({ line, lineIndex, lineCount, isActive, isPast, isFuture, translation, phonetic, isPlaceholder, instrumentalBreakRevision = 0, textEffectRevision = 0 }) => {
         const vocalRows = useMemo(() => getVocalRowsFromLine(line), [line]);
         const hasVocalStack = Array.isArray(vocalRows) && vocalRows.length > 1;
-        const speakerClass = String(line?.speaker || '')
-            .trim()
-            .toLowerCase()
-            .replace(/[_\s]+/g, '-')
-            .replace(/[^a-z0-9-]/g, '');
+        const speakerPresentation = getPanelSpeakerPresentation(line?.speaker, line?.['speaker-color']);
+        const speakerClass = speakerPresentation.speakerClass;
+        const lineStyle = getPanelSpeakerStyle(line?.speaker, line?.['speaker-color']);
         const lineKindClasses = getTextEffectKindClassParts(line?.kind);
         const lineClass = `ivlyrics-panel-line ${isActive ? 'active' : ''} ${isPast ? 'past' : ''} ${isFuture ? 'future' : ''} ${isPlaceholder ? 'placeholder' : ''} ${hasVocalStack ? 'vocal-stack' : ''} ${lineKindClasses.join(' ')} ${speakerClass ? `speaker-${speakerClass}` : ''}`;
         const interludeInfo = isPlaceholder ? { isInterlude: false, durationMs: 0 } : (line?.interludeInfo || getInterludeInfo(line, lineIndex, lineCount));
@@ -2821,6 +2852,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 phonetic,
                 translation,
                 lineClass,
+                lineStyle,
                 textEffectRevision
             });
         }
@@ -2830,7 +2862,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             displayText,
             phonetic,
             translation,
-            lineClass
+            lineClass,
+            lineStyle
         });
     }, (prevProps, nextProps) => {
         // currentTime 제거됨 - 라인 상태 변경 시에만 리렌더링
@@ -3237,7 +3270,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     setAutoInstrumentalBreakEnabled(isAutoInstrumentalBreakEnabled());
                     setActiveTrailingInterludeKey(null);
                 }
-                if (event.detail?.name === 'karaoke-text-effects') {
+                if (event.detail?.name === 'karaoke-text-effects' ||
+                    event.detail?.name === 'sync-data-custom-speaker-colors-enabled') {
                     setTextEffectRevision((revision) => revision + 1);
                 }
                 if (event.detail?.name === 'instrumental-break-icon' ||

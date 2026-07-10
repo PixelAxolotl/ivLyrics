@@ -839,6 +839,10 @@ window.LANG_BN = {
       "maleGroup": "পুরুষ",
       "femaleGroup": "নারী",
       "duetGroup": "ডুয়েট",
+      "useCreatorColors": {
+        "label": "সিঙ্ক নির্মাতার কাস্টম রং ব্যবহার করুন",
+        "desc": "সিঙ্ক নির্মাতার ডেটায় যোগ করা ভোকাল রং ব্যবহার করে। বন্ধ থাকলে CUSTOM ভোকাল সংশ্লিষ্ট বিভাগের ১ নম্বর রং ব্যবহার করে।"
+      },
       "reset": "রং রিসেট করুন",
       "resetDone": "মাল্টি-ভোকাল রং রিসেট করা হয়েছে।",
       "invalidColor": "একটি বৈধ HEX রং লিখুন।"
@@ -2298,6 +2302,9 @@ window.LANG_BN = {
     "kindPop": "পপ",
     "select": "নির্বাচন করুন",
     "speakerLabel": "গায়ক",
+    "speakerCustomColor": "কাস্টম ভোকাল রং",
+    "speakerCustomColorDesc": "এই রং সিঙ্ক ডেটায় সংরক্ষিত হয় এবং নির্মাতার রং অনুমোদনকারী ব্যবহারকারীদের দেখানো হয়।",
+    "speakerCustomColorInvalid": "একটি বৈধ HEX রং লিখুন।",
     "typeLabel": "টেক্সট ইফেক্ট",
     "unselectedType": "টেক্সট ইফেক্ট নির্বাচিত নয়",
     "allLine": "সম্পূর্ণ লাইন",

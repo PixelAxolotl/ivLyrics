@@ -839,6 +839,10 @@ window.LANG_SV = {
       "maleGroup": "Manlig",
       "femaleGroup": "Kvinnlig",
       "duetGroup": "Duett",
+      "useCreatorColors": {
+        "label": "Använd synkskaparens anpassade färger",
+        "desc": "Använder röstfärger som synkskaparen bäddat in. När det är avstängt använder CUSTOM-röster färg 1 i sin kategori."
+      },
       "reset": "Återställ färger",
       "resetDone": "Färgerna för flera sångare har återställts.",
       "invalidColor": "Ange en giltig HEX-färg."
@@ -2297,6 +2301,9 @@ window.LANG_SV = {
     "kindPop": "Pop",
     "select": "Välj",
     "speakerLabel": "Sångare",
+    "speakerCustomColor": "Anpassad röstfärg",
+    "speakerCustomColorDesc": "Färgen sparas i synkdata och visas för användare som tillåter skaparens färger.",
+    "speakerCustomColorInvalid": "Ange en giltig HEX-färg.",
     "typeLabel": "Texteffekt",
     "unselectedType": "Texteffekt inte vald",
     "allLine": "Hela raden",

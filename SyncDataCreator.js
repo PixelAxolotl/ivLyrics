@@ -11,9 +11,20 @@ const SYNC_CREATOR_HANGUL_JAMO_ONLY_REGEX = /^[\u3131-\u3163\u1100-\u11ff]+$/u;
 const SYNC_CREATOR_SPEAKER_OPTIONS = [
 	'NORMAL',
 	...Array.from({ length: 5 }, (_, index) => `MALE ${index + 1}`),
+	'MALE CUSTOM',
 	...Array.from({ length: 5 }, (_, index) => `FEMALE ${index + 1}`),
-	...Array.from({ length: 5 }, (_, index) => `DUET ${index + 1}`)
+	'FEMALE CUSTOM',
+	...Array.from({ length: 5 }, (_, index) => `DUET ${index + 1}`),
+	'DUET CUSTOM'
 ];
+const SYNC_CREATOR_CUSTOM_SPEAKER_FALLBACKS = {
+	'MALE CUSTOM': 'MALE 1',
+	'FEMALE CUSTOM': 'FEMALE 1',
+	'DUET CUSTOM': 'DUET 1'
+};
+const SYNC_CREATOR_BULK_SPEAKER_OPTIONS = SYNC_CREATOR_SPEAKER_OPTIONS.filter(
+	(value) => !Object.prototype.hasOwnProperty.call(SYNC_CREATOR_CUSTOM_SPEAKER_FALLBACKS, value)
+);
 const SYNC_CREATOR_SPEAKER_TEXT_COLORS = {
 	'NORMAL': '#f2f4f7',
 	'MALE 1': '#e6f2ff',
@@ -257,11 +268,51 @@ const normalizeSyncCreatorSpeaker = (value) => {
 	return SYNC_CREATOR_SPEAKER_OPTIONS.includes(normalized) ? normalized : '';
 };
 
-const getSyncCreatorSpeakerTextColor = (value) => {
+const isSyncCreatorCustomSpeaker = (value) => (
+	!!SYNC_CREATOR_CUSTOM_SPEAKER_FALLBACKS[normalizeSyncCreatorSpeaker(value)]
+);
+
+const normalizeSyncCreatorSpeakerColor = (value) => {
+	const helperColor = window.ivLyricsSpeakerColors?.normalizeColor?.(value);
+	if (helperColor) return helperColor;
+	const color = String(value || '').trim();
+	if (/^#[0-9a-f]{6}$/i.test(color)) return color.toLowerCase();
+	if (/^#[0-9a-f]{3}$/i.test(color)) {
+		return `#${color.slice(1).split('').map(char => char + char).join('')}`.toLowerCase();
+	}
+	return '';
+};
+
+const getSyncCreatorCustomSpeakerDefaultColor = (value) => {
+	const speaker = normalizeSyncCreatorSpeaker(value);
+	const fallbackSpeaker = SYNC_CREATOR_CUSTOM_SPEAKER_FALLBACKS[speaker];
+	return fallbackSpeaker
+		? (SYNC_CREATOR_SPEAKER_TEXT_COLORS[fallbackSpeaker]
+			|| window.ivLyricsSpeakerColors?.getTextColor?.(fallbackSpeaker)
+			|| '#ffffff')
+		: '';
+};
+
+const sanitizeSyncCreatorSpeakerColor = (speaker, color, useDefault = false) => {
+	if (!isSyncCreatorCustomSpeaker(speaker)) return '';
+	return normalizeSyncCreatorSpeakerColor(color)
+		|| (useDefault ? getSyncCreatorCustomSpeakerDefaultColor(speaker) : '');
+};
+
+const isSyncCreatorSpeakerMetaComplete = (value) => {
+	const speaker = normalizeSyncCreatorSpeaker(value?.speaker);
+	if (!speaker) return false;
+	return !isSyncCreatorCustomSpeaker(speaker)
+		|| !!sanitizeSyncCreatorSpeakerColor(speaker, value?.['speaker-color']);
+};
+
+const getSyncCreatorSpeakerTextColor = (value, speakerColor = '') => {
 	const speaker = normalizeSyncCreatorSpeaker(value);
 	if (!speaker) return 'var(--spice-text)';
-	return window.ivLyricsSpeakerColors?.getTextColor?.(speaker)
-		|| SYNC_CREATOR_SPEAKER_TEXT_COLORS[speaker]
+	const fallbackSpeaker = SYNC_CREATOR_CUSTOM_SPEAKER_FALLBACKS[speaker] || speaker;
+	return sanitizeSyncCreatorSpeakerColor(speaker, speakerColor)
+		|| window.ivLyricsSpeakerColors?.getTextColor?.(fallbackSpeaker)
+		|| SYNC_CREATOR_SPEAKER_TEXT_COLORS[fallbackSpeaker]
 		|| 'var(--spice-text)';
 };
 
@@ -1254,6 +1305,18 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const sanitizeSyncCreatorParallel = (parallel, options = {}) => {
 		if (!parallel || typeof parallel !== 'object') return parallel;
 		const nextParallel = { ...parallel };
+		if (Array.isArray(nextParallel.parts)) {
+			nextParallel.parts = nextParallel.parts.map((part) => {
+				if (!part || typeof part !== 'object') return part;
+				const nextPart = { ...part };
+				const speaker = normalizeSyncCreatorSpeaker(nextPart.speaker);
+				if (speaker) nextPart.speaker = speaker;
+				const speakerColor = sanitizeSyncCreatorSpeakerColor(speaker, nextPart['speaker-color'], true);
+				if (speakerColor) nextPart['speaker-color'] = speakerColor;
+				else delete nextPart['speaker-color'];
+				return nextPart;
+			});
+		}
 		const hiddenRanges = normalizeSyncCreatorHiddenRanges(nextParallel.hiddenRanges);
 		if (hiddenRanges.length > 0) {
 			nextParallel.hiddenRanges = hiddenRanges;
@@ -1335,6 +1398,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		let migratedParallelRanges = false;
 		const lines = data.lines.map((line) => {
 			const nextLine = { ...line };
+			const speaker = normalizeSyncCreatorSpeaker(nextLine.speaker);
+			if (speaker) nextLine.speaker = speaker;
+			const speakerColor = sanitizeSyncCreatorSpeakerColor(speaker, nextLine['speaker-color'], true);
+			if (speakerColor) nextLine['speaker-color'] = speakerColor;
+			else delete nextLine['speaker-color'];
 			if (nextLine.parallel) {
 				const normalized = normalizeSyncCreatorParentheticalParallelRanges(nextLine.parallel, fullTextChars);
 				nextLine.parallel = normalized.parallel;
@@ -1627,6 +1695,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						...part,
 						role: existing?.role || part.role,
 						speaker: normalizeSyncCreatorSpeaker(existing?.speaker || part.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER,
+						'speaker-color': sanitizeSyncCreatorSpeakerColor(
+							existing?.speaker || part.speaker,
+							existing?.['speaker-color'] || part['speaker-color'],
+							true
+						) || undefined,
 						kind: normalizeSyncCreatorKind(existing?.kind || part.kind) || SYNC_CREATOR_DEFAULT_KIND,
 						chars: Array.isArray(existing?.chars) ? existing.chars : undefined
 					};
@@ -2408,10 +2481,20 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const canMergeCurrentLineWithNext = !currentLineCoveredByPrevious
 		&& currentMergedLineIndexes.length < SYNC_CREATOR_MAX_MERGED_LINES
 		&& currentNextMergeLineIndex < lyricsLines.length;
-	const currentLineMeta = useMemo(() => ({
-		speaker: normalizeSyncCreatorSpeaker(lineMetaDrafts[currentLineStart]?.speaker || currentExistingLineData?.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER,
-		kind: normalizeSyncCreatorKind(lineMetaDrafts[currentLineStart]?.kind || currentExistingLineData?.kind) || SYNC_CREATOR_DEFAULT_KIND
-	}), [lineMetaDrafts, currentLineStart, currentExistingLineData]);
+	const currentLineMeta = useMemo(() => {
+		const draft = lineMetaDrafts[currentLineStart] || {};
+		const speaker = normalizeSyncCreatorSpeaker(draft.speaker || currentExistingLineData?.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
+		const hasColorDraft = Object.prototype.hasOwnProperty.call(draft, 'speaker-color');
+		return {
+			speaker,
+			'speaker-color': sanitizeSyncCreatorSpeakerColor(
+				speaker,
+				hasColorDraft ? draft['speaker-color'] : currentExistingLineData?.['speaker-color'],
+				true
+			),
+			kind: normalizeSyncCreatorKind(draft.kind || currentExistingLineData?.kind) || SYNC_CREATOR_DEFAULT_KIND
+		};
+	}, [lineMetaDrafts, currentLineStart, currentExistingLineData]);
 	const getParallelTemplateForLine = useCallback((lineChars, lineStart) => {
 		const splitPoints = [
 			...getAutoMergeSplitPointsForLine(lineStart),
@@ -2453,9 +2536,16 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			...merged,
 			parts: merged.parts.map((part) => {
 				const draft = parallelPartMetaDrafts[`${currentLineStart}:${part.id}`] || {};
+				const speaker = normalizeSyncCreatorSpeaker(draft.speaker || part.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
+				const hasColorDraft = Object.prototype.hasOwnProperty.call(draft, 'speaker-color');
 				return {
 					...part,
-					speaker: normalizeSyncCreatorSpeaker(draft.speaker || part.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER,
+					speaker,
+					'speaker-color': sanitizeSyncCreatorSpeakerColor(
+						speaker,
+						hasColorDraft ? draft['speaker-color'] : part['speaker-color'],
+						true
+					),
 					kind: normalizeSyncCreatorKind(draft.kind || part.kind) || SYNC_CREATOR_DEFAULT_KIND
 				};
 			})
@@ -2545,7 +2635,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			if (!existingPart || !Array.isArray(existingPart.chars) || existingPart.chars.length !== expectedChars) {
 				return part.id;
 			}
-			if (!(normalizeSyncCreatorSpeaker(existingPart.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER) || !(normalizeSyncCreatorKind(existingPart.kind) || SYNC_CREATOR_DEFAULT_KIND)) {
+			if (!isSyncCreatorSpeakerMetaComplete(existingPart) || !(normalizeSyncCreatorKind(existingPart.kind) || SYNC_CREATOR_DEFAULT_KIND)) {
 				return part.id;
 			}
 		}
@@ -2555,9 +2645,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		if (!multiVocalMode) return true;
 		if (hasCurrentParallelParts) {
 			const targetPart = activeParallelPart || currentParallelParts[0] || null;
-			return !!(normalizeSyncCreatorSpeaker(targetPart?.speaker) && normalizeSyncCreatorKind(targetPart?.kind));
+			return !!(isSyncCreatorSpeakerMetaComplete(targetPart) && normalizeSyncCreatorKind(targetPart?.kind));
 		}
-		return !!(normalizeSyncCreatorSpeaker(currentLineMeta.speaker) && normalizeSyncCreatorKind(currentLineMeta.kind));
+		return !!(isSyncCreatorSpeakerMetaComplete(currentLineMeta) && normalizeSyncCreatorKind(currentLineMeta.kind));
 	}, [multiVocalMode, hasCurrentParallelParts, activeParallelPart, currentParallelParts, currentLineMeta]);
 	const showMissingMetaToast = useCallback(() => {
 		Toast.error(I18n.t('syncCreator.multiVocalMetaRequired') || 'Select SPEAKER and text effect for the current vocal first.');
@@ -3826,11 +3916,17 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							: null;
 				if (!Array.isArray(chars) || chars.length !== lineChars.length) return null;
 
+				const speaker = normalizeSyncCreatorSpeaker(directLine?.speaker || existingPart?.speaker || currentLineData?.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
 				return {
 					start: lineStart,
 					end: lineEnd,
 					chars,
-					speaker: normalizeSyncCreatorSpeaker(directLine?.speaker || existingPart?.speaker || currentLineData?.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER,
+					speaker,
+					'speaker-color': sanitizeSyncCreatorSpeakerColor(
+						speaker,
+						directLine?.['speaker-color'] || existingPart?.['speaker-color'] || currentLineData?.['speaker-color'],
+						true
+					),
 					kind: normalizeSyncCreatorKind(directLine?.kind || existingPart?.kind || currentLineData?.kind) || SYNC_CREATOR_DEFAULT_KIND
 				};
 			};
@@ -3842,6 +3938,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					end: mergedEnd,
 					chars: normalizeCommittedLineChars(snapshots.flatMap(snapshot => snapshot.chars), previousLineEndTime),
 					speaker: snapshots[0].speaker,
+					...(snapshots[0]['speaker-color'] ? { 'speaker-color': snapshots[0]['speaker-color'] } : {}),
 					kind: snapshots[0].kind,
 					mergedLineContinuationStarts: nextMergedLineIndexes.slice(1).map(index => lineCharOffsets[index]),
 					parallel: sanitizeSyncCreatorParallel({
@@ -3850,6 +3947,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							id: partIds[index] || `p${index + 1}`,
 							role: index === 0 ? 'lead' : 'background',
 							speaker: snapshot.speaker,
+							...(snapshot['speaker-color'] ? { 'speaker-color': snapshot['speaker-color'] } : {}),
 							kind: snapshot.kind,
 							ranges: [{ start: snapshot.start, end: snapshot.end }],
 							join: [],
@@ -3972,6 +4070,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const leadMetaPart = currentParallelData?.parts?.find(part => part.role === 'lead') || currentParallelData?.parts?.[0] || activeParallelPart;
 		const lineMetaDraft = lineMetaDrafts[lineStart] || {};
 		const hasLineSpeakerDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker');
+		const hasLineSpeakerColorDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker-color');
 		const hasLineKindDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'kind');
 		const draftLineSpeaker = normalizeSyncCreatorSpeaker(lineMetaDraft.speaker);
 		const draftLineKind = normalizeSyncCreatorKind(lineMetaDraft.kind);
@@ -3983,12 +4082,24 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const lineKind = hasLineKindDraft
 			? draftLineKind || SYNC_CREATOR_DEFAULT_KIND
 			: currentLineMeta.kind || existingLineKind || leadMetaPart?.kind || SYNC_CREATOR_DEFAULT_KIND;
+		const lineSpeakerColor = sanitizeSyncCreatorSpeakerColor(
+			lineSpeaker,
+			hasLineSpeakerColorDraft
+				? lineMetaDraft['speaker-color']
+				: currentLineMeta['speaker-color'] || existingLine?.['speaker-color'] || leadMetaPart?.['speaker-color'],
+			true
+		);
 		const shouldPersistLineSpeaker = multiVocalMode || lineSpeaker !== SYNC_CREATOR_DEFAULT_SPEAKER;
 		const shouldPersistLineKind = multiVocalMode || lineKind !== SYNC_CREATOR_DEFAULT_KIND;
 		if (lineSpeaker && shouldPersistLineSpeaker) {
 			lineData.speaker = lineSpeaker;
 		} else {
 			delete lineData.speaker;
+		}
+		if (lineSpeakerColor) {
+			lineData['speaker-color'] = lineSpeakerColor;
+		} else {
+			delete lineData['speaker-color'];
 		}
 		if (lineKind && shouldPersistLineKind) {
 			lineData.kind = lineKind;
@@ -4001,6 +4112,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			const parts = currentParallelData.parts
 				.map((part) => {
 					const existingPart = existingParts.find(item => item.id === part.id);
+					const partSpeakerColor = sanitizeSyncCreatorSpeakerColor(part.speaker, part['speaker-color'], true);
 					const expectedChars = countRangeChars(part.ranges);
 					const syncedChars = part.id === activeParallelPart.id
 						? normalizedRawChars.map((time) => roundSyncTime(time))
@@ -4012,6 +4124,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						id: part.id,
 						role: part.role,
 						speaker: part.speaker,
+						...(partSpeakerColor
+							? { 'speaker-color': partSpeakerColor }
+							: {}),
 						kind: part.kind,
 						ranges: part.ranges,
 						join: part.join || []
@@ -5084,17 +5199,20 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const updateParallelPartMeta = useCallback((partId, field, value) => {
 		const safeValue = field === 'speaker'
 			? normalizeSyncCreatorSpeaker(value)
+			: field === 'speaker-color'
+				? normalizeSyncCreatorSpeakerColor(value)
 			: field === 'kind'
 				? normalizeSyncCreatorKind(value)
 				: String(value || '').trim();
-		if (!partId || !field || !safeValue) return;
+		const shouldDelete = field === 'speaker-color' && !safeValue;
+		if (!partId || !field || (!safeValue && !shouldDelete)) return;
 		const lineStart = lineCharOffsets[currentLineIndex];
 		const draftKey = `${lineStart}:${partId}`;
 		setParallelPartMetaDrafts(prev => ({
 			...prev,
 			[draftKey]: {
 				...(prev[draftKey] || {}),
-				[field]: safeValue
+				[field]: shouldDelete ? '' : safeValue
 			}
 		}));
 
@@ -5108,9 +5226,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						...line,
 						parallel: {
 							...line.parallel,
-							parts: line.parallel.parts.map(part => part.id === partId
-								? { ...part, [field]: safeValue }
-								: part)
+							parts: line.parallel.parts.map(part => {
+								if (part.id !== partId) return part;
+								const nextPart = { ...part };
+								if (shouldDelete) delete nextPart[field];
+								else nextPart[field] = safeValue;
+								return nextPart;
+							})
 						}
 					};
 				})
@@ -5121,10 +5243,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const updateCurrentLineMeta = useCallback((field, value) => {
 		const safeValue = field === 'speaker'
 			? normalizeSyncCreatorSpeaker(value)
+			: field === 'speaker-color'
+				? normalizeSyncCreatorSpeakerColor(value)
 			: field === 'kind'
 				? normalizeSyncCreatorKind(value)
 				: String(value || '').trim();
-		if (!field || !safeValue) return;
+		const shouldDelete = field === 'speaker-color' && !safeValue;
+		if (!field || (!safeValue && !shouldDelete)) return;
 		const lineStart = lineCharOffsets[currentLineIndex];
 		const shouldOmitDefaultValue = !multiVocalMode && (
 			(field === 'speaker' && safeValue === SYNC_CREATOR_DEFAULT_SPEAKER)
@@ -5134,7 +5259,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			...prev,
 			[lineStart]: {
 				...(prev[lineStart] || {}),
-				[field]: safeValue
+				[field]: shouldDelete ? '' : safeValue
 			}
 		}));
 
@@ -5144,7 +5269,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				...prev,
 				lines: prev.lines.map(line => {
 					if (line.start !== lineStart) return line;
-					if (!shouldOmitDefaultValue) {
+					if (!shouldOmitDefaultValue && !shouldDelete) {
 						return { ...line, [field]: safeValue };
 					}
 					const nextLine = { ...line };
@@ -5168,7 +5293,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			if (!Number.isInteger(lineStart)) return;
 			nextLineMetaDrafts[lineStart] = {
 				...(lineMetaDrafts[lineStart] || {}),
-				speaker
+				speaker,
+				'speaker-color': ''
 			};
 
 			if (isLineCoveredByMergedPrevious(index, syncLinesByStart)) {
@@ -5187,7 +5313,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					if (!part?.id) return;
 					nextParallelPartMetaDrafts[`${lineStart}:${part.id}`] = {
 						...(parallelPartMetaDrafts[`${lineStart}:${part.id}`] || {}),
-						speaker
+						speaker,
+						'speaker-color': ''
 					};
 				});
 			}
@@ -5205,19 +5332,24 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			if (!prev || !Array.isArray(prev.lines)) return prev;
 			return {
 				...prev,
-				lines: prev.lines.map(line => ({
-					...line,
-					speaker,
-					parallel: line.parallel ? {
-						...line.parallel,
-						parts: Array.isArray(line.parallel.parts)
-							? line.parallel.parts.map(part => ({
-								...part,
-								speaker
-							}))
-							: line.parallel.parts
-					} : line.parallel
-				}))
+				lines: prev.lines.map(line => {
+					const nextLine = {
+						...line,
+						speaker,
+						parallel: line.parallel ? {
+							...line.parallel,
+							parts: Array.isArray(line.parallel.parts)
+								? line.parallel.parts.map(part => {
+									const nextPart = { ...part, speaker };
+									delete nextPart['speaker-color'];
+									return nextPart;
+								})
+								: line.parallel.parts
+						} : line.parallel
+					};
+					delete nextLine['speaker-color'];
+					return nextLine;
+				})
 			};
 		});
 		Toast.success(I18n.t('syncCreator.bulkVocalApplied') || 'Applied the vocal speaker to the whole song.');
@@ -5649,12 +5781,15 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							Toast.error(I18n.t('syncCreator.lineAllPartsMissingSync', { line: index + 1 }) || `Sync every vocal part on line ${index + 1}.`);
 							return;
 						}
-						if (!(normalizeSyncCreatorSpeaker(existingPart.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER) || !(normalizeSyncCreatorKind(existingPart.kind) || SYNC_CREATOR_DEFAULT_KIND)) {
+						if (!isSyncCreatorSpeakerMetaComplete(existingPart) || !(normalizeSyncCreatorKind(existingPart.kind) || SYNC_CREATOR_DEFAULT_KIND)) {
 							Toast.error(I18n.t('syncCreator.linePartMetaRequired', { line: index + 1 }) || `Select SPEAKER and text effect for every vocal part on line ${index + 1}.`);
 							return;
 						}
 					}
-				} else if (!(normalizeSyncCreatorSpeaker(lineData.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER) || !(normalizeSyncCreatorKind(lineData.kind) || SYNC_CREATOR_DEFAULT_KIND)) {
+				} else if (!isSyncCreatorSpeakerMetaComplete({
+					speaker: normalizeSyncCreatorSpeaker(lineData.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER,
+					'speaker-color': lineData['speaker-color']
+				}) || !(normalizeSyncCreatorKind(lineData.kind) || SYNC_CREATOR_DEFAULT_KIND)) {
 					Toast.error(I18n.t('syncCreator.lineMetaRequired', { line: index + 1 }) || `Select SPEAKER and text effect for line ${index + 1}.`);
 					return;
 				}
@@ -5674,16 +5809,24 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			lines: syncData.lines.map(line => {
 				const speaker = normalizeSyncCreatorSpeaker(line.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
 				const kind = normalizeSyncCreatorKind(line.kind) || SYNC_CREATOR_DEFAULT_KIND;
+				const speakerColor = sanitizeSyncCreatorSpeakerColor(speaker, line['speaker-color'], true);
 				const nextLine = {
 					...line,
 					parallel: line.parallel ? sanitizeSyncCreatorParallel({
 						...line.parallel,
 						parts: Array.isArray(line.parallel.parts)
-							? line.parallel.parts.map(part => ({
-								...part,
-								speaker: normalizeSyncCreatorSpeaker(part.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER,
-								kind: normalizeSyncCreatorKind(part.kind) || SYNC_CREATOR_DEFAULT_KIND
-							}))
+							? line.parallel.parts.map(part => {
+								const partSpeaker = normalizeSyncCreatorSpeaker(part.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
+								const partSpeakerColor = sanitizeSyncCreatorSpeakerColor(partSpeaker, part['speaker-color'], true);
+								const nextPart = {
+									...part,
+									speaker: partSpeaker,
+									kind: normalizeSyncCreatorKind(part.kind) || SYNC_CREATOR_DEFAULT_KIND
+								};
+								if (partSpeakerColor) nextPart['speaker-color'] = partSpeakerColor;
+								else delete nextPart['speaker-color'];
+								return nextPart;
+							})
 							: line.parallel.parts
 					}) : line.parallel
 				};
@@ -5693,6 +5836,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				} else {
 					delete nextLine.speaker;
 				}
+				if (speakerColor) nextLine['speaker-color'] = speakerColor;
+				else delete nextLine['speaker-color'];
 				if (multiVocalMode || kind !== SYNC_CREATOR_DEFAULT_KIND) {
 					nextLine.kind = kind;
 				} else {
@@ -6538,6 +6683,42 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			outline: 'none'
 		},
 		speakerDot: { width: '8px', height: '8px', borderRadius: '999px', flexShrink: 0 },
+		customSpeakerColorEditor: {
+			display: 'grid',
+			gridTemplateColumns: '42px minmax(0, 1fr)',
+			gap: '10px',
+			alignItems: 'center',
+			marginTop: '12px',
+			padding: '12px',
+			borderRadius: '10px',
+			border: `1px solid ${TOSS_BORDER}`,
+			background: 'rgba(255,255,255,0.035)'
+		},
+		customSpeakerColorPicker: {
+			width: '42px',
+			height: '42px',
+			padding: '3px',
+			borderRadius: '8px',
+			border: `1px solid ${TOSS_BORDER}`,
+			background: 'transparent',
+			cursor: 'pointer'
+		},
+		customSpeakerColorFields: { display: 'flex', flexDirection: 'column', gap: '6px', minWidth: 0 },
+		customSpeakerColorLabel: { fontSize: '11px', fontWeight: '850', color: 'var(--spice-text)' },
+		customSpeakerColorDescription: { fontSize: '10px', lineHeight: 1.45, color: 'var(--spice-subtext)' },
+		customSpeakerColorText: {
+			width: '100%',
+			minHeight: '34px',
+			boxSizing: 'border-box',
+			borderRadius: '8px',
+			border: `1px solid ${TOSS_BORDER}`,
+			background: 'rgba(0,0,0,0.18)',
+			color: 'var(--spice-text)',
+			fontFamily: 'monospace',
+			fontSize: '12px',
+			padding: '0 10px',
+			outline: 'none'
+		},
 		effectGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '9px' },
 		effectCard: {
 			minHeight: '86px',
@@ -7144,9 +7325,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		);
 	};
 
-	const getSpeakerTone = (speaker) => {
+	const getSpeakerTone = (speaker, speakerColor = '') => {
 		const value = String(speaker || '').toUpperCase();
-		const text = getSyncCreatorSpeakerTextColor(value);
+		const text = getSyncCreatorSpeakerTextColor(value, speakerColor);
 		const colorTone = {
 			text,
 			dot: text,
@@ -7205,7 +7386,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		});
 	};
 
-	const renderSpeakerPicker = (selectedSpeaker, onSelect) => {
+	const renderSpeakerPicker = (selectedSpeaker, selectedSpeakerColor, onSelect) => {
 		const groups = [
 			{ title: 'NORMAL', values: SYNC_CREATOR_SPEAKER_OPTIONS.filter(value => value.startsWith('NORMAL')) },
 			{ title: 'MALE', values: SYNC_CREATOR_SPEAKER_OPTIONS.filter(value => value.startsWith('MALE')) },
@@ -7218,8 +7399,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				react.createElement('div', { style: s.speakerGroupTitle }, group.title),
 				react.createElement('div', { style: s.speakerGrid },
 					group.values.map(value => {
-						const tone = getSpeakerTone(value);
 						const isSelected = selectedSpeaker === value;
+						const tone = getSpeakerTone(value, isSelected ? selectedSpeakerColor : '');
 						return react.createElement('button', {
 							key: value,
 							type: 'button',
@@ -7233,7 +7414,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							onClick: () => onSelect(value)
 						},
 							react.createElement('span', { style: { ...s.speakerDot, background: tone.dot } }),
-							value.replace(' ', '')
+							value.endsWith(' CUSTOM') ? 'CUSTOM' : value.replace(' ', '')
 						);
 					})
 				)
@@ -7283,17 +7464,31 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		},
 			[
 				react.createElement('option', { key: 'placeholder', value: '', disabled: true }, I18n.t('syncCreator.bulkVocalPlaceholder') || 'Set speaker...'),
-				...SYNC_CREATOR_SPEAKER_OPTIONS.map(value => react.createElement('option', { key: value, value }, value))
+				...SYNC_CREATOR_BULK_SPEAKER_OPTIONS.map(value => react.createElement('option', { key: value, value }, value))
 			]
 		)
 	);
 
 	const renderLineInspector = () => {
 		const targetSpeaker = activeParallelPart ? activeParallelPart.speaker : currentLineMeta.speaker;
+		const targetSpeakerColor = activeParallelPart ? activeParallelPart['speaker-color'] : currentLineMeta['speaker-color'];
 		const targetKind = activeParallelPart ? activeParallelPart.kind : currentLineMeta.kind;
 		const updateSpeaker = (value) => {
-			if (activeParallelPart) updateParallelPartMeta(activeParallelPart.id, 'speaker', value);
-			else updateCurrentLineMeta('speaker', value);
+			const customColor = sanitizeSyncCreatorSpeakerColor(value, targetSpeakerColor, true);
+			if (activeParallelPart) {
+				updateParallelPartMeta(activeParallelPart.id, 'speaker', value);
+				updateParallelPartMeta(activeParallelPart.id, 'speaker-color', customColor);
+			} else {
+				updateCurrentLineMeta('speaker', value);
+				updateCurrentLineMeta('speaker-color', customColor);
+			}
+		};
+		const updateSpeakerColor = (value) => {
+			const color = normalizeSyncCreatorSpeakerColor(value);
+			if (!color) return false;
+			if (activeParallelPart) updateParallelPartMeta(activeParallelPart.id, 'speaker-color', color);
+			else updateCurrentLineMeta('speaker-color', color);
+			return true;
 		};
 		const updateKind = (value) => {
 			if (activeParallelPart) updateParallelPartMeta(activeParallelPart.id, 'kind', value);
@@ -7304,7 +7499,36 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			react.createElement('div', { style: s.panel },
 				react.createElement('div', { style: s.panelTitle }, I18n.t('syncCreator.speakerLabel') || 'SPEAKER'),
 				react.createElement('div', { style: s.panelSubtitle }, activeParallelPart ? (activeParallelPart.role || '') : (I18n.t('syncCreator.allLine') || 'Full line')),
-				renderSpeakerPicker(targetSpeaker, updateSpeaker),
+				renderSpeakerPicker(targetSpeaker, targetSpeakerColor, updateSpeaker),
+				isSyncCreatorCustomSpeaker(targetSpeaker) && react.createElement('div', { style: s.customSpeakerColorEditor },
+					react.createElement('input', {
+						type: 'color',
+						style: s.customSpeakerColorPicker,
+						value: sanitizeSyncCreatorSpeakerColor(targetSpeaker, targetSpeakerColor, true),
+						onChange: (event) => updateSpeakerColor(event.target.value),
+						'aria-label': I18n.t('syncCreator.speakerCustomColor') || 'Custom speaker color'
+					}),
+					react.createElement('div', { style: s.customSpeakerColorFields },
+						react.createElement('div', { style: s.customSpeakerColorLabel }, I18n.t('syncCreator.speakerCustomColor') || 'Custom speaker color'),
+						react.createElement('input', {
+							key: `${activeParallelPart?.id || currentLineStart}:${targetSpeakerColor}`,
+							type: 'text',
+							style: s.customSpeakerColorText,
+							defaultValue: sanitizeSyncCreatorSpeakerColor(targetSpeaker, targetSpeakerColor, true),
+							placeholder: '#00ff00',
+							maxLength: 7,
+							onKeyDown: (event) => {
+								if (event.key === 'Enter') event.currentTarget.blur();
+							},
+							onBlur: (event) => {
+								if (updateSpeakerColor(event.target.value)) return;
+								event.target.value = sanitizeSyncCreatorSpeakerColor(targetSpeaker, targetSpeakerColor, true);
+								Toast.error(I18n.t('syncCreator.speakerCustomColorInvalid') || 'Enter a valid HEX color.');
+							}
+						}),
+						react.createElement('div', { style: s.customSpeakerColorDescription }, I18n.t('syncCreator.speakerCustomColorDesc') || 'This color is stored in sync-data for listeners who allow creator colors.')
+					)
+				),
 				react.createElement('div', { style: s.railDivider }),
 				renderBulkSpeakerControl()
 			),
@@ -8010,7 +8234,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					},
 						[
 							react.createElement('option', { key: 'placeholder', value: '', disabled: true }, I18n.t('syncCreator.bulkVocalPlaceholder') || 'Set speaker...'),
-							...SYNC_CREATOR_SPEAKER_OPTIONS.map(value =>
+							...SYNC_CREATOR_BULK_SPEAKER_OPTIONS.map(value =>
 								react.createElement('option', { key: value, value }, value)
 							)
 						]

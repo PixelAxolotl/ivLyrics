@@ -839,6 +839,10 @@ window.LANG_TH = {
       "maleGroup": "ชาย",
       "femaleGroup": "หญิง",
       "duetGroup": "ดูเอต",
+      "useCreatorColors": {
+        "label": "ใช้สีแบบกำหนดเองของผู้สร้างซิงก์",
+        "desc": "ใช้สีเสียงร้องที่ผู้สร้างซิงก์ฝังไว้ในข้อมูล เมื่อปิด เสียงร้อง CUSTOM จะใช้สีลำดับที่ 1 ของหมวดนั้น"
+      },
       "reset": "รีเซ็ตสี",
       "resetDone": "รีเซ็ตสีหลายเสียงร้องแล้ว",
       "invalidColor": "ป้อนสี HEX ที่ถูกต้อง"
@@ -2298,6 +2302,9 @@ window.LANG_TH = {
     "kindPop": "ป๊อป",
     "select": "เลือก",
     "speakerLabel": "ผู้ร้อง",
+    "speakerCustomColor": "สีเสียงร้องแบบกำหนดเอง",
+    "speakerCustomColorDesc": "สีนี้จะถูกบันทึกในข้อมูลซิงก์และแสดงแก่ผู้ใช้ที่อนุญาตสีของผู้สร้าง",
+    "speakerCustomColorInvalid": "ป้อนสี HEX ที่ถูกต้อง",
     "typeLabel": "เอฟเฟกต์ข้อความ",
     "unselectedType": "ยังไม่ได้เลือกเอฟเฟกต์ข้อความ",
     "allLine": "ทั้งบรรทัด",

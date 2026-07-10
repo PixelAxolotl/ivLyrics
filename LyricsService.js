@@ -3673,6 +3673,7 @@
 	                        id: part.id || '',
 	                        role: part.role || '',
 	                        speaker: part.speaker || '',
+	                        'speaker-color': part['speaker-color'] || '',
 	                        kind: part.kind || 'vocal',
 	                        text: normalizedText,
 	                        syllables: partSyllables,
@@ -3694,12 +3695,14 @@
 	                        endTime: Math.max(...allPartTimes, lineEndTime),
 	                        text: lineText,
 	                        speaker: lineData.speaker || leadPart.speaker || '',
+	                        'speaker-color': lineData['speaker-color'] || leadPart['speaker-color'] || '',
 	                        kind: lineData.kind || leadPart.kind || 'vocal',
 	                        vocals: {
 	                            lead: {
 	                                id: leadPart.id,
 	                                role: leadPart.role,
 	                                speaker: leadPart.speaker,
+	                                'speaker-color': leadPart['speaker-color'] || '',
 	                                kind: leadPart.kind,
 	                                text: leadPart.text,
 	                                syllables: leadPart.syllables
@@ -3708,6 +3711,7 @@
 	                                id: part.id,
 	                                role: part.role,
 	                                speaker: part.speaker,
+	                                'speaker-color': part['speaker-color'] || '',
 	                                kind: part.kind,
 	                                text: part.text,
 	                                syllables: part.syllables
@@ -3722,6 +3726,7 @@
 	                    endTime: lineEndTime,
 	                    text: lineText,
 	                    speaker: lineData.speaker || '',
+	                    'speaker-color': lineData['speaker-color'] || '',
 	                    kind: lineData.kind || 'vocal',
 	                    syllables
 	                });
@@ -3742,6 +3747,7 @@
                 startTime: line.startTime,
                 text: line.text,
                 speaker: line.speaker,
+                'speaker-color': line['speaker-color'],
                 kind: line.kind
             }));
         }

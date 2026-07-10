@@ -2237,11 +2237,36 @@ const getTimedSyllablesFromLine = (line) => {
 	return syllables;
 };
 
-const normalizeKaraokeSpeakerClass = (speaker) => String(speaker || "")
-	.trim()
-	.toLowerCase()
-	.replace(/[_\s]+/g, "-")
-	.replace(/[^a-z0-9-]/g, "");
+const getKaraokeSpeakerPresentation = (speaker, speakerColor = "") => {
+	const presentation = window.ivLyricsSpeakerColors?.getPresentation?.(speaker, speakerColor);
+	if (presentation) return presentation;
+	const normalized = String(speaker || "").trim().replace(/[_-]+/g, " ").replace(/\s+/g, " ").toUpperCase();
+	const effectiveSpeaker = {
+		"MALE CUSTOM": "MALE 1",
+		"FEMALE CUSTOM": "FEMALE 1",
+		"DUET CUSTOM": "DUET 1",
+	}[normalized] || normalized;
+	const normalizedColor = /^#[0-9a-f]{6}$/i.test(String(speakerColor || "").trim())
+		? String(speakerColor).trim().toLowerCase()
+		: "";
+	const creatorColorEnabled = CONFIG?.visual?.["sync-data-custom-speaker-colors-enabled"] !== false;
+	return {
+		speakerClass: String(effectiveSpeaker || "").trim().toLowerCase().replace(/[_\s]+/g, "-").replace(/[^a-z0-9-]/g, ""),
+		creatorColor: normalized.endsWith(" CUSTOM") && creatorColorEnabled ? normalizedColor : "",
+	};
+};
+
+const normalizeKaraokeSpeakerClass = (speaker, speakerColor = "") => (
+	getKaraokeSpeakerPresentation(speaker, speakerColor).speakerClass
+);
+
+const getKaraokeSpeakerStyle = (speaker, speakerColor = "") => {
+	const creatorColor = getKaraokeSpeakerPresentation(speaker, speakerColor).creatorColor;
+	return creatorColor ? {
+		"--lyrics-color-active": creatorColor,
+		"--lyrics-color-inactive": `color-mix(in srgb, ${creatorColor} 50%, transparent)`,
+	} : {};
+};
 
 const KARAOKE_TEXT_EFFECT_KIND_CLASSES = new Set([
 	"effect",
@@ -2278,7 +2303,7 @@ const getKaraokeKindClassParts = (kind) => {
 
 const getKaraokeLineMetaClass = (line) => {
 	const classes = [];
-	const speakerClass = normalizeKaraokeSpeakerClass(line?.speaker);
+	const speakerClass = normalizeKaraokeSpeakerClass(line?.speaker, line?.['speaker-color']);
 	if (speakerClass) classes.push(`speaker-${speakerClass}`);
 	if (line?.kind) classes.push(...getKaraokeKindClassParts(line.kind));
 	return classes.join(" ");
@@ -2320,8 +2345,10 @@ const getKaraokeVocalRows = (line) => {
 		key: line.vocals.lead.id || "lead",
 		role: line.vocals.lead.role || "lead",
 		speaker: line.vocals.lead.speaker || "",
+		speakerColor: line.vocals.lead['speaker-color'] || "",
 		kind: line.vocals.lead.kind || "vocal",
-		speakerClass: normalizeKaraokeSpeakerClass(line.vocals.lead.speaker),
+		speakerClass: normalizeKaraokeSpeakerClass(line.vocals.lead.speaker, line.vocals.lead['speaker-color']),
+		speakerStyle: getKaraokeSpeakerStyle(line.vocals.lead.speaker, line.vocals.lead['speaker-color']),
 		phonetic: line.vocals.lead.phonetic || "",
 		translation: line.vocals.lead.translation || "",
 		text: line.vocals.lead.text || "",
@@ -2338,8 +2365,10 @@ const getKaraokeVocalRows = (line) => {
 				key: part.id || `background-${index}`,
 				role: part.role || "background",
 				speaker: part.speaker || "",
+				speakerColor: part['speaker-color'] || "",
 				kind: part.kind || "vocal",
-				speakerClass: normalizeKaraokeSpeakerClass(part.speaker),
+				speakerClass: normalizeKaraokeSpeakerClass(part.speaker, part['speaker-color']),
+				speakerStyle: getKaraokeSpeakerStyle(part.speaker, part['speaker-color']),
 				phonetic: part.phonetic || "",
 				translation: part.translation || "",
 				text: part.text || "",
@@ -3478,6 +3507,7 @@ const SyncedLyricsScrollView = react.memo(({
 						className: `lyrics-lyricsContainer-LyricsLine lyrics-lyricsContainer-LyricsLine-scrollView ${getKaraokeLineMetaClass(line)}${hasSubLine ? " lyrics-lyricsContainer-LyricsLine-hasSubLine" : ""}${isOriginalActiveLine ? " lyrics-lyricsContainer-LyricsLine-active lyrics-lyricsContainer-LyricsLine-scrollCurrent" : ""}`,
 				style: {
 					cursor: Number.isFinite(startTime) ? "pointer" : "default",
+					...getKaraokeSpeakerStyle(line?.speaker, line?.['speaker-color']),
 				},
 				lineRef: isOriginalActiveLine ? activeLineRef : null,
 				seekTime: Number.isFinite(startTime) ? startTime : null,
@@ -3827,6 +3857,7 @@ const useSyncedLyricsEngine = ({
 						className: `lyrics-lyricsContainer-LyricsLine lyrics-lyricsContainer-LyricsLine-scrollView ${getKaraokeLineMetaClass(line)}${hasSubLine ? " lyrics-lyricsContainer-LyricsLine-hasSubLine" : ""}${isOriginalActiveLine ? " lyrics-lyricsContainer-LyricsLine-active lyrics-lyricsContainer-LyricsLine-scrollCurrent" : ""}`,
 						style: {
 							cursor: Number.isFinite(startTime) ? "pointer" : "default",
+							...getKaraokeSpeakerStyle(line?.speaker, line?.['speaker-color']),
 						},
 						line,
 						startTime,
@@ -3937,6 +3968,7 @@ const useSyncedLyricsEngine = ({
 				className,
 				style: {
 					cursor: "pointer",
+					...getKaraokeSpeakerStyle(line?.speaker, line?.['speaker-color']),
 					"--position-index": animationIndex,
 					"--animation-index": Math.abs(animationIndex) + 1,
 					"--line-shift-duration": isScrolling
@@ -4387,6 +4419,7 @@ const buildKaraokeVocalRowLine = (line, row) => ({
   syllables: row.syllables,
   vocals: undefined,
   speaker: row.speaker,
+  'speaker-color': row.speakerColor,
   kind: row.kind,
 });
 
@@ -4588,6 +4621,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0
                           {
                                   key: row.key || rowIndex,
                                   className: classParts.join(" "),
+                                  style: row.speakerStyle,
                                   "data-karaoke-vocal-row-index": rowIndex,
                           },
                           react.createElement(KaraokeLine, {

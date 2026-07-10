@@ -839,6 +839,10 @@ window.LANG_JA = {
       "maleGroup": "男性",
       "femaleGroup": "女性",
       "duetGroup": "デュエット",
+      "useCreatorColors": {
+        "label": "同期作成者のカスタム色を使用",
+        "desc": "同期作成者がデータに設定したボーカル色を使用します。オフにすると、CUSTOM話者には各カテゴリの1番の色が使われます。"
+      },
       "reset": "色をリセット",
       "resetDone": "複数ボーカルの色をリセットしました。",
       "invalidColor": "有効なHEXカラーを入力してください。"
@@ -2298,6 +2302,9 @@ window.LANG_JA = {
     "kindPop": "ポップ",
     "select": "選択",
     "speakerLabel": "スピーカー",
+    "speakerCustomColor": "カスタム話者色",
+    "speakerCustomColorDesc": "この色は同期データに保存され、作成者の色を許可したユーザーに表示されます。",
+    "speakerCustomColorInvalid": "有効なHEXカラーを入力してください。",
     "typeLabel": "テキスト効果",
     "unselectedType": "テキスト効果未選択",
     "allLine": "行全体",

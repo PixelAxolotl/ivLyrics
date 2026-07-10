@@ -839,6 +839,10 @@ window.LANG_EN = {
       "maleGroup": "Male",
       "femaleGroup": "Female",
       "duetGroup": "Duet",
+      "useCreatorColors": {
+        "label": "Use sync creator custom colors",
+        "desc": "Use custom speaker colors embedded by sync creators. When disabled, CUSTOM speakers use color 1 from their category."
+      },
       "reset": "Reset colors",
       "resetDone": "Multi-vocal colors were reset.",
       "invalidColor": "Enter a valid hex color."
@@ -2298,6 +2302,9 @@ window.LANG_EN = {
     "kindPop": "Pop",
     "select": "Select",
     "speakerLabel": "Speaker",
+    "speakerCustomColor": "Custom speaker color",
+    "speakerCustomColorDesc": "This color is stored in sync-data and shown to listeners who allow creator colors.",
+    "speakerCustomColorInvalid": "Enter a valid HEX color.",
     "typeLabel": "Text effect",
     "unselectedType": "Text effect not selected",
     "allLine": "Full line",

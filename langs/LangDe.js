@@ -839,6 +839,10 @@ window.LANG_DE = {
       "maleGroup": "Männlich",
       "femaleGroup": "Weiblich",
       "duetGroup": "Duett",
+      "useCreatorColors": {
+        "label": "Benutzerdefinierte Farben des Sync-Erstellers verwenden",
+        "desc": "Verwendet die vom Sync-Ersteller eingebetteten Stimmenfarben. Wenn deaktiviert, nutzen CUSTOM-Stimmen Farbe 1 ihrer Kategorie."
+      },
       "reset": "Farben zurücksetzen",
       "resetDone": "Mehrstimmen-Farben wurden zurückgesetzt.",
       "invalidColor": "Gib eine gültige HEX-Farbe ein."
@@ -2297,6 +2301,9 @@ window.LANG_DE = {
     "kindPop": "Pop",
     "select": "Auswählen",
     "speakerLabel": "Sprecher",
+    "speakerCustomColor": "Benutzerdefinierte Stimmenfarbe",
+    "speakerCustomColorDesc": "Diese Farbe wird in den Sync-Daten gespeichert und Nutzern angezeigt, die Erstellerfarben erlauben.",
+    "speakerCustomColorInvalid": "Gib eine gültige HEX-Farbe ein.",
     "typeLabel": "Texteffekt",
     "unselectedType": "Texteffekt nicht ausgewählt",
     "allLine": "Ganze Zeile",

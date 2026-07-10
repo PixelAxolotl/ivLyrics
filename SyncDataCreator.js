@@ -1762,7 +1762,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	) || 0));
 	const isVirtualKaraokeSource =
 		lyrics?.karaokeSource === 'spotify-audio-analysis' ||
-		lyrics?.karaokeSource === 'audio-analysis-pseudo';
+		lyrics?.karaokeSource === 'audio-analysis-pseudo' ||
+		lyrics?.karaokeSource === 'line-timing-pseudo';
 	const albumArt = trackInfo?.album?.images?.[0]?.url ||
 		Spicetify.Player?.data?.item?.album?.images?.[0]?.url || '';
 

@@ -5237,12 +5237,16 @@ class LyricsContainer extends react.Component {
       if (!hasSpotifyTrackId) {
         const savedLocalLyrics = this.getSavedLocalLyrics(info.uri);
         if (savedLocalLyrics) {
-          CACHE[info.uri] = {
+          const restoredLocalLyrics = {
             ...savedLocalLyrics,
             provider: "local",
             uri: info.uri,
             trackLyricsProviderOverride: null,
           };
+          if (window.PseudoKaraokeService?.applyToResult) {
+            await window.PseudoKaraokeService.applyToResult(restoredLocalLyrics, info);
+          }
+          CACHE[info.uri] = restoredLocalLyrics;
           isCached = true;
         }
       }
@@ -6654,7 +6658,7 @@ class LyricsContainer extends react.Component {
       .map((key) => key[0].toUpperCase() + key.slice(1));
   }
 
-  applyLocalLyrics(localLyrics, { sourceLabel = "local", successMessage = null } = {}) {
+  async applyLocalLyrics(localLyrics, { sourceLabel = "local", successMessage = null } = {}) {
     const currentUri = this.currentTrackUri || this.state.uri;
     if (!currentUri) {
       Toast.error(this.getText("notifications.noTrackPlaying", "No track playing"));
@@ -6675,6 +6679,12 @@ class LyricsContainer extends react.Component {
       uri: currentUri,
       localLyricsSource: sourceLabel,
     };
+    if (window.PseudoKaraokeService?.applyToResult) {
+      await window.PseudoKaraokeService.applyToResult(nextLyrics, {
+        uri: currentUri,
+        duration: Spicetify.Player?.data?.item?.duration?.milliseconds,
+      });
+    }
     const resetTranslations = {
       romaji: null,
       furigana: null,
@@ -6735,7 +6745,7 @@ class LyricsContainer extends react.Component {
     input.click();
   }
 
-  applyLocalLyricsFromLrclibCandidate(candidate, options = {}) {
+  async applyLocalLyricsFromLrclibCandidate(candidate, options = {}) {
     const rawLyrics = String(
       candidate?.syncedLyrics ||
       candidate?.plainLyrics ||
@@ -6751,7 +6761,7 @@ class LyricsContainer extends react.Component {
     }
 
     const localLyrics = Utils.parseLocalLyrics(rawLyrics);
-    const applied = this.applyLocalLyrics(localLyrics, {
+    const applied = await this.applyLocalLyrics(localLyrics, {
       sourceLabel: options?.source || "lrclib",
       successMessage: this.getText("notifications.lyricsLoadedFromLrclib", "LRCLIB에서 가사를 가져왔습니다."),
     });
@@ -6771,10 +6781,10 @@ class LyricsContainer extends react.Component {
       return;
     }
 
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const localLyrics = Utils.parseLocalLyrics(e.target.result);
-        this.applyLocalLyrics(localLyrics, { sourceLabel: "file" });
+        await this.applyLocalLyrics(localLyrics, { sourceLabel: "file" });
       } catch (e) {
         Toast.error(I18n.t("notifications.lyricsLoadFailed"));
       }

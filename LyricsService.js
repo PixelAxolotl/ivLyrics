@@ -3768,7 +3768,8 @@
 
     const PseudoKaraokeService = (() => {
         const SETTING_KEY = 'ivLyrics:visual:spotify-fake-karaoke-enabled';
-        const CACHE_VERSION_BASE = 'pseudo-karaoke-v10';
+        const CACHE_VERSION_BASE = 'pseudo-karaoke-v11';
+        const LINE_TIMING_PSEUDO_SOURCE = 'line-timing-pseudo';
         const AGGRESSIVE_SCRIPT_REGEX = /[\u3040-\u30ff\u31f0-\u31ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u1100-\u11ff\u3130-\u318f\uac00-\ud7af]/;
         const HANGUL_BASE_CODE = 0xac00;
         const HANGUL_END_CODE = 0xd7a3;
@@ -3783,7 +3784,11 @@
         const _analysisCache = new Map();
         const _inflightAnalysis = new Map();
         const _analysisHintsCache = new WeakMap();
-        const PSEUDO_SOURCES = new Set(['audio-analysis-pseudo', 'spotify-audio-analysis']);
+        const PSEUDO_SOURCES = new Set([
+            'audio-analysis-pseudo',
+            'spotify-audio-analysis',
+            LINE_TIMING_PSEUDO_SOURCE
+        ]);
 
         function clamp(value, min, max) {
             return Math.max(min, Math.min(max, value));
@@ -5380,6 +5385,49 @@
             };
         }
 
+        function buildLineTimingPseudoKaraokeLine(line) {
+            const text = line?.text || '';
+            const startTime = Number.isFinite(line?.startTime) ? line.startTime : 0;
+            const endTime = Number.isFinite(line?.endTime) && line.endTime > startTime
+                ? line.endTime
+                : startTime + 2500;
+
+            if (!text.trim()) {
+                return { startTime, endTime, text, syllables: [] };
+            }
+
+            const lineDurationMs = Math.max(1, endTime - startTime);
+            const units = tokenizeLine(text, {
+                lineConfidence: 0.5,
+                lineDurationMs
+            });
+            if (!units.length) return null;
+
+            const weights = units.map(getUnitWeight);
+            const totalWeight = weights.reduce((sum, weight) => sum + weight, 0) || units.length;
+            let accumulatedWeight = 0;
+            const syllables = units.map((unitText, index) => {
+                const unitStart = startTime + (lineDurationMs * accumulatedWeight / totalWeight);
+                accumulatedWeight += weights[index] || 1;
+                const unitEnd = index === units.length - 1
+                    ? endTime
+                    : startTime + (lineDurationMs * accumulatedWeight / totalWeight);
+
+                return {
+                    text: unitText,
+                    startTime: unitStart,
+                    endTime: Math.max(unitStart + 1, unitEnd)
+                };
+            });
+
+            return {
+                startTime,
+                endTime,
+                text,
+                syllables
+            };
+        }
+
         async function applyToResult(result, info = {}) {
             if (!result) return result;
 
@@ -5393,9 +5441,6 @@
 
             const trackUri = result.uri || info?.uri || '';
             const trackId = Utils.extractTrackId(trackUri);
-            if (!trackId) {
-                return clearPseudoKaraoke(result);
-            }
             const fallbackDurationMs = Number.isFinite(info?.duration)
                 ? info.duration
                 : parseMs(Spicetify.Player?.data?.item?.duration?.milliseconds);
@@ -5405,24 +5450,27 @@
                 return clearPseudoKaraoke(result);
             }
 
-            if (result.karaoke && PSEUDO_SOURCES.has(result.karaokeSource) && result.pseudoKaraokeCacheVersion === getCacheVersion()) {
+            if (
+                result.karaoke &&
+                PSEUDO_SOURCES.has(result.karaokeSource) &&
+                result.pseudoKaraokeCacheVersion === getCacheVersion() &&
+                (result.karaokeSource !== LINE_TIMING_PSEUDO_SOURCE || !trackId)
+            ) {
                 return result;
             }
 
-            const analysis = await getAudioAnalysis(trackId);
-            if (!analysis) {
-                result.skipCache = true;
-                return result;
-            }
-
-            const karaoke = baseLyrics.map((line) => buildPseudoKaraokeLine(line, analysis)).filter(Boolean);
+            const analysis = trackId ? await getAudioAnalysis(trackId) : null;
+            const karaoke = baseLyrics
+                .map((line) => analysis
+                    ? buildPseudoKaraokeLine(line, analysis)
+                    : buildLineTimingPseudoKaraokeLine(line))
+                .filter(Boolean);
             if (!karaoke.length) {
-                result.skipCache = true;
                 return clearPseudoKaraoke(result);
             }
 
             result.karaoke = karaoke;
-            result.karaokeSource = 'audio-analysis-pseudo';
+            result.karaokeSource = analysis ? 'audio-analysis-pseudo' : LINE_TIMING_PSEUDO_SOURCE;
             result.pseudoKaraokeCacheVersion = getCacheVersion();
             return result;
         }

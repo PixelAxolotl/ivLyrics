@@ -58,7 +58,7 @@
     const ORIGINAL_SIZE_KEY = "ivLyrics:visual:panel-lyrics-original-size";
     const PHONETIC_SIZE_KEY = "ivLyrics:visual:panel-lyrics-phonetic-size";
     const TRANSLATION_SIZE_KEY = "ivLyrics:visual:panel-lyrics-translation-size";
-    const PSEUDO_KARAOKE_SOURCES = new Set(['audio-analysis-pseudo', 'spotify-audio-analysis']);
+    const PSEUDO_KARAOKE_SOURCES = new Set(['audio-analysis-pseudo', 'spotify-audio-analysis', 'line-timing-pseudo']);
     // 배경 설정 키
     const BG_TYPE_KEY = "ivLyrics:visual:panel-bg-type";
     const BG_COLOR_KEY = "ivLyrics:visual:panel-bg-color";
@@ -2939,9 +2939,12 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 // 1단계: 가사만 먼저 로드 (빠르게 표시)
                 // ==========================================
                 // Spotify 트랙은 LyricsAddonManager를 통해 로드하고, 로컬 곡은 저장된 로컬 가사만 사용한다.
-                const result = isLocalTrack
+                let result = isLocalTrack
                     ? getSavedPanelLocalLyrics(trackUri)
                     : await window.LyricsService.getLyricsFromProviders(trackInfo);
+                if (isLocalTrack && result && window.PseudoKaraokeService?.applyToResult) {
+                    result = await window.PseudoKaraokeService.applyToResult(result, trackInfo);
+                }
                 if (!isActiveLoad(loadSeq, loadingForTrackUri)) {
                     panelDebug("[PanelLyrics] Track changed during lyrics fetch, discarding result for:", loadingForTrackUri);
                     return;

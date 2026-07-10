@@ -1896,15 +1896,18 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
 
     const areTextEffectsEnabled = () => getVisualSetting('karaoke-text-effects', true) !== false;
 
-    const getPanelSpeakerPresentation = (speaker, speakerColor = '') => {
-        const presentation = window.ivLyricsSpeakerColors?.getPresentation?.(speaker, speakerColor);
+    const getPanelSpeakerPresentation = (speaker, speakerColor = '', speakerFallback = '') => {
+        const presentation = window.ivLyricsSpeakerColors?.getPresentation?.(speaker, speakerColor, speakerFallback);
         if (presentation) return presentation;
         const normalized = String(speaker || '').trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').toUpperCase();
-        const effectiveSpeaker = {
+        const normalizedFallback = String(speakerFallback || '').trim().replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').toUpperCase();
+        const effectiveSpeaker = normalized === 'CUSTOM'
+            ? (['MALE 1', 'FEMALE 1', 'DUET 1'].includes(normalizedFallback) ? normalizedFallback : 'MALE 1')
+            : ({
             'MALE CUSTOM': 'MALE 1',
             'FEMALE CUSTOM': 'FEMALE 1',
             'DUET CUSTOM': 'DUET 1'
-        }[normalized] || normalized;
+        }[normalized] || normalized);
         const normalizedColor = /^#[0-9a-f]{6}$/i.test(String(speakerColor || '').trim())
             ? String(speakerColor).trim().toLowerCase()
             : '';
@@ -1912,12 +1915,12 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         return {
             effectiveSpeaker,
             speakerClass: String(effectiveSpeaker || '').trim().toLowerCase().replace(/[_\s]+/g, '-').replace(/[^a-z0-9-]/g, ''),
-            creatorColor: normalized.endsWith(' CUSTOM') && creatorColorEnabled ? normalizedColor : ''
+            creatorColor: (normalized === 'CUSTOM' || normalized.endsWith(' CUSTOM')) && creatorColorEnabled ? normalizedColor : ''
         };
     };
 
-    const getPanelSpeakerStyle = (speaker, speakerColor = '') => {
-        const presentation = getPanelSpeakerPresentation(speaker, speakerColor);
+    const getPanelSpeakerStyle = (speaker, speakerColor = '', speakerFallback = '') => {
+        const presentation = getPanelSpeakerPresentation(speaker, speakerColor, speakerFallback);
         if (!presentation.creatorColor) return {};
         const cssVariable = window.ivLyricsSpeakerColors?.getCssVariableName?.(presentation.effectiveSpeaker)
             || (presentation.speakerClass ? `--ivlyrics-multi-vocal-speaker-color-${presentation.speakerClass}` : '');
@@ -1945,9 +1948,10 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             role: line.vocals.lead.role || 'lead',
             speaker: line.vocals.lead.speaker || '',
             speakerColor: line.vocals.lead['speaker-color'] || '',
+            speakerFallback: line.vocals.lead['speaker-fallback'] || '',
             kind: line.vocals.lead.kind || 'vocal',
-            speakerClass: getPanelSpeakerPresentation(line.vocals.lead.speaker, line.vocals.lead['speaker-color']).speakerClass,
-            speakerStyle: getPanelSpeakerStyle(line.vocals.lead.speaker, line.vocals.lead['speaker-color']),
+            speakerClass: getPanelSpeakerPresentation(line.vocals.lead.speaker, line.vocals.lead['speaker-color'], line.vocals.lead['speaker-fallback']).speakerClass,
+            speakerStyle: getPanelSpeakerStyle(line.vocals.lead.speaker, line.vocals.lead['speaker-color'], line.vocals.lead['speaker-fallback']),
             phonetic: line.vocals.lead.phonetic || '',
             translation: line.vocals.lead.translation || '',
             text: line.vocals.lead.text || '',
@@ -1962,9 +1966,10 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                         role: part.role || 'background',
                         speaker: part.speaker || '',
                         speakerColor: part['speaker-color'] || '',
+                        speakerFallback: part['speaker-fallback'] || '',
                         kind: part.kind || 'vocal',
-                        speakerClass: getPanelSpeakerPresentation(part.speaker, part['speaker-color']).speakerClass,
-                        speakerStyle: getPanelSpeakerStyle(part.speaker, part['speaker-color']),
+                        speakerClass: getPanelSpeakerPresentation(part.speaker, part['speaker-color'], part['speaker-fallback']).speakerClass,
+                        speakerStyle: getPanelSpeakerStyle(part.speaker, part['speaker-color'], part['speaker-fallback']),
                         phonetic: part.phonetic || '',
                         translation: part.translation || '',
                         text: part.text || '',
@@ -2814,9 +2819,9 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     const LyricLine = memo(({ line, lineIndex, lineCount, isActive, isPast, isFuture, translation, phonetic, isPlaceholder, instrumentalBreakRevision = 0, textEffectRevision = 0 }) => {
         const vocalRows = useMemo(() => getVocalRowsFromLine(line), [line]);
         const hasVocalStack = Array.isArray(vocalRows) && vocalRows.length > 1;
-        const speakerPresentation = getPanelSpeakerPresentation(line?.speaker, line?.['speaker-color']);
+        const speakerPresentation = getPanelSpeakerPresentation(line?.speaker, line?.['speaker-color'], line?.['speaker-fallback']);
         const speakerClass = speakerPresentation.speakerClass;
-        const lineStyle = getPanelSpeakerStyle(line?.speaker, line?.['speaker-color']);
+        const lineStyle = getPanelSpeakerStyle(line?.speaker, line?.['speaker-color'], line?.['speaker-fallback']);
         const lineKindClasses = getTextEffectKindClassParts(line?.kind);
         const lineClass = `ivlyrics-panel-line ${isActive ? 'active' : ''} ${isPast ? 'past' : ''} ${isFuture ? 'future' : ''} ${isPlaceholder ? 'placeholder' : ''} ${hasVocalStack ? 'vocal-stack' : ''} ${lineKindClasses.join(' ')} ${speakerClass ? `speaker-${speakerClass}` : ''}`;
         const interludeInfo = isPlaceholder ? { isInterlude: false, durationMs: 0 } : (line?.interludeInfo || getInterludeInfo(line, lineIndex, lineCount));

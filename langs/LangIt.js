@@ -841,7 +841,7 @@ window.LANG_IT = {
       "duetGroup": "Duetto",
       "useCreatorColors": {
         "label": "Usa i colori personalizzati del creatore della sincronizzazione",
-        "desc": "Usa i colori delle voci incorporati dal creatore della sincronizzazione. Se disattivato, le voci CUSTOM usano il colore 1 della propria categoria."
+        "desc": "Usa i colori delle voci incorporati dal creatore della sincronizzazione. Se disattivato, le voci CUSTOM usano il colore alternativo scelto dal creatore."
       },
       "reset": "Reimposta colori",
       "resetDone": "I colori multi-vocale sono stati reimpostati.",
@@ -2304,6 +2304,8 @@ window.LANG_IT = {
     "speakerLabel": "Interprete",
     "speakerCustomColor": "Colore voce personalizzato",
     "speakerCustomColorDesc": "Questo colore viene salvato nei dati di sincronizzazione e mostrato agli utenti che consentono i colori del creatore.",
+    "speakerCustomFallback": "Gruppo colore alternativo",
+    "speakerCustomFallbackDesc": "Usato quando l’utente disattiva i colori personalizzati del creatore.",
     "speakerCustomColorInvalid": "Inserisci un colore HEX valido.",
     "typeLabel": "Effetto testo",
     "unselectedType": "Effetto testo non selezionato",

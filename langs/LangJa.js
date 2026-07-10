@@ -841,7 +841,7 @@ window.LANG_JA = {
       "duetGroup": "デュエット",
       "useCreatorColors": {
         "label": "同期作成者のカスタム色を使用",
-        "desc": "同期作成者がデータに設定したボーカル色を使用します。オフにすると、CUSTOM話者には各カテゴリの1番の色が使われます。"
+        "desc": "同期作成者がデータに設定したボーカル色を使用します。オフにすると、CUSTOM話者には同期作成者が選んだフォールバック色が使われます。"
       },
       "reset": "色をリセット",
       "resetDone": "複数ボーカルの色をリセットしました。",
@@ -2304,6 +2304,8 @@ window.LANG_JA = {
     "speakerLabel": "スピーカー",
     "speakerCustomColor": "カスタム話者色",
     "speakerCustomColorDesc": "この色は同期データに保存され、作成者の色を許可したユーザーに表示されます。",
+    "speakerCustomFallback": "フォールバック色グループ",
+    "speakerCustomFallbackDesc": "ユーザーが作成者のカスタム色を無効にした場合に使用されます。",
     "speakerCustomColorInvalid": "有効なHEXカラーを入力してください。",
     "typeLabel": "テキスト効果",
     "unselectedType": "テキスト効果未選択",

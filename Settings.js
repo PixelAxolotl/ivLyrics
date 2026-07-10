@@ -11202,7 +11202,7 @@ const ConfigModal = ({
             {
               desc: I18n.t("settingsAdvanced.multiVocalColors.useCreatorColors.label") || "Use sync creator custom colors",
               key: "sync-data-custom-speaker-colors-enabled",
-              info: I18n.t("settingsAdvanced.multiVocalColors.useCreatorColors.desc") || "Use custom speaker colors embedded by sync creators. When disabled, CUSTOM speakers use color 1 from their category.",
+              info: I18n.t("settingsAdvanced.multiVocalColors.useCreatorColors.desc") || "Use custom speaker colors embedded by sync creators. When disabled, CUSTOM speakers use the fallback selected by the sync creator.",
               type: ConfigSlider,
               defaultValue: CONFIG.visual["sync-data-custom-speaker-colors-enabled"] ?? true,
             },

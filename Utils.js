@@ -94,11 +94,13 @@ const IV_LYRICS_DEFAULT_SPEAKER_TEXT_COLORS = {
   "DUET 4": "#dec9ff",
   "DUET 5": "#e9dcff",
 };
-const IV_LYRICS_CUSTOM_SPEAKER_FALLBACKS = {
+const IV_LYRICS_LEGACY_CUSTOM_SPEAKER_FALLBACKS = {
   "MALE CUSTOM": "MALE 1",
   "FEMALE CUSTOM": "FEMALE 1",
   "DUET CUSTOM": "DUET 1",
 };
+const IV_LYRICS_CUSTOM_SPEAKER_FALLBACK_OPTIONS = ["MALE 1", "FEMALE 1", "DUET 1"];
+const IV_LYRICS_DEFAULT_CUSTOM_SPEAKER_FALLBACK = "MALE 1";
 const IV_LYRICS_SPEAKER_COLOR_OPTIONS = Object.keys(IV_LYRICS_DEFAULT_SPEAKER_TEXT_COLORS);
 const IV_LYRICS_SPEAKER_COLOR_KEY_PREFIX = "multi-vocal-speaker-color-";
 const IV_LYRICS_SPEAKER_COLOR_STORAGE_PREFIX = "ivLyrics:visual:";
@@ -110,18 +112,36 @@ const normalizeIvLyricsSpeakerLabel = (value) => {
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
     .toUpperCase();
-  return IV_LYRICS_DEFAULT_SPEAKER_TEXT_COLORS[normalized] || IV_LYRICS_CUSTOM_SPEAKER_FALLBACKS[normalized]
+  return IV_LYRICS_DEFAULT_SPEAKER_TEXT_COLORS[normalized]
+    || normalized === "CUSTOM"
+    || IV_LYRICS_LEGACY_CUSTOM_SPEAKER_FALLBACKS[normalized]
     ? normalized
     : "";
 };
 
-const getIvLyricsSpeakerFallback = (speaker) => {
+const normalizeIvLyricsSpeakerFallback = (fallback, sourceSpeaker = "") => {
+  const normalized = String(fallback || "")
+    .trim()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .toUpperCase();
+  if (IV_LYRICS_CUSTOM_SPEAKER_FALLBACK_OPTIONS.includes(normalized)) return normalized;
+  const source = normalizeIvLyricsSpeakerLabel(sourceSpeaker);
+  return IV_LYRICS_LEGACY_CUSTOM_SPEAKER_FALLBACKS[source] || "";
+};
+
+const getIvLyricsSpeakerFallback = (speaker, speakerFallback = "") => {
   const normalized = normalizeIvLyricsSpeakerLabel(speaker);
-  return IV_LYRICS_CUSTOM_SPEAKER_FALLBACKS[normalized] || normalized;
+  if (normalized === "CUSTOM") {
+    return normalizeIvLyricsSpeakerFallback(speakerFallback, speaker)
+      || IV_LYRICS_DEFAULT_CUSTOM_SPEAKER_FALLBACK;
+  }
+  return IV_LYRICS_LEGACY_CUSTOM_SPEAKER_FALLBACKS[normalized] || normalized;
 };
 
 const isIvLyricsCustomSpeaker = (speaker) => (
-  !!IV_LYRICS_CUSTOM_SPEAKER_FALLBACKS[normalizeIvLyricsSpeakerLabel(speaker)]
+  normalizeIvLyricsSpeakerLabel(speaker) === "CUSTOM"
+  || !!IV_LYRICS_LEGACY_CUSTOM_SPEAKER_FALLBACKS[normalizeIvLyricsSpeakerLabel(speaker)]
 );
 
 const getIvLyricsSpeakerColorSettingKey = (speaker) => {
@@ -206,9 +226,9 @@ const isIvLyricsCreatorSpeakerColorEnabled = () => {
   }
 };
 
-const getIvLyricsSpeakerPresentation = (speaker, speakerColor) => {
+const getIvLyricsSpeakerPresentation = (speaker, speakerColor, speakerFallback = "") => {
   const normalized = normalizeIvLyricsSpeakerLabel(speaker);
-  const effectiveSpeaker = getIvLyricsSpeakerFallback(normalized);
+  const effectiveSpeaker = getIvLyricsSpeakerFallback(normalized, speakerFallback);
   const creatorColor = isIvLyricsCustomSpeaker(normalized) && isIvLyricsCreatorSpeakerColorEnabled()
     ? normalizeIvLyricsHexColor(speakerColor)
     : "";
@@ -259,9 +279,11 @@ const applyIvLyricsSpeakerColorCssVariables = (target = document.documentElement
 
 window.ivLyricsSpeakerColors = {
   defaultColors: IV_LYRICS_DEFAULT_SPEAKER_TEXT_COLORS,
-  customFallbacks: IV_LYRICS_CUSTOM_SPEAKER_FALLBACKS,
+  customFallbacks: IV_LYRICS_LEGACY_CUSTOM_SPEAKER_FALLBACKS,
+  customFallbackOptions: IV_LYRICS_CUSTOM_SPEAKER_FALLBACK_OPTIONS,
   options: IV_LYRICS_SPEAKER_COLOR_OPTIONS,
   normalizeSpeaker: normalizeIvLyricsSpeakerLabel,
+  normalizeFallback: normalizeIvLyricsSpeakerFallback,
   normalizeColor: normalizeIvLyricsHexColor,
   isCustomSpeaker: isIvLyricsCustomSpeaker,
   getFallbackSpeaker: getIvLyricsSpeakerFallback,

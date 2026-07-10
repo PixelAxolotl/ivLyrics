@@ -3674,6 +3674,7 @@
 	                        role: part.role || '',
 	                        speaker: part.speaker || '',
 	                        'speaker-color': part['speaker-color'] || '',
+	                        'speaker-fallback': part['speaker-fallback'] || '',
 	                        kind: part.kind || 'vocal',
 	                        text: normalizedText,
 	                        syllables: partSyllables,
@@ -3696,6 +3697,7 @@
 	                        text: lineText,
 	                        speaker: lineData.speaker || leadPart.speaker || '',
 	                        'speaker-color': lineData['speaker-color'] || leadPart['speaker-color'] || '',
+	                        'speaker-fallback': lineData['speaker-fallback'] || leadPart['speaker-fallback'] || '',
 	                        kind: lineData.kind || leadPart.kind || 'vocal',
 	                        vocals: {
 	                            lead: {
@@ -3703,6 +3705,7 @@
 	                                role: leadPart.role,
 	                                speaker: leadPart.speaker,
 	                                'speaker-color': leadPart['speaker-color'] || '',
+	                                'speaker-fallback': leadPart['speaker-fallback'] || '',
 	                                kind: leadPart.kind,
 	                                text: leadPart.text,
 	                                syllables: leadPart.syllables
@@ -3712,6 +3715,7 @@
 	                                role: part.role,
 	                                speaker: part.speaker,
 	                                'speaker-color': part['speaker-color'] || '',
+	                                'speaker-fallback': part['speaker-fallback'] || '',
 	                                kind: part.kind,
 	                                text: part.text,
 	                                syllables: part.syllables
@@ -3727,6 +3731,7 @@
 	                    text: lineText,
 	                    speaker: lineData.speaker || '',
 	                    'speaker-color': lineData['speaker-color'] || '',
+	                    'speaker-fallback': lineData['speaker-fallback'] || '',
 	                    kind: lineData.kind || 'vocal',
 	                    syllables
 	                });
@@ -3748,6 +3753,7 @@
                 text: line.text,
                 speaker: line.speaker,
                 'speaker-color': line['speaker-color'],
+                'speaker-fallback': line['speaker-fallback'],
                 kind: line.kind
             }));
         }

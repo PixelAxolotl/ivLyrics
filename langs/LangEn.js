@@ -841,7 +841,7 @@ window.LANG_EN = {
       "duetGroup": "Duet",
       "useCreatorColors": {
         "label": "Use sync creator custom colors",
-        "desc": "Use custom speaker colors embedded by sync creators. When disabled, CUSTOM speakers use color 1 from their category."
+        "desc": "Use custom speaker colors embedded by sync creators. When disabled, CUSTOM speakers use the fallback selected by the sync creator."
       },
       "reset": "Reset colors",
       "resetDone": "Multi-vocal colors were reset.",
@@ -2304,6 +2304,8 @@ window.LANG_EN = {
     "speakerLabel": "Speaker",
     "speakerCustomColor": "Custom speaker color",
     "speakerCustomColorDesc": "This color is stored in sync-data and shown to listeners who allow creator colors.",
+    "speakerCustomFallback": "Fallback color group",
+    "speakerCustomFallbackDesc": "Used when listeners disable creator custom colors.",
     "speakerCustomColorInvalid": "Enter a valid HEX color.",
     "typeLabel": "Text effect",
     "unselectedType": "Text effect not selected",

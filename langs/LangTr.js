@@ -841,7 +841,7 @@ window.LANG_TR = {
     "duetGroup": "Düet",
     "useCreatorColors": {
       "label": "Senkronizasyon oluşturucunun özel renklerini kullan",
-      "desc": "Senkronizasyon oluşturucunun veriye eklediği vokal renklerini kullanır. Kapatıldığında CUSTOM vokaller kendi kategorisinin 1. rengini kullanır."
+      "desc": "Senkronizasyon oluşturucunun veriye eklediği vokal renklerini kullanır. Kapatıldığında CUSTOM vokaller oluşturucunun seçtiği yedek rengi kullanır."
     },
     "reset": "Renkleri sıfırla",
     "resetDone": "Çoklu vokal renkleri sıfırlandı.",
@@ -2304,6 +2304,8 @@ window.LANG_TR = {
     "speakerLabel": "Şarkıcı",
     "speakerCustomColor": "Özel vokal rengi",
     "speakerCustomColorDesc": "Bu renk senkronizasyon verisine kaydedilir ve oluşturucu renklerine izin veren kullanıcılara gösterilir.",
+    "speakerCustomFallback": "Yedek renk grubu",
+    "speakerCustomFallbackDesc": "Kullanıcı oluşturucunun özel renklerini kapattığında kullanılır.",
     "speakerCustomColorInvalid": "Geçerli bir HEX renk kodu girin.",
     "typeLabel": "Metin efekti",
     "unselectedType": "Metin efekti seçilmedi",

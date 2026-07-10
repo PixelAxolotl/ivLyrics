@@ -11,19 +11,19 @@ const SYNC_CREATOR_HANGUL_JAMO_ONLY_REGEX = /^[\u3131-\u3163\u1100-\u11ff]+$/u;
 const SYNC_CREATOR_SPEAKER_OPTIONS = [
 	'NORMAL',
 	...Array.from({ length: 5 }, (_, index) => `MALE ${index + 1}`),
-	'MALE CUSTOM',
 	...Array.from({ length: 5 }, (_, index) => `FEMALE ${index + 1}`),
-	'FEMALE CUSTOM',
 	...Array.from({ length: 5 }, (_, index) => `DUET ${index + 1}`),
-	'DUET CUSTOM'
+	'CUSTOM'
 ];
-const SYNC_CREATOR_CUSTOM_SPEAKER_FALLBACKS = {
+const SYNC_CREATOR_LEGACY_CUSTOM_SPEAKER_FALLBACKS = {
 	'MALE CUSTOM': 'MALE 1',
 	'FEMALE CUSTOM': 'FEMALE 1',
 	'DUET CUSTOM': 'DUET 1'
 };
+const SYNC_CREATOR_CUSTOM_FALLBACK_OPTIONS = ['MALE 1', 'FEMALE 1', 'DUET 1'];
+const SYNC_CREATOR_DEFAULT_CUSTOM_FALLBACK = 'MALE 1';
 const SYNC_CREATOR_BULK_SPEAKER_OPTIONS = SYNC_CREATOR_SPEAKER_OPTIONS.filter(
-	(value) => !Object.prototype.hasOwnProperty.call(SYNC_CREATOR_CUSTOM_SPEAKER_FALLBACKS, value)
+	(value) => value !== 'CUSTOM'
 );
 const SYNC_CREATOR_SPEAKER_TEXT_COLORS = {
 	'NORMAL': '#f2f4f7',
@@ -257,20 +257,37 @@ const normalizeLoadedSyncCreatorBodyForLyrics = (syncBody, lyricsText) => {
 	};
 };
 
-const normalizeSyncCreatorSpeaker = (value) => {
+const normalizeSyncCreatorSpeakerToken = (value) => {
 	const raw = String(value || '').trim();
 	if (!raw) return '';
-	const normalized = raw
+	return raw
 		.replace(/[_-]+/g, ' ')
 		.replace(/\s+/g, ' ')
 		.toUpperCase();
+};
+
+const normalizeSyncCreatorSpeaker = (value) => {
+	const normalized = normalizeSyncCreatorSpeakerToken(value);
 	if (/^NORMAL(?:\s+1)?$/.test(normalized)) return 'NORMAL';
+	if (normalized === 'CUSTOM' || SYNC_CREATOR_LEGACY_CUSTOM_SPEAKER_FALLBACKS[normalized]) return 'CUSTOM';
 	return SYNC_CREATOR_SPEAKER_OPTIONS.includes(normalized) ? normalized : '';
 };
 
 const isSyncCreatorCustomSpeaker = (value) => (
-	!!SYNC_CREATOR_CUSTOM_SPEAKER_FALLBACKS[normalizeSyncCreatorSpeaker(value)]
+	normalizeSyncCreatorSpeaker(value) === 'CUSTOM'
 );
+
+const normalizeSyncCreatorSpeakerFallback = (value) => {
+	const normalized = normalizeSyncCreatorSpeakerToken(value);
+	return SYNC_CREATOR_CUSTOM_FALLBACK_OPTIONS.includes(normalized) ? normalized : '';
+};
+
+const sanitizeSyncCreatorSpeakerFallback = (speaker, fallback, useDefault = false, sourceSpeaker = speaker) => {
+	if (!isSyncCreatorCustomSpeaker(speaker)) return '';
+	return normalizeSyncCreatorSpeakerFallback(fallback)
+		|| SYNC_CREATOR_LEGACY_CUSTOM_SPEAKER_FALLBACKS[normalizeSyncCreatorSpeakerToken(sourceSpeaker)]
+		|| (useDefault ? SYNC_CREATOR_DEFAULT_CUSTOM_FALLBACK : '');
+};
 
 const normalizeSyncCreatorSpeakerColor = (value) => {
 	const helperColor = window.ivLyricsSpeakerColors?.normalizeColor?.(value);
@@ -283,9 +300,8 @@ const normalizeSyncCreatorSpeakerColor = (value) => {
 	return '';
 };
 
-const getSyncCreatorCustomSpeakerDefaultColor = (value) => {
-	const speaker = normalizeSyncCreatorSpeaker(value);
-	const fallbackSpeaker = SYNC_CREATOR_CUSTOM_SPEAKER_FALLBACKS[speaker];
+const getSyncCreatorCustomSpeakerDefaultColor = (value, fallback) => {
+	const fallbackSpeaker = sanitizeSyncCreatorSpeakerFallback(value, fallback, true);
 	return fallbackSpeaker
 		? (SYNC_CREATOR_SPEAKER_TEXT_COLORS[fallbackSpeaker]
 			|| window.ivLyricsSpeakerColors?.getTextColor?.(fallbackSpeaker)
@@ -293,23 +309,28 @@ const getSyncCreatorCustomSpeakerDefaultColor = (value) => {
 		: '';
 };
 
-const sanitizeSyncCreatorSpeakerColor = (speaker, color, useDefault = false) => {
+const sanitizeSyncCreatorSpeakerColor = (speaker, color, useDefault = false, fallback = '') => {
 	if (!isSyncCreatorCustomSpeaker(speaker)) return '';
 	return normalizeSyncCreatorSpeakerColor(color)
-		|| (useDefault ? getSyncCreatorCustomSpeakerDefaultColor(speaker) : '');
+		|| (useDefault ? getSyncCreatorCustomSpeakerDefaultColor(speaker, fallback) : '');
 };
 
 const isSyncCreatorSpeakerMetaComplete = (value) => {
 	const speaker = normalizeSyncCreatorSpeaker(value?.speaker);
 	if (!speaker) return false;
 	return !isSyncCreatorCustomSpeaker(speaker)
-		|| !!sanitizeSyncCreatorSpeakerColor(speaker, value?.['speaker-color']);
+		|| (
+			!!sanitizeSyncCreatorSpeakerFallback(speaker, value?.['speaker-fallback'], false, value?.speaker)
+			&& !!sanitizeSyncCreatorSpeakerColor(speaker, value?.['speaker-color'])
+		);
 };
 
-const getSyncCreatorSpeakerTextColor = (value, speakerColor = '') => {
+const getSyncCreatorSpeakerTextColor = (value, speakerColor = '', speakerFallback = '') => {
 	const speaker = normalizeSyncCreatorSpeaker(value);
 	if (!speaker) return 'var(--spice-text)';
-	const fallbackSpeaker = SYNC_CREATOR_CUSTOM_SPEAKER_FALLBACKS[speaker] || speaker;
+	const fallbackSpeaker = isSyncCreatorCustomSpeaker(speaker)
+		? sanitizeSyncCreatorSpeakerFallback(speaker, speakerFallback, true, value)
+		: speaker;
 	return sanitizeSyncCreatorSpeakerColor(speaker, speakerColor)
 		|| window.ivLyricsSpeakerColors?.getTextColor?.(fallbackSpeaker)
 		|| SYNC_CREATOR_SPEAKER_TEXT_COLORS[fallbackSpeaker]
@@ -328,8 +349,8 @@ const getSyncCreatorHexColorWithAlpha = (color, alpha) => {
 	return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
 };
 
-const isSyncCreatorDuetSpeaker = (value) => (
-	String(value || '').trim().toUpperCase().startsWith('DUET ')
+const isSyncCreatorDuetSpeaker = (value, fallback = '') => (
+	String(isSyncCreatorCustomSpeaker(value) ? fallback : value).trim().toUpperCase().startsWith('DUET ')
 );
 
 const getSyncCreatorKindLabel = (value) => {
@@ -1309,9 +1330,23 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			nextParallel.parts = nextParallel.parts.map((part) => {
 				if (!part || typeof part !== 'object') return part;
 				const nextPart = { ...part };
-				const speaker = normalizeSyncCreatorSpeaker(nextPart.speaker);
+				const sourceSpeaker = nextPart.speaker;
+				const speaker = normalizeSyncCreatorSpeaker(sourceSpeaker);
 				if (speaker) nextPart.speaker = speaker;
-				const speakerColor = sanitizeSyncCreatorSpeakerColor(speaker, nextPart['speaker-color'], true);
+				const speakerFallback = sanitizeSyncCreatorSpeakerFallback(
+					speaker,
+					nextPart['speaker-fallback'],
+					true,
+					sourceSpeaker
+				);
+				if (speakerFallback) nextPart['speaker-fallback'] = speakerFallback;
+				else delete nextPart['speaker-fallback'];
+				const speakerColor = sanitizeSyncCreatorSpeakerColor(
+					speaker,
+					nextPart['speaker-color'],
+					true,
+					speakerFallback
+				);
 				if (speakerColor) nextPart['speaker-color'] = speakerColor;
 				else delete nextPart['speaker-color'];
 				return nextPart;
@@ -1398,9 +1433,23 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		let migratedParallelRanges = false;
 		const lines = data.lines.map((line) => {
 			const nextLine = { ...line };
-			const speaker = normalizeSyncCreatorSpeaker(nextLine.speaker);
+			const sourceSpeaker = nextLine.speaker;
+			const speaker = normalizeSyncCreatorSpeaker(sourceSpeaker);
 			if (speaker) nextLine.speaker = speaker;
-			const speakerColor = sanitizeSyncCreatorSpeakerColor(speaker, nextLine['speaker-color'], true);
+			const speakerFallback = sanitizeSyncCreatorSpeakerFallback(
+				speaker,
+				nextLine['speaker-fallback'],
+				true,
+				sourceSpeaker
+			);
+			if (speakerFallback) nextLine['speaker-fallback'] = speakerFallback;
+			else delete nextLine['speaker-fallback'];
+			const speakerColor = sanitizeSyncCreatorSpeakerColor(
+				speaker,
+				nextLine['speaker-color'],
+				true,
+				speakerFallback
+			);
 			if (speakerColor) nextLine['speaker-color'] = speakerColor;
 			else delete nextLine['speaker-color'];
 			if (nextLine.parallel) {
@@ -1691,14 +1740,24 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			hiddenRanges: Array.isArray(existingParallel?.hiddenRanges) ? existingParallel.hiddenRanges : template.hiddenRanges,
 			parts: template.parts.map((part) => {
 				const existing = existingParts.find(item => item?.id === part.id);
+				const sourceSpeaker = existing?.speaker || part.speaker;
+				const speaker = normalizeSyncCreatorSpeaker(sourceSpeaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
+				const speakerFallback = sanitizeSyncCreatorSpeakerFallback(
+					speaker,
+					existing?.['speaker-fallback'] || part['speaker-fallback'],
+					true,
+					sourceSpeaker
+				);
 				return {
 						...part,
 						role: existing?.role || part.role,
-						speaker: normalizeSyncCreatorSpeaker(existing?.speaker || part.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER,
+						speaker,
+						...(speakerFallback ? { 'speaker-fallback': speakerFallback } : {}),
 						'speaker-color': sanitizeSyncCreatorSpeakerColor(
-							existing?.speaker || part.speaker,
+							speaker,
 							existing?.['speaker-color'] || part['speaker-color'],
-							true
+							true,
+							speakerFallback
 						) || undefined,
 						kind: normalizeSyncCreatorKind(existing?.kind || part.kind) || SYNC_CREATOR_DEFAULT_KIND,
 						chars: Array.isArray(existing?.chars) ? existing.chars : undefined
@@ -2483,14 +2542,25 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		&& currentNextMergeLineIndex < lyricsLines.length;
 	const currentLineMeta = useMemo(() => {
 		const draft = lineMetaDrafts[currentLineStart] || {};
-		const speaker = normalizeSyncCreatorSpeaker(draft.speaker || currentExistingLineData?.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
+		const hasSpeakerDraft = Object.prototype.hasOwnProperty.call(draft, 'speaker');
+		const sourceSpeaker = hasSpeakerDraft ? draft.speaker : currentExistingLineData?.speaker;
+		const speaker = normalizeSyncCreatorSpeaker(sourceSpeaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
 		const hasColorDraft = Object.prototype.hasOwnProperty.call(draft, 'speaker-color');
+		const hasFallbackDraft = Object.prototype.hasOwnProperty.call(draft, 'speaker-fallback');
+		const speakerFallback = sanitizeSyncCreatorSpeakerFallback(
+			speaker,
+			hasFallbackDraft ? draft['speaker-fallback'] : currentExistingLineData?.['speaker-fallback'],
+			true,
+			sourceSpeaker
+		);
 		return {
 			speaker,
+			'speaker-fallback': speakerFallback,
 			'speaker-color': sanitizeSyncCreatorSpeakerColor(
 				speaker,
 				hasColorDraft ? draft['speaker-color'] : currentExistingLineData?.['speaker-color'],
-				true
+				true,
+				speakerFallback
 			),
 			kind: normalizeSyncCreatorKind(draft.kind || currentExistingLineData?.kind) || SYNC_CREATOR_DEFAULT_KIND
 		};
@@ -2536,15 +2606,26 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			...merged,
 			parts: merged.parts.map((part) => {
 				const draft = parallelPartMetaDrafts[`${currentLineStart}:${part.id}`] || {};
-				const speaker = normalizeSyncCreatorSpeaker(draft.speaker || part.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
+				const hasSpeakerDraft = Object.prototype.hasOwnProperty.call(draft, 'speaker');
+				const sourceSpeaker = hasSpeakerDraft ? draft.speaker : part.speaker;
+				const speaker = normalizeSyncCreatorSpeaker(sourceSpeaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
 				const hasColorDraft = Object.prototype.hasOwnProperty.call(draft, 'speaker-color');
+				const hasFallbackDraft = Object.prototype.hasOwnProperty.call(draft, 'speaker-fallback');
+				const speakerFallback = sanitizeSyncCreatorSpeakerFallback(
+					speaker,
+					hasFallbackDraft ? draft['speaker-fallback'] : part['speaker-fallback'],
+					true,
+					sourceSpeaker
+				);
 				return {
 					...part,
 					speaker,
+					'speaker-fallback': speakerFallback,
 					'speaker-color': sanitizeSyncCreatorSpeakerColor(
 						speaker,
 						hasColorDraft ? draft['speaker-color'] : part['speaker-color'],
-						true
+						true,
+						speakerFallback
 					),
 					kind: normalizeSyncCreatorKind(draft.kind || part.kind) || SYNC_CREATOR_DEFAULT_KIND
 				};
@@ -3916,16 +3997,25 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							: null;
 				if (!Array.isArray(chars) || chars.length !== lineChars.length) return null;
 
-				const speaker = normalizeSyncCreatorSpeaker(directLine?.speaker || existingPart?.speaker || currentLineData?.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
+				const sourceSpeaker = directLine?.speaker || existingPart?.speaker || currentLineData?.speaker;
+				const speaker = normalizeSyncCreatorSpeaker(sourceSpeaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
+				const speakerFallback = sanitizeSyncCreatorSpeakerFallback(
+					speaker,
+					directLine?.['speaker-fallback'] || existingPart?.['speaker-fallback'] || currentLineData?.['speaker-fallback'],
+					true,
+					sourceSpeaker
+				);
 				return {
 					start: lineStart,
 					end: lineEnd,
 					chars,
 					speaker,
+					...(speakerFallback ? { 'speaker-fallback': speakerFallback } : {}),
 					'speaker-color': sanitizeSyncCreatorSpeakerColor(
 						speaker,
 						directLine?.['speaker-color'] || existingPart?.['speaker-color'] || currentLineData?.['speaker-color'],
-						true
+						true,
+						speakerFallback
 					),
 					kind: normalizeSyncCreatorKind(directLine?.kind || existingPart?.kind || currentLineData?.kind) || SYNC_CREATOR_DEFAULT_KIND
 				};
@@ -3938,6 +4028,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					end: mergedEnd,
 					chars: normalizeCommittedLineChars(snapshots.flatMap(snapshot => snapshot.chars), previousLineEndTime),
 					speaker: snapshots[0].speaker,
+					...(snapshots[0]['speaker-fallback'] ? { 'speaker-fallback': snapshots[0]['speaker-fallback'] } : {}),
 					...(snapshots[0]['speaker-color'] ? { 'speaker-color': snapshots[0]['speaker-color'] } : {}),
 					kind: snapshots[0].kind,
 					mergedLineContinuationStarts: nextMergedLineIndexes.slice(1).map(index => lineCharOffsets[index]),
@@ -3947,6 +4038,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							id: partIds[index] || `p${index + 1}`,
 							role: index === 0 ? 'lead' : 'background',
 							speaker: snapshot.speaker,
+							...(snapshot['speaker-fallback'] ? { 'speaker-fallback': snapshot['speaker-fallback'] } : {}),
 							...(snapshot['speaker-color'] ? { 'speaker-color': snapshot['speaker-color'] } : {}),
 							kind: snapshot.kind,
 							ranges: [{ start: snapshot.start, end: snapshot.end }],
@@ -4071,6 +4163,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const lineMetaDraft = lineMetaDrafts[lineStart] || {};
 		const hasLineSpeakerDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker');
 		const hasLineSpeakerColorDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker-color');
+		const hasLineSpeakerFallbackDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker-fallback');
 		const hasLineKindDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'kind');
 		const draftLineSpeaker = normalizeSyncCreatorSpeaker(lineMetaDraft.speaker);
 		const draftLineKind = normalizeSyncCreatorKind(lineMetaDraft.kind);
@@ -4082,12 +4175,21 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const lineKind = hasLineKindDraft
 			? draftLineKind || SYNC_CREATOR_DEFAULT_KIND
 			: currentLineMeta.kind || existingLineKind || leadMetaPart?.kind || SYNC_CREATOR_DEFAULT_KIND;
+		const lineSpeakerFallback = sanitizeSyncCreatorSpeakerFallback(
+			lineSpeaker,
+			hasLineSpeakerFallbackDraft
+				? lineMetaDraft['speaker-fallback']
+				: currentLineMeta['speaker-fallback'] || existingLine?.['speaker-fallback'] || leadMetaPart?.['speaker-fallback'],
+			true,
+			hasLineSpeakerDraft ? lineMetaDraft.speaker : existingLine?.speaker || leadMetaPart?.speaker || lineSpeaker
+		);
 		const lineSpeakerColor = sanitizeSyncCreatorSpeakerColor(
 			lineSpeaker,
 			hasLineSpeakerColorDraft
 				? lineMetaDraft['speaker-color']
 				: currentLineMeta['speaker-color'] || existingLine?.['speaker-color'] || leadMetaPart?.['speaker-color'],
-			true
+			true,
+			lineSpeakerFallback
 		);
 		const shouldPersistLineSpeaker = multiVocalMode || lineSpeaker !== SYNC_CREATOR_DEFAULT_SPEAKER;
 		const shouldPersistLineKind = multiVocalMode || lineKind !== SYNC_CREATOR_DEFAULT_KIND;
@@ -4095,6 +4197,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			lineData.speaker = lineSpeaker;
 		} else {
 			delete lineData.speaker;
+		}
+		if (lineSpeakerFallback) {
+			lineData['speaker-fallback'] = lineSpeakerFallback;
+		} else {
+			delete lineData['speaker-fallback'];
 		}
 		if (lineSpeakerColor) {
 			lineData['speaker-color'] = lineSpeakerColor;
@@ -4112,7 +4219,18 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			const parts = currentParallelData.parts
 				.map((part) => {
 					const existingPart = existingParts.find(item => item.id === part.id);
-					const partSpeakerColor = sanitizeSyncCreatorSpeakerColor(part.speaker, part['speaker-color'], true);
+					const partSpeakerFallback = sanitizeSyncCreatorSpeakerFallback(
+						part.speaker,
+						part['speaker-fallback'],
+						true,
+						existingPart?.speaker || part.speaker
+					);
+					const partSpeakerColor = sanitizeSyncCreatorSpeakerColor(
+						part.speaker,
+						part['speaker-color'],
+						true,
+						partSpeakerFallback
+					);
 					const expectedChars = countRangeChars(part.ranges);
 					const syncedChars = part.id === activeParallelPart.id
 						? normalizedRawChars.map((time) => roundSyncTime(time))
@@ -4124,6 +4242,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						id: part.id,
 						role: part.role,
 						speaker: part.speaker,
+						...(partSpeakerFallback
+							? { 'speaker-fallback': partSpeakerFallback }
+							: {}),
 						...(partSpeakerColor
 							? { 'speaker-color': partSpeakerColor }
 							: {}),
@@ -5201,10 +5322,12 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			? normalizeSyncCreatorSpeaker(value)
 			: field === 'speaker-color'
 				? normalizeSyncCreatorSpeakerColor(value)
+			: field === 'speaker-fallback'
+				? normalizeSyncCreatorSpeakerFallback(value)
 			: field === 'kind'
 				? normalizeSyncCreatorKind(value)
 				: String(value || '').trim();
-		const shouldDelete = field === 'speaker-color' && !safeValue;
+		const shouldDelete = (field === 'speaker-color' || field === 'speaker-fallback') && !safeValue;
 		if (!partId || !field || (!safeValue && !shouldDelete)) return;
 		const lineStart = lineCharOffsets[currentLineIndex];
 		const draftKey = `${lineStart}:${partId}`;
@@ -5245,10 +5368,12 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			? normalizeSyncCreatorSpeaker(value)
 			: field === 'speaker-color'
 				? normalizeSyncCreatorSpeakerColor(value)
+			: field === 'speaker-fallback'
+				? normalizeSyncCreatorSpeakerFallback(value)
 			: field === 'kind'
 				? normalizeSyncCreatorKind(value)
 				: String(value || '').trim();
-		const shouldDelete = field === 'speaker-color' && !safeValue;
+		const shouldDelete = (field === 'speaker-color' || field === 'speaker-fallback') && !safeValue;
 		if (!field || (!safeValue && !shouldDelete)) return;
 		const lineStart = lineCharOffsets[currentLineIndex];
 		const shouldOmitDefaultValue = !multiVocalMode && (
@@ -5294,7 +5419,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			nextLineMetaDrafts[lineStart] = {
 				...(lineMetaDrafts[lineStart] || {}),
 				speaker,
-				'speaker-color': ''
+				'speaker-color': '',
+				'speaker-fallback': ''
 			};
 
 			if (isLineCoveredByMergedPrevious(index, syncLinesByStart)) {
@@ -5314,7 +5440,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					nextParallelPartMetaDrafts[`${lineStart}:${part.id}`] = {
 						...(parallelPartMetaDrafts[`${lineStart}:${part.id}`] || {}),
 						speaker,
-						'speaker-color': ''
+						'speaker-color': '',
+						'speaker-fallback': ''
 					};
 				});
 			}
@@ -5342,12 +5469,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 								? line.parallel.parts.map(part => {
 									const nextPart = { ...part, speaker };
 									delete nextPart['speaker-color'];
+									delete nextPart['speaker-fallback'];
 									return nextPart;
 								})
 								: line.parallel.parts
 						} : line.parallel
 					};
 					delete nextLine['speaker-color'];
+					delete nextLine['speaker-fallback'];
 					return nextLine;
 				})
 			};
@@ -5788,6 +5917,12 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					}
 				} else if (!isSyncCreatorSpeakerMetaComplete({
 					speaker: normalizeSyncCreatorSpeaker(lineData.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER,
+					'speaker-fallback': sanitizeSyncCreatorSpeakerFallback(
+						lineData.speaker,
+						lineData['speaker-fallback'],
+						false,
+						lineData.speaker
+					),
 					'speaker-color': lineData['speaker-color']
 				}) || !(normalizeSyncCreatorKind(lineData.kind) || SYNC_CREATOR_DEFAULT_KIND)) {
 					Toast.error(I18n.t('syncCreator.lineMetaRequired', { line: index + 1 }) || `Select SPEAKER and text effect for line ${index + 1}.`);
@@ -5809,7 +5944,18 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			lines: syncData.lines.map(line => {
 				const speaker = normalizeSyncCreatorSpeaker(line.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
 				const kind = normalizeSyncCreatorKind(line.kind) || SYNC_CREATOR_DEFAULT_KIND;
-				const speakerColor = sanitizeSyncCreatorSpeakerColor(speaker, line['speaker-color'], true);
+				const speakerFallback = sanitizeSyncCreatorSpeakerFallback(
+					speaker,
+					line['speaker-fallback'],
+					true,
+					line.speaker
+				);
+				const speakerColor = sanitizeSyncCreatorSpeakerColor(
+					speaker,
+					line['speaker-color'],
+					true,
+					speakerFallback
+				);
 				const nextLine = {
 					...line,
 					parallel: line.parallel ? sanitizeSyncCreatorParallel({
@@ -5817,12 +5963,25 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						parts: Array.isArray(line.parallel.parts)
 							? line.parallel.parts.map(part => {
 								const partSpeaker = normalizeSyncCreatorSpeaker(part.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
-								const partSpeakerColor = sanitizeSyncCreatorSpeakerColor(partSpeaker, part['speaker-color'], true);
+								const partSpeakerFallback = sanitizeSyncCreatorSpeakerFallback(
+									partSpeaker,
+									part['speaker-fallback'],
+									true,
+									part.speaker
+								);
+								const partSpeakerColor = sanitizeSyncCreatorSpeakerColor(
+									partSpeaker,
+									part['speaker-color'],
+									true,
+									partSpeakerFallback
+								);
 								const nextPart = {
 									...part,
 									speaker: partSpeaker,
 									kind: normalizeSyncCreatorKind(part.kind) || SYNC_CREATOR_DEFAULT_KIND
 								};
+								if (partSpeakerFallback) nextPart['speaker-fallback'] = partSpeakerFallback;
+								else delete nextPart['speaker-fallback'];
 								if (partSpeakerColor) nextPart['speaker-color'] = partSpeakerColor;
 								else delete nextPart['speaker-color'];
 								return nextPart;
@@ -5836,6 +5995,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				} else {
 					delete nextLine.speaker;
 				}
+				if (speakerFallback) nextLine['speaker-fallback'] = speakerFallback;
+				else delete nextLine['speaker-fallback'];
 				if (speakerColor) nextLine['speaker-color'] = speakerColor;
 				else delete nextLine['speaker-color'];
 				if (multiVocalMode || kind !== SYNC_CREATOR_DEFAULT_KIND) {
@@ -6687,7 +6848,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			display: 'grid',
 			gridTemplateColumns: '42px minmax(0, 1fr)',
 			gap: '10px',
-			alignItems: 'center',
+			alignItems: 'start',
 			marginTop: '12px',
 			padding: '12px',
 			borderRadius: '10px',
@@ -7271,7 +7432,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const savedPart = currentLineData?.parallel?.parts?.find(item => item.id === part.id);
 		const syncedCount = Array.isArray(savedPart?.chars) ? Math.min(savedPart.chars.length, partChars.length) : 0;
 		const speakerLabel = part.speaker || SYNC_CREATOR_DEFAULT_SPEAKER;
-		const isDuetSpeaker = isSyncCreatorDuetSpeaker(speakerLabel);
+		const isDuetSpeaker = isSyncCreatorDuetSpeaker(speakerLabel, part['speaker-fallback']);
 		const kindLabel = getSyncCreatorKindLabel(part.kind) || part.kind || SYNC_CREATOR_DEFAULT_KIND;
 		const handlePartPointerDown = (e) => {
 			if (isActive) {
@@ -7325,9 +7486,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		);
 	};
 
-	const getSpeakerTone = (speaker, speakerColor = '') => {
+	const getSpeakerTone = (speaker, speakerColor = '', speakerFallback = '') => {
 		const value = String(speaker || '').toUpperCase();
-		const text = getSyncCreatorSpeakerTextColor(value, speakerColor);
+		const text = getSyncCreatorSpeakerTextColor(value, speakerColor, speakerFallback);
 		const colorTone = {
 			text,
 			dot: text,
@@ -7386,12 +7547,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		});
 	};
 
-	const renderSpeakerPicker = (selectedSpeaker, selectedSpeakerColor, onSelect) => {
+	const renderSpeakerPicker = (selectedSpeaker, selectedSpeakerColor, selectedSpeakerFallback, onSelect) => {
 		const groups = [
 			{ title: 'NORMAL', values: SYNC_CREATOR_SPEAKER_OPTIONS.filter(value => value.startsWith('NORMAL')) },
 			{ title: 'MALE', values: SYNC_CREATOR_SPEAKER_OPTIONS.filter(value => value.startsWith('MALE')) },
 			{ title: 'FEMALE', values: SYNC_CREATOR_SPEAKER_OPTIONS.filter(value => value.startsWith('FEMALE')) },
-			{ title: 'DUET', values: SYNC_CREATOR_SPEAKER_OPTIONS.filter(value => value.startsWith('DUET')) }
+			{ title: 'DUET', values: SYNC_CREATOR_SPEAKER_OPTIONS.filter(value => value.startsWith('DUET')) },
+			{ title: 'CUSTOM', values: ['CUSTOM'] }
 		];
 
 		return react.createElement('div', { style: s.speakerGroups },
@@ -7400,12 +7562,17 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				react.createElement('div', { style: s.speakerGrid },
 					group.values.map(value => {
 						const isSelected = selectedSpeaker === value;
-						const tone = getSpeakerTone(value, isSelected ? selectedSpeakerColor : '');
+						const tone = getSpeakerTone(
+							value,
+							isSelected ? selectedSpeakerColor : '',
+							isSelected ? selectedSpeakerFallback : SYNC_CREATOR_DEFAULT_CUSTOM_FALLBACK
+						);
 						return react.createElement('button', {
 							key: value,
 							type: 'button',
 							style: {
 								...s.speakerChoice,
+								...(value === 'CUSTOM' ? { gridColumn: '1 / -1' } : null),
 								color: tone.text,
 								background: tone.background,
 								borderColor: isSelected ? tone.borderActive : tone.border,
@@ -7414,7 +7581,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							onClick: () => onSelect(value)
 						},
 							react.createElement('span', { style: { ...s.speakerDot, background: tone.dot } }),
-							value.endsWith(' CUSTOM') ? 'CUSTOM' : value.replace(' ', '')
+							value === 'CUSTOM' ? 'CUSTOM' : value.replace(' ', '')
 						);
 					})
 				)
@@ -7472,23 +7639,46 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const renderLineInspector = () => {
 		const targetSpeaker = activeParallelPart ? activeParallelPart.speaker : currentLineMeta.speaker;
 		const targetSpeakerColor = activeParallelPart ? activeParallelPart['speaker-color'] : currentLineMeta['speaker-color'];
+		const targetSpeakerFallback = sanitizeSyncCreatorSpeakerFallback(
+			targetSpeaker,
+			activeParallelPart ? activeParallelPart['speaker-fallback'] : currentLineMeta['speaker-fallback'],
+			true,
+			targetSpeaker
+		);
 		const targetKind = activeParallelPart ? activeParallelPart.kind : currentLineMeta.kind;
+		const updateSpeakerMeta = (field, value) => {
+			if (activeParallelPart) updateParallelPartMeta(activeParallelPart.id, field, value);
+			else updateCurrentLineMeta(field, value);
+		};
 		const updateSpeaker = (value) => {
-			const customColor = sanitizeSyncCreatorSpeakerColor(value, targetSpeakerColor, true);
-			if (activeParallelPart) {
-				updateParallelPartMeta(activeParallelPart.id, 'speaker', value);
-				updateParallelPartMeta(activeParallelPart.id, 'speaker-color', customColor);
-			} else {
-				updateCurrentLineMeta('speaker', value);
-				updateCurrentLineMeta('speaker-color', customColor);
-			}
+			const speaker = normalizeSyncCreatorSpeaker(value);
+			if (!speaker) return;
+			const enteringCustom = isSyncCreatorCustomSpeaker(speaker) && !isSyncCreatorCustomSpeaker(targetSpeaker);
+			const fallback = sanitizeSyncCreatorSpeakerFallback(
+				speaker,
+				targetSpeakerFallback,
+				true,
+				value
+			);
+			const customColor = sanitizeSyncCreatorSpeakerColor(
+				speaker,
+				enteringCustom ? '' : targetSpeakerColor,
+				true,
+				fallback
+			);
+			updateSpeakerMeta('speaker', speaker);
+			updateSpeakerMeta('speaker-fallback', fallback);
+			updateSpeakerMeta('speaker-color', customColor);
 		};
 		const updateSpeakerColor = (value) => {
 			const color = normalizeSyncCreatorSpeakerColor(value);
 			if (!color) return false;
-			if (activeParallelPart) updateParallelPartMeta(activeParallelPart.id, 'speaker-color', color);
-			else updateCurrentLineMeta('speaker-color', color);
+			updateSpeakerMeta('speaker-color', color);
 			return true;
+		};
+		const updateSpeakerFallback = (value) => {
+			const fallback = normalizeSyncCreatorSpeakerFallback(value);
+			if (fallback) updateSpeakerMeta('speaker-fallback', fallback);
 		};
 		const updateKind = (value) => {
 			if (activeParallelPart) updateParallelPartMeta(activeParallelPart.id, 'kind', value);
@@ -7499,22 +7689,22 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			react.createElement('div', { style: s.panel },
 				react.createElement('div', { style: s.panelTitle }, I18n.t('syncCreator.speakerLabel') || 'SPEAKER'),
 				react.createElement('div', { style: s.panelSubtitle }, activeParallelPart ? (activeParallelPart.role || '') : (I18n.t('syncCreator.allLine') || 'Full line')),
-				renderSpeakerPicker(targetSpeaker, targetSpeakerColor, updateSpeaker),
+				renderSpeakerPicker(targetSpeaker, targetSpeakerColor, targetSpeakerFallback, updateSpeaker),
 				isSyncCreatorCustomSpeaker(targetSpeaker) && react.createElement('div', { style: s.customSpeakerColorEditor },
 					react.createElement('input', {
 						type: 'color',
 						style: s.customSpeakerColorPicker,
-						value: sanitizeSyncCreatorSpeakerColor(targetSpeaker, targetSpeakerColor, true),
+						value: sanitizeSyncCreatorSpeakerColor(targetSpeaker, targetSpeakerColor, true, targetSpeakerFallback),
 						onChange: (event) => updateSpeakerColor(event.target.value),
 						'aria-label': I18n.t('syncCreator.speakerCustomColor') || 'Custom speaker color'
 					}),
 					react.createElement('div', { style: s.customSpeakerColorFields },
 						react.createElement('div', { style: s.customSpeakerColorLabel }, I18n.t('syncCreator.speakerCustomColor') || 'Custom speaker color'),
 						react.createElement('input', {
-							key: `${activeParallelPart?.id || currentLineStart}:${targetSpeakerColor}`,
+							key: `${currentLineStart}:${activeParallelPart?.id || 'line'}:${targetSpeakerColor}`,
 							type: 'text',
 							style: s.customSpeakerColorText,
-							defaultValue: sanitizeSyncCreatorSpeakerColor(targetSpeaker, targetSpeakerColor, true),
+							defaultValue: sanitizeSyncCreatorSpeakerColor(targetSpeaker, targetSpeakerColor, true, targetSpeakerFallback),
 							placeholder: '#00ff00',
 							maxLength: 7,
 							onKeyDown: (event) => {
@@ -7522,11 +7712,21 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							},
 							onBlur: (event) => {
 								if (updateSpeakerColor(event.target.value)) return;
-								event.target.value = sanitizeSyncCreatorSpeakerColor(targetSpeaker, targetSpeakerColor, true);
+								event.target.value = sanitizeSyncCreatorSpeakerColor(targetSpeaker, targetSpeakerColor, true, targetSpeakerFallback);
 								Toast.error(I18n.t('syncCreator.speakerCustomColorInvalid') || 'Enter a valid HEX color.');
 							}
 						}),
-						react.createElement('div', { style: s.customSpeakerColorDescription }, I18n.t('syncCreator.speakerCustomColorDesc') || 'This color is stored in sync-data for listeners who allow creator colors.')
+						react.createElement('div', { style: s.customSpeakerColorDescription }, I18n.t('syncCreator.speakerCustomColorDesc') || 'This color is stored in sync-data for listeners who allow creator colors.'),
+						react.createElement('div', { style: s.customSpeakerColorLabel }, I18n.t('syncCreator.speakerCustomFallback') || 'Fallback color group'),
+						react.createElement('select', {
+							style: { ...s.select, width: '100%' },
+							value: targetSpeakerFallback,
+							onChange: (event) => updateSpeakerFallback(event.target.value)
+						}, SYNC_CREATOR_CUSTOM_FALLBACK_OPTIONS.map(value => react.createElement('option', {
+							key: value,
+							value
+						}, value.replace(' 1', '')))),
+						react.createElement('div', { style: s.customSpeakerColorDescription }, I18n.t('syncCreator.speakerCustomFallbackDesc') || 'Used when listeners disable creator custom colors.')
 					)
 				),
 				react.createElement('div', { style: s.railDivider }),

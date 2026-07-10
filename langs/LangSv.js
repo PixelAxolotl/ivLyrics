@@ -841,7 +841,7 @@ window.LANG_SV = {
       "duetGroup": "Duett",
       "useCreatorColors": {
         "label": "Använd synkskaparens anpassade färger",
-        "desc": "Använder röstfärger som synkskaparen bäddat in. När det är avstängt använder CUSTOM-röster färg 1 i sin kategori."
+        "desc": "Använder röstfärger som synkskaparen bäddat in. När det är avstängt använder CUSTOM-röster reservfärgen som synkskaparen valt."
       },
       "reset": "Återställ färger",
       "resetDone": "Färgerna för flera sångare har återställts.",
@@ -2303,6 +2303,8 @@ window.LANG_SV = {
     "speakerLabel": "Sångare",
     "speakerCustomColor": "Anpassad röstfärg",
     "speakerCustomColorDesc": "Färgen sparas i synkdata och visas för användare som tillåter skaparens färger.",
+    "speakerCustomFallback": "Reservfärgsgrupp",
+    "speakerCustomFallbackDesc": "Används när användaren stänger av skaparens anpassade färger.",
     "speakerCustomColorInvalid": "Ange en giltig HEX-färg.",
     "typeLabel": "Texteffekt",
     "unselectedType": "Texteffekt inte vald",

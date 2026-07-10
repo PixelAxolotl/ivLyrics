@@ -841,7 +841,7 @@ window.LANG_DE = {
       "duetGroup": "Duett",
       "useCreatorColors": {
         "label": "Benutzerdefinierte Farben des Sync-Erstellers verwenden",
-        "desc": "Verwendet die vom Sync-Ersteller eingebetteten Stimmenfarben. Wenn deaktiviert, nutzen CUSTOM-Stimmen Farbe 1 ihrer Kategorie."
+        "desc": "Verwendet die vom Sync-Ersteller eingebetteten Stimmenfarben. Wenn deaktiviert, nutzen CUSTOM-Stimmen die vom Sync-Ersteller gewählte Fallback-Farbe."
       },
       "reset": "Farben zurücksetzen",
       "resetDone": "Mehrstimmen-Farben wurden zurückgesetzt.",
@@ -2303,6 +2303,8 @@ window.LANG_DE = {
     "speakerLabel": "Sprecher",
     "speakerCustomColor": "Benutzerdefinierte Stimmenfarbe",
     "speakerCustomColorDesc": "Diese Farbe wird in den Sync-Daten gespeichert und Nutzern angezeigt, die Erstellerfarben erlauben.",
+    "speakerCustomFallback": "Fallback-Farbgruppe",
+    "speakerCustomFallbackDesc": "Wird verwendet, wenn Nutzer benutzerdefinierte Erstellerfarben deaktivieren.",
     "speakerCustomColorInvalid": "Gib eine gültige HEX-Farbe ein.",
     "typeLabel": "Texteffekt",
     "unselectedType": "Texteffekt nicht ausgewählt",

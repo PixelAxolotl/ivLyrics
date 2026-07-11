@@ -5,7 +5,7 @@
  * @addon-type lyrics
  * @id unison
  * @name Unison
- * @version 1.0.0
+ * @version 1.0.1
  * @author ivLis STUDIO
  * @supports karaoke: true
  * @supports synced: true
@@ -16,7 +16,7 @@
     'use strict';
 
     const API_BASE = 'https://unison.boidu.dev';
-    const CACHE_VERSION = '2026-07-11-unison-1';
+    const CACHE_VERSION = '2026-07-12-unison-2';
     const ATTRIBUTION = 'Lyrics from Unison (https://unison.boidu.dev).';
     const REQUEST_TIMEOUT_MS = 10000;
 
@@ -36,7 +36,7 @@
         id: 'unison',
         name: 'Unison',
         author: 'ivLis STUDIO',
-        version: '1.0.0',
+        version: '1.0.1',
         cacheVersion: CACHE_VERSION,
         description: {
             en: 'Read-only provider backed by the Unison community lyrics API',
@@ -48,7 +48,7 @@
             unsynced: true
         },
         supportsLocalTracks: true,
-        useIvLyricsSync: true,
+        useIvLyricsSync: false,
         icon: 'M9 3v10.55A4 4 0 1 0 11 17V7h6V3H9zm-2 16a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm8-6a2 2 0 1 1 0 4 2 2 0 0 1 0-4z'
     };
 

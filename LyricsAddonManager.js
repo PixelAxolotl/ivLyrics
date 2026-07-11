@@ -610,9 +610,11 @@
                     // 2. karaoke가 필요한데 없으면 sync-data 조회
                     const needsKaraoke = allowKaraoke && !result.karaoke;
                     const hasBaseLyrics = result.synced || result.unsynced;
+                    const useIvLyricsSync = provider.useIvLyricsSync !== false;
                     console.info('[ivLyrics sync-data]', 'LyricsAddonManager:sync-check', {
                         providerId: provider.id,
                         resultProvider: result.provider || null,
+                        useIvLyricsSync,
                         allowKaraoke,
                         hasKaraoke: !!result.karaoke,
                         hasSynced: !!result.synced,
@@ -623,7 +625,7 @@
                         hasSyncDataService: !!window.SyncDataService?.getSyncData
                     });
 
-                    if (needsKaraoke && hasBaseLyrics) {
+                    if (useIvLyricsSync && needsKaraoke && hasBaseLyrics) {
                         window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Karaoke needed but not available, checking sync-data for ${provider.id}...`);
 
                         // sync-data 조회 시도

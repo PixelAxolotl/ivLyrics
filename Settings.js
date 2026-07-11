@@ -4783,7 +4783,8 @@ const getSettingsText = (key, fallback) => {
 };
 
 const getSettingsUiTheme = () => {
-  const storedTheme = localStorage.getItem("ivLyrics:settings-ui-theme");
+  const storedTheme = window.ivLyricsStoragePersistence?.getItem("ivLyrics:settings-ui-theme")
+    ?? localStorage.getItem("ivLyrics:settings-ui-theme");
   if (storedTheme === "light" || storedTheme === "dark") {
     return storedTheme;
   }
@@ -4798,7 +4799,11 @@ const getSettingsUiTheme = () => {
 };
 
 const persistSettingsUiTheme = (theme) => {
-  localStorage.setItem("ivLyrics:settings-ui-theme", theme);
+  if (window.ivLyricsStoragePersistence) {
+    window.ivLyricsStoragePersistence.setItem("ivLyrics:settings-ui-theme", theme);
+  } else {
+    localStorage.setItem("ivLyrics:settings-ui-theme", theme);
+  }
 };
 
 const SETTINGS_BACKGROUND_PRESETS = [
@@ -13228,6 +13233,8 @@ const ConfigModal = ({
                   keysToRemove.forEach((key) => {
                     localStorage.removeItem(key);
                   });
+
+                  await window.ivLyricsStoragePersistence?.clear?.();
 
                   resultContainer.innerHTML = `<div style="
 													padding: 16px 20px;

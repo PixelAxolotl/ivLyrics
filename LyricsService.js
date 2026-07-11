@@ -5489,6 +5489,7 @@
 
         return {
             isEnabled,
+            isPseudoSource: (source) => PSEUDO_SOURCES.has(source),
             getCacheVersion,
             applyToResult,
             clearPseudoKaraoke
@@ -5807,6 +5808,28 @@
                 // 5. 발음/번역 요청 (설정에 따라)
                 const needsTranslation = mode1 !== "none" || mode2 !== "none";
 
+                // 번역을 기다리는 동안 오버레이가 비어 있지 않도록 원문 가사를 먼저 전송
+                if (needsTranslation) {
+                    try {
+                        const originalLyricsSends = [];
+                        if (sendToOverlay && window.OverlaySender?.sendLyrics) {
+                            originalLyricsSends.push(window.OverlaySender.sendLyrics(
+                                { uri: info.uri, title: info.title, artist: info.artist },
+                                lyrics
+                            ));
+                        }
+                        if (window.lyricsHelperSender?.sendLyrics) {
+                            originalLyricsSends.push(window.lyricsHelperSender.sendLyrics(
+                                { uri: info.uri, title: info.title, artist: info.artist },
+                                lyrics
+                            ));
+                        }
+                        void Promise.allSettled(originalLyricsSends);
+                    } catch (e) {
+                        // 원문 선전송 실패는 무시하고 번역 진행
+                    }
+                }
+
                 if (needsTranslation && window.Translator?.callGemini) {
                     serviceDebug('[LyricsService] 발음/번역 요청:', { mode1, mode2 });
 
@@ -5941,21 +5964,23 @@
                 }
 
                 // 6. 오버레이 전송
+                const finalLyricsSends = [];
                 if (sendToOverlay && window.OverlaySender?.sendLyrics) {
-                    await window.OverlaySender.sendLyrics(
+                    finalLyricsSends.push(window.OverlaySender.sendLyrics(
                         { uri: info.uri, title: info.title, artist: info.artist },
                         lyrics,
                         true
-                    );
+                    ));
                 }
                 // 헬퍼 전송
                 if (window.lyricsHelperSender?.sendLyrics) {
-                    await window.lyricsHelperSender.sendLyrics(
+                    finalLyricsSends.push(window.lyricsHelperSender.sendLyrics(
                         { uri: info.uri, title: info.title, artist: info.artist },
                         lyrics,
                         true
-                    );
+                    ));
                 }
+                await Promise.allSettled(finalLyricsSends);
 
                 // 6. 이벤트 발생
                 this.emit('lyrics-loaded', {
@@ -6757,12 +6782,206 @@
     // Extension으로 이동하여 어떤 페이지에서든 작동
     // ============================================
 
+    let senderBootstrapTimer = null;
+    let senderBootstrapScheduledChain = null;
+    let senderBootstrapInFlightChain = null;
+    let senderBootstrapRerunRequested = null;
+    let senderBootstrapNextChainId = 0;
+    let senderBootstrapPageGraceUri = null;
+    let senderBootstrapPageGraceUntil = 0;
+    const SENDER_BOOTSTRAP_METADATA_WAIT_MS = 4000;
+
+    // Spotify 시작/헬퍼 재연결 시 songchange보다 리스너 등록이 늦으면 현재 곡을
+    // 영원히 놓칠 수 있다. 두 sender가 공유하는 단일 부트스트랩으로 중복 조회 없이
+    // 현재 곡을 한 번 보충하고, 이후 전송은 각 sender의 enabled 상태에 맡긴다.
+    const scheduleSenderBootstrap = (delay = 1200, previousUri = null, existingChain = null) => {
+        let bootstrapChain = existingChain;
+        if (bootstrapChain) {
+            if (bootstrapChain.id !== senderBootstrapScheduledChain?.id
+                && bootstrapChain.id !== senderBootstrapRerunRequested?.id) {
+                return;
+            }
+        } else if (senderBootstrapTimer && senderBootstrapScheduledChain
+            && (!previousUri || !senderBootstrapScheduledChain.previousUri
+                || previousUri === senderBootstrapScheduledChain.previousUri)) {
+            // 같은 대기 체인에 겹쳐 들어온 예약은 마감 시각까지 포함해 그대로 재사용한다.
+            bootstrapChain = senderBootstrapScheduledChain;
+            if (!bootstrapChain.previousUri && previousUri) {
+                bootstrapChain.previousUri = previousUri;
+            }
+        } else {
+            bootstrapChain = {
+                id: ++senderBootstrapNextChainId,
+                previousUri: previousUri || null,
+                metadataDeadline: Date.now() + SENDER_BOOTSTRAP_METADATA_WAIT_MS
+            };
+        }
+
+        if (senderBootstrapTimer) {
+            clearTimeout(senderBootstrapTimer.handle);
+        }
+
+        const timerHandle = setTimeout(async () => {
+            if (senderBootstrapTimer?.handle === timerHandle) {
+                senderBootstrapTimer = null;
+            }
+            if (senderBootstrapScheduledChain?.id !== bootstrapChain.id) return;
+            if (senderBootstrapInFlightChain) {
+                if (!senderBootstrapRerunRequested
+                    || bootstrapChain.id > senderBootstrapRerunRequested.id) {
+                    senderBootstrapRerunRequested = bootstrapChain;
+                }
+                return;
+            }
+
+            const finishChain = () => {
+                if (senderBootstrapScheduledChain?.id === bootstrapChain.id) {
+                    senderBootstrapScheduledChain = null;
+                }
+                if (senderBootstrapRerunRequested?.id === bootstrapChain.id) {
+                    senderBootstrapRerunRequested = null;
+                }
+            };
+
+            const overlaySender = window.OverlaySender;
+            const helperSender = window.lyricsHelperSender;
+            const overlayEnabled = !!overlaySender?.enabled;
+            const helperEnabled = !!helperSender?.enabled;
+            if (!overlayEnabled && !helperEnabled) {
+                finishChain();
+                return;
+            }
+
+            const item = Spicetify.Player.data?.item;
+            const uri = item?.uri;
+            const title = item?.metadata?.title || item?.name || '';
+            const artist = item?.metadata?.artist_name
+                || item?.artists?.map(artistItem => artistItem.name).filter(Boolean).join(', ')
+                || '';
+            if (!uri || !title) {
+                if (Date.now() < bootstrapChain.metadataDeadline) {
+                    scheduleSenderBootstrap(150, null, bootstrapChain);
+                } else {
+                    finishChain();
+                }
+                return;
+            }
+
+            // songchange 이벤트 직후에는 Player.data가 잠시 이전 URI를 유지한다.
+            if (bootstrapChain.previousUri && uri === bootstrapChain.previousUri
+                && Date.now() < bootstrapChain.metadataDeadline) {
+                scheduleSenderBootstrap(150, null, bootstrapChain);
+                return;
+            }
+
+            const overlayHasCurrentTrack = !overlayEnabled || overlaySender?.lastDeliveredUri === uri;
+            const helperHasCurrentTrack = !helperEnabled || helperSender?.lastDeliveredUri === uri;
+            if (overlayHasCurrentTrack && helperHasCurrentTrack) {
+                finishChain();
+                return;
+            }
+
+            // /ivLyrics 페이지에서는 페이지가 직접 가사를 조회해 lyrics-ready로
+            // 전달하므로 중복 Gemini 호출을 피하려고 잠시 기다린다. 다만 페이지가
+            // 렌더링에 실패하면 아무도 조회하지 않게 되므로, 유예 시간이 지나도
+            // 현재 곡이 전달되지 않으면 부트스트랩이 직접 조회한다.
+            const pathname = Spicetify.Platform?.History?.location?.pathname || "";
+            if (pathname.includes("/ivLyrics")) {
+                if (senderBootstrapPageGraceUri !== uri) {
+                    senderBootstrapPageGraceUri = uri;
+                    senderBootstrapPageGraceUntil = Date.now() + 8000;
+                }
+                if (Date.now() < senderBootstrapPageGraceUntil) {
+                    helperDebug('[LyricsService] ivLyrics 페이지 가사 전달 대기 중:', { uri });
+                    scheduleSenderBootstrap(1000, null, bootstrapChain);
+                    return;
+                }
+                helperDebug('[LyricsService] ivLyrics 페이지가 가사를 전달하지 않아 직접 조회:', { uri });
+            }
+
+            senderBootstrapInFlightChain = bootstrapChain;
+            try {
+                helperDebug('[LyricsService] 현재 곡 가사 초기 동기화:', { uri, title });
+                await LyricsService.getFullLyrics(
+                    {
+                        uri,
+                        title,
+                        artist,
+                        duration: Spicetify.Player.getDuration() || 0
+                    },
+                    { sendToOverlay: true }
+                );
+            } catch (e) {
+                console.error('[LyricsService] 현재 곡 가사 초기 동기화 실패:', e);
+            } finally {
+                if (senderBootstrapInFlightChain?.id === bootstrapChain.id) {
+                    senderBootstrapInFlightChain = null;
+                }
+                const rerunChain = senderBootstrapRerunRequested;
+                if (rerunChain
+                    && senderBootstrapScheduledChain?.id === rerunChain.id
+                    && rerunChain.id > bootstrapChain.id) {
+                    senderBootstrapRerunRequested = null;
+                    scheduleSenderBootstrap(150, null, rerunChain);
+                } else {
+                    if (rerunChain
+                        && rerunChain.id < (senderBootstrapScheduledChain?.id || bootstrapChain.id)) {
+                        senderBootstrapRerunRequested = null;
+                    }
+                    finishChain();
+                }
+            }
+        }, delay);
+        senderBootstrapScheduledChain = bootstrapChain;
+        senderBootstrapTimer = { handle: timerHandle, chainId: bootstrapChain.id };
+    };
+
+    // Rust helper/overlay의 입력 형식은 정수 밀리초와 문자열만 허용한다.
+    // pseudo-karaoke의 소수 타임스탬프나 객체형 보조 가사가 들어오면 422가 나므로
+    // 두 sender가 같은 경계 정규화를 사용한다.
+    const mapLyricsForSender = (lyrics, offset) => {
+        const safeOffset = Number(offset);
+        const normalizedOffset = Number.isFinite(safeOffset) ? safeOffset : 0;
+
+        return lyrics.map(line => {
+            const originalCandidate = line?.originalText ?? line?.text ?? '';
+            const originalText = typeof originalCandidate === 'string'
+                ? originalCandidate
+                : String(originalCandidate ?? '');
+            const pronCandidate = typeof line?.text === 'string' ? line.text : null;
+            const pronText = pronCandidate
+                && pronCandidate !== line?.originalText
+                && pronCandidate !== originalText
+                ? pronCandidate
+                : null;
+            const transText = [line?.text2, line?.translation, line?.translationText]
+                .find(value => typeof value === 'string' && value.trim() && value !== originalText)
+                || null;
+
+            const rawStartTime = Number(line?.startTime);
+            const rawEndTime = line?.endTime == null ? null : Number(line.endTime);
+            const startTime = Math.round((Number.isFinite(rawStartTime) ? rawStartTime : 0) + normalizedOffset);
+            const endTime = rawEndTime !== null && Number.isFinite(rawEndTime)
+                ? Math.round(rawEndTime + normalizedOffset)
+                : null;
+
+            return { startTime, endTime, text: originalText, pronText, transText };
+        });
+    };
+
+    const LYRICS_SEND_RETRY_DELAYS = [250, 750];
+
     const OverlaySender = {
         DEFAULT_PORT: 15000,
         progressInterval: null,
         lastSentUri: null,
         lastSentLyrics: null,
         lastSentOffset: null,
+        _lastSentDedupeToken: null,
+        lastDeliveredUri: null,
+        _deliveryGeneration: 0,
+        _deliveryKey: null,
+        _terminalDeliveryFailure: null,
         _lastTrackInfo: null,
         _lastLyrics: null,
         lastConfigDelay: undefined,
@@ -6778,6 +6997,8 @@
         _isSendingProgress: false,
         _reqId: 0,
         _lastReqId: 0,
+        _pendingLyricsSend: null,
+        _lyricsSendActive: false,
 
         // 포트 설정 (localStorage에 저장)
         get port() {
@@ -6845,11 +7066,41 @@
 
             if (value && !wasConnected) {
                 helperDebug('[OverlaySender] 오버레이 연결됨 ✓');
-                setTimeout(() => this.resendWithNewOffset(), 100);
+                this.handleConnectionRecovery();
             }
             else if (!value && wasConnected) {
                 helperDebug('[OverlaySender] 오버레이 연결 끊김');
             }
+        },
+
+        handleConnectionRecovery() {
+            // 가사 요청 자체가 연결을 복구한 경우 현재 큐가 성공 상태를 기록하므로
+            // 여기서 같은 payload를 다시 예약하지 않는다.
+            if (this._lyricsSendActive) return;
+
+            const failure = this._terminalDeliveryFailure;
+            if (failure
+                && failure.generation === this._deliveryGeneration
+                && failure.key === this._deliveryKey) {
+                if (failure.reconnectUsed) return;
+                failure.reconnectUsed = true;
+                const { generation, key } = failure;
+                setTimeout(() => {
+                    const currentFailure = this._terminalDeliveryFailure;
+                    if (!this.enabled || !currentFailure
+                        || currentFailure.generation !== generation
+                        || currentFailure.key !== key
+                        || this._deliveryGeneration !== generation
+                        || this._deliveryKey !== key) {
+                        return;
+                    }
+                    this.resendWithNewOffset('reconnect');
+                }, 100);
+                return;
+            }
+
+            setTimeout(() => this.resendWithNewOffset('reconnect'), 100);
+            scheduleSenderBootstrap(150);
         },
 
         async checkConnection() {
@@ -6887,6 +7138,8 @@
         async sendToEndpoint(endpoint, data) {
             if (!this.enabled) return;
 
+            const isProgressEndpoint = endpoint === '/progress' || endpoint === '/lyrics/progress';
+
             try {
                 const response = await fetch(`http://localhost:${this.port}${endpoint}`, {
                     method: 'POST',
@@ -6896,13 +7149,41 @@
                     signal: AbortSignal.timeout(2000)
                 });
 
+                if (!response.ok) {
+                    let responseDetail = '';
+                    try {
+                        responseDetail = await response.text();
+                    } catch (e) { }
+                    if (this._isConnected) {
+                        this.isConnected = false;
+                    }
+                    if (!isProgressEndpoint) {
+                        console.error('[LyricsService] 가사 전송 실패:', {
+                            endpoint,
+                            port: this.port,
+                            status: response.status,
+                            detail: responseDetail || null
+                        });
+                    }
+                    return false;
+                }
+
                 if (!this._isConnected && response.ok) {
                     this.isConnected = true;
                 }
+                return true;
             } catch (e) {
                 if (this._isConnected) {
                     this.isConnected = false;
                 }
+                if (!isProgressEndpoint) {
+                    console.error('[LyricsService] 가사 전송 중 오류:', {
+                        endpoint,
+                        port: this.port,
+                        error: e
+                    });
+                }
+                return false;
             }
         },
 
@@ -6949,9 +7230,140 @@
             return -offset;
         },
 
-        async sendLyrics(trackInfo, lyrics, forceResend = false) {
+        // 현재 재생 중인 곡과 다른(이전) 곡의 가사 전송인지 확인
+        isStaleTrackSend(trackInfo) {
+            try {
+                const currentUri = Spicetify.Player.data?.item?.uri;
+                return !!(currentUri && trackInfo?.uri && trackInfo.uri !== currentUri);
+            } catch (e) {
+                return false;
+            }
+        },
+
+        // 가사 전송 직렬화 (최신 페이로드 우선) - HTTP 응답 순서 뒤집힘으로
+        // 이전 가사가 최신 가사를 덮어쓰는 문제 방지
+        async queueLyricsSend(endpoint, uri, payload, deliveryContext = null) {
+            if (!deliveryContext) {
+                const key = JSON.stringify([uri, this.lastSentLyrics, this.lastSentOffset]);
+                deliveryContext = {
+                    key,
+                    generation: ++this._deliveryGeneration,
+                    isReconnectCycle: false
+                };
+                this._deliveryKey = key;
+                this._terminalDeliveryFailure = null;
+            }
+            const dedupeToken = this.lastSentUri === uri ? {} : null;
+            if (dedupeToken) {
+                this._lastSentDedupeToken = dedupeToken;
+            }
+            this._pendingLyricsSend = {
+                endpoint,
+                uri,
+                payload,
+                retryCount: 0,
+                deliveryKey: deliveryContext.key,
+                generation: deliveryContext.generation,
+                isReconnectCycle: !!deliveryContext.isReconnectCycle,
+                dedupeSnapshot: {
+                    uri: this.lastSentUri,
+                    lyrics: this.lastSentLyrics,
+                    offset: this.lastSentOffset,
+                    token: dedupeToken
+                }
+            };
+            if (this._lyricsSendActive) return;
+            this._lyricsSendActive = true;
+            const clearDedupeIfCurrent = (queued) => {
+                const snapshot = queued.dedupeSnapshot;
+                if (queued.generation !== this._deliveryGeneration
+                    || !snapshot || snapshot.uri !== queued.uri
+                    || this._lastSentDedupeToken !== snapshot.token
+                    || this.lastSentUri !== snapshot.uri
+                    || this.lastSentLyrics !== snapshot.lyrics
+                    || !Object.is(this.lastSentOffset, snapshot.offset)) {
+                    return;
+                }
+                this.lastSentUri = null;
+                this.lastSentLyrics = null;
+                this.lastSentOffset = null;
+                this._lastSentDedupeToken = null;
+            };
+            const markTerminalFailure = (queued) => {
+                if (queued.generation !== this._deliveryGeneration
+                    || queued.deliveryKey !== this._deliveryKey) {
+                    return;
+                }
+                const previousFailure = this._terminalDeliveryFailure;
+                this._terminalDeliveryFailure = {
+                    key: queued.deliveryKey,
+                    generation: queued.generation,
+                    reconnectUsed: queued.isReconnectCycle
+                        || !!(previousFailure
+                            && previousFailure.key === queued.deliveryKey
+                            && previousFailure.generation === queued.generation
+                            && previousFailure.reconnectUsed)
+                };
+                clearDedupeIfCurrent(queued);
+            };
+            try {
+                while (this._pendingLyricsSend) {
+                    const next = this._pendingLyricsSend;
+                    this._pendingLyricsSend = null;
+                    if (next.generation !== this._deliveryGeneration) continue;
+                    if (!this.enabled || (next.uri && this.isStaleTrackSend({ uri: next.uri }))) {
+                        clearDedupeIfCurrent(next);
+                        continue;
+                    }
+                    const sent = await this.sendToEndpoint(next.endpoint, next.payload);
+                    const deliveryIsCurrent = this.enabled
+                        && next.generation === this._deliveryGeneration
+                        && (!next.uri || !this.isStaleTrackSend({ uri: next.uri }));
+                    if (sent === true) {
+                        if (deliveryIsCurrent) {
+                            this.lastDeliveredUri = next.uri || null;
+                            this._terminalDeliveryFailure = null;
+                        }
+                        continue;
+                    }
+
+                    if (!deliveryIsCurrent) continue;
+
+                    if (this.lastDeliveredUri === next.uri) {
+                        this.lastDeliveredUri = null;
+                    }
+                    this.scheduleConnectionCheck?.();
+
+                    const retryDelay = LYRICS_SEND_RETRY_DELAYS[next.retryCount];
+                    if (retryDelay === undefined) {
+                        markTerminalFailure(next);
+                        continue;
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, retryDelay));
+                    // 대기 중 들어온 최신 페이로드가 실패한 요청의 재시도를 대체한다.
+                    if (this._pendingLyricsSend) {
+                        continue;
+                    }
+                    if (!this.enabled || next.generation !== this._deliveryGeneration
+                        || (next.uri && this.isStaleTrackSend({ uri: next.uri }))) {
+                        clearDedupeIfCurrent(next);
+                        continue;
+                    }
+                    this._pendingLyricsSend = { ...next, retryCount: next.retryCount + 1 };
+                }
+            } finally {
+                this._lyricsSendActive = false;
+            }
+        },
+
+        async sendLyrics(trackInfo, lyrics, forceResend = false, sendReason = 'normal') {
             if (!trackInfo || !lyrics || !Array.isArray(lyrics)) return;
             if (!this.enabled) return;
+            if (this.isStaleTrackSend(trackInfo)) {
+                helperDebug('[OverlaySender] 이전 곡 가사 전송 차단:', trackInfo.uri);
+                return;
+            }
 
             const currentReqId = ++this._reqId;
 
@@ -6966,6 +7378,11 @@
             }
             this._lastReqId = currentReqId;
 
+            if (!this.enabled || this.isStaleTrackSend(trackInfo)) {
+                helperDebug('[OverlaySender] 이전 곡 가사 전송 차단 (오프셋 계산 후):', trackInfo.uri);
+                return;
+            }
+
             const lyricsHash = JSON.stringify(lyrics);
 
             if (!forceResend &&
@@ -6973,6 +7390,15 @@
                 this.lastSentLyrics === lyricsHash &&
                 this.lastSentOffset === offset) {
                 return;
+            }
+
+            const deliveryKey = JSON.stringify([trackInfo.uri, lyricsHash, offset]);
+            const isReconnectCycle = sendReason === 'reconnect';
+            let deliveryGeneration = this._deliveryGeneration;
+            if (!isReconnectCycle || this._deliveryKey !== deliveryKey) {
+                deliveryGeneration = ++this._deliveryGeneration;
+                this._deliveryKey = deliveryKey;
+                this._terminalDeliveryFailure = null;
             }
 
             this.lastSentUri = trackInfo.uri;
@@ -6988,29 +7414,7 @@
                 albumArt = resolveSpotifyImageUrl(imageUrl);
             } catch (e) { }
 
-            const mappedLines = lyrics.map(l => {
-                const originalText = l.originalText || l.text || '';
-                const pronText = (l.text && l.text !== l.originalText && l.text !== originalText) ? l.text : null;
-                let transText = l.text2 || l.translation || l.translationText || null;
-                if (transText && typeof transText === 'string' && transText.trim() === '') {
-                    transText = null;
-                }
-                if (transText && transText === originalText) {
-                    transText = null;
-                }
-
-                // startTime과 endTime을 숫자로 안전하게 변환
-                const startTimeNum = typeof l.startTime === 'number' ? l.startTime : (parseInt(l.startTime, 10) || 0);
-                const endTimeNum = l.endTime != null ? (typeof l.endTime === 'number' ? l.endTime : (parseInt(l.endTime, 10) || null)) : null;
-
-                return {
-                    startTime: startTimeNum + offset,
-                    endTime: endTimeNum !== null ? endTimeNum + offset : null,
-                    text: originalText,
-                    pronText: pronText,
-                    transText: transText
-                };
-            });
+            const mappedLines = mapLyricsForSender(lyrics, offset);
 
             // 현재 트랙 정보 가져오기 (Spicetify.Player.data에서 최신 정보 사용)
             const originalTitle = trackInfo.title || Spicetify.Player.data?.item?.metadata?.title || '';
@@ -7030,7 +7434,7 @@
                 translated: !!translatedMetadata
             });
 
-            await this.sendToEndpoint('/lyrics', {
+            await this.queueLyricsSend('/lyrics', trackInfo.uri, {
                 track: {
                     title: currentTitle,
                     artist: currentArtist,
@@ -7040,15 +7444,19 @@
                 },
                 lyrics: mappedLines,
                 isSynced: lyrics.some(l => l.startTime !== undefined && l.startTime !== null)
+            }, {
+                key: deliveryKey,
+                generation: deliveryGeneration,
+                isReconnectCycle
             });
         },
 
-        async resendWithNewOffset() {
+        async resendWithNewOffset(sendReason = 'explicit') {
             // 오프셋 캐시 초기화
             this._offsetCache = {};
             if (this._lastTrackInfo && this._lastLyrics) {
                 helperDebug('[OverlaySender] 가사 재전송 (싱크 반영)');
-                await this.sendLyrics(this._lastTrackInfo, this._lastLyrics, true);
+                await this.sendLyrics(this._lastTrackInfo, this._lastLyrics, true, sendReason);
             }
         },
 
@@ -7218,68 +7626,29 @@
             };
 
             // 트랙 변경 감지
-            this._songChangeListener = async () => {
+            this._songChangeListener = () => {
+                const previousUri = this._lastTrackInfo?.uri || this.lastSentUri || null;
                 // 캐시 초기화
                 this.lastSentUri = null;
                 this.lastSentLyrics = null;
                 this.lastSentOffset = null;
+                this._lastSentDedupeToken = null;
+                this.lastDeliveredUri = null;
+                this._deliveryGeneration += 1;
+                this._deliveryKey = null;
+                this._terminalDeliveryFailure = null;
+                this._pendingLyricsSend = null;
                 this._offsetCache = {};
                 this._lastProgressUri = null;
+                this._lastTrackInfo = null;
+                this._lastLyrics = null;
 
                 // 오버레이 활성화 상태가 아니면 스킵
                 if (!this.enabled) return;
-
-                // ivLyrics 페이지에 있으면 index.js가 처리하므로 스킵
-                // (lyrics-ready 이벤트를 통해 가사가 전송됨)
-                const pathname = Spicetify.Platform?.History?.location?.pathname || "";
-                if (pathname.includes("/ivLyrics")) {
-                    helperDebug('[OverlaySender] ivLyrics 페이지 - index.js가 처리');
-                    return;
-                }
-
-                // 다른 페이지에서 곡 변경됨 - 직접 가사 가져와서 전송
-                helperDebug('[OverlaySender] 다른 페이지에서 곡 변경 감지');
-
-                // 트랙 정보가 완전히 로드될 때까지 대기
-                const waitForTrackData = () => {
-                    return new Promise((resolve) => {
-                        const check = () => {
-                            const data = Spicetify.Player.data;
-                            if (data?.item?.uri && data?.item?.metadata?.title) {
-                                resolve(data);
-                            } else {
-                                setTimeout(check, 100);
-                            }
-                        };
-                        check();
-                        // 3초 타임아웃
-                        setTimeout(() => resolve(null), 3000);
-                    });
-                };
-
-                try {
-                    const playerData = await waitForTrackData();
-                    if (!playerData?.item) {
-                        helperDebug('[OverlaySender] 트랙 데이터 로드 실패');
-                        return;
-                    }
-
-                    const uri = playerData.item.uri;
-                    const title = playerData.item.metadata?.title || '';
-                    const artist = playerData.item.metadata?.artist_name || '';
-                    const duration = Spicetify.Player.getDuration() || 0;
-
-                    helperDebug('[OverlaySender] 트랙 정보:', { title, artist });
-
-                    // LyricsService.getFullLyrics 통합 API 사용
-                    // (가사 로드 + endTime 계산 + 발음/번역 + 오버레이 전송까지 한 번에 처리)
-                    await LyricsService.getFullLyrics(
-                        { uri, title, artist, duration },
-                        { sendToOverlay: true }
-                    );
-                } catch (e) {
-                    console.error('[OverlaySender] 가사 가져오기 실패:', e);
-                }
+                // songchange 시점에는 Player.data가 아직 이전 곡일 수 있다.
+                // 두 sender가 공유하는 지연 부트스트랩이 최신 메타데이터를 읽고 한 번만 조회한다.
+                helperDebug('[OverlaySender] 곡 변경 - 현재 곡 가사 동기화 예약');
+                scheduleSenderBootstrap(150, previousUri);
             };
 
             window.addEventListener('storage', this._storageListener);
@@ -7356,6 +7725,7 @@
                 this.startProgressSync();
                 this.setupOffsetListener();
                 this.scheduleConnectionCheck();
+                scheduleSenderBootstrap();
             } else {
                 this.stopProgressSync();
                 this.teardownOffsetListener();
@@ -7363,6 +7733,12 @@
                 this.lastSentUri = null;
                 this.lastSentLyrics = null;
                 this.lastSentOffset = null;
+                this._lastSentDedupeToken = null;
+                this.lastDeliveredUri = null;
+                this._deliveryGeneration += 1;
+                this._deliveryKey = null;
+                this._terminalDeliveryFailure = null;
+                this._pendingLyricsSend = null;
                 this._lastTrackInfo = null;
                 this._lastLyrics = null;
                 this._offsetCache = {};
@@ -7423,6 +7799,49 @@
         DEFAULT_PORT: {
             value: 15123  // Helper 서버 포트 (video_server와 lyrics_server 통합)
         },
+        // ⚠️ 상태 분리: Object.create로 만든 객체는 자기 소유 속성이 없으면
+        // 프로토타입(OverlaySender)의 가변 상태를 그대로 읽고, 상속된 메서드가
+        // OverlaySender의 워커를 죽이거나 window 리스너를 떼어내는 사고가 발생한다.
+        // (오버레이에 가사가 안 들어오던 원인) 반드시 전부 own property로 초기화한다.
+        progressInterval: { value: null, writable: true },
+        lastSentUri: { value: null, writable: true },
+        lastSentLyrics: { value: null, writable: true },
+        lastSentOffset: { value: null, writable: true },
+        _lastSentDedupeToken: { value: null, writable: true },
+        lastDeliveredUri: { value: null, writable: true },
+        _deliveryGeneration: { value: 0, writable: true },
+        _deliveryKey: { value: null, writable: true },
+        _terminalDeliveryFailure: { value: null, writable: true },
+        _lastTrackInfo: { value: null, writable: true },
+        _lastLyrics: { value: null, writable: true },
+        lastConfigDelay: { value: undefined, writable: true },
+        _offsetCache: { value: {}, writable: true },
+        _isConnected: { value: false, writable: true },
+        _connectionCheckInterval: { value: null, writable: true },
+        _connectionCheckTimer: { value: null, writable: true },
+        _lastConnectionAttempt: { value: 0, writable: true },
+        _isSettingsOpen: { value: false, writable: true },
+        _settingsTimer: { value: null, writable: true },
+        _worker: { value: null, writable: true },
+        _isSendingProgress: { value: false, writable: true },
+        _lastProgressUri: { value: null, writable: true },
+        _reqId: { value: 0, writable: true },
+        _lastReqId: { value: 0, writable: true },
+        _pendingLyricsSend: { value: null, writable: true },
+        _lyricsSendActive: { value: false, writable: true },
+        _initialized: { value: false, writable: true },
+        _offsetListenerSetup: { value: false, writable: true },
+        _runtimeListenerSetup: { value: false, writable: true },
+        _runtimeEnabledState: { value: undefined, writable: true },
+        _storageListener: { value: null, writable: true },
+        _delayChangedListener: { value: null, writable: true },
+        _offsetChangedListener: { value: null, writable: true },
+        _lyricsReadyListener: { value: null, writable: true },
+        _visibilityChangeListener: { value: null, writable: true },
+        _focusListener: { value: null, writable: true },
+        _songChangeListener: { value: null, writable: true },
+        _runtimeStorageListener: { value: null, writable: true },
+        _runtimeEventListener: { value: null, writable: true },
         port: {
             get() {
                 return this.DEFAULT_PORT;
@@ -7441,14 +7860,7 @@
                 } else {
                     Spicetify.LocalStorage.set('ivLyrics:visual:lyrics-helper-enabled', value ? 'true' : 'false');
                 }
-                if (value) {
-                    this.startProgressSync();
-                    this.checkConnection();
-                } else {
-                    clearSettingsPolling(this);
-                    this.teardownOffsetListener();
-                    this.stopProgressSync();
-                }
+                this.syncRuntimeState();
             }
         },
         setSettingsOpen: {
@@ -7483,7 +7895,7 @@
 
                 if (value && !wasConnected) {
                     helperDebug('[lyricsHelperSender] 헬퍼 연결됨 ✓');
-                    setTimeout(() => this.resendWithNewOffset(), 100);
+                    this.handleConnectionRecovery();
                 }
                 else if (!value && wasConnected) {
                     helperDebug('[lyricsHelperSender] 헬퍼 연결 끊김');
@@ -7491,9 +7903,13 @@
             }
         },
         sendLyrics: {
-            value: async function (trackInfo, lyrics, forceResend = false) {
+            value: async function (trackInfo, lyrics, forceResend = false, sendReason = 'normal') {
                 if (!trackInfo || !lyrics || !Array.isArray(lyrics)) return;
                 if (!this.enabled) return;
+                if (this.isStaleTrackSend(trackInfo)) {
+                    helperDebug('[lyricsHelperSender] 이전 곡 가사 전송 차단:', trackInfo.uri);
+                    return;
+                }
 
                 const currentReqId = ++this._reqId;
 
@@ -7508,6 +7924,11 @@
                 }
                 this._lastReqId = currentReqId;
 
+                if (!this.enabled || this.isStaleTrackSend(trackInfo)) {
+                    helperDebug('[lyricsHelperSender] 이전 곡 가사 전송 차단 (오프셋 계산 후):', trackInfo.uri);
+                    return;
+                }
+
                 const lyricsHash = JSON.stringify(lyrics);
 
                 if (!forceResend &&
@@ -7515,6 +7936,15 @@
                     this.lastSentLyrics === lyricsHash &&
                     this.lastSentOffset === offset) {
                     return;
+                }
+
+                const deliveryKey = JSON.stringify([trackInfo.uri, lyricsHash, offset]);
+                const isReconnectCycle = sendReason === 'reconnect';
+                let deliveryGeneration = this._deliveryGeneration;
+                if (!isReconnectCycle || this._deliveryKey !== deliveryKey) {
+                    deliveryGeneration = ++this._deliveryGeneration;
+                    this._deliveryKey = deliveryKey;
+                    this._terminalDeliveryFailure = null;
                 }
 
                 this.lastSentUri = trackInfo.uri;
@@ -7530,29 +7960,7 @@
                     albumArt = resolveSpotifyImageUrl(imageUrl);
                 } catch (e) { }
 
-                const mappedLines = lyrics.map(l => {
-                    const originalText = l.originalText || l.text || '';
-                    const pronText = (l.text && l.text !== l.originalText && l.text !== originalText) ? l.text : null;
-                    let transText = l.text2 || l.translation || l.translationText || null;
-                    if (transText && typeof transText === 'string' && transText.trim() === '') {
-                        transText = null;
-                    }
-                    if (transText && transText === originalText) {
-                        transText = null;
-                    }
-
-                    // startTime과 endTime을 숫자로 안전하게 변환
-                    const startTimeNum = typeof l.startTime === 'number' ? l.startTime : (parseInt(l.startTime, 10) || 0);
-                    const endTimeNum = l.endTime != null ? (typeof l.endTime === 'number' ? l.endTime : (parseInt(l.endTime, 10) || null)) : null;
-
-                    return {
-                        startTime: startTimeNum + offset,
-                        endTime: endTimeNum !== null ? endTimeNum + offset : null,
-                        text: originalText,
-                        pronText: pronText,
-                        transText: transText
-                    };
-                });
+                const mappedLines = mapLyricsForSender(lyrics, offset);
 
                 // 현재 트랙 정보 가져오기 (Spicetify.Player.data에서 최신 정보 사용)
                 const currentTitle = trackInfo.title || Spicetify.Player.data?.item?.metadata?.title || '';
@@ -7567,7 +7975,7 @@
                 });
 
                 // 새로운 엔드포인트 사용: /lyrics/sender
-                await this.sendToEndpoint('/lyrics/sender', {
+                await this.queueLyricsSend('/lyrics/sender', trackInfo.uri, {
                     track: {
                         title: currentTitle,
                         artist: currentArtist,
@@ -7577,15 +7985,19 @@
                     },
                     lyrics: mappedLines,
                     isSynced: lyrics.some(l => l.startTime !== undefined && l.startTime !== null)
+                }, {
+                    key: deliveryKey,
+                    generation: deliveryGeneration,
+                    isReconnectCycle
                 });
             }
         },
         resendWithNewOffset: {
-            value: async function () {
+            value: async function (sendReason = 'explicit') {
                 this._offsetCache = {};
                 if (this._lastTrackInfo && this._lastLyrics) {
                     helperDebug('[lyricsHelperSender] 가사 재전송 (싱크 반영)');
-                    await this.sendLyrics(this._lastTrackInfo, this._lastLyrics, true);
+                    await this.sendLyrics(this._lastTrackInfo, this._lastLyrics, true, sendReason);
                 }
             }
         },
@@ -7658,68 +8070,28 @@
                     }
                 };
 
-                this._songChangeListener = async () => {
+                this._songChangeListener = () => {
+                    const previousUri = this._lastTrackInfo?.uri || this.lastSentUri || null;
                     // 캐시 초기화
                     this.lastSentUri = null;
                     this.lastSentLyrics = null;
                     this.lastSentOffset = null;
+                    this._lastSentDedupeToken = null;
+                    this.lastDeliveredUri = null;
+                    this._deliveryGeneration += 1;
+                    this._deliveryKey = null;
+                    this._terminalDeliveryFailure = null;
+                    this._pendingLyricsSend = null;
                     this._offsetCache = {};
                     this._lastProgressUri = null;
+                    this._lastTrackInfo = null;
+                    this._lastLyrics = null;
 
                     // 오버레이 활성화 상태가 아니면 스킵
                     if (!this.enabled) return;
-
-                    // ivLyrics 페이지에 있으면 index.js가 처리하므로 스킵
-                    // (lyrics-ready 이벤트를 통해 가사가 전송됨)
-                    const pathname = Spicetify.Platform?.History?.location?.pathname || "";
-                    if (pathname.includes("/ivLyrics")) {
-                        helperDebug('[lyricsHelperSender] ivLyrics 페이지 - index.js가 처리');
-                        return;
-                    }
-
-                    // 다른 페이지에서 곡 변경됨 - 직접 가사 가져와서 전송
-                    helperDebug('[lyricsHelperSender] 다른 페이지에서 곡 변경 감지');
-
-                    // 트랙 정보가 완전히 로드될 때까지 대기
-                    const waitForTrackData = () => {
-                        return new Promise((resolve) => {
-                            const check = () => {
-                                const data = Spicetify.Player.data;
-                                if (data?.item?.uri && data?.item?.metadata?.title) {
-                                    resolve(data);
-                                } else {
-                                    setTimeout(check, 100);
-                                }
-                            };
-                            check();
-                            // 3초 타임아웃
-                            setTimeout(() => resolve(null), 3000);
-                        });
-                    };
-
-                    try {
-                        const playerData = await waitForTrackData();
-                        if (!playerData?.item) {
-                            helperDebug('[lyricsHelperSender] 트랙 데이터 로드 실패');
-                            return;
-                        }
-
-                        const uri = playerData.item.uri;
-                        const title = playerData.item.metadata?.title || '';
-                        const artist = playerData.item.metadata?.artist_name || '';
-                        const duration = Spicetify.Player.getDuration() || 0;
-
-                        helperDebug('[lyricsHelperSender] 트랙 정보:', { title, artist });
-
-                        // LyricsService.getFullLyrics 통합 API 사용
-                        // (가사 로드 + endTime 계산 + 발음/번역 + 오버레이 전송까지 한 번에 처리)
-                        await LyricsService.getFullLyrics(
-                            { uri, title, artist, duration },
-                            { sendToOverlay: true }
-                        );
-                    } catch (e) {
-                        console.error('[lyricsHelperSender] 가사 가져오기 실패:', e);
-                    }
+                    // OverlaySender와 동일한 공용 타이머를 사용해 중복 조회하지 않는다.
+                    helperDebug('[lyricsHelperSender] 곡 변경 - 현재 곡 가사 동기화 예약');
+                    scheduleSenderBootstrap(150, previousUri);
                 };
 
                 window.addEventListener('storage', this._storageListener);
@@ -7907,6 +8279,7 @@
                     this.startProgressSync();
                     this.setupOffsetListener();
                     this.scheduleConnectionCheck();
+                    scheduleSenderBootstrap();
                 } else {
                     this.stopProgressSync();
                     this.teardownOffsetListener();
@@ -7914,6 +8287,12 @@
                     this.lastSentUri = null;
                     this.lastSentLyrics = null;
                     this.lastSentOffset = null;
+                    this._lastSentDedupeToken = null;
+                    this.lastDeliveredUri = null;
+                    this._deliveryGeneration += 1;
+                    this._deliveryKey = null;
+                    this._terminalDeliveryFailure = null;
+                    this._pendingLyricsSend = null;
                     this._lastTrackInfo = null;
                     this._lastLyrics = null;
                     this._offsetCache = {};
@@ -7979,6 +8358,8 @@
         },
         init: {
             value: function () {
+                if (this._initialized) return;
+                this._initialized = true;
                 this.setupRuntimeListener();
                 this.syncRuntimeState();
                 helperDebug('[lyricsHelperSender] Initialized in Extension');

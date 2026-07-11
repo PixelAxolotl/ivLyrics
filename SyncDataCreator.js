@@ -315,6 +315,55 @@ const sanitizeSyncCreatorSpeakerColor = (speaker, color, useDefault = false, fal
 		|| (useDefault ? getSyncCreatorCustomSpeakerDefaultColor(speaker, fallback) : '');
 };
 
+const resolveSyncCreatorSpeakerTransition = ({
+	currentSpeaker,
+	currentColor = '',
+	currentFallback = '',
+	nextSpeaker,
+	remembered = {}
+}) => {
+	const speaker = normalizeSyncCreatorSpeaker(nextSpeaker);
+	if (!speaker) return null;
+
+	let rememberedColor = normalizeSyncCreatorSpeakerColor(remembered.color);
+	let rememberedFallback = normalizeSyncCreatorSpeakerFallback(remembered.fallback);
+	if (isSyncCreatorCustomSpeaker(currentSpeaker)) {
+		rememberedColor = normalizeSyncCreatorSpeakerColor(currentColor) || rememberedColor;
+		rememberedFallback = normalizeSyncCreatorSpeakerFallback(currentFallback) || rememberedFallback;
+	}
+
+	if (!isSyncCreatorCustomSpeaker(speaker)) {
+		return {
+			speaker,
+			color: '',
+			fallback: '',
+			remembered: {
+				color: rememberedColor,
+				fallback: rememberedFallback
+			}
+		};
+	}
+
+	const fallback = sanitizeSyncCreatorSpeakerFallback(
+		speaker,
+		rememberedFallback || currentFallback,
+		true,
+		nextSpeaker
+	);
+	const color = sanitizeSyncCreatorSpeakerColor(
+		speaker,
+		rememberedColor || currentColor,
+		true,
+		fallback
+	);
+	return {
+		speaker,
+		color,
+		fallback,
+		remembered: { color, fallback }
+	};
+};
+
 const isSyncCreatorSpeakerMetaComplete = (value) => {
 	const speaker = normalizeSyncCreatorSpeaker(value?.speaker);
 	if (!speaker) return false;
@@ -1833,6 +1882,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const preventNextTrackRef = useRef(false);
 	const providerRef = useRef(provider);
 	const selectedLrclibSourceRef = useRef(selectedLrclibSource);
+	const customSpeakerMetaMemoryRef = useRef(new Map());
 
 	const setProviderValue = useCallback((nextProvider = '') => {
 		const normalizedProvider = nextProvider || '';
@@ -7650,35 +7700,41 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			if (activeParallelPart) updateParallelPartMeta(activeParallelPart.id, field, value);
 			else updateCurrentLineMeta(field, value);
 		};
+		const customSpeakerMemoryKey = `${trackId || 'track'}:${currentLineStart}:${activeParallelPart?.id || 'line'}`;
 		const updateSpeaker = (value) => {
-			const speaker = normalizeSyncCreatorSpeaker(value);
-			if (!speaker) return;
-			const enteringCustom = isSyncCreatorCustomSpeaker(speaker) && !isSyncCreatorCustomSpeaker(targetSpeaker);
-			const fallback = sanitizeSyncCreatorSpeakerFallback(
-				speaker,
-				targetSpeakerFallback,
-				true,
-				value
-			);
-			const customColor = sanitizeSyncCreatorSpeakerColor(
-				speaker,
-				enteringCustom ? '' : targetSpeakerColor,
-				true,
-				fallback
-			);
-			updateSpeakerMeta('speaker', speaker);
-			updateSpeakerMeta('speaker-fallback', fallback);
-			updateSpeakerMeta('speaker-color', customColor);
+			const transition = resolveSyncCreatorSpeakerTransition({
+				currentSpeaker: targetSpeaker,
+				currentColor: targetSpeakerColor,
+				currentFallback: targetSpeakerFallback,
+				nextSpeaker: value,
+				remembered: customSpeakerMetaMemoryRef.current.get(customSpeakerMemoryKey)
+			});
+			if (!transition) return;
+			customSpeakerMetaMemoryRef.current.set(customSpeakerMemoryKey, transition.remembered);
+			updateSpeakerMeta('speaker', transition.speaker);
+			updateSpeakerMeta('speaker-fallback', transition.fallback);
+			updateSpeakerMeta('speaker-color', transition.color);
 		};
 		const updateSpeakerColor = (value) => {
 			const color = normalizeSyncCreatorSpeakerColor(value);
 			if (!color) return false;
+			const remembered = customSpeakerMetaMemoryRef.current.get(customSpeakerMemoryKey) || {};
+			customSpeakerMetaMemoryRef.current.set(customSpeakerMemoryKey, {
+				color,
+				fallback: normalizeSyncCreatorSpeakerFallback(targetSpeakerFallback) || remembered.fallback || ''
+			});
 			updateSpeakerMeta('speaker-color', color);
 			return true;
 		};
 		const updateSpeakerFallback = (value) => {
 			const fallback = normalizeSyncCreatorSpeakerFallback(value);
-			if (fallback) updateSpeakerMeta('speaker-fallback', fallback);
+			if (!fallback) return;
+			const remembered = customSpeakerMetaMemoryRef.current.get(customSpeakerMemoryKey) || {};
+			customSpeakerMetaMemoryRef.current.set(customSpeakerMemoryKey, {
+				color: normalizeSyncCreatorSpeakerColor(targetSpeakerColor) || remembered.color || '',
+				fallback
+			});
+			updateSpeakerMeta('speaker-fallback', fallback);
 		};
 		const updateKind = (value) => {
 			if (activeParallelPart) updateParallelPartMeta(activeParallelPart.id, 'kind', value);

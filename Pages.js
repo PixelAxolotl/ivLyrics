@@ -2854,6 +2854,19 @@ const getCompactSyncedOffset = (container, activeLine, isScrolling) => {
 
 const useSyncedLayoutEffect = react.useLayoutEffect || useEffect;
 
+const countKaraokeCharacters = (value) => {
+	const text = value || "";
+	if (typeof text !== "string") {
+		return Array.from(text).length;
+	}
+
+	let count = 0;
+	for (const _character of text) {
+		count++;
+	}
+	return count;
+};
+
 const buildGlobalCharState = (lyrics, position) => {
 	const offsets = [];
 	let totalChars = 0;
@@ -2874,12 +2887,13 @@ const buildGlobalCharState = (lyrics, position) => {
 		for (const syllable of syllables) {
 			if (!syllable || !syllable.text) continue;
 
-			const charArray = Array.from(syllable.text || "");
+			const charCount = countKaraokeCharacters(syllable.text);
+			if (charCount === 0) continue;
 			const syllableStart = syllable.startTime || 0;
 			const syllableEnd = syllable.endTime || syllableStart + 500;
+			const charDuration = (syllableEnd - syllableStart) / charCount;
 
-			for (let charIdx = 0; charIdx < charArray.length; charIdx++) {
-				const charDuration = (syllableEnd - syllableStart) / charArray.length;
+			for (let charIdx = 0; charIdx < charCount; charIdx++) {
 				const charStart = syllableStart + (charIdx * charDuration);
 				const charEnd = charStart + charDuration;
 

@@ -909,11 +909,13 @@
     function getLyricsTextFingerprint(text) {
         const value = String(text || '').normalize('NFC');
         let hash = 2166136261;
-        for (const char of Array.from(value)) {
+        let codePointLength = 0;
+        for (const char of value) {
             hash ^= char.codePointAt(0) || 0;
             hash = Math.imul(hash, 16777619);
+            codePointLength += 1;
         }
-        return `lrclib-${(hash >>> 0).toString(36)}-${Array.from(value).length.toString(36)}`;
+        return `lrclib-${(hash >>> 0).toString(36)}-${codePointLength.toString(36)}`;
     }
 
     function getSyncDataLrclibSource(syncData) {

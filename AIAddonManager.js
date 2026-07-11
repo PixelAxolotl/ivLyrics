@@ -716,11 +716,18 @@
             const resultLines = Array.isArray(result?.l)
                 ? result.l
                 : (Array.isArray(result?.lines) ? result.lines : []);
+            const resultLinesByIndex = new Map();
+            resultLines.forEach((line) => {
+                const lineIndex = Number(line?.i ?? line?.index);
+                if (!resultLinesByIndex.has(lineIndex)) {
+                    resultLinesByIndex.set(lineIndex, line);
+                }
+            });
 
             return {
                 lines: sourceLines.map((text, lineIndex) => {
                     const sourceChars = Array.from(text);
-                    const resultLine = resultLines.find(line => Number(line?.i ?? line?.index) === lineIndex) || resultLines[lineIndex] || {};
+                    const resultLine = resultLinesByIndex.get(lineIndex) || resultLines[lineIndex] || {};
                     const resultChars = Array.isArray(resultLine?.c)
                         ? resultLine.c
                         : (Array.isArray(resultLine?.chars) ? resultLine.chars : []);

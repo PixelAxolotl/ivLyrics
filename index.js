@@ -1883,35 +1883,35 @@ const CONFIG = {
     "panel-border-opacity":
       StorageManager.getItem("ivLyrics:visual:panel-border-opacity") || "10",
     "multi-vocal-speaker-color-male-1":
-      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-male-1") || "#e6f2ff",
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-male-1") || "#a8ccff",
     "multi-vocal-speaker-color-male-2":
-      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-male-2") || "#d7ecff",
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-male-2") || "#9ae8d4",
     "multi-vocal-speaker-color-male-3":
-      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-male-3") || "#edf7ff",
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-male-3") || "#bfe8ff",
     "multi-vocal-speaker-color-male-4":
-      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-male-4") || "#dbe7ff",
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-male-4") || "#7fb5e6",
     "multi-vocal-speaker-color-male-5":
-      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-male-5") || "#e2f8ff",
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-male-5") || "#6cb8b8",
     "multi-vocal-speaker-color-female-1":
-      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-female-1") || "#ffe7ef",
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-female-1") || "#ffb8c7",
     "multi-vocal-speaker-color-female-2":
-      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-female-2") || "#ffe0e8",
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-female-2") || "#ffd6b3",
     "multi-vocal-speaker-color-female-3":
-      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-female-3") || "#fff0f5",
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-female-3") || "#f6c8ff",
     "multi-vocal-speaker-color-female-4":
-      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-female-4") || "#ffdfe0",
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-female-4") || "#e6b4d4",
     "multi-vocal-speaker-color-female-5":
-      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-female-5") || "#fbe5ff",
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-female-5") || "#f6e5a5",
     "multi-vocal-speaker-color-duet-1":
-      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-1") || "#eadfff",
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-1") || "#e4d8ff",
     "multi-vocal-speaker-color-duet-2":
-      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-2") || "#e2d2ff",
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-2") || "#d6e4ff",
     "multi-vocal-speaker-color-duet-3":
-      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-3") || "#f0e8ff",
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-3") || "#ffddf2",
     "multi-vocal-speaker-color-duet-4":
-      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-4") || "#dec9ff",
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-4") || "#bfaeff",
     "multi-vocal-speaker-color-duet-5":
-      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-5") || "#e9dcff",
+      StorageManager.getItem("ivLyrics:visual:multi-vocal-speaker-color-duet-5") || "#9d8cf2",
     "sync-data-custom-speaker-colors-enabled": StorageManager.get(
       "ivLyrics:visual:sync-data-custom-speaker-colors-enabled",
       true

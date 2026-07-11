@@ -3987,8 +3987,7 @@
                 .filter(Boolean);
         }
 
-        function estimateAggressiveChunkSize(coreToken, lineConfidence, lineDurationMs) {
-            const charCount = Array.from(coreToken).length;
+        function estimateAggressiveChunkSize(charCount, lineConfidence, lineDurationMs) {
             if (charCount <= 1) return 1;
 
             const msPerChar = lineDurationMs / Math.max(1, charCount);
@@ -4014,7 +4013,8 @@
                     continue;
                 }
 
-                const shouldSplitAggressively = Array.from(trimmed).some(isAggressiveChar);
+                const trimmedChars = Array.from(trimmed);
+                const shouldSplitAggressively = trimmedChars.some(isAggressiveChar);
                 if (!shouldSplitAggressively) {
                     units.push(token);
                     continue;
@@ -4023,8 +4023,8 @@
                 const trailingWhitespaceMatch = token.match(/\s+$/);
                 const trailingWhitespace = trailingWhitespaceMatch ? trailingWhitespaceMatch[0] : '';
                 const coreToken = trailingWhitespace ? token.slice(0, -trailingWhitespace.length) : token;
-                const chars = Array.from(coreToken);
-                const chunkSize = estimateAggressiveChunkSize(coreToken, lineConfidence, lineDurationMs);
+                const chars = coreToken === trimmed ? trimmedChars : Array.from(coreToken);
+                const chunkSize = estimateAggressiveChunkSize(chars.length, lineConfidence, lineDurationMs);
 
                 if (!chars.length) {
                     units.push(token);

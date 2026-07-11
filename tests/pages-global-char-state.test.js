@@ -116,3 +116,72 @@ test("global character state preserves Unicode offsets and timing boundaries", (
     assert.deepEqual(actual, expected, `position ${position}`);
   }
 });
+
+test("global character state preserves per-character numeric coercion", () => {
+  const buildGlobalCharState = createProductionHarness();
+  const createLyrics = () => {
+    const calls = { start: 0, end: 0 };
+    const log = [];
+    return {
+      calls,
+      log,
+      lyrics: [{
+        syllables: [{
+          text: "abc",
+          startTime: {
+            valueOf() {
+              calls.start += 1;
+              log.push("start");
+              return 0;
+            },
+          },
+          endTime: {
+            valueOf() {
+              calls.end += 1;
+              log.push("end");
+              return 300;
+            },
+          },
+        }],
+      }],
+    };
+  };
+
+  const referenceInput = createLyrics();
+  const productionInput = createLyrics();
+  const expected = buildGlobalCharStateReference(referenceInput.lyrics, 150);
+  const actual = JSON.parse(JSON.stringify(buildGlobalCharState(productionInput.lyrics, 150)));
+
+  assert.equal(expected.activeGlobalCharIndex, 1);
+  assert.equal(actual.activeGlobalCharIndex, expected.activeGlobalCharIndex);
+  assert.deepEqual(productionInput.calls, referenceInput.calls);
+  assert.deepEqual(productionInput.calls, { start: 6, end: 3 });
+  assert.deepEqual(productionInput.log, referenceInput.log);
+});
+
+test("empty iterable text still evaluates timing getters", () => {
+  const buildGlobalCharState = createProductionHarness();
+  const verify = (build) => {
+    const expectedError = new Error("startTime getter evaluated");
+    const emptyIterable = {
+      *[Symbol.iterator]() {},
+    };
+    const lyrics = [{
+      syllables: [{
+        text: emptyIterable,
+        get startTime() {
+          throw expectedError;
+        },
+        endTime: 500,
+      }],
+    }];
+
+    assert.throws(
+      () => build(lyrics, 0),
+      (error) => error === expectedError
+    );
+  };
+
+  verify(buildGlobalCharStateReference);
+  verify(buildGlobalCharState);
+});

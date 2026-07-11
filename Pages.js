@@ -2888,12 +2888,11 @@ const buildGlobalCharState = (lyrics, position) => {
 			if (!syllable || !syllable.text) continue;
 
 			const charCount = countKaraokeCharacters(syllable.text);
-			if (charCount === 0) continue;
 			const syllableStart = syllable.startTime || 0;
 			const syllableEnd = syllable.endTime || syllableStart + 500;
-			const charDuration = (syllableEnd - syllableStart) / charCount;
 
 			for (let charIdx = 0; charIdx < charCount; charIdx++) {
+				const charDuration = (syllableEnd - syllableStart) / charCount;
 				const charStart = syllableStart + (charIdx * charDuration);
 				const charEnd = charStart + charDuration;
 

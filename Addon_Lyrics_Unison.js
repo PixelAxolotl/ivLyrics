@@ -4,8 +4,8 @@
  *
  * @addon-type lyrics
  * @id unison
- * @name Unison (Experimental)
- * @version 0.1.1
+ * @name Unison
+ * @version 1.0.0
  * @author ivLis STUDIO
  * @supports karaoke: true
  * @supports synced: true
@@ -16,7 +16,7 @@
     'use strict';
 
     const API_BASE = 'https://unison.boidu.dev';
-    const CACHE_VERSION = '2026-07-11-unison-experimental-2';
+    const CACHE_VERSION = '2026-07-11-unison-1';
     const ATTRIBUTION = 'Lyrics from Unison (https://unison.boidu.dev).';
     const REQUEST_TIMEOUT_MS = 10000;
 
@@ -34,13 +34,13 @@
 
     const ADDON_INFO = {
         id: 'unison',
-        name: 'Unison (Experimental)',
+        name: 'Unison',
         author: 'ivLis STUDIO',
-        version: '0.1.1',
+        version: '1.0.0',
         cacheVersion: CACHE_VERSION,
         description: {
-            en: 'Experimental read-only provider backed by the Unison community lyrics API',
-            ko: 'Unison 커뮤니티 가사 API를 사용하는 실험용 읽기 전용 제공자'
+            en: 'Read-only provider backed by the Unison community lyrics API',
+            ko: 'Unison 커뮤니티 가사 API를 사용하는 읽기 전용 제공자'
         },
         supports: {
             karaoke: true,

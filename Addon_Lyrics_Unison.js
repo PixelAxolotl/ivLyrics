@@ -5,7 +5,7 @@
  * @addon-type lyrics
  * @id unison
  * @name Unison
- * @version 1.0.1
+ * @version 1.0.2
  * @author ivLis STUDIO
  * @supports karaoke: true
  * @supports synced: true
@@ -16,7 +16,7 @@
     'use strict';
 
     const API_BASE = 'https://unison.boidu.dev';
-    const CACHE_VERSION = '2026-07-12-unison-2';
+    const CACHE_VERSION = '2026-07-12-unison-3';
     const ATTRIBUTION = 'Lyrics from Unison (https://unison.boidu.dev).';
     const REQUEST_TIMEOUT_MS = 10000;
 
@@ -36,7 +36,7 @@
         id: 'unison',
         name: 'Unison',
         author: 'ivLis STUDIO',
-        version: '1.0.1',
+        version: '1.0.2',
         cacheVersion: CACHE_VERSION,
         description: {
             en: 'Read-only provider backed by the Unison community lyrics API',
@@ -280,7 +280,14 @@
     function getSpeakerPresentation(agentId, agentOrder) {
         if (!agentId) return {};
         const index = Math.max(0, agentOrder.get(agentId) ?? 0);
-        const palette = SPEAKER_PALETTE[index % SPEAKER_PALETTE.length];
+        if (index === 0) {
+            return {
+                speaker: 'NORMAL',
+                unisonAgent: agentId
+            };
+        }
+
+        const palette = SPEAKER_PALETTE[(index - 1) % SPEAKER_PALETTE.length];
         return {
             speaker: 'CUSTOM',
             'speaker-color': palette.color,

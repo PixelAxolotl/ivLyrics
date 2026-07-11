@@ -2379,8 +2379,14 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         };
     };
 
-    const getTrailingKaraokeInterludeInfo = (line, nextLine = null, lineIndex = -1, lineCount = 0) => {
-        if (!isAutoInstrumentalBreakEnabled()) {
+    const getTrailingKaraokeInterludeInfo = (
+        line,
+        nextLine = null,
+        lineIndex = -1,
+        lineCount = 0,
+        autoInstrumentalBreakEnabled = isAutoInstrumentalBreakEnabled()
+    ) => {
+        if (!autoInstrumentalBreakEnabled) {
             return { isInterlude: false, durationMs: 0, source: "karaoke-trailing-gap" };
         }
 
@@ -2406,6 +2412,47 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     const getTrailingKaraokeInterludeKey = (lineIndex, interludeInfo) => {
         if (!interludeInfo?.isInterlude) return null;
         return `${lineIndex}:${interludeInfo.startTime}:${interludeInfo.endTime}`;
+    };
+
+    const createTrailingKaraokeInterludeResolver = (lyrics) => {
+        const lastLineIndex = lyrics.length - 1;
+        let hasCachedLine = false;
+        let cachedLineIndex = -1;
+        let cachedInfo = null;
+        let cachedAutoInstrumentalBreakEnabled = null;
+
+        return (lineIndex) => {
+            const autoInstrumentalBreakEnabled = isAutoInstrumentalBreakEnabled();
+
+            // 마지막 줄의 종료 시각은 Player 메타데이터가 늦게 채워질 수 있어 매번 확인한다.
+            if (lineIndex === lastLineIndex) {
+                return getTrailingKaraokeInterludeInfo(
+                    lyrics[lineIndex],
+                    lyrics[lineIndex + 1],
+                    lineIndex,
+                    lyrics.length,
+                    autoInstrumentalBreakEnabled
+                );
+            }
+
+            if (!hasCachedLine ||
+                lineIndex !== cachedLineIndex ||
+                autoInstrumentalBreakEnabled !== cachedAutoInstrumentalBreakEnabled) {
+                const info = getTrailingKaraokeInterludeInfo(
+                    lyrics[lineIndex],
+                    lyrics[lineIndex + 1],
+                    lineIndex,
+                    lyrics.length,
+                    autoInstrumentalBreakEnabled
+                );
+                cachedLineIndex = lineIndex;
+                cachedInfo = info;
+                cachedAutoInstrumentalBreakEnabled = autoInstrumentalBreakEnabled;
+                hasCachedLine = true;
+            }
+
+            return cachedInfo;
+        };
     };
 
     // ============================================
@@ -3635,6 +3682,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             let lastTrackUri = null;
             const UPDATE_INTERVAL = 30; // 업데이트 간격 (ms) - RAF보다 CPU 효율적
             const EVENT_THROTTLE = 80; // 이벤트 발생 간격 (ms) - 노래방 업데이트용
+            const resolveTrailingInterludeInfo = createTrailingKaraokeInterludeResolver(lyrics);
 
             // 이진 탐색으로 현재 라인 찾기 (O(log n))
             const findCurrentLine = (time) => {
@@ -3691,12 +3739,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
 
                 // 현재 라인 찾기 (이진 탐색)
                 const newIndex = findCurrentLine(adjustedPosition);
-                const trailingInterludeInfo = getTrailingKaraokeInterludeInfo(
-                    lyrics[newIndex],
-                    lyrics[newIndex + 1],
-                    newIndex,
-                    lyrics.length
-                );
+                const trailingInterludeInfo = resolveTrailingInterludeInfo(newIndex);
                 const nextTrailingInterludeKey = trailingInterludeInfo.isInterlude &&
                     adjustedPosition >= trailingInterludeInfo.startTime &&
                     adjustedPosition < trailingInterludeInfo.endTime

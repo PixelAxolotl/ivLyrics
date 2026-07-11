@@ -132,6 +132,7 @@
         'sv': { name: 'Swedish', native: 'Svenska', phoneticDesc: 'Swedish phonetic spelling' },
         'pt': { name: 'Portuguese', native: 'Português', phoneticDesc: 'Portuguese phonetic spelling' },
         'bn': { name: 'Bengali', native: 'বাংলা', phoneticDesc: 'Bengali script pronunciation' },
+        'cs': { name: 'Czech', native: 'Čeština', phoneticDesc: 'Czech phonetic spelling' },
         'it': { name: 'Italian', native: 'Italiano', phoneticDesc: 'Italian phonetic spelling' },
         'th': { name: 'Thai', native: 'ไทย', phoneticDesc: 'Thai script pronunciation' },
         'tr': { name: 'Turkish', native: 'Türkçe', phoneticDesc: 'Turkish phonetic spelling' },

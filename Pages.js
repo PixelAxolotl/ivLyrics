@@ -195,6 +195,7 @@ function getCreatorPublicProfileUrl(profileData, contributor) {
 const CREATOR_GREETING_LANGUAGE_CODES = new Set([
 	"ar",
 	"bn",
+	"cs",
 	"de",
 	"en",
 	"es",
@@ -242,6 +243,7 @@ const CREATOR_GREETING_TRANSLATING_MESSAGES = {
 	ar: "تتم ترجمة هذه التحية...",
 	fa: "در حال ترجمه این پیام...",
 	bn: "এই শুভেচ্ছাটি অনুবাদ করা হচ্ছে...",
+	cs: "Překládání tohoto pozdravu...",
 	hi: "इस अभिवादन का अनुवाद हो रहा है...",
 	id: "Menerjemahkan sapaan ini...",
 	ms: "Menterjemah ucapan ini...",

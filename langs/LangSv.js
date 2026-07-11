@@ -2366,6 +2366,5 @@ window.LANG_SV = {
     "disclaimerTitle": "Tillägg från tredje part",
     "disclaimerInstall": "Detta är ett tredjepartstillägg som inte utvecklats eller verifierats av ivLis STUDIO. Installera på egen risk. För eventuella problem, vänligen kontakta tilläggsutvecklaren.",
     "dontShowAgain": "Visa inte igen"
-  },
-  "language": "Svenska"
+  }
 };

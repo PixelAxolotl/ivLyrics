@@ -460,11 +460,13 @@
             const turkishRegex = /[çğıöşüÇĞİÖŞÜ]/gu;
             const turkishUniqueRegex = /[ğıİışĞIŞ]/gu;
             const polishRegex = /[ąćęłńóśźżĄĆĘŁŃÓŚŹŻ]/gu;
+            const czechRegex = /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/gu;
+            const czechUniqueRegex = /[ěĚřŘůŮ]/gu;
             const arabicRegex = /[\u0600-\u06FF]/gu;
             const thaiRegex = /[\u0E00-\u0E7F]/gu;
             const devanagariRegex = /[\u0900-\u097F]/gu;
-            const latinExtendedRegex = /[a-zA-ZÀ-ÿ]/gu;
-            const latinWordRegex = /[a-zà-ÿ]+(?:['’][a-zà-ÿ]+)?/giu;
+            const latinExtendedRegex = /\p{Script=Latin}/gu;
+            const latinWordRegex = /\p{Script=Latin}+(?:['’]\p{Script=Latin}+)?/gu;
 
             const cjkMatchRegex = this._cjkMatchRegex || (
                 this._cjkMatchRegex = new RegExp(`${kanaRegex.source}|${hanziRegex.source}|${hangulRegex.source}`, "gu")
@@ -485,6 +487,8 @@
             const turkishMatch = rawLyrics.match(turkishRegex);
             const turkishUniqueMatch = rawLyrics.match(turkishUniqueRegex);
             const polishMatch = rawLyrics.match(polishRegex);
+            const czechMatch = rawLyrics.match(czechRegex);
+            const czechUniqueMatch = rawLyrics.match(czechUniqueRegex);
             const arabicMatch = rawLyrics.match(arabicRegex);
             const thaiMatch = rawLyrics.match(thaiRegex);
             const hindiMatch = rawLyrics.match(devanagariRegex);
@@ -532,6 +536,10 @@
                         strong: ["ben", "sen", "biz", "siz", "değil", "degil", "için", "icin", "çok", "cok", "gibi", "beni", "seni", "aşk", "ask", "kalp", "gece"],
                         weak: ["ve", "bir", "bu", "o", "da", "de", "mi", "ne", "ile", "ama", "her"]
                     },
+                    cs: {
+                        strong: ["já", "ty", "jsme", "jste", "není", "nejsem", "jsem", "jsi", "můj", "moje", "tvůj", "tvoje", "láska", "srdce", "noc", "tebe", "tobě", "chci", "mám"],
+                        weak: ["a", "ale", "nebo", "že", "se", "si", "do", "na", "pro", "s", "z", "když", "jen", "už", "jak"]
+                    },
                     pl: {
                         strong: ["ja", "ty", "my", "wy", "nie", "jest", "są", "sa", "dla", "przez", "mój", "moj", "moja", "twój", "twoj", "twoja", "miłość", "milosc", "serce", "noc"],
                         weak: ["i", "lub", "ale", "to", "ten", "ta", "te", "w", "na", "z", "do", "jak"]
@@ -571,6 +579,7 @@
 
                 scores.de += charBonus(/[ß]/gu, 5) + charBonus(/[ä]/gu, 3) + charBonus(/[öü]/gu, 1);
                 scores.tr += charBonus(/[ğıış]/gu, 5) + charBonus(/[ç]/gu, 2);
+                scores.cs += charBonus(/[ěřů]/gu, 5) + charBonus(/[čďňšťž]/gu, 2);
                 scores.sv += charBonus(/[å]/gu, 5) + charBonus(/[äö]/gu, 1);
                 scores.fr += charBonus(/[æœçëïÿêèùû]/gu, 3);
                 scores.es += charBonus(/[ñ¿¡]/gu, 5) + charBonus(/[áéíóú]/gu, 1);
@@ -637,6 +646,7 @@
             const swedishUniqueCount = swedishUniqueMatch ? swedishUniqueMatch.length : 0;
             const germanUniqueCount = germanUniqueMatch ? germanUniqueMatch.length : 0;
             const turkishUniqueCount = turkishUniqueMatch ? turkishUniqueMatch.length : 0;
+            const czechUniqueCount = czechUniqueMatch ? czechUniqueMatch.length : 0;
             const latinScoreLanguage = !cjkMatch ? detectLatinLanguageByScore() : null;
 
             if (latinScoreLanguage) {
@@ -665,6 +675,11 @@
             if (turkishMatch && turkishMatch.length > 3 && turkishUniqueCount > 0) {
                 this._cacheLanguageResult(cacheKey, "tr");
                 return "tr";
+            }
+            // Czech
+            if (czechMatch && czechMatch.length > 3 && czechUniqueCount > 0) {
+                this._cacheLanguageResult(cacheKey, "cs");
+                return "cs";
             }
             // Polish
             if (polishMatch && polishMatch.length > 3) {
@@ -6577,6 +6592,7 @@
                     case "nl":
                     case "pl":
                     case "tr":
+                    case "cs":
                     case "ar":
                     case "hi":
                     case "th":
@@ -6650,6 +6666,7 @@
                 case "nl":
                 case "pl":
                 case "tr":
+                case "cs":
                 case "ar":
                 case "hi":
                 case "th":

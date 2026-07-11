@@ -35,6 +35,7 @@
 		"langs/LangIt.js",
 		"langs/LangId.js",
 		"langs/LangMs.js",
+		"langs/LangCs.js",
 		"langs/LangTh.js",
 		"langs/LangVi.js",
 		"langs/LangTr.js",

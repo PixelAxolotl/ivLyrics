@@ -114,6 +114,7 @@
         'sv': { name: 'Swedish', native: 'Svenska' },
         'pt': { name: 'Portuguese', native: 'Português' },
         'bn': { name: 'Bengali', native: 'বাংলা' },
+        'cs': { name: 'Czech', native: 'Čeština' },
         'it': { name: 'Italian', native: 'Italiano' },
         'th': { name: 'Thai', native: 'ไทย' },
         'tr': { name: 'Turkish', native: 'Türkçe' },

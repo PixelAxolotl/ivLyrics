@@ -2202,6 +2202,7 @@ const TranslationMenu = react.memo(({ friendlyLanguage, hasTranslation }) => {
       { key: "fr", value: getDisplayLanguageName("fr") },
       { key: "pt", value: getDisplayLanguageName("pt") },
       { key: "tr", value: getDisplayLanguageName("tr") },
+      { key: "cs", value: getDisplayLanguageName("cs") },
       { key: "pl", value: getDisplayLanguageName("pl") },
       { key: "ar", value: getDisplayLanguageName("ar") },
       { key: "th", value: getDisplayLanguageName("th") },

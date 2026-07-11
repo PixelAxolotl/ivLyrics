@@ -4754,17 +4754,6 @@ const OptionList = ({ type, items, onChange }) => {
   );
 };
 
-const languageCodes =
-  "none,en,af,ar,bg,bn,ca,zh,cs,da,de,el,es,et,fa,fi,fr,gu,he,hi,hr,hu,id,is,it,ja,jv,id,kn,ko,lt,lv,ml,mr,ms,nl,no,pl,pt,ro,ru,sk,sl,sr,su,sv,ta,te,th,tr,uk,ur,vi,zu".split(
-    ","
-  );
-
-const displayNames = new Intl.DisplayNames(["en"], { type: "language" });
-const languageOptions = languageCodes.reduce((acc, code) => {
-  acc[code] = code === "none" ? "None" : displayNames.of(code);
-  return acc;
-}, {});
-
 // Pre-defined styles to avoid recreation on each render
 const MODAL_STYLES = {
   header: { margin: 0, fontSize: "18px", fontWeight: "600" },
@@ -11001,29 +10990,9 @@ const ConfigModal = ({
               key: "language",
               info: I18n.t("settings.language.desc"),
               type: ConfigSelection,
-              options: {
-                ko: "한국어",
-                en: "English",
-                "zh-CN": "简体中文",
-                "zh-TW": "繁體中文",
-                ja: "日本語",
-                hi: "हिन्दी",
-                es: "Español",
-                fr: "Français",
-                ar: "العربية",
-                fa: "فارسی",
-                de: "Deutsch",
-                ru: "Русский",
-                sv: "Svenska",
-                pt: "Português",
-                bn: "বাংলা",
-                it: "Italiano",
-                th: "ภาษาไทย",
-                tr: "Türkçe",
-                vi: "Tiếng Việt",
-                id: "Bahasa Indonesia",
-                ms: "Bahasa Melayu",
-              },
+              options: Object.fromEntries(
+                I18n.getAvailableLanguages().map(language => [language.code, language.name])
+              ),
             },
           ],
           onChange: (name, value) => {
@@ -11048,27 +11017,9 @@ const ConfigModal = ({
               type: ConfigSelection,
               options: {
                 auto: I18n.t("settings.translationTargetLanguage.options.auto"),
-                ko: "한국어",
-                en: "English",
-                "zh-CN": "简体中文",
-                "zh-TW": "繁體中文",
-                ja: "日本語",
-                hi: "हिन्दी",
-                es: "Español",
-                fr: "Français",
-                ar: "العربية",
-                fa: "فارسی",
-                de: "Deutsch",
-                ru: "Русский",
-                sv: "Svenska",
-                pt: "Português",
-                bn: "বাংলা",
-                it: "Italiano",
-                th: "ภาษาไทย",
-                tr: "Türkçe",
-                vi: "Tiếng Việt",
-                id: "Bahasa Indonesia",
-                ms: "Bahasa Melayu",
+                ...Object.fromEntries(
+                  I18n.getAvailableLanguages().map(language => [language.code, language.name])
+                ),
               },
             },
           ],

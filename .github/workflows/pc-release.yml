@@ -21,9 +21,6 @@ on:
 permissions:
   contents: write
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 concurrency:
   group: pc-release
   cancel-in-progress: false
@@ -35,7 +32,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -124,7 +121,7 @@ jobs:
         run: python3 .github/scripts/generate_release_notes.py
 
       - name: Upload release preview
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ivLyrics-${{ steps.version.outputs.tag }}-release-preview
           path: |

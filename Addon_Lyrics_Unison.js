@@ -5,7 +5,7 @@
  * @addon-type lyrics
  * @id unison
  * @name Unison (Experimental)
- * @version 0.1.0
+ * @version 0.1.1
  * @author ivLis STUDIO
  * @supports karaoke: true
  * @supports synced: true
@@ -16,7 +16,7 @@
     'use strict';
 
     const API_BASE = 'https://unison.boidu.dev';
-    const CACHE_VERSION = '2026-07-11-unison-experimental-1';
+    const CACHE_VERSION = '2026-07-11-unison-experimental-2';
     const ATTRIBUTION = 'Lyrics from Unison (https://unison.boidu.dev).';
     const REQUEST_TIMEOUT_MS = 10000;
 
@@ -36,7 +36,7 @@
         id: 'unison',
         name: 'Unison (Experimental)',
         author: 'ivLis STUDIO',
-        version: '0.1.0',
+        version: '0.1.1',
         cacheVersion: CACHE_VERSION,
         description: {
             en: 'Experimental read-only provider backed by the Unison community lyrics API',
@@ -117,6 +117,26 @@
 
     function normalizeDisplayText(value) {
         return normalizeInlineText(value).trim();
+    }
+
+    function stripBackgroundVocalParentheses(parsedPart) {
+        if (!parsedPart) return parsedPart;
+
+        const strip = value => String(value || '').replace(/[()（）]/g, '');
+        const syllables = Array.isArray(parsedPart.syllables)
+            ? parsedPart.syllables
+                .map(syllable => ({ ...syllable, text: strip(syllable?.text) }))
+                .filter(syllable => syllable.text.length > 0)
+            : [];
+
+        while (syllables.length && !syllables[0].text.trim()) syllables.shift();
+        while (syllables.length && !syllables[syllables.length - 1].text.trim()) syllables.pop();
+
+        return {
+            ...parsedPart,
+            text: normalizeDisplayText(strip(parsedPart.text)),
+            syllables
+        };
     }
 
     function hasContentAfter(nodes, index) {
@@ -318,7 +338,9 @@
                     }
                     const backgroundStart = parseTimeMs(getAttribute(element, 'begin')) ?? startTime;
                     const backgroundEnd = parseTimeMs(getAttribute(element, 'end')) ?? endTime;
-                    const parsed = parseTimedNodes(element.childNodes, backgroundStart, backgroundEnd);
+                    const parsed = stripBackgroundVocalParentheses(
+                        parseTimedNodes(element.childNodes, backgroundStart, backgroundEnd)
+                    );
                     return createVocalPart(
                         `${lineKey}-background-${backgroundIndex + 1}`,
                         'background',
@@ -700,6 +722,7 @@
         parseTtmlLyrics,
         parseLrcLyrics,
         parsePlainLyrics,
+        stripBackgroundVocalParentheses,
         buildLyricsUrl,
         fetchLyricsData
     });

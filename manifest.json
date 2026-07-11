@@ -68,6 +68,7 @@
 		"Addon_AI_Perplexity.js",
 		"Addon_Lyrics_Lrclib.js",
 		"Addon_Lyrics_Spotify.js",
+		"Addon_Lyrics_Unison.js",
 		"AIAddonManager.js",
 		"LyricsAddonManager.js",
 		"LyricsService.js",

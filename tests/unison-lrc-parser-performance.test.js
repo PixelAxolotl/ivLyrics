@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const crypto = require("node:crypto");
 const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
@@ -33,13 +34,16 @@ const plainFunctionSource = extract(
   "    function parsePlainLyrics(",
   "\n\n    function normalizeDurationSeconds("
 );
-const parentFunctionSource = productionFunctionSource
+const parentProductionNameSource = productionFunctionSource
   .replace(
     `            const timestamps = [];
             const strippedLine = rawLine.replace(
                 /\\[(\\d{1,3}):(\\d{1,2})(?:[.:](\\d{1,3}))?\\]/g,
-                (match, minutes, seconds, fraction) => {
-                    timestamps.push([match, minutes, seconds, fraction]);
+                (_match, minutes, seconds, fraction) => {
+                    const captureIndex = timestamps.length;
+                    timestamps[captureIndex] = minutes;
+                    timestamps[captureIndex + 1] = seconds;
+                    timestamps[captureIndex + 2] = fraction;
                     return '';
                 }
             );
@@ -49,11 +53,37 @@ const parentFunctionSource = productionFunctionSource
             if (!timestamps.length) return;
             const text = rawLine.replace(/\\[(\\d{1,3}):(\\d{1,2})(?:[.:](\\d{1,3}))?\\]/g, '').trim();`
   )
+  .replace(
+    `            for (let index = 0; index < timestamps.length; index += 3) {
+                synced.push({
+                    startTime: Math.max(0, parseLrcTimestamp(
+                        timestamps[index],
+                        timestamps[index + 1],
+                        timestamps[index + 2]
+                    ) + offset),
+                    text
+                });
+            }`,
+    `            timestamps.forEach(match => {
+                synced.push({
+                    startTime: Math.max(0, parseLrcTimestamp(match[1], match[2], match[3]) + offset),
+                    text
+                });
+            });`
+  );
+const parentFunctionSource = parentProductionNameSource
   .replace("function parseLrcLyrics(", "function parseLrcLyricsReference(");
 
 assert.notEqual(parentFunctionSource, productionFunctionSource);
-assert.equal(parentFunctionSource.includes("timestamps.push"), false);
+assert.equal(productionFunctionSource.includes("timestamps.push"), false);
+assert.equal(productionFunctionSource.includes("captureIndex"), true);
+assert.equal(productionFunctionSource.includes("index += 3"), true);
 assert.equal(parentFunctionSource.includes("rawLine.matchAll"), true);
+assert.equal(parentFunctionSource.includes("timestamps.forEach"), true);
+assert.equal(
+  crypto.createHash("sha256").update(parentProductionNameSource).digest("hex"),
+  "6795e1abe8f041cba0e2cb56acc939fc2b8538587313da22c47d69440ef500b1"
+);
 
 function createParser(functionSource, functionName) {
   const context = {};
@@ -192,7 +222,7 @@ function runWorker(sourceBundle, lrc, duration) {
       `const { parentPort, workerData } = require("node:worker_threads");
        ${sourceBundle}
        let result;
-       for (let index = 0; index < 250; index++) {
+       for (let index = 0; index < 400; index++) {
          result = parseLrcLyrics(workerData.lrc, workerData.duration);
        }
        parentPort.postMessage(JSON.parse(JSON.stringify(result)));`,
@@ -239,14 +269,16 @@ test("full Unison LRC parser preserves formats, boundaries, and coercion", () =>
   for (const fixture of fixtures) compareScenario(parsers, fixture);
 });
 
-test("Unison LRC Unicode UTF-8 byte boundaries and fuzz match the parent", () => {
+test("Unison LRC Unicode UTF-8 byte boundaries and 10k fuzz match the parent", () => {
   const parsers = createParsers();
   const boundaryInput = "\uFEFF[offset:-250]\r\n[00:01.23][00:02.345]한글🎵e\u0301\ud800\r\n[00:03]普通话";
-  for (let first = 1; first <= 19; first += 1) {
-    const decoded = decodeByChunks(boundaryInput, [first, 1, 7, 2, 13]);
-    compareScenario(parsers, { lrc: decoded, duration: 12000 });
+  for (let first = 1; first <= 37; first += 1) {
+    for (let second = 1; second <= 11; second += 2) {
+      const decoded = decodeByChunks(boundaryInput, [first, second, 1, 7, 2, 13]);
+      compareScenario(parsers, { lrc: decoded, duration: 12000 });
+    }
   }
-  for (const scenario of createDeterministicScenarios(3000)) {
+  for (const scenario of createDeterministicScenarios(10000)) {
     compareScenario(parsers, scenario);
   }
 });
@@ -254,7 +286,7 @@ test("Unison LRC Unicode UTF-8 byte boundaries and fuzz match the parent", () =>
 test("parallel Unison LRC parses remain isolated", async () => {
   const parsers = createParsers();
   const bundle = `${timestampFunctionSource}\n${plainFunctionSource}\n${productionFunctionSource}`;
-  const inputs = Array.from({ length: 8 }, (_, index) => ({
+  const inputs = Array.from({ length: 12 }, (_, index) => ({
     lrc: `[offset:${index * 17 - 40}]\n[00:01.${index}]worker-${index}-한글🎵\n[00:02.34][00:03.456]shared-${index}`,
     duration: 8000 + index,
   }));

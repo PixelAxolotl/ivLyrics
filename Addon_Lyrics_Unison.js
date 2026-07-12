@@ -474,8 +474,11 @@
             const timestamps = [];
             const strippedLine = rawLine.replace(
                 /\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\]/g,
-                (match, minutes, seconds, fraction) => {
-                    timestamps.push([match, minutes, seconds, fraction]);
+                (_match, minutes, seconds, fraction) => {
+                    const captureIndex = timestamps.length;
+                    timestamps[captureIndex] = minutes;
+                    timestamps[captureIndex + 1] = seconds;
+                    timestamps[captureIndex + 2] = fraction;
                     return '';
                 }
             );
@@ -483,12 +486,16 @@
             const text = strippedLine.trim();
             if (!text) return;
 
-            timestamps.forEach(match => {
+            for (let index = 0; index < timestamps.length; index += 3) {
                 synced.push({
-                    startTime: Math.max(0, parseLrcTimestamp(match[1], match[2], match[3]) + offset),
+                    startTime: Math.max(0, parseLrcTimestamp(
+                        timestamps[index],
+                        timestamps[index + 1],
+                        timestamps[index + 2]
+                    ) + offset),
                     text
                 });
-            });
+            }
         });
 
         synced.sort((left, right) => left.startTime - right.startTime);

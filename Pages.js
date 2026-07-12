@@ -3385,6 +3385,22 @@ const shouldHideSyncedLine = ({ compact, isScrolling, animationIndex }) => {
 	);
 };
 
+const formatKaraokeLineShiftSeconds = (value) => {
+	switch (value) {
+		case 0: return "0s";
+		case 0.02: return "0.02s";
+		case 0.04: return "0.04s";
+		case 0.06: return "0.06s";
+		case 0.28: return "0.28s";
+		case 0.30000000000000004: return "0.30000000000000004s";
+		case 0.34: return "0.34s";
+		case 0.38: return "0.38s";
+		case 0.42000000000000004: return "0.42000000000000004s";
+		case 0.46: return "0.46s";
+		default: return `${value}s`;
+	}
+};
+
 const LyricsLineBlock = react.memo(({
 	className,
 	style,
@@ -4048,10 +4064,10 @@ const useSyncedLyricsEngine = ({
 					"--animation-index": Math.abs(animationIndex) + 1,
 					"--line-shift-duration": isScrolling
 						? "0s"
-						: `${Math.max(0.28, 0.46 - Math.min(Math.abs(animationIndex), 4) * 0.04)}s`,
+						: formatKaraokeLineShiftSeconds(Math.max(0.28, 0.46 - Math.min(Math.abs(animationIndex), 4) * 0.04)),
 					"--line-shift-delay": isScrolling
 						? "0s"
-						: `${animationIndex > 0 ? Math.min(animationIndex, 3) * 0.02 : 0}s`,
+						: formatKaraokeLineShiftSeconds(animationIndex > 0 ? Math.min(animationIndex, 3) * 0.02 : 0),
 					"--blur-index": Math.min(Math.abs(animationIndex), 3),
 				},
 				line,
@@ -4087,10 +4103,10 @@ const useSyncedLyricsEngine = ({
 						"--animation-index": Math.abs(virtualAnimationIndex) + 1,
 						"--line-shift-duration": isScrolling
 							? "0s"
-							: `${Math.max(0.28, 0.46 - Math.min(Math.abs(virtualAnimationIndex), 4) * 0.04)}s`,
+							: formatKaraokeLineShiftSeconds(Math.max(0.28, 0.46 - Math.min(Math.abs(virtualAnimationIndex), 4) * 0.04)),
 						"--line-shift-delay": isScrolling
 							? "0s"
-							: `${virtualAnimationIndex > 0 ? Math.min(virtualAnimationIndex, 3) * 0.02 : 0}s`,
+							: formatKaraokeLineShiftSeconds(virtualAnimationIndex > 0 ? Math.min(virtualAnimationIndex, 3) * 0.02 : 0),
 						"--blur-index": 0,
 					},
 					line: activeTrailingInterludeLine,

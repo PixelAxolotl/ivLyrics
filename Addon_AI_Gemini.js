@@ -2,7 +2,7 @@
  * Gemini AI Addon for ivLyrics
  * Google Gemini AI를 사용한 번역, 발음, TMI 생성
  * 
- * @author ivLis STUDIO
+ * @author default
  * @version 1.0.0
  */
 
@@ -16,7 +16,7 @@
     const ADDON_INFO = {
         id: 'gemini',
         name: 'Google Gemini',
-        author: 'ivLis STUDIO',
+        author: 'default',
         description: {
             ko: 'Google Gemini AI를 사용한 번역, 발음, TMI 생성',
             en: 'Translation, pronunciation, and TMI generation using Google Gemini AI',

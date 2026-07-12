@@ -1995,6 +1995,96 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         return rows.length > 1 ? rows : null;
     };
 
+    const buildPanelTranslationRequests = (lyrics = []) => {
+        if (!Array.isArray(lyrics)) return [];
+        const requests = [];
+        lyrics.forEach((line, lineIndex) => {
+            const vocalRows = getVocalRowsFromLine(line);
+            if (Array.isArray(vocalRows)) {
+                vocalRows.forEach((row, vocalRowIndex) => {
+                    requests.push({
+                        lineIndex,
+                        vocalRowIndex,
+                        text: row.text || ''
+                    });
+                });
+                return;
+            }
+
+            requests.push({
+                lineIndex,
+                vocalRowIndex: null,
+                text: line?.text || line?.originalText || ''
+            });
+        });
+        return requests;
+    };
+
+    const normalizePanelTranslationLines = (value) => {
+        if (Array.isArray(value)) return value;
+        if (typeof value === 'string') return value.split('\n');
+        return [];
+    };
+
+    const applyPanelTranslationResults = (lyrics, requests, phoneticLines, translationLines) => {
+        const resultsByLine = new Map();
+        requests.forEach((request, requestIndex) => {
+            const results = resultsByLine.get(request.lineIndex) || [];
+            results.push({
+                ...request,
+                phonetic: String(phoneticLines[requestIndex] || '').trim(),
+                translation: String(translationLines[requestIndex] || '').trim()
+            });
+            resultsByLine.set(request.lineIndex, results);
+        });
+
+        return lyrics.map((line, lineIndex) => {
+            const results = resultsByLine.get(lineIndex) || [];
+            const isKaraokeLine = Array.isArray(line?.syllables)
+                || Array.isArray(line?.vocals?.lead?.syllables);
+            const originalText = isKaraokeLine && line?.originalText
+                ? line.originalText
+                : (line?.text || line?.originalText || '');
+            const hasVocalResults = results.some(result => Number.isInteger(result.vocalRowIndex))
+                && line?.vocals?.lead;
+
+            let vocals = line?.vocals;
+            if (hasVocalResults) {
+                vocals = {
+                    ...line.vocals,
+                    lead: { ...line.vocals.lead },
+                    background: Array.isArray(line.vocals.background)
+                        ? line.vocals.background.map(part => ({ ...part }))
+                        : []
+                };
+                results.forEach((result) => {
+                    const targetPart = result.vocalRowIndex === 0
+                        ? vocals.lead
+                        : vocals.background[result.vocalRowIndex - 1];
+                    if (!targetPart) return;
+                    if (result.phonetic) targetPart.phonetic = result.phonetic;
+                    if (result.translation) targetPart.translation = result.translation;
+                });
+            }
+
+            const phoneticText = results.map(result => result.phonetic).filter(Boolean).join(' / ')
+                || line?.phoneticText
+                || '';
+            const translationText = results.map(result => result.translation).filter(Boolean).join(' / ')
+                || line?.text2
+                || '';
+
+            return {
+                ...line,
+                vocals,
+                originalText,
+                text: isKaraokeLine ? originalText : (phoneticText || line?.text || ''),
+                phoneticText,
+                text2: translationText
+            };
+        });
+    };
+
     const VOCAL_STACK_CENTER_THRESHOLD = 4;
 
     const getVocalRowTimeBounds = (row) => {
@@ -3154,7 +3244,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 }
 
                 // 가사 언어 감지
-                const lyricsText = lyricsData.map(l => l.text || '').join('\n');
+                const translationRequests = buildPanelTranslationRequests(lyricsData);
+                const lyricsText = translationRequests.map(request => request.text).join('\n');
                 const trackId = trackInfo.trackId;
 
                 // 언어 감지 (LyricsService.detectLanguage 사용)
@@ -3253,7 +3344,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     if (!isActiveLoad(loadSeq, trackInfo.uri)) {
                         return;
                     }
-                    phoneticLines = phoneticResponse?.phonetic || [];
+                    phoneticLines = normalizePanelTranslationLines(phoneticResponse?.phonetic);
                 }
 
                 // 번역 요청 (필요한 경우에만)
@@ -3273,7 +3364,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     if (!isActiveLoad(loadSeq, trackInfo.uri)) {
                         return;
                     }
-                    translationLines = translationResponse?.translation || [];
+                    translationLines = normalizePanelTranslationLines(translationResponse?.translation);
                 }
 
                 // 결과 병합 전에 현재 재생 중인 트랙이 변경되었는지 확인
@@ -3285,22 +3376,12 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
 
                 // 결과 병합
                 if (phoneticLines.length > 0 || translationLines.length > 0) {
-                    const updatedLyrics = lyricsData.map((line, idx) => {
-                        const isKaraokeLine = Array.isArray(line?.syllables)
-                            || Array.isArray(line?.vocals?.lead?.syllables);
-                        const originalText = isKaraokeLine && line?.originalText
-                            ? line.originalText
-                            : (line?.text || line?.originalText || '');
-                        const phoneticText = phoneticLines[idx] || line?.phoneticText || '';
-
-                        return {
-                            ...line,
-                            originalText,
-                            text: isKaraokeLine ? originalText : (phoneticText || line?.text || ''),
-                            phoneticText,
-                            text2: translationLines[idx] || line?.text2 || ''
-                        };
-                    });
+                    const updatedLyrics = applyPanelTranslationResults(
+                        lyricsData,
+                        translationRequests,
+                        phoneticLines,
+                        translationLines
+                    );
 
                     panelDebug("[PanelLyrics] Applied translation:", phoneticLines.length, "phonetic,", translationLines.length, "translation");
                     setLyrics(updatedLyrics);
@@ -3355,6 +3436,16 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 if (event.detail?.name === 'karaoke-text-effects' ||
                     event.detail?.name === 'sync-data-custom-speaker-colors-enabled') {
                     setTextEffectRevision((revision) => revision + 1);
+                }
+                if (event.detail?.name === 'prefer-sync-data-provider' ||
+                    event.detail?.name === 'prefer-lyrics-type-over-provider-order') {
+                    const currentUri = Spicetify.Player.data?.item?.uri;
+                    if (currentUri) {
+                        loadSeqRef.current += 1;
+                        loadingRef.current = false;
+                        lastTrackUri.current = null;
+                        loadLyricsFromExtension(true, currentUri);
+                    }
                 }
                 if (event.detail?.name === 'instrumental-break-icon' ||
                     event.detail?.name === 'instrumental-break-show-label' ||

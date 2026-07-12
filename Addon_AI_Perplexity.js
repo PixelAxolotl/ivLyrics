@@ -2,7 +2,7 @@
  * Perplexity AI Addon for ivLyrics
  * Perplexity AI를 사용한 번역, 발음, TMI 생성
  * 
- * @author ivLis STUDIO
+ * @author default
  * @version 1.0.0
  */
 
@@ -16,7 +16,7 @@
     const ADDON_INFO = {
         id: 'perplexity',
         name: 'Perplexity',
-        author: 'ivLis STUDIO',
+        author: 'default',
         description: {
             ko: 'Perplexity AI를 사용한 번역, 발음, TMI 생성 (실시간 웹 검색 지원)',
             en: 'Translation, pronunciation, and TMI generation using Perplexity AI (with real-time web search)',

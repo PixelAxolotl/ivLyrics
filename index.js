@@ -463,6 +463,22 @@ const getTranslationSourceCacheHash = (text) => {
   return `src-${(hash >>> 0).toString(36)}-${value.length.toString(36)}`;
 };
 
+const getLyricsProcessingShapeSignature = (lyrics = []) => {
+  if (!Array.isArray(lyrics)) return "0:0:src-0-0:";
+  const requests = buildTranslationLineRequests(lyrics);
+  const sourceHash = getTranslationSourceCacheHash(
+    requests.map((request) => request.text || "").join("\n")
+  );
+  const vocalShape = lyrics.map((line) => {
+    if (!line?.vocals?.lead) return "s";
+    const backgroundCount = Array.isArray(line.vocals.background)
+      ? line.vocals.background.length
+      : 0;
+    return `v${backgroundCount + 1}`;
+  }).join(".");
+  return `${lyrics.length}:${requests.length}:${sourceHash}:${vocalShape}`;
+};
+
 const getCachedTranslationForText = async ({
   trackId,
   lang,
@@ -2268,6 +2284,14 @@ const CONFIG = {
       "ivLyrics:visual:pseudo-karaoke-render-advance",
       250
     ),
+    "prefer-sync-data-provider": StorageManager.get(
+      "ivLyrics:visual:prefer-sync-data-provider",
+      true
+    ),
+    "prefer-lyrics-type-over-provider-order": StorageManager.get(
+      "ivLyrics:visual:prefer-lyrics-type-over-provider-order",
+      true
+    ),
     // Prefetch settings
     "prefetch-enabled": StorageManager.get(
       "ivLyrics:visual:prefetch-enabled",
@@ -2535,6 +2559,15 @@ const getPlainLyricsLines = (...sources) => {
 };
 
 const SYNC_DATA_RENDERER_VERSION = "2026-05-28-parenthetical-v3-1";
+const getLyricsProviderSelectionPolicy = () => (
+  `${CONFIG.visual["prefer-lyrics-type-over-provider-order"] !== false
+    && CONFIG.visual["prefer-lyrics-type-over-provider-order"] !== "false"
+    ? "type-first-v1"
+    : "provider-first-v1"}:${CONFIG.visual["prefer-sync-data-provider"] !== false
+      && CONFIG.visual["prefer-sync-data-provider"] !== "false"
+      ? "sync-data-first"
+      : "configured-order"}`
+);
 
 const getLyricsTextCacheHash = (lyrics = []) => {
   const lines = Array.isArray(lyrics) ? lyrics : [];
@@ -2562,13 +2595,24 @@ const getSyncDataRendererCacheVersion = (lyricsState = {}) => (
 );
 
 const isLyricsRenderCacheCurrent = (lyricsState = {}) => (
-  !lyricsState?.syncDataApplied ||
-  lyricsState.syncDataRendererVersion === SYNC_DATA_RENDERER_VERSION
+  (!lyricsState?.syncDataApplied ||
+    lyricsState.syncDataRendererVersion === SYNC_DATA_RENDERER_VERSION)
+  && (!lyricsState?.provider
+    || lyricsState.provider === "local"
+    || !!lyricsState?.trackLyricsProviderOverride
+    || (lyricsState?.providerSelectionPolicy || "provider-first-v1:sync-data-first") === getLyricsProviderSelectionPolicy())
 );
 
 const getDisplayModeCacheKey = (lyricsState = {}, mode = "") => {
   const providerKey = lyricsState.provider || "";
-  return `${lyricsState.uri}:${providerKey}:${mode}:${getSyncDataRendererCacheVersion(lyricsState)}`;
+  const providerCacheVersion = lyricsState.cacheVersion || "provider-cache-legacy";
+  const sourceLyrics = lyricsState.currentLyrics
+    || lyricsState.karaoke
+    || lyricsState.synced
+    || lyricsState.unsynced
+    || [];
+  const lyricsShape = getLyricsProcessingShapeSignature(sourceLyrics);
+  return `${lyricsState.uri}:${providerKey}:${mode}:${getSyncDataRendererCacheVersion(lyricsState)}:${providerCacheVersion}:${lyricsShape}`;
 };
 
 // Enhanced cache system with memory-efficient LRU and automatic cleanup
@@ -5626,11 +5670,19 @@ class LyricsContainer extends react.Component {
     // Check if display modes or provider changed - if so, clear cached results
     const currentProvider = lyricsState.provider || '';
     const currentRendererVersion = getSyncDataRendererCacheVersion(lyricsState);
+    const currentLyricsShapeSignature = getLyricsProcessingShapeSignature(lyrics);
     if (this._dmResults[currentUri]) {
       const cached = this._dmResults[currentUri];
-      // If provider changed, invalidate all cache for this track
-      if (cached.lastProvider !== currentProvider || cached.lastRendererVersion !== currentRendererVersion) {
-        ivLyricsDebug(`[processLyricsWithDisplayModes] Provider changed from ${cached.lastProvider} to ${currentProvider}, invalidating cache`);
+      // If provider, renderer, or selected lyric shape changed, invalidate all cache for this track.
+      if (cached.lastProvider !== currentProvider
+        || cached.lastRendererVersion !== currentRendererVersion
+        || cached.lastLyricsShapeSignature !== currentLyricsShapeSignature) {
+        ivLyricsDebug('[processLyricsWithDisplayModes] Lyrics source shape changed, invalidating display-mode cache', {
+          previousProvider: cached.lastProvider,
+          currentProvider,
+          previousShape: cached.lastLyricsShapeSignature,
+          currentShape: currentLyricsShapeSignature,
+        });
         cached.mode1 = null;
         cached.mode2 = null;
       }
@@ -5651,6 +5703,7 @@ class LyricsContainer extends react.Component {
     this._dmResults[currentUri].lastMode2 = displayMode2;
     this._dmResults[currentUri].lastProvider = currentProvider;
     this._dmResults[currentUri].lastRendererVersion = currentRendererVersion;
+    this._dmResults[currentUri].lastLyricsShapeSignature = currentLyricsShapeSignature;
 
     let lyricsMode1 = this._dmResults[currentUri].mode1;
     let lyricsMode2 = this._dmResults[currentUri].mode2;
@@ -5936,7 +5989,7 @@ class LyricsContainer extends react.Component {
 
       // Safely extract original text
       const originalText =
-        typeof line === "object" ? line.text || "" : String(line || "");
+        typeof line === "object" ? line.originalText || line.text || "" : String(line || "");
       let translation1 = "";
       let translation2 = "";
 

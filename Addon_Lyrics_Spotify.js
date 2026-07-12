@@ -24,7 +24,7 @@
     const ADDON_INFO = {
         id: 'spotify',
         name: 'Spotify',
-        author: 'ivLis STUDIO',
+        author: 'default',
         version: '1.0.0',
         description: {
             en: 'Get lyrics from Spotify\'s built-in lyrics service',

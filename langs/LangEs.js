@@ -435,6 +435,14 @@ window.LANG_ES = {
     "lyricsProviders": {
       "title": "Proveedores de letras",
       "description": "Selecciona y prioriza los proveedores de letras. Los proveedores en la parte superior se intentan primero.",
+      "preferSyncDataProvider": {
+        "label": "Priorizar proveedores con datos de sincronización",
+        "desc": "Si hay datos de sincronización para la canción actual, se probará el proveedor de letras correspondiente antes del orden habitual."
+      },
+      "preferLyricsTypeOverProviderOrder": {
+        "label": "Priorizar el tipo de letra sobre el orden de proveedores",
+        "desc": "Probar primero las letras de karaoke en todos los proveedores, después las sincronizadas y finalmente las letras sin sincronizar. Dentro de cada tipo se conserva el orden configurado."
+      },
       "noProviders": "No hay proveedores de letras registrados.",
       "allowedTypes": "Tipos de letras permitidos",
       "moveUp": "Mover arriba",

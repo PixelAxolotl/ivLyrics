@@ -435,6 +435,14 @@ window.LANG_KO = {
     "lyricsProviders": {
       "title": "가사 제공자",
       "description": "가사를 가져올 제공자를 선택하고 우선순위를 설정합니다. 위에 있는 제공자부터 먼저 시도합니다.",
+      "preferSyncDataProvider": {
+        "label": "ivLyrics Sync 데이터가 있는 제공자 우선",
+        "desc": "OpenDB에 현재 곡의 ivLyrics Sync 데이터가 있으면 해당 가사 제공자를 일반 우선순위보다 먼저 시도합니다."
+      },
+      "preferLyricsTypeOverProviderOrder": {
+        "label": "노래방 → 싱크 → 일반 우선 조회",
+        "desc": "모든 제공자의 노래방 가사를 먼저 찾은 뒤 싱크 가사, 일반 가사 순서로 조회합니다. 같은 유형 안에서는 설정한 제공자 순서를 따릅니다."
+      },
       "noProviders": "등록된 가사 제공자가 없습니다.",
       "allowedTypes": "허용할 가사 유형",
       "moveUp": "위로 이동",

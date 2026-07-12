@@ -435,6 +435,14 @@ window.LANG_CS = {
     "lyricsProviders": {
       "title": "Poskytovatelé textů",
       "description": "Vyberte a upřednostněte poskytovatele textů. Poskytovatelé nahoře jsou vyzkoušeni jako první.",
+      "preferSyncDataProvider": {
+        "label": "Upřednostnit poskytovatele se synchronizačními daty",
+        "desc": "Pokud jsou pro aktuální skladbu dostupná synchronizační data, odpovídající poskytovatel textu se vyzkouší před běžným pořadím poskytovatelů."
+      },
+      "preferLyricsTypeOverProviderOrder": {
+        "label": "Upřednostnit typ textu před pořadím poskytovatelů",
+        "desc": "Nejprve vyzkoušet karaoke texty u všech poskytovatelů, potom synchronizované a nakonec prosté texty. V rámci každého typu se zachová nastavené pořadí poskytovatelů."
+      },
       "noProviders": "Nejsou registrováni žádní poskytovatelé textů.",
       "allowedTypes": "Povolené typy textů",
       "moveUp": "Posunout nahoru",

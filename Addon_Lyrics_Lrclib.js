@@ -22,7 +22,7 @@
  * @id lrclib               - 고유 식별자
  * @name LRCLIB             - 표시 이름
  * @version 1.0.0           - 버전 정보
- * @author ivLis STUDIO     - 제작자
+ * @author default          - 제작자
  * @supports karaoke: false - 노래방 모드 미지원 (커뮤니티 sync-data 확장으로 지원 가능)
  * @supports synced: true   - 시간 동기화된 가사 지원
  * @supports unsynced: true - 시간 동기화 없는 일반 가사 지원
@@ -248,7 +248,7 @@
     const ADDON_INFO = {
         id: 'lrclib',           // 【고유 ID】 다른 애드온과 구분하기 위한 식별자
         name: 'LRCLIB',         // 【표시 이름】 UI에 표시되는 애드온 이름
-        author: 'ivLis STUDIO', // 【제작자】 애드온 개발자 정보
+        author: 'default',       // 【제작자】 애드온 개발자 정보
         version: '1.0.0',       // 【버전】 시맨틱 버저닝 (Major.Minor.Patch)
         cacheVersion: '2026-03-19-search-flow-rework-3',
 

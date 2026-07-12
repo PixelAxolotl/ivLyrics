@@ -6,7 +6,7 @@
  * @id unison
  * @name Unison
  * @version 1.0.2
- * @author ivLis STUDIO
+ * @author default
  * @supports karaoke: true
  * @supports synced: true
  * @supports unsynced: true
@@ -35,7 +35,7 @@
     const ADDON_INFO = {
         id: 'unison',
         name: 'Unison',
-        author: 'ivLis STUDIO',
+        author: 'default',
         version: '1.0.2',
         cacheVersion: CACHE_VERSION,
         description: {

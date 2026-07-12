@@ -435,6 +435,14 @@ window.LANG_PT = {
     "lyricsProviders": {
       "title": "Provedores de letras",
       "description": "Selecione e priorize os provedores de letras. Os provedores no topo são tentados primeiro.",
+      "preferSyncDataProvider": {
+        "label": "Priorizar provedores com dados de sincronização",
+        "desc": "Quando houver dados de sincronização para a faixa atual, tente o provedor de letras correspondente antes da ordem normal."
+      },
+      "preferLyricsTypeOverProviderOrder": {
+        "label": "Priorizar o tipo de letra antes da ordem dos provedores",
+        "desc": "Tentar primeiro letras de karaokê em todos os provedores, depois letras sincronizadas e por fim letras simples. A ordem configurada dos provedores é mantida em cada tipo."
+      },
       "noProviders": "Nenhum provedor de letras registrado.",
       "allowedTypes": "Tipos de letras permitidos",
       "moveUp": "Mover para cima",

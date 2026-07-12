@@ -2,7 +2,7 @@
  * OpenRouter AI Addon for ivLyrics
  * OpenRouter를 통한 다양한 AI 모델 사용 (번역, 발음, TMI 생성)
  * 
- * @author ivLis STUDIO
+ * @author default
  * @version 1.0.0
  */
 
@@ -16,7 +16,7 @@
     const ADDON_INFO = {
         id: 'openrouter',
         name: 'OpenRouter',
-        author: 'ivLis STUDIO',
+        author: 'default',
         description: {
             ko: 'OpenRouter를 통해 다양한 AI 모델 사용 (Claude, GPT, Gemini, Llama 등)',
             en: 'Access multiple AI models via OpenRouter (Claude, GPT, Gemini, Llama, etc.)',

@@ -14,6 +14,10 @@
     // ============================================
 
     const STORAGE_PREFIX = 'ivLyrics:lyrics:';
+    const PREFER_SYNC_DATA_PROVIDER_SETTING = 'prefer-sync-data-provider';
+    const PREFER_SYNC_DATA_PROVIDER_STORAGE_KEY = `ivLyrics:visual:${PREFER_SYNC_DATA_PROVIDER_SETTING}`;
+    const PREFER_LYRICS_TYPE_OVER_PROVIDER_ORDER_SETTING = 'prefer-lyrics-type-over-provider-order';
+    const PREFER_LYRICS_TYPE_OVER_PROVIDER_ORDER_STORAGE_KEY = `ivLyrics:visual:${PREFER_LYRICS_TYPE_OVER_PROVIDER_ORDER_SETTING}`;
     const getStoredValue = (key) => window.ivLyricsStoragePersistence
         ? window.ivLyricsStoragePersistence.getItem(key)
         : Spicetify.LocalStorage.get(key);
@@ -28,9 +32,39 @@
         SYNCED: 'synced',       // 싱크 가사 (줄별 타이밍)
         UNSYNCED: 'unsynced'    // 일반 가사 (타이밍 없음)
     };
+    const LYRICS_TYPE_PRIORITY_ORDER = [
+        LYRICS_TYPES.KARAOKE,
+        LYRICS_TYPES.SYNCED,
+        LYRICS_TYPES.UNSYNCED
+    ];
+    const PROVIDER_SELECTION_POLICIES = {
+        PROVIDER_FIRST: 'provider-first-v1',
+        TYPE_FIRST: 'type-first-v1'
+    };
+    const DEFAULT_PROVIDER_ORDER = ['lyricsplus', 'unison', 'lrclib', 'spotify'];
+    const PSEUDO_KARAOKE_SOURCES = new Set([
+        'audio-analysis-pseudo',
+        'spotify-audio-analysis',
+        'line-timing-pseudo'
+    ]);
 
     function hasLyricsContent(lines) {
         return Array.isArray(lines) && lines.length > 0;
+    }
+
+    function getLyricsAddonIdForSyncProvider(providerValue) {
+        const providerId = typeof providerValue === 'string'
+            ? providerValue.trim().toLowerCase()
+            : '';
+        if (!providerId) return '';
+        if (providerId === 'legacy' || providerId === 'spotify' || providerId.startsWith('spotify-')) {
+            return 'spotify';
+        }
+        return providerId;
+    }
+
+    function getSyncProviderId(entry) {
+        return typeof entry === 'string' ? entry : entry?.provider;
     }
 
     // ============================================
@@ -375,8 +409,14 @@
                 return order;
             }
 
-            // Default: validation order (registered order)
-            return allAddonIds;
+            // 기본 제공자는 품질과 안정성을 고려한 고정 순서를 사용하고,
+            // 마켓플레이스 등에서 추가된 제공자는 등록 순서대로 뒤에 붙인다.
+            const defaultIds = DEFAULT_PROVIDER_ORDER.filter(id => allAddonIds.includes(id));
+            const defaultIdSet = new Set(defaultIds);
+            return [
+                ...defaultIds,
+                ...allAddonIds.filter(id => !defaultIdSet.has(id))
+            ];
         }
 
         /**
@@ -414,6 +454,130 @@
             return order
                 .filter(id => this.isProviderEnabled(id) && this._addons.has(id))
                 .map(id => this._addons.get(id));
+        }
+
+        /**
+         * OpenDB에 sync-data가 등록된 가사 제공자를 곡별로 우선할지 여부.
+         * 저장값이 없는 기존 사용자도 기능을 바로 사용할 수 있도록 기본값은 true다.
+         */
+        isPreferSyncDataProviderEnabled() {
+            const configValue = window.CONFIG?.visual?.[PREFER_SYNC_DATA_PROVIDER_SETTING];
+            if (configValue !== undefined && configValue !== null) {
+                return configValue !== false && configValue !== 'false';
+            }
+
+            const storedValue = getStoredValue(PREFER_SYNC_DATA_PROVIDER_STORAGE_KEY);
+            return storedValue !== false && storedValue !== 'false';
+        }
+
+        setPreferSyncDataProviderEnabled(enabled) {
+            const nextValue = enabled !== false;
+            if (window.CONFIG?.visual) {
+                window.CONFIG.visual[PREFER_SYNC_DATA_PROVIDER_SETTING] = nextValue;
+            }
+            if (window.StorageManager?.saveConfig) {
+                window.StorageManager.saveConfig(PREFER_SYNC_DATA_PROVIDER_SETTING, nextValue);
+            } else {
+                setStoredValue(PREFER_SYNC_DATA_PROVIDER_STORAGE_KEY, nextValue ? 'true' : 'false');
+            }
+
+            this.emit('provider:sync-data-priority:changed', { enabled: nextValue });
+            this._triggerLyricsRefresh();
+        }
+
+        /**
+         * 모든 제공자의 노래방 가사를 먼저 찾고, 이후 싱크/일반 가사를
+         * 같은 제공자 우선순위로 탐색할지 여부. 새 설치의 기본값은 true다.
+         */
+        isPreferLyricsTypeOverProviderOrderEnabled() {
+            const configValue = window.CONFIG?.visual?.[PREFER_LYRICS_TYPE_OVER_PROVIDER_ORDER_SETTING];
+            if (configValue !== undefined && configValue !== null) {
+                return configValue !== false && configValue !== 'false';
+            }
+
+            const storedValue = getStoredValue(PREFER_LYRICS_TYPE_OVER_PROVIDER_ORDER_STORAGE_KEY);
+            return storedValue !== false && storedValue !== 'false';
+        }
+
+        setPreferLyricsTypeOverProviderOrderEnabled(enabled) {
+            const nextValue = enabled !== false;
+            if (window.CONFIG?.visual) {
+                window.CONFIG.visual[PREFER_LYRICS_TYPE_OVER_PROVIDER_ORDER_SETTING] = nextValue;
+            }
+            if (window.StorageManager?.saveConfig) {
+                window.StorageManager.saveConfig(PREFER_LYRICS_TYPE_OVER_PROVIDER_ORDER_SETTING, nextValue);
+            } else {
+                setStoredValue(PREFER_LYRICS_TYPE_OVER_PROVIDER_ORDER_STORAGE_KEY, nextValue ? 'true' : 'false');
+            }
+
+            this.emit('provider:lyrics-type-priority:changed', { enabled: nextValue });
+            this._triggerLyricsRefresh();
+        }
+
+        async _getAvailableSyncDataProviderIds(trackId, trackIsrc, info) {
+            if (!trackIsrc || !window.SyncDataService?.getAvailableProviders) {
+                return new Set();
+            }
+
+            try {
+                const syncProviders = await window.SyncDataService.getAvailableProviders(trackId, {
+                    ...info,
+                    isrc: trackIsrc
+                });
+                if (!Array.isArray(syncProviders)) return new Set();
+
+                return new Set(
+                    syncProviders
+                        .map(entry => getLyricsAddonIdForSyncProvider(getSyncProviderId(entry)))
+                        .filter(Boolean)
+                );
+            } catch (error) {
+                console.warn('[LyricsAddonManager] Failed to read available sync-data providers:', error);
+                return new Set();
+            }
+        }
+
+        /**
+         * OpenDB의 ISRC 인덱스에 현재 곡의 sync-data가 있으면 해당 가사 제공자들을
+         * 사용자 지정 순서 안에서 안정적으로 앞으로 이동한다. 저장된 전역 순서는 바꾸지 않는다.
+         */
+        async _prioritizeProvidersWithSyncData(providers, trackId, trackIsrc, info, syncDataProviderIds = null) {
+            if (!Array.isArray(providers) || providers.length < 2) return providers;
+            if (!trackIsrc || !this.isPreferSyncDataProviderEnabled()) return providers;
+            if (!window.SyncDataService?.getAvailableProviders) return providers;
+
+            try {
+                const preferredAddonIds = syncDataProviderIds instanceof Set
+                    ? syncDataProviderIds
+                    : await this._getAvailableSyncDataProviderIds(trackId, trackIsrc, info);
+                if (preferredAddonIds.size === 0) return providers;
+
+                const preferred = [];
+                const remaining = [];
+                for (const provider of providers) {
+                    const addonId = getLyricsAddonIdForSyncProvider(provider?.id);
+                    const canUseSyncData = provider?.useIvLyricsSync !== false
+                        && this.getAddonSetting(provider.id, 'enable_karaoke', true) !== false;
+                    if (canUseSyncData && preferredAddonIds.has(addonId)) {
+                        preferred.push(provider);
+                    } else {
+                        remaining.push(provider);
+                    }
+                }
+
+                if (preferred.length === 0) return providers;
+                const prioritizedProviders = [...preferred, ...remaining];
+                console.info('[ivLyrics sync-data]', 'LyricsAddonManager:provider-priority', {
+                    isrc: trackIsrc,
+                    syncProviders: Array.from(preferredAddonIds),
+                    configuredOrder: providers.map(provider => provider.id),
+                    attemptOrder: prioritizedProviders.map(provider => provider.id)
+                });
+                return prioritizedProviders;
+            } catch (error) {
+                console.warn('[LyricsAddonManager] Failed to prioritize providers with sync-data:', error);
+                return providers;
+            }
         }
 
         // ============================================
@@ -482,20 +646,323 @@
         // API Methods
         // ============================================
 
+        _getProviderTypeSettings(provider) {
+            return {
+                [LYRICS_TYPES.KARAOKE]: this.getAddonSetting(provider.id, 'enable_karaoke', true) !== false,
+                [LYRICS_TYPES.SYNCED]: this.getAddonSetting(provider.id, 'enable_synced', true) !== false,
+                [LYRICS_TYPES.UNSYNCED]: this.getAddonSetting(provider.id, 'enable_unsynced', true) !== false
+            };
+        }
+
+        _canProviderParticipateInType(provider, lyricsType, typeSettings, syncDataProviderIds) {
+            if (!typeSettings?.[lyricsType]) return false;
+
+            if (lyricsType === LYRICS_TYPES.KARAOKE) {
+                const addonId = getLyricsAddonIdForSyncProvider(provider?.id);
+                const hasKnownSyncData = provider?.useIvLyricsSync !== false
+                    && syncDataProviderIds instanceof Set
+                    && syncDataProviderIds.has(addonId);
+                return provider?.supports?.karaoke === true || hasKnownSyncData;
+            }
+
+            return provider?.supports?.[lyricsType] === true;
+        }
+
+        _isPseudoKaraoke(result) {
+            const source = result?.karaokeSource;
+            if (!source) return false;
+            return window.PseudoKaraokeService?.isPseudoSource?.(source) === true
+                || PSEUDO_KARAOKE_SOURCES.has(source);
+        }
+
+        _selectProviderCandidateForType(candidate, lyricsType) {
+            if (!candidate) return null;
+
+            if (lyricsType === LYRICS_TYPES.KARAOKE) {
+                return candidate.hasKaraoke && !candidate.isPseudoKaraoke
+                    ? { ...candidate.result }
+                    : null;
+            }
+
+            if (lyricsType === LYRICS_TYPES.SYNCED) {
+                const hasSyncedGradeResult = candidate.hasSynced
+                    || (candidate.hasKaraoke && candidate.isPseudoKaraoke);
+                if (!hasSyncedGradeResult) return null;
+                const result = { ...candidate.result };
+                if (candidate.hasKaraoke && !candidate.isPseudoKaraoke) {
+                    result.karaoke = null;
+                    result.karaokeSource = null;
+                }
+                return result;
+            }
+
+            if (lyricsType === LYRICS_TYPES.UNSYNCED && candidate.hasUnsynced) {
+                return {
+                    ...candidate.result,
+                    karaoke: null,
+                    karaokeSource: null,
+                    synced: null
+                };
+            }
+
+            return null;
+        }
+
+        _finalizeLyricsFetch(result, info, providerId, selectionPolicy, selectionType) {
+            const finalResult = {
+                ...result,
+                providerSelectionPolicy: selectionPolicy,
+                providerSelectionType: selectionType
+            };
+            const hasKaraoke = hasLyricsContent(finalResult.karaoke);
+            const hasSynced = hasLyricsContent(finalResult.synced);
+            const hasUnsynced = hasLyricsContent(finalResult.unsynced);
+            const selectedProvider = finalResult.provider || providerId;
+
+            if (window.AddonDebug?.isEnabled()) {
+                window.AddonDebug.timeEnd('lyrics', 'getLyrics:total');
+                window.AddonDebug.log('lyrics', 'getLyrics success', {
+                    provider: selectedProvider,
+                    selectionPolicy,
+                    selectionType,
+                    hasKaraoke,
+                    hasSynced,
+                    hasUnsynced,
+                    syncDataApplied: finalResult.syncDataApplied || false
+                });
+            }
+
+            this.emit('lyrics:fetch:success', {
+                uri: info.uri,
+                provider: selectedProvider,
+                selectionPolicy,
+                selectionType,
+                hasKaraoke,
+                hasSynced,
+                hasUnsynced,
+                syncDataApplied: finalResult.syncDataApplied || false
+            });
+
+            return finalResult;
+        }
+
+        async _loadProviderCandidate(provider, info, context, typeSettings) {
+            const { lyricsCacheId, trackId, trackIsrc } = context;
+            const allowKaraoke = typeSettings[LYRICS_TYPES.KARAOKE];
+            const allowSynced = typeSettings[LYRICS_TYPES.SYNCED];
+            const allowUnsynced = typeSettings[LYRICS_TYPES.UNSYNCED];
+
+            if (!allowKaraoke && !allowSynced && !allowUnsynced) {
+                window.__ivLyricsDebugLog?.(`[LyricsAddonManager] All lyrics types disabled for ${provider.id}, skipping`);
+                return null;
+            }
+
+            window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Trying provider: ${provider.id}`);
+            window.__ivLyricsDebugLog?.(`[LyricsAddonManager] User settings for ${provider.id}: karaoke=${allowKaraoke}, synced=${allowSynced}, unsynced=${allowUnsynced}`);
+
+            let result = null;
+            let cacheHit = false;
+            let providerFetched = false;
+            let syncDataAppliedThisCall = false;
+            let pseudoKaraokeChanged = false;
+            const debugTiming = window.AddonDebug?.isEnabled();
+            if (debugTiming) {
+                window.AddonDebug.time('lyrics', `provider:${provider.id}`);
+            }
+
+            try {
+                if (lyricsCacheId && window.LyricsService?.getCachedLyrics) {
+                    try {
+                        const cached = await window.LyricsService.getCachedLyrics(lyricsCacheId, provider.id);
+                        const isProviderCacheCurrent = cached && (!provider.cacheVersion || cached.cacheVersion === provider.cacheVersion);
+                        const isSyncDataRendererCurrent = !cached?.syncDataApplied
+                            || cached.syncDataRendererVersion === SYNC_DATA_RENDERER_VERSION;
+                        if (isProviderCacheCurrent && isSyncDataRendererCurrent) {
+                            result = cached;
+                            cacheHit = true;
+                            window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Cache hit for ${provider.id}`);
+                        } else if (isProviderCacheCurrent && !isSyncDataRendererCurrent) {
+                            window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Sync-data renderer cache mismatch for ${provider.id}, refetching...`);
+                        } else if (cached) {
+                            window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Cache version mismatch for ${provider.id}, refetching...`);
+                        }
+                    } catch (error) {
+                        console.warn(`[LyricsAddonManager] Cache lookup failed for ${provider.id}:`, error);
+                    }
+                }
+
+                if (!result) {
+                    result = await provider.getLyrics(info);
+                    providerFetched = true;
+                }
+            } finally {
+                if (debugTiming) {
+                    window.AddonDebug.timeEnd('lyrics', `provider:${provider.id}`);
+                }
+            }
+
+            if (!result || result.error) {
+                window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Provider ${provider.id} returned error:`, result?.error);
+                return null;
+            }
+
+            const resultHasKaraoke = hasLyricsContent(result.karaoke);
+            const resultHasSynced = hasLyricsContent(result.synced);
+            const resultHasUnsynced = hasLyricsContent(result.unsynced);
+            const needsKaraoke = allowKaraoke && (
+                !resultHasKaraoke
+                || this._isPseudoKaraoke(result)
+            );
+            const hasBaseLyrics = resultHasSynced || resultHasUnsynced;
+            const useIvLyricsSync = provider.useIvLyricsSync !== false;
+
+            window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Got lyrics from: ${provider.id}`, {
+                hasKaraoke: resultHasKaraoke,
+                hasSynced: resultHasSynced,
+                hasUnsynced: resultHasUnsynced,
+                provider: result.provider
+            });
+            console.info('[ivLyrics sync-data]', 'LyricsAddonManager:sync-check', {
+                providerId: provider.id,
+                resultProvider: result.provider || null,
+                useIvLyricsSync,
+                allowKaraoke,
+                hasKaraoke: resultHasKaraoke,
+                hasSynced: resultHasSynced,
+                hasUnsynced: resultHasUnsynced,
+                needsKaraoke,
+                hasBaseLyrics,
+                isrc: trackIsrc || null,
+                hasSyncDataService: !!window.SyncDataService?.getSyncData
+            });
+
+            if (useIvLyricsSync && needsKaraoke && hasBaseLyrics) {
+                if ((trackId || trackIsrc) && window.SyncDataService?.getSyncData) {
+                    try {
+                        const syncProvider = result.provider || provider.id;
+                        const syncData = await window.SyncDataService.getSyncData(trackId, syncProvider, {
+                            ...info,
+                            isrc: trackIsrc
+                        });
+
+                        if (syncData?.syncData) {
+                            const baseLyrics = resultHasSynced ? result.synced : result.unsynced;
+                            const karaoke = window.SyncDataService.applySyncDataToLyrics(baseLyrics, syncData, {
+                                durationMs: info.durationMs || info.duration_ms || info.duration,
+                                trackInfo: info
+                            });
+
+                            if (hasLyricsContent(karaoke)) {
+                                result.karaoke = karaoke;
+                                result.karaokeSource = 'sync-data';
+                                delete result.pseudoKaraokeCacheVersion;
+                                result.syncDataApplied = true;
+                                result.syncDataProvider = syncProvider;
+                                result.syncDataRendererVersion = SYNC_DATA_RENDERER_VERSION;
+                                syncDataAppliedThisCall = true;
+
+                                if (syncData.contributors || syncData.syncData?.contributors) {
+                                    result.contributors = syncData.contributors || syncData.syncData.contributors;
+                                }
+                                if (window.SyncDataService.convertKaraokeToSynced) {
+                                    const syncedFromKaraoke = window.SyncDataService.convertKaraokeToSynced(karaoke);
+                                    if (hasLyricsContent(syncedFromKaraoke)) {
+                                        result.synced = syncedFromKaraoke;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.warn('[LyricsAddonManager] Failed to get sync-data:', error);
+                    }
+                } else if (provider.useIvLyricsSync && window.LyricsService?.applyIvLyricsSyncData) {
+                    try {
+                        const karaokeBeforeSyncData = result.karaoke;
+                        const syncedBeforeSyncData = result.synced;
+                        const syncDataAppliedBefore = result.syncDataApplied;
+                        const syncResult = await window.LyricsService.applyIvLyricsSyncData(result);
+                        if (syncResult) {
+                            Object.assign(result, syncResult);
+                            syncDataAppliedThisCall = !!result.syncDataApplied && (
+                                result.karaoke !== karaokeBeforeSyncData
+                                || result.synced !== syncedBeforeSyncData
+                                || result.syncDataApplied !== syncDataAppliedBefore
+                            );
+                        }
+                    } catch (error) {
+                        console.warn('[LyricsAddonManager] Failed to apply legacy sync data:', error);
+                    }
+                }
+            }
+
+            if (window.PseudoKaraokeService?.applyToResult) {
+                try {
+                    const karaokeBeforePseudo = result.karaoke;
+                    const karaokeSourceBeforePseudo = result.karaokeSource;
+                    const pseudoCacheVersionBeforePseudo = result.pseudoKaraokeCacheVersion;
+                    const pseudoResult = await window.PseudoKaraokeService.applyToResult(result, info);
+                    if (pseudoResult) {
+                        Object.assign(result, pseudoResult);
+                    }
+                    pseudoKaraokeChanged = result.karaoke !== karaokeBeforePseudo
+                        || result.karaokeSource !== karaokeSourceBeforePseudo
+                        || result.pseudoKaraokeCacheVersion !== pseudoCacheVersionBeforePseudo;
+                } catch (error) {
+                    console.warn('[LyricsAddonManager] Failed to apply pseudo karaoke:', error);
+                }
+            }
+
+            const finalResult = { ...result };
+            if (finalResult.syncDataApplied) {
+                finalResult.syncDataRendererVersion = SYNC_DATA_RENDERER_VERSION;
+            }
+            if (!allowKaraoke) finalResult.karaoke = null;
+            if (!allowSynced) finalResult.synced = null;
+            if (!allowUnsynced) finalResult.unsynced = null;
+
+            const hasKaraoke = hasLyricsContent(finalResult.karaoke);
+            const hasSynced = hasLyricsContent(finalResult.synced);
+            const hasUnsynced = hasLyricsContent(finalResult.unsynced);
+            const isPseudoKaraoke = hasKaraoke && this._isPseudoKaraoke(finalResult);
+
+            window.__ivLyricsDebugLog?.(`[LyricsAddonManager] After filtering for ${provider.id}:`, {
+                hasKaraoke,
+                hasSynced,
+                hasUnsynced,
+                isPseudoKaraoke
+            });
+
+            const shouldUpdateCache = (!cacheHit && providerFetched)
+                || syncDataAppliedThisCall
+                || pseudoKaraokeChanged;
+            if (
+                (hasKaraoke || hasSynced || hasUnsynced)
+                && lyricsCacheId
+                && window.LyricsService?.cacheLyrics
+                && !result.skipCache
+                && shouldUpdateCache
+            ) {
+                const cachePayload = { ...result };
+                if (cachePayload.syncDataApplied) {
+                    cachePayload.syncDataRendererVersion = SYNC_DATA_RENDERER_VERSION;
+                }
+                delete cachePayload.skipCache;
+                window.LyricsService.cacheLyrics(lyricsCacheId, provider.id, cachePayload);
+            }
+
+            return {
+                provider,
+                result: finalResult,
+                hasKaraoke,
+                hasSynced,
+                hasUnsynced,
+                isPseudoKaraoke
+            };
+        }
+
         /**
-         * 가사 가져오기 (개선된 로직)
-         * 
-         * 흐름:
-         * 1. Provider에서 가사 가져오기
-         * 2. 사용자가 원하는 가사 유형 확인 (karaoke, synced, unsynced)
-         * 3. karaoke가 필요한데 없으면 → sync-data 조회
-         * 4. sync-data로 karaoke 생성
-         * 5. 사용자 설정에 따라 필터링
-         * 6. 허용된 가사가 있으면 반환, 없으면 다음 Provider
-         * 
-         * @param {Object} info - 트랙 정보 { uri, title, artist, album, duration }
-         * @param {string|null} forcedProviderId - 이 요청에서 강제로 사용할 제공자 ID
-         * @returns {Promise<LyricsResult|null>}
+         * 가사를 가져온다. 품질 우선 옵션에서는 각 제공자를 한 번만 요청하며,
+         * 노래방 → 싱크 → 일반 단계 안에서 사용자 지정 제공자 순서를 유지한다.
          */
         async getLyrics(info, forcedProviderId = null) {
             const trackId = window.LyricsService?.extractTrackId?.(info.uri)
@@ -506,34 +973,67 @@
             const availableProviders = trackId
                 ? allEnabledProviders
                 : allEnabledProviders.filter(provider => provider.supportsLocalTracks === true);
-            const enabledProviders = forcedProviderId
+            let enabledProviders = forcedProviderId
                 ? availableProviders.filter(provider => provider.id === forcedProviderId)
                 : availableProviders;
+            const typePriorityEnabled = !forcedProviderId
+                && this.isPreferLyricsTypeOverProviderOrderEnabled();
             const trackIsrc = (trackId ? await window.SyncDataService?.resolveTrackIsrc?.(trackId, info) : null)
                 || window.SyncDataService?.getTrackIsrc?.(trackId, info)
                 || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);
+            const shouldReadSyncDataProviders = !forcedProviderId
+                && !!trackIsrc
+                && (typePriorityEnabled || this.isPreferSyncDataProviderEnabled());
+            const syncDataProviderIds = shouldReadSyncDataProviders
+                ? await this._getAvailableSyncDataProviderIds(trackId, trackIsrc, info)
+                : new Set();
+
+            if (!forcedProviderId) {
+                enabledProviders = await this._prioritizeProvidersWithSyncData(
+                    enabledProviders,
+                    trackId,
+                    trackIsrc,
+                    info,
+                    syncDataProviderIds
+                );
+            }
+
+            const typeSelectionPolicy = typePriorityEnabled
+                ? PROVIDER_SELECTION_POLICIES.TYPE_FIRST
+                : PROVIDER_SELECTION_POLICIES.PROVIDER_FIRST;
+            const selectionPolicy = `${typeSelectionPolicy}:${
+                this.isPreferSyncDataProviderEnabled()
+                    ? 'sync-data-first'
+                    : 'configured-order'
+            }`;
             console.info('[ivLyrics sync-data]', 'LyricsAddonManager:getLyrics:start', {
                 uri: info.uri,
                 trackId,
                 resolvedIsrc: trackIsrc || null,
                 forcedProviderId,
+                selectionPolicy,
+                syncDataProviders: Array.from(syncDataProviderIds),
                 enabledProviders: enabledProviders.map(provider => provider.id)
             });
 
-            // 디버그 로깅
             if (window.AddonDebug?.isEnabled()) {
                 window.AddonDebug.log('lyrics', 'getLyrics called', {
                     uri: info.uri,
                     title: info.title,
                     artist: info.artist,
-                    providers: enabledProviders.map(p => p.id),
-                    forcedProviderId
+                    providers: enabledProviders.map(provider => provider.id),
+                    forcedProviderId,
+                    selectionPolicy
                 });
                 window.AddonDebug.time('lyrics', 'getLyrics:total');
             }
 
-            // 이벤트 발생
-            this.emit('lyrics:fetch:start', { uri: info.uri, title: info.title, artist: info.artist });
+            this.emit('lyrics:fetch:start', {
+                uri: info.uri,
+                title: info.title,
+                artist: info.artist,
+                selectionPolicy
+            });
 
             if (enabledProviders.length === 0) {
                 const error = {
@@ -542,289 +1042,104 @@
                     provider: forcedProviderId || null
                 };
                 console.warn('[LyricsAddonManager]', error.error, forcedProviderId || '');
-                this.emit('lyrics:fetch:error', { ...error, reason: forcedProviderId ? 'provider_unavailable' : 'no_providers' });
+                this.emit('lyrics:fetch:error', {
+                    ...error,
+                    reason: forcedProviderId ? 'provider_unavailable' : 'no_providers'
+                });
                 return error;
             }
 
-            for (const provider of enabledProviders) {
+            const context = { lyricsCacheId, trackId, trackIsrc };
+            const typeSettingsByProvider = new Map(
+                enabledProviders.map(provider => [provider.id, this._getProviderTypeSettings(provider)])
+            );
+            const providerAttempts = new Map();
+            const loadProviderOnce = async (provider) => {
+                if (providerAttempts.has(provider.id)) {
+                    return providerAttempts.get(provider.id);
+                }
+
+                let candidate = null;
                 try {
-                    window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Trying provider: ${provider.id}`);
-
-                    // 사용자 설정 확인 (먼저 확인해서 최적화)
-                    const allowKaraoke = this.getAddonSetting(provider.id, 'enable_karaoke', true);
-                    const allowSynced = this.getAddonSetting(provider.id, 'enable_synced', true);
-                    const allowUnsynced = this.getAddonSetting(provider.id, 'enable_unsynced', true);
-
-                    window.__ivLyricsDebugLog?.(`[LyricsAddonManager] User settings for ${provider.id}: karaoke=${allowKaraoke}, synced=${allowSynced}, unsynced=${allowUnsynced}`);
-
-                    // 모든 유형이 비활성화되면 이 provider 건너뜀
-                    if (!allowKaraoke && !allowSynced && !allowUnsynced) {
-                        window.__ivLyricsDebugLog?.(`[LyricsAddonManager] All lyrics types disabled for ${provider.id}, skipping`);
-                        continue;
-                    }
-
-                    // 디버그 타이머
-                    if (window.AddonDebug?.isEnabled()) {
-                        window.AddonDebug.time('lyrics', `provider:${provider.id}`);
-                    }
-
-                    // 0. IndexedDB 캐시 확인
-                    let result = null;
-                    let cacheHit = false;
-                    let providerFetched = false;
-                    let syncDataAppliedThisCall = false;
-                    let pseudoKaraokeChanged = false;
-                    if (lyricsCacheId && window.LyricsService?.getCachedLyrics) {
-                        try {
-                            const cached = await window.LyricsService.getCachedLyrics(lyricsCacheId, provider.id);
-                            const isProviderCacheCurrent = cached && (!provider.cacheVersion || cached.cacheVersion === provider.cacheVersion);
-                            const isSyncDataRendererCurrent = !cached?.syncDataApplied
-                                || cached.syncDataRendererVersion === SYNC_DATA_RENDERER_VERSION;
-                            if (isProviderCacheCurrent && isSyncDataRendererCurrent) {
-                                result = cached;
-                                cacheHit = true;
-                                window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Cache hit for ${provider.id}`);
-                            } else if (isProviderCacheCurrent && !isSyncDataRendererCurrent) {
-                                window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Sync-data renderer cache mismatch for ${provider.id}, refetching...`);
-                            } else if (cached) {
-                                window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Cache version mismatch for ${provider.id}, refetching...`);
-                            }
-                        } catch (e) {
-                            console.warn(`[LyricsAddonManager] Cache lookup failed for ${provider.id}:`, e);
-                        }
-                    }
-
-                    // 1. 캐시 miss 시 Provider에서 가사 가져오기
-                    if (!result) {
-                        result = await provider.getLyrics(info);
-                        providerFetched = true;
-                    }
-
-                    // 디버그 타이머 종료
-                    if (window.AddonDebug?.isEnabled()) {
-                        window.AddonDebug.timeEnd('lyrics', `provider:${provider.id}`);
-                    }
-
-                    if (!result || result.error) {
-                        window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Provider ${provider.id} returned error:`, result?.error);
-                        continue;
-                    }
-
-                    const resultHasKaraoke = hasLyricsContent(result.karaoke);
-                    const resultHasSynced = hasLyricsContent(result.synced);
-                    const resultHasUnsynced = hasLyricsContent(result.unsynced);
-
-                    window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Got lyrics from: ${provider.id}`, {
-                        hasKaraoke: resultHasKaraoke,
-                        hasSynced: resultHasSynced,
-                        hasUnsynced: resultHasUnsynced,
-                        provider: result.provider
-                    });
-
-                    // 2. karaoke가 필요한데 없으면 sync-data 조회
-                    const needsKaraoke = allowKaraoke && (
-                        !resultHasKaraoke
-                        || window.PseudoKaraokeService?.isPseudoSource?.(result.karaokeSource)
+                    candidate = await this._loadProviderCandidate(
+                        provider,
+                        info,
+                        context,
+                        typeSettingsByProvider.get(provider.id)
                     );
-                    const hasBaseLyrics = resultHasSynced || resultHasUnsynced;
-                    const useIvLyricsSync = provider.useIvLyricsSync !== false;
-                    console.info('[ivLyrics sync-data]', 'LyricsAddonManager:sync-check', {
-                        providerId: provider.id,
-                        resultProvider: result.provider || null,
-                        useIvLyricsSync,
-                        allowKaraoke,
-                        hasKaraoke: resultHasKaraoke,
-                        hasSynced: resultHasSynced,
-                        hasUnsynced: resultHasUnsynced,
-                        needsKaraoke,
-                        hasBaseLyrics,
-                        isrc: trackIsrc || null,
-                        hasSyncDataService: !!window.SyncDataService?.getSyncData
-                    });
-
-                    if (useIvLyricsSync && needsKaraoke && hasBaseLyrics) {
-                        window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Karaoke needed but not available, checking sync-data for ${provider.id}...`);
-
-                        // sync-data 조회 시도
-                        if ((trackId || trackIsrc) && window.SyncDataService?.getSyncData) {
-                            try {
-                                const syncProvider = result.provider || provider.id;
-                                window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Fetching sync-data for isrc=${trackIsrc || 'missing'}, provider=${syncProvider}`);
-                                console.info('[ivLyrics sync-data]', 'LyricsAddonManager:calling-getSyncData', {
-                                    trackId,
-                                    isrc: trackIsrc || null,
-                                    provider: syncProvider
-                                });
-
-                                const syncData = await window.SyncDataService.getSyncData(trackId, syncProvider, { ...info, isrc: trackIsrc });
-                                console.info('[ivLyrics sync-data]', 'LyricsAddonManager:getSyncData-result', {
-                                    provider: syncProvider,
-                                    found: !!syncData,
-                                    hasSyncData: !!syncData?.syncData
-                                });
-
-                                if (syncData && syncData.syncData) {
-                                    window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Found sync-data, applying...`);
-
-                                    // sync-data를 가사에 적용하여 karaoke 생성
-                                    const baseLyrics = resultHasSynced ? result.synced : result.unsynced;
-                                    const karaoke = window.SyncDataService.applySyncDataToLyrics(baseLyrics, syncData, {
-                                        durationMs: info.durationMs || info.duration_ms || info.duration,
-                                        trackInfo: info
-                                    });
-
-                                    if (hasLyricsContent(karaoke)) {
-                                        result.karaoke = karaoke;
-                                        result.karaokeSource = 'sync-data';
-                                        delete result.pseudoKaraokeCacheVersion;
-                                        result.syncDataApplied = true;
-                                        result.syncDataProvider = syncProvider;
-                                        result.syncDataRendererVersion = SYNC_DATA_RENDERER_VERSION;
-                                        syncDataAppliedThisCall = true;
-
-                                        // 기여자 정보 추가
-                                        if (syncData.contributors || syncData.syncData?.contributors) {
-                                            result.contributors = syncData.contributors || syncData.syncData.contributors;
-                                        }
-                                        // sync-data에서 synced도 업데이트 (더 정확한 타이밍)
-                                        if (window.SyncDataService.convertKaraokeToSynced) {
-                                            const syncedFromKaraoke = window.SyncDataService.convertKaraokeToSynced(karaoke);
-                                            if (hasLyricsContent(syncedFromKaraoke)) {
-                                                result.synced = syncedFromKaraoke;
-                                            }
-                                        }
-
-                                        window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Karaoke created from sync-data (${karaoke.length} lines)`);
-                                    }
-                                } else {
-                                    window.__ivLyricsDebugLog?.(`[LyricsAddonManager] No sync-data found for ${syncProvider}`);
-                                }
-                            } catch (e) {
-                                console.warn(`[LyricsAddonManager] Failed to get sync-data:`, e);
-                            }
-                        } else if (provider.useIvLyricsSync && window.LyricsService?.applyIvLyricsSyncData) {
-                            // 레거시 방식: LyricsService.applyIvLyricsSyncData 사용
-                            window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Using legacy applyIvLyricsSyncData for ${provider.id}...`);
-                            try {
-                                const karaokeBeforeSyncData = result.karaoke;
-                                const syncedBeforeSyncData = result.synced;
-                                const syncDataAppliedBefore = result.syncDataApplied;
-                                const syncResult = await window.LyricsService.applyIvLyricsSyncData(result);
-                                if (syncResult) {
-                                    Object.assign(result, syncResult);
-                                    syncDataAppliedThisCall = !!result.syncDataApplied && (
-                                        result.karaoke !== karaokeBeforeSyncData
-                                        || result.synced !== syncedBeforeSyncData
-                                        || result.syncDataApplied !== syncDataAppliedBefore
-                                    );
-                                    window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Legacy sync-data applied, hasKaraoke: ${hasLyricsContent(result.karaoke)}`);
-                                }
-                            } catch (e) {
-                                console.warn(`[LyricsAddonManager] Failed to apply legacy sync data:`, e);
-                            }
-                        }
-                    }
-
-                    // 3. line-synced 가사에 대한 pseudo karaoke를 중앙 서비스에서 합성
-                    if (window.PseudoKaraokeService?.applyToResult) {
-                        try {
-                            const karaokeBeforePseudo = result.karaoke;
-                            const karaokeSourceBeforePseudo = result.karaokeSource;
-                            const pseudoCacheVersionBeforePseudo = result.pseudoKaraokeCacheVersion;
-                            const pseudoResult = await window.PseudoKaraokeService.applyToResult(result, info);
-                            if (pseudoResult) {
-                                Object.assign(result, pseudoResult);
-                            }
-                            pseudoKaraokeChanged = result.karaoke !== karaokeBeforePseudo
-                                || result.karaokeSource !== karaokeSourceBeforePseudo
-                                || result.pseudoKaraokeCacheVersion !== pseudoCacheVersionBeforePseudo;
-                        } catch (e) {
-                            console.warn(`[LyricsAddonManager] Failed to apply pseudo karaoke:`, e);
-                        }
-                    }
-
-                    // 4. 사용자 설정에 따라 필터링
-                    const finalResult = { ...result };
-                    if (finalResult.syncDataApplied) {
-                        finalResult.syncDataRendererVersion = SYNC_DATA_RENDERER_VERSION;
-                    }
-                    if (!allowKaraoke) finalResult.karaoke = null;
-                    if (!allowSynced) finalResult.synced = null;
-                    if (!allowUnsynced) finalResult.unsynced = null;
-
-                    const hasKaraoke = hasLyricsContent(finalResult.karaoke);
-                    const hasSynced = hasLyricsContent(finalResult.synced);
-                    const hasUnsynced = hasLyricsContent(finalResult.unsynced);
-
-                    window.__ivLyricsDebugLog?.(`[LyricsAddonManager] After filtering for ${provider.id}:`, {
-                        hasKaraoke,
-                        hasSynced,
-                        hasUnsynced
-                    });
-
-                    // 5. 허용된 가사가 있으면 반환
-                    if (hasKaraoke || hasSynced || hasUnsynced) {
-                        // 디버그 타이머 종료
-                        if (window.AddonDebug?.isEnabled()) {
-                            window.AddonDebug.timeEnd('lyrics', 'getLyrics:total');
-                            window.AddonDebug.log('lyrics', 'getLyrics success', {
-                                provider: finalResult.provider,
-                                hasKaraoke,
-                                hasSynced,
-                                hasUnsynced,
-                                syncDataApplied: finalResult.syncDataApplied || false
-                            });
-                        }
-
-                        // 이벤트 발생
-                        this.emit('lyrics:fetch:success', {
-                            uri: info.uri,
-                            provider: finalResult.provider,
-                            hasKaraoke,
-                            hasSynced,
-                            hasUnsynced,
-                            syncDataApplied: finalResult.syncDataApplied || false
-                        });
-
-                        // IndexedDB에 캐시 저장
-                        const shouldUpdateCache = (!cacheHit && providerFetched)
-                            || syncDataAppliedThisCall
-                            || pseudoKaraokeChanged;
-                        if (lyricsCacheId && window.LyricsService?.cacheLyrics && !result.skipCache && shouldUpdateCache) {
-                            const cachePayload = { ...result };
-                            if (cachePayload.syncDataApplied) {
-                                cachePayload.syncDataRendererVersion = SYNC_DATA_RENDERER_VERSION;
-                            }
-                            delete cachePayload.skipCache;
-                            window.LyricsService.cacheLyrics(lyricsCacheId, provider.id, cachePayload);
-                        }
-
-                        return finalResult;
-                    }
-
-                    // 6. 필터링 후 가사가 없으면 다음 provider 시도
-                    window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Lyrics from ${provider.id} filtered out by user settings or empty`);
-
-                } catch (e) {
-                    console.warn(`[LyricsAddonManager] Provider ${provider.id} failed:`, e);
-
-                    // 디버그 로깅
+                } catch (error) {
+                    console.warn(`[LyricsAddonManager] Provider ${provider.id} failed:`, error);
                     if (window.AddonDebug?.isEnabled()) {
-                        window.AddonDebug.error('lyrics', `Provider ${provider.id} error`, e);
+                        window.AddonDebug.error('lyrics', `Provider ${provider.id} error`, error);
+                    }
+                }
+                providerAttempts.set(provider.id, candidate);
+                return candidate;
+            };
+
+            if (typePriorityEnabled) {
+                for (const lyricsType of LYRICS_TYPE_PRIORITY_ORDER) {
+                    window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Starting lyrics type phase: ${lyricsType}`);
+                    for (const provider of enabledProviders) {
+                        const typeSettings = typeSettingsByProvider.get(provider.id);
+                        const existingCandidate = providerAttempts.get(provider.id);
+                        const hasAllowedPseudoSyncedFallback = lyricsType === LYRICS_TYPES.SYNCED
+                            && typeSettings?.[LYRICS_TYPES.KARAOKE]
+                            && existingCandidate?.hasKaraoke
+                            && existingCandidate?.isPseudoKaraoke;
+                        if (!hasAllowedPseudoSyncedFallback && !this._canProviderParticipateInType(
+                            provider,
+                            lyricsType,
+                            typeSettings,
+                            syncDataProviderIds
+                        )) {
+                            continue;
+                        }
+
+                        const candidate = await loadProviderOnce(provider);
+                        const selectedResult = this._selectProviderCandidateForType(candidate, lyricsType);
+                        if (selectedResult) {
+                            return this._finalizeLyricsFetch(
+                                selectedResult,
+                                info,
+                                provider.id,
+                                selectionPolicy,
+                                lyricsType
+                            );
+                        }
+                    }
+                }
+            } else {
+                for (const provider of enabledProviders) {
+                    const candidate = await loadProviderOnce(provider);
+                    if (!candidate) continue;
+
+                    const selectionType = candidate.hasKaraoke
+                        ? LYRICS_TYPES.KARAOKE
+                        : candidate.hasSynced
+                            ? LYRICS_TYPES.SYNCED
+                            : candidate.hasUnsynced
+                                ? LYRICS_TYPES.UNSYNCED
+                                : null;
+                    if (selectionType) {
+                        return this._finalizeLyricsFetch(
+                            candidate.result,
+                            info,
+                            provider.id,
+                            selectionPolicy,
+                            selectionType
+                        );
                     }
                 }
             }
 
-            // 디버그 타이머 종료
             if (window.AddonDebug?.isEnabled()) {
                 window.AddonDebug.timeEnd('lyrics', 'getLyrics:total');
                 window.AddonDebug.warn('lyrics', 'No lyrics found from any provider');
             }
 
-            // 이벤트 발생
             const errorResult = { error: 'No lyrics found', uri: info.uri };
-            this.emit('lyrics:fetch:error', { ...errorResult, reason: 'not_found' });
-
+            this.emit('lyrics:fetch:error', { ...errorResult, reason: 'not_found', selectionPolicy });
             return errorResult;
         }
 

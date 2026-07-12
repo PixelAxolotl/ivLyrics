@@ -1744,6 +1744,27 @@ const getLyricsDisplayMode = (isKara, line, text, originalText, text2) => {
 	return { mainText, subText, subText2 };
 };
 
+const getEmbeddedAuxiliaryDisplayValues = (line) => {
+	const phoneticText = typeof line?.phoneticText === "string" ? line.phoneticText.trim() : "";
+	const translationText = typeof line?.translationText === "string" ? line.translationText.trim() : "";
+	const displayTranslationText = typeof line?.text2 === "string" && line.text2.trim()
+		? line.text2.trim()
+		: translationText;
+	if (!phoneticText && !translationText) {
+		return {
+			text: line?.text,
+			originalText: line?.originalText,
+			text2: line?.text2,
+		};
+	}
+
+	return {
+		text: phoneticText || displayTranslationText || null,
+		originalText: line?.originalText || line?.text || "",
+		text2: phoneticText ? (displayTranslationText || null) : null,
+	};
+};
+
 function renderLyricsUnavailable(message = I18n.t("messages.noLyrics"), messageClassName = "") {
 	const messageClass = [
 		"lyrics-lyricsContainer-LyricsUnavailableMessage",
@@ -3326,17 +3347,20 @@ const getPseudoKaraokeRenderAdvance = (karaokeSource) => {
 };
 
 const buildPreparedSyncedLyrics = (lyrics, isKara) =>
-	lyrics.map((line, index, allLines) => ({
-		...line,
-		interludeInfo: getInterludeInfo(line, allLines[index + 1], index, allLines.length),
-		...buildLyricDisplayState(
-			isKara,
-			line,
-			line?.text,
-			line?.originalText,
-			line?.text2
-		),
-	}));
+	lyrics.map((line, index, allLines) => {
+		const displayValues = getEmbeddedAuxiliaryDisplayValues(line);
+		return {
+			...line,
+			interludeInfo: getInterludeInfo(line, allLines[index + 1], index, allLines.length),
+			...buildLyricDisplayState(
+				isKara,
+				line,
+				displayValues.text,
+				displayValues.originalText,
+				displayValues.text2
+			),
+		};
+	});
 
 const buildPaddedSyncedLyrics = (lyrics, leadingEmptyLines) =>
 	Array.from({ length: leadingEmptyLines }, () => emptyLine)
@@ -3571,7 +3595,8 @@ const SyncedLyricsScrollView = react.memo(({
 			className: `lyrics-lyricsContainer-SyncedScrollView ${isKara ? "is-karaoke" : "is-synced"}`,
 		},
 		...lyrics.flatMap((line, index) => {
-			const { text, startTime, originalText, text2 } = line;
+			const { startTime } = line;
+			const { text, originalText, text2 } = getEmbeddedAuxiliaryDisplayValues(line);
 			const interludeInfo = getInterludeInfo(line, lyrics[index + 1], index, lyrics.length);
 			const renderLine = interludeInfo.isInterlude ? { ...line, interludeInfo } : line;
 			const isActiveLine = index === activeLyricIndex;
@@ -5282,7 +5307,8 @@ const SyncedExpandedLyricsPage = react.memo(({ lyrics = [], provider, contributo
 
 const UnsyncedLyricsPage = react.memo(({ lyrics = [], provider, contributors, copyright }) => {
 	const lyricsArray = useMemo(() => normalizeUnsyncedLyrics(lyrics), [lyrics]);
-	const renderItems = useMemo(() => lyricsArray.map(({ text, originalText, text2 }, index) => {
+	const renderItems = useMemo(() => lyricsArray.map((line, index) => {
+		const { text, originalText, text2 } = getEmbeddedAuxiliaryDisplayValues(line);
 		const {
 			lineText,
 			subText,

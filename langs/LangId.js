@@ -435,6 +435,14 @@ window.LANG_ID = {
     "lyricsProviders": {
       "title": "Penyedia Lirik",
       "description": "Pilih dan prioritaskan penyedia lirik. Penyedia di urutan teratas akan dicoba terlebih dahulu.",
+      "preferSyncDataProvider": {
+        "label": "Prioritaskan penyedia dengan data sinkronisasi",
+        "desc": "Jika data sinkronisasi tersedia untuk lagu saat ini, coba penyedia lirik yang cocok sebelum urutan penyedia biasa."
+      },
+      "preferLyricsTypeOverProviderOrder": {
+        "label": "Prioritaskan jenis lirik sebelum urutan penyedia",
+        "desc": "Coba lirik karaoke dari semua penyedia terlebih dahulu, lalu lirik sinkron, kemudian lirik biasa. Urutan penyedia yang diatur tetap dipertahankan dalam setiap jenis."
+      },
       "noProviders": "Tidak ada penyedia lirik yang terdaftar.",
       "allowedTypes": "Tipe Lirik yang Diizinkan",
       "moveUp": "Pindahkan ke Atas",

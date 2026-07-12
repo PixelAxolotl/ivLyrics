@@ -2,7 +2,7 @@
  * Pollinations.ai AI Addon for ivLyrics
  * Pollinations.ai를 사용한 번역, 발음, TMI 생성 (무료 API)
  * 
- * @author ivLis STUDIO
+ * @author default
  * @version 1.1.0
  */
 
@@ -16,7 +16,7 @@
     const ADDON_INFO = {
         id: 'pollinations',
         name: 'Pollinations.ai',
-        author: 'ivLis STUDIO',
+        author: 'default',
         description: {
             ko: 'Pollinations.ai를 사용한 번역, 발음, TMI 생성 (API 키 필요)',
             en: 'Translation, pronunciation, and TMI generation using Pollinations.ai (API Key Required)',

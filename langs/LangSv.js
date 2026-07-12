@@ -435,6 +435,14 @@ window.LANG_SV = {
     "lyricsProviders": {
       "title": "Textleverantörer",
       "description": "Välj och prioritera textleverantörer. Leverantörer i toppen prövas först.",
+      "preferSyncDataProvider": {
+        "label": "Prioritera leverantörer med synkdata",
+        "desc": "När synkdata finns för det aktuella spåret provas motsvarande textleverantör före den vanliga ordningen."
+      },
+      "preferLyricsTypeOverProviderOrder": {
+        "label": "Prioritera texttyp före leverantörsordning",
+        "desc": "Prova först karaoketexter hos alla leverantörer, sedan synkroniserade texter och sist vanliga texter. Den inställda leverantörsordningen behålls inom varje typ."
+      },
       "noProviders": "Inga textleverantörer registrerade.",
       "allowedTypes": "Tillåtna texttyper",
       "moveUp": "Flytta upp",

@@ -1245,6 +1245,12 @@ const LyricsProvidersTab = () => {
   const [enabledProviders, setEnabledProviders] = useState({});
   const [expandedProviders, setExpandedProviders] = useState(new Set());
   const [refreshKey, setRefreshKey] = useState(0);
+  const preferSyncDataProviderEnabled =
+    window.LyricsAddonManager?.isPreferSyncDataProviderEnabled?.()
+    ?? (CONFIG.visual["prefer-sync-data-provider"] !== false);
+  const preferLyricsTypeOverProviderOrderEnabled =
+    window.LyricsAddonManager?.isPreferLyricsTypeOverProviderOrderEnabled?.()
+    ?? (CONFIG.visual["prefer-lyrics-type-over-provider-order"] !== false);
 
   useEffect(() => {
     const loadProviders = () => {
@@ -1314,6 +1320,45 @@ const LyricsProvidersTab = () => {
         react.createElement("h3", null, I18n.t("settings.lyricsProviders.title") || "가사 제공자"),
         react.createElement("p", null, I18n.t("settings.lyricsProviders.description") || "가사를 가져올 제공자를 선택하고 우선순위를 설정합니다.")
       ),
+
+      react.createElement(OptionList, {
+        items: [
+          {
+            desc: I18n.t("settings.lyricsProviders.preferSyncDataProvider.label") || "Prioritize providers with sync data",
+            info: I18n.t("settings.lyricsProviders.preferSyncDataProvider.desc") || "When sync data is available for the current track, try its matching lyrics provider before the normal provider order.",
+            key: "prefer-sync-data-provider",
+            type: ConfigSlider,
+            defaultValue: preferSyncDataProviderEnabled,
+          },
+          {
+            desc: I18n.t("settings.lyricsProviders.preferLyricsTypeOverProviderOrder.label") || "Prioritize lyrics type over provider order",
+            info: I18n.t("settings.lyricsProviders.preferLyricsTypeOverProviderOrder.desc") || "Try karaoke lyrics across all providers first, then synced lyrics, then plain lyrics. Provider order is preserved within each type.",
+            key: "prefer-lyrics-type-over-provider-order",
+            type: ConfigSlider,
+            defaultValue: preferLyricsTypeOverProviderOrderEnabled,
+          },
+        ],
+        onChange: (name, value) => {
+          if (
+            name === "prefer-sync-data-provider"
+            && typeof window.LyricsAddonManager?.setPreferSyncDataProviderEnabled === "function"
+          ) {
+            window.LyricsAddonManager.setPreferSyncDataProviderEnabled(value);
+          } else if (
+            name === "prefer-lyrics-type-over-provider-order"
+            && typeof window.LyricsAddonManager?.setPreferLyricsTypeOverProviderOrderEnabled === "function"
+          ) {
+            window.LyricsAddonManager.setPreferLyricsTypeOverProviderOrderEnabled(value);
+          } else {
+            CONFIG.visual[name] = value;
+            StorageManager.saveConfig(name, value);
+            window.LyricsAddonManager?._triggerLyricsRefresh?.();
+          }
+          window.dispatchEvent(new CustomEvent("ivLyrics", {
+            detail: { type: "config", name, value },
+          }));
+        },
+      }),
 
       // Provider 목록
       providers.length > 0 && react.createElement("div", { className: "lyrics-providers-list" },
@@ -5517,6 +5562,30 @@ const ConfigModal = ({
       name: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
       desc: I18n.t("settings.lyricsProviders.description") || "Choose and order lyrics providers",
       i18nKeys: ["tabs.lyricsProviders", "settings.lyricsProviders.title", "settings.lyricsProviders.description"]
+    },
+    {
+      section: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
+      sectionKey: "lyrics-providers",
+      settingKey: "prefer-sync-data-provider",
+      name: I18n.t("settings.lyricsProviders.preferSyncDataProvider.label") || "Prioritize providers with sync data",
+      desc: I18n.t("settings.lyricsProviders.preferSyncDataProvider.desc") || "Try the matching lyrics provider first when sync data is available",
+      i18nKeys: [
+        "tabs.lyricsProviders",
+        "settings.lyricsProviders.preferSyncDataProvider.label",
+        "settings.lyricsProviders.preferSyncDataProvider.desc"
+      ]
+    },
+    {
+      section: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
+      sectionKey: "lyrics-providers",
+      settingKey: "prefer-lyrics-type-over-provider-order",
+      name: I18n.t("settings.lyricsProviders.preferLyricsTypeOverProviderOrder.label") || "Prioritize lyrics type over provider order",
+      desc: I18n.t("settings.lyricsProviders.preferLyricsTypeOverProviderOrder.desc") || "Try karaoke across all providers before synced and plain lyrics",
+      i18nKeys: [
+        "tabs.lyricsProviders",
+        "settings.lyricsProviders.preferLyricsTypeOverProviderOrder.label",
+        "settings.lyricsProviders.preferLyricsTypeOverProviderOrder.desc"
+      ]
     },
     {
       section: I18n.t("tabs.aiProviders"),

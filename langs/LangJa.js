@@ -435,6 +435,14 @@ window.LANG_JA = {
     "lyricsProviders": {
       "title": "歌詞プロバイダー",
       "description": "歌詞を取得するプロバイダーを選択し、優先順位を設定します。上にあるプロバイダーから先に試行されます。",
+      "preferSyncDataProvider": {
+        "label": "同期データのあるプロバイダーを優先",
+        "desc": "現在の曲に同期データがある場合、通常の優先順位より先に対応する歌詞プロバイダーを試します。"
+      },
+      "preferLyricsTypeOverProviderOrder": {
+        "label": "歌詞タイプをプロバイダー順より優先",
+        "desc": "全プロバイダーのカラオケ歌詞を先に試し、次に同期歌詞、最後にプレーン歌詞を試します。同じタイプ内では設定したプロバイダー順を維持します。"
+      },
       "noProviders": "登録されている歌詞プロバイダーがありません。",
       "allowedTypes": "許可する歌詞タイプ",
       "moveUp": "上に移動",

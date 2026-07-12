@@ -2,7 +2,7 @@
  * Groq AI Addon for ivLyrics
  * Groq의 초고속 추론을 사용한 번역, 발음, TMI 생성
  * 
- * @author ivLis STUDIO
+ * @author default
  * @version 1.0.0
  */
 
@@ -16,7 +16,7 @@
     const ADDON_INFO = {
         id: 'groq',
         name: 'Groq',
-        author: 'ivLis STUDIO',
+        author: 'default',
         description: {
             ko: 'Groq의 초고속 AI 추론을 사용한 번역, 발음, TMI 생성 (Llama, Mixtral 등)',
             en: 'Ultra-fast AI inference with Groq for translation, pronunciation, and TMI (Llama, Mixtral, etc.)',

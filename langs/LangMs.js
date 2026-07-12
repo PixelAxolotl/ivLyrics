@@ -435,6 +435,14 @@ window.LANG_MS = {
     "lyricsProviders": {
       "title": "Penyedia Lirik",
       "description": "Pilih penyedia untuk mengambil lirik dan tetapkan keutamaan. Percubaan bermula dari penyedia di bahagian atas.",
+      "preferSyncDataProvider": {
+        "label": "Utamakan penyedia dengan data penyegerakan",
+        "desc": "Jika data penyegerakan tersedia untuk lagu semasa, cuba penyedia lirik yang sepadan sebelum susunan penyedia biasa."
+      },
+      "preferLyricsTypeOverProviderOrder": {
+        "label": "Utamakan jenis lirik berbanding susunan penyedia",
+        "desc": "Cuba lirik karaoke daripada semua penyedia dahulu, kemudian lirik segerak, diikuti lirik biasa. Susunan penyedia yang ditetapkan dikekalkan dalam setiap jenis."
+      },
       "noProviders": "Tiada penyedia lirik berdaftar.",
       "allowedTypes": "Jenis Lirik Dibenarkan",
       "moveUp": "Alih ke atas",

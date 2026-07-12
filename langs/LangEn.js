@@ -435,6 +435,14 @@ window.LANG_EN = {
     "lyricsProviders": {
       "title": "Lyrics Providers",
       "description": "Select and prioritize lyrics providers. Providers at the top are tried first.",
+      "preferSyncDataProvider": {
+        "label": "Prioritize providers with ivLyrics Sync data",
+        "desc": "When OpenDB has ivLyrics Sync data for the current track, try its matching lyrics provider before the normal provider order."
+      },
+      "preferLyricsTypeOverProviderOrder": {
+        "label": "Prioritize lyrics type over provider order",
+        "desc": "Try karaoke lyrics across all providers first, then synced lyrics, then plain lyrics. The configured provider order is preserved within each type."
+      },
       "noProviders": "No lyrics providers registered.",
       "allowedTypes": "Allowed Lyrics Types",
       "moveUp": "Move Up",

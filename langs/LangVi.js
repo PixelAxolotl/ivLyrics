@@ -435,6 +435,14 @@ window.LANG_VI = {
     "lyricsProviders": {
       "title": "Nhà cung cấp lời bài hát",
       "description": "Lựa chọn và ưu tiên các nhà cung cấp lời bài hát. Các nhà cung cấp ở đầu danh sách sẽ được thử trước.",
+      "preferSyncDataProvider": {
+        "label": "Ưu tiên nhà cung cấp có dữ liệu đồng bộ",
+        "desc": "Khi bài hát hiện tại có dữ liệu đồng bộ, hãy thử nhà cung cấp lời tương ứng trước thứ tự thông thường."
+      },
+      "preferLyricsTypeOverProviderOrder": {
+        "label": "Ưu tiên loại lời bài hát hơn thứ tự nhà cung cấp",
+        "desc": "Thử lời karaoke từ tất cả nhà cung cấp trước, sau đó lời đồng bộ và cuối cùng lời thường. Thứ tự nhà cung cấp đã đặt được giữ nguyên trong từng loại."
+      },
       "noProviders": "Chưa có nhà cung cấp lời bài hát nào được đăng ký.",
       "allowedTypes": "Các loại lời được phép",
       "moveUp": "Di chuyển lên",

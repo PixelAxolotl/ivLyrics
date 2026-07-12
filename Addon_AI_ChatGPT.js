@@ -2,7 +2,7 @@
  * ChatGPT AI Addon for ivLyrics
  * OpenAI ChatGPT를 사용한 번역, 발음, TMI 생성
  * 
- * @author ivLis STUDIO
+ * @author default
  * @version 1.0.0
  */
 
@@ -16,7 +16,7 @@
     const ADDON_INFO = {
         id: 'chatgpt',
         name: 'OpenAI ChatGPT',
-        author: 'ivLis STUDIO',
+        author: 'default',
         description: {
             ko: 'OpenAI ChatGPT를 사용한 번역, 발음, TMI 생성 (OpenAI 호환 API 지원)',
             en: 'Translation, pronunciation, and TMI generation using OpenAI ChatGPT (supports OpenAI-compatible APIs)',

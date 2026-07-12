@@ -435,6 +435,14 @@ window.LANG_ZH_TW = {
     "lyricsProviders": {
       "title": "歌詞提供者",
       "description": "選擇並劃分歌詞提供者的優先級。排在頂部的提供者將被優先嘗試。",
+      "preferSyncDataProvider": {
+        "label": "優先使用有同步資料的提供者",
+        "desc": "如果目前歌曲有同步資料，會在一般提供者順序之前嘗試對應的歌詞提供者。"
+      },
+      "preferLyricsTypeOverProviderOrder": {
+        "label": "歌詞類型優先於提供者順序",
+        "desc": "先在所有提供者中尋找卡拉 OK 歌詞，再尋找同步歌詞，最後尋找一般歌詞。每種類型內仍依照設定的提供者順序嘗試。"
+      },
       "noProviders": "未註冊歌詞提供者。",
       "allowedTypes": "允許的歌詞類型",
       "moveUp": "上移",

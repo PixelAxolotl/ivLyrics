@@ -2,7 +2,7 @@
  * Claude AI Addon for ivLyrics
  * Anthropic Claude를 사용한 번역, 발음, TMI 생성
  * 
- * @author ivLis STUDIO
+ * @author default
  * @version 1.0.0
  */
 
@@ -16,7 +16,7 @@
     const ADDON_INFO = {
         id: 'claude',
         name: 'Anthropic Claude',
-        author: 'ivLis STUDIO',
+        author: 'default',
         description: {
             ko: 'Anthropic Claude를 사용한 번역, 발음, TMI 생성',
             en: 'Translation, pronunciation, and TMI generation using Anthropic Claude',

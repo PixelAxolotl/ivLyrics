@@ -435,6 +435,14 @@ window.LANG_IT = {
     "lyricsProviders": {
       "title": "Fornitori di testi",
       "description": "Seleziona e dai priorità ai fornitori di testi. I fornitori in alto vengono provati per primi.",
+      "preferSyncDataProvider": {
+        "label": "Dai priorità ai fornitori con dati di sincronizzazione",
+        "desc": "Quando sono disponibili dati di sincronizzazione per il brano corrente, prova il fornitore di testi corrispondente prima dell’ordine normale."
+      },
+      "preferLyricsTypeOverProviderOrder": {
+        "label": "Dai priorità al tipo di testo rispetto all’ordine dei fornitori",
+        "desc": "Prova prima i testi karaoke di tutti i fornitori, poi i testi sincronizzati e infine quelli normali. L’ordine configurato dei fornitori viene mantenuto in ogni tipo."
+      },
       "noProviders": "Nessun fornitore di testi registrato.",
       "allowedTypes": "Tipi di testo consentiti",
       "moveUp": "Sposta su",

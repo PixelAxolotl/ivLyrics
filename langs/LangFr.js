@@ -435,6 +435,14 @@ window.LANG_FR = {
     "lyricsProviders": {
       "title": "Fournisseurs de paroles",
       "description": "Sélectionnez et priorisez les fournisseurs de paroles. Les fournisseurs en haut sont essayés en premier.",
+      "preferSyncDataProvider": {
+        "label": "Prioriser les fournisseurs avec des données de synchronisation",
+        "desc": "Lorsque des données de synchronisation existent pour le titre actuel, le fournisseur de paroles correspondant est essayé avant l’ordre habituel."
+      },
+      "preferLyricsTypeOverProviderOrder": {
+        "label": "Prioriser le type de paroles sur l’ordre des fournisseurs",
+        "desc": "Essayer d’abord les paroles karaoké chez tous les fournisseurs, puis les paroles synchronisées et enfin les paroles simples. L’ordre configuré des fournisseurs est conservé dans chaque type."
+      },
       "noProviders": "Aucun fournisseur de paroles enregistré.",
       "allowedTypes": "Types de paroles autorisés",
       "moveUp": "Déplacer vers le haut",

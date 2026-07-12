@@ -435,6 +435,14 @@ window.LANG_ZH_CN = {
     "lyricsProviders": {
       "title": "歌词提供者",
       "description": "选择并划分歌词提供者的优先级。排在顶部的提供者将被优先尝试。",
+      "preferSyncDataProvider": {
+        "label": "优先使用有同步数据的提供商",
+        "desc": "如果当前歌曲有同步数据，将在常规提供商顺序之前尝试对应的歌词提供商。"
+      },
+      "preferLyricsTypeOverProviderOrder": {
+        "label": "歌词类型优先于提供商顺序",
+        "desc": "先在所有提供商中查找卡拉 OK 歌词，再查找同步歌词，最后查找普通歌词。每种类型内仍按设定的提供商顺序尝试。"
+      },
       "noProviders": "未注册歌词提供者。",
       "allowedTypes": "允许的歌词类型",
       "moveUp": "上移",

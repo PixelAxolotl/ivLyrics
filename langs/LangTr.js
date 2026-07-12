@@ -435,6 +435,14 @@ window.LANG_TR = {
     "lyricsProviders": {
       "title": "Söz Sağlayıcıları",
       "description": "Söz sağlayıcılarını seçin ve önceliklendirin. En üstteki sağlayıcılar önce denenir.",
+      "preferSyncDataProvider": {
+        "label": "Senkronizasyon verisi olan sağlayıcılara öncelik ver",
+        "desc": "Geçerli parça için senkronizasyon verisi varsa eşleşen söz sağlayıcısı normal sağlayıcı sırasından önce denenir."
+      },
+      "preferLyricsTypeOverProviderOrder": {
+        "label": "Şarkı sözü türünü sağlayıcı sırasından önce tut",
+        "desc": "Önce tüm sağlayıcılarda karaoke sözlerini, ardından senkronize sözleri ve son olarak düz sözleri dene. Her tür içinde ayarlanan sağlayıcı sırası korunur."
+      },
       "noProviders": "Kayıtlı söz sağlayıcısı yok.",
       "allowedTypes": "İzin Verilen Söz Türleri",
       "moveUp": "Yukarı Taşı",

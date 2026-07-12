@@ -435,6 +435,14 @@ window.LANG_DE = {
     "lyricsProviders": {
       "title": "Songtext-Anbieter",
       "description": "Wählen Sie Songtext-Anbieter aus und priorisieren Sie diese. Anbieter oben werden zuerst versucht.",
+      "preferSyncDataProvider": {
+        "label": "Anbieter mit Sync-Daten bevorzugen",
+        "desc": "Wenn für den aktuellen Titel Sync-Daten vorhanden sind, wird der passende Songtext-Anbieter vor der normalen Anbieterreihenfolge ausprobiert."
+      },
+      "preferLyricsTypeOverProviderOrder": {
+        "label": "Songtexttyp vor Anbieterreihenfolge priorisieren",
+        "desc": "Zuerst bei allen Anbietern nach Karaoke-Texten suchen, danach nach synchronisierten und zuletzt nach unformatierten Texten. Innerhalb jedes Typs bleibt die festgelegte Anbieterreihenfolge erhalten."
+      },
       "noProviders": "Keine Songtext-Anbieter registriert.",
       "allowedTypes": "Erlaubte Songtext-Typen",
       "moveUp": "Nach oben verschieben",

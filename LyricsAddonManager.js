@@ -41,7 +41,7 @@
         PROVIDER_FIRST: 'provider-first-v1',
         TYPE_FIRST: 'type-first-v1'
     };
-    const DEFAULT_PROVIDER_ORDER = ['lyricsplus', 'unison', 'lrclib', 'spotify'];
+    const DEFAULT_PROVIDER_ORDER = ['lrclib', 'spotify', 'lyricsplus', 'unison'];
     const PSEUDO_KARAOKE_SOURCES = new Set([
         'audio-analysis-pseudo',
         'spotify-audio-analysis',

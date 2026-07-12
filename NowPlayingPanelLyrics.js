@@ -1640,24 +1640,6 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     const KARAOKE_RTL_STRONG_CHAR_REGEX = /[\u0590-\u08FF\uFB1D-\uFDFF\uFE70-\uFEFC]/u;
     const KARAOKE_LTR_STRONG_CHAR_REGEX = /[A-Za-z\u00C0-\u02AF\u0370-\u052F\u1E00-\u1EFF]/u;
     const KARAOKE_JOINING_SCRIPT_REGEX = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFC]/u;
-    const KARAOKE_ARRAY_FROM_REFERENCE = Array.from;
-    const KARAOKE_STRING_ITERATOR_REFERENCE = String.prototype[Symbol.iterator];
-    const KARAOKE_CAN_ITERATE_STRING_DIRECTLY = (() => {
-        try {
-            const functionToString = Function.prototype.toString;
-            return functionToString.call(KARAOKE_ARRAY_FROM_REFERENCE).includes("[native code]") &&
-                functionToString.call(KARAOKE_STRING_ITERATOR_REFERENCE).includes("[native code]");
-        } catch {
-            return false;
-        }
-    })();
-
-    const getKaraokeDirectionCharacters = (text) =>
-        KARAOKE_CAN_ITERATE_STRING_DIRECTLY &&
-        Array.from === KARAOKE_ARRAY_FROM_REFERENCE &&
-        String.prototype[Symbol.iterator] === KARAOKE_STRING_ITERATOR_REFERENCE
-            ? text
-            : Array.from(text);
     const KARAOKE_NO_WORD_WRAP_LANGUAGE_PREFIXES = ["ja", "zh", "th", "lo", "km", "my"];
     const KARAOKE_NO_WORD_WRAP_SCRIPT_REGEX = /[\u3040-\u30ff\uff66-\uff9f\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u0e00-\u0e7f\u0e80-\u0eff\u1780-\u17ff\u1000-\u109f]/u;
     const KARAOKE_NON_WHITESPACE_CHAR_REGEX = /\S/u;
@@ -1668,7 +1650,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         let rtlCount = 0;
         let ltrCount = 0;
 
-        for (const char of getKaraokeDirectionCharacters(normalizedText)) {
+        for (const char of normalizedText) {
             if (KARAOKE_RTL_STRONG_CHAR_REGEX.test(char)) {
                 rtlCount++;
                 continue;

@@ -618,6 +618,33 @@ ${JSON.stringify(payload)}`;
         throw lastError || new Error('[Perplexity] All API keys and retries exhausted');
     }
 
+    function emitStreamingLines(accumulated, onLine, state, flush = false) {
+        if (!onLine) return;
+
+        if (flush) {
+            const finalLine = accumulated.slice(state.offset);
+            onLine(state.index, finalLine);
+            return;
+        }
+
+        let newlineIndex = accumulated.indexOf('\n', state.offset);
+        if (newlineIndex === -1) return;
+
+        const completedLines = [];
+        let lineStart = state.offset;
+        while (newlineIndex !== -1) {
+            completedLines.push(accumulated.slice(lineStart, newlineIndex));
+            lineStart = newlineIndex + 1;
+            newlineIndex = accumulated.indexOf('\n', lineStart);
+        }
+
+        for (const line of completedLines) {
+            onLine(state.index, line);
+            state.index += 1;
+            state.offset += line.length + 1;
+        }
+    }
+
     async function callPerplexityAPIStream(prompt, onLine, maxRetries = 3) {
         const apiKeys = getApiKeys();
         if (apiKeys.length === 0) throw new Error('[Perplexity] API key is required.');
@@ -641,7 +668,8 @@ ${JSON.stringify(payload)}`;
                     }
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
-                    let sseBuffer = '', accumulated = '', emittedLines = 0;
+                    let sseBuffer = '', accumulated = '';
+                    const lineState = { index: 0, offset: 0 };
                     while (true) {
                         const { value, done } = await reader.read();
                         if (done) break;
@@ -652,9 +680,9 @@ ${JSON.stringify(payload)}`;
                             if (!line.startsWith('data: ') || line === 'data: [DONE]') continue;
                             try { const p = JSON.parse(line.slice(6)); const t = p.choices?.[0]?.delta?.content || ''; if (t) accumulated += t; } catch (e) { }
                         }
-                        if (onLine) { const cl = accumulated.split('\n'); for (let i = emittedLines; i < cl.length - 1; i++) { onLine(i, cl[i]); emittedLines = i + 1; } }
+                        emitStreamingLines(accumulated, onLine, lineState);
                     }
-                    if (onLine) { const fl = accumulated.split('\n'); if (fl.length > emittedLines) onLine(emittedLines, fl[emittedLines]); }
+                    emitStreamingLines(accumulated, onLine, lineState, true);
                     if (!accumulated) throw new Error('[Perplexity] Empty response from streaming API');
                     return accumulated;
                 } catch (e) {

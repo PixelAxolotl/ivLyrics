@@ -6086,9 +6086,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			}
 		}
 
-		const coveredLineCount = lyricsLines.reduce((count, _, index) => (
-			count + (isLineCoveredByMergedPrevious(index, new Map(syncData.lines.map(line => [line.start, line]))) ? 1 : 0)
-		), 0);
+		const linesByStart = new Map();
+		const coveredLineCount = lyricsLines.reduce((count, _, index) => {
+			linesByStart.clear();
+			for (const line of syncData.lines) {
+				linesByStart.set(line.start, line);
+			}
+			return count + (isLineCoveredByMergedPrevious(index, linesByStart) ? 1 : 0);
+		}, 0);
 		if (syncData.lines.length + coveredLineCount < lyricsLines.length) {
 			if (!confirm(I18n.t('syncCreator.incompleteConfirm'))) return;
 		}

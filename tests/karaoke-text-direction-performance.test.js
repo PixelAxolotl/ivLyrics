@@ -25,8 +25,8 @@ function extract(source, startMarker, endMarker) {
 
 function parentFromProduction(productionSource, expectedHash) {
   const parentSource = productionSource.replace(
-    "of normalizedText)",
-    "of Array.from(normalizedText))"
+    "getKaraokeDirectionCharacters(normalizedText)",
+    "Array.from(normalizedText)"
   );
   assert.notEqual(parentSource, productionSource);
   assert.equal(
@@ -70,15 +70,19 @@ assert.equal(pageProductionSource.includes("Array.from"), false);
 assert.equal(panelProductionSource.includes("Array.from"), false);
 
 function createDirection(regexSource, functionSource, filename) {
+  return createDirectionRealm(regexSource, functionSource, filename).direction;
+}
+
+function createDirectionRealm(regexSource, functionSource, filename, beforeSource = "") {
   const context = {};
   vm.createContext(context);
   vm.runInContext(
-    `${regexSource}\n${functionSource}\n` +
+    `${beforeSource}\n${regexSource}\n${functionSource}\n` +
       "globalThis.__direction = getKaraokeTextDirection;",
     context,
     { filename }
   );
-  return context.__direction;
+  return { context, direction: context.__direction };
 }
 
 function createHarnesses() {
@@ -166,6 +170,105 @@ test("direction detection preserves fixtures and non-string coercion", () => {
     "e\u0301 ش A", "\u0000\n\t",
   ];
   for (const fixture of fixtures) compare(harnesses, fixture);
+});
+
+test("patched Array.from falls back to the parent call and exception behavior", () => {
+  for (const beforeSource of ["", "Array.from = () => [];"]) {
+    const pageParent = createDirectionRealm(
+      pageRegexSource,
+      pageParentSource,
+      "Pages.direction.parent.patched.js",
+      beforeSource
+    );
+    const pageProduction = createDirectionRealm(
+      pageRegexSource,
+      pageProductionSource,
+      "Pages.direction.production.patched.js",
+      beforeSource
+    );
+    const panelParent = createDirectionRealm(
+      panelRegexSource,
+      panelParentSource,
+      "Panel.direction.parent.patched.js",
+      beforeSource
+    );
+    const panelProduction = createDirectionRealm(
+      panelRegexSource,
+      panelProductionSource,
+      "Panel.direction.production.patched.js",
+      beforeSource
+    );
+
+    if (!beforeSource) {
+      vm.runInContext("Array.from = () => [];", pageParent.context);
+      vm.runInContext("Array.from = () => [];", pageProduction.context);
+      vm.runInContext("Array.from = () => [];", panelParent.context);
+      vm.runInContext("Array.from = () => [];", panelProduction.context);
+    }
+    assert.equal(pageProduction.direction("א"), pageParent.direction("א"));
+    assert.equal(panelProduction.direction("א"), panelParent.direction("א"));
+  }
+
+  const throwingSource = "Array.from = () => { throw new Error('array-from-sentinel'); };";
+  for (const [regexSource, parentSource, productionSource, label] of [
+    [pageRegexSource, pageParentSource, pageProductionSource, "Pages"],
+    [panelRegexSource, panelParentSource, panelProductionSource, "Panel"],
+  ]) {
+    const parent = createDirectionRealm(
+      regexSource,
+      parentSource,
+      `${label}.direction.parent.throw.js`,
+      throwingSource
+    );
+    const production = createDirectionRealm(
+      regexSource,
+      productionSource,
+      `${label}.direction.production.throw.js`,
+      throwingSource
+    );
+    for (const realm of [parent, production]) {
+      assert.throws(
+        () => realm.direction("א"),
+        (error) => error.name === "Error" && error.message === "array-from-sentinel"
+      );
+    }
+  }
+});
+
+test("patched String iterator preserves parent consumption and throw order", () => {
+  const iteratorSource = `String.prototype[Symbol.iterator] = function* () {
+    yield "א";
+    throw new Error("iterator-sentinel");
+  };`;
+  for (const [regexSource, parentSource, productionSource, label] of [
+    [pageRegexSource, pageParentSource, pageProductionSource, "Pages"],
+    [panelRegexSource, panelParentSource, panelProductionSource, "Panel"],
+  ]) {
+    for (const before of [true, false]) {
+      const parent = createDirectionRealm(
+        regexSource,
+        parentSource,
+        `${label}.direction.parent.iterator.js`,
+        before ? iteratorSource : ""
+      );
+      const production = createDirectionRealm(
+        regexSource,
+        productionSource,
+        `${label}.direction.production.iterator.js`,
+        before ? iteratorSource : ""
+      );
+      if (!before) {
+        vm.runInContext(iteratorSource, parent.context);
+        vm.runInContext(iteratorSource, production.context);
+      }
+      for (const realm of [parent, production]) {
+        assert.throws(
+          () => realm.direction("abc"),
+          (error) => error.name === "Error" && error.message === "iterator-sentinel"
+        );
+      }
+    }
+  }
 });
 
 test("every Unicode scalar preserves page and panel direction", () => {

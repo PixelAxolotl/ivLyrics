@@ -7,5 +7,5 @@ __pycache__/
 *.pyc
 
 # Local test harnesses
-/test/
-/tests/
+**/test/
+**/tests/

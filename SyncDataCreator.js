@@ -55,6 +55,15 @@ const SYNC_CREATOR_RECORDING_BACKGROUND = 'rgba(255, 152, 0, 0.6)';
 const getSyncCreatorProgressGradient = (direction, percent, color = SYNC_CREATOR_PROGRESS_COLOR) => (
 	`linear-gradient(${direction === 'rtl' ? 'to left' : 'to right'}, ${color} 0%, ${color} ${percent}%, var(--spice-subtext) ${percent}%, var(--spice-subtext) 100%)`
 );
+const isSyncCreatorLyricsProvider = (addon) => (
+	Boolean(addon?.id) && addon.useIvLyricsSync !== false
+);
+const getSyncCreatorLyricsProviders = (manager) => {
+	const enabledProviders = manager?.getEnabledProviders?.();
+	return Array.isArray(enabledProviders)
+		? enabledProviders.filter(isSyncCreatorLyricsProvider)
+		: [];
+};
 const normalizeSyncCreatorIsrc = (value) => {
 	if (typeof value !== 'string') return '';
 	const normalized = value.trim().replace(/[\s-]/g, '').toUpperCase();
@@ -3259,15 +3268,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		};
 	}, [trackUri]);
 
-	// Provider 목록 로드 (활성화된 Provider만, 사용자 설정 순서대로)
+	// Provider 목록 로드 (활성화 및 ivLyrics Sync 연동된 Provider만, 사용자 설정 순서대로)
 	useEffect(() => {
 		const loadProviders = () => {
-			if (window.LyricsAddonManager) {
-				const enabledAddons = window.LyricsAddonManager.getEnabledProviders();
-				setAvailableProviders(enabledAddons);
-			} else {
-				setAvailableProviders([]);
-			}
+			setAvailableProviders(getSyncCreatorLyricsProviders(window.LyricsAddonManager));
 		};
 		loadProviders();
 
@@ -3304,19 +3308,18 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				Spicetify.Player?.data?.item?.artists?.[0]?.name ||
 				artistName.split(',')[0].trim();
 
-			// 만약 preferredProvider가 지정되어 있다면 그것만 시도, 아니면 LyricsAddonManager의 순서대로
-			let providersToTry = preferredProvider ? [preferredProvider] : [];
-
-			if (!preferredProvider) {
-				if (window.LyricsAddonManager) {
-					// 활성화된 Provider 순서대로 시도
-					const addons = window.LyricsAddonManager.getEnabledProviders();
-					providersToTry = addons.map(addon => addon.id);
-				} else {
-					// Manager가 없으면 빈 배열 (또는 로드될 때까지 대기해야 함)
-					providersToTry = [];
-				}
+			// 선택 요청과 자동 조회 모두 ivLyrics Sync 연동 Provider만 허용한다.
+			const syncCreatorAddons = getSyncCreatorLyricsProviders(window.LyricsAddonManager);
+			if (preferredProvider && !syncCreatorAddons.some(addon => addon.id === preferredProvider)) {
+				setAddonId('');
+				setProviderValue('');
+				setError(I18n.t('syncCreator.noLyrics'));
+				setIsLoading(false);
+				return;
 			}
+			const providersToTry = preferredProvider
+				? [preferredProvider]
+				: syncCreatorAddons.map(addon => addon.id);
 
 			let result = null;
 			let usedProvider = null;

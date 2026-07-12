@@ -2357,7 +2357,7 @@
                         baseDate: manifest?.base?.date || '',
                         stale: false,
                         unavailable: false,
-                        providerMap: normalizeOpenDbProviderMap(providerMap)
+                        providerMap
                     };
                     writeOpenDbStorage(_openDbState);
                     return _openDbState;

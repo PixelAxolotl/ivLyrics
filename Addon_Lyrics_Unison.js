@@ -75,21 +75,25 @@
             return Math.round(amount * multiplier);
         }
 
-        const clockParts = input.split(':');
-        if (clockParts.length < 1 || clockParts.length > 3) return null;
-        const numbers = clockParts.map(part => Number(part));
-        if (numbers.some(number => !Number.isFinite(number))) return null;
+        const firstColon = input.indexOf(':');
+        const secondColon = firstColon >= 0 ? input.indexOf(':', firstColon + 1) : -1;
+        if (secondColon >= 0 && input.indexOf(':', secondColon + 1) >= 0) return null;
 
-        let seconds = 0;
-        if (numbers.length === 3) {
-            seconds = (numbers[0] * 3600) + (numbers[1] * 60) + numbers[2];
-        } else if (numbers.length === 2) {
-            seconds = (numbers[0] * 60) + numbers[1];
-        } else {
-            seconds = numbers[0];
-        }
+        const first = Number(firstColon >= 0 ? input.slice(0, firstColon) : input);
+        if (!Number.isFinite(first)) return null;
+        if (firstColon < 0) return Math.round(first * 1000);
+
+        const second = Number(input.slice(firstColon + 1, secondColon >= 0 ? secondColon : undefined));
+        if (!Number.isFinite(second)) return null;
+        if (secondColon < 0) return Math.round(((first * 60) + second) * 1000);
+
+        const third = Number(input.slice(secondColon + 1));
+        if (!Number.isFinite(third)) return null;
+        const seconds = (first * 3600) + (second * 60) + third;
         return Math.round(seconds * 1000);
     }
+
+    const isNativeDomNode = value => typeof Node !== 'undefined' && value instanceof Node;
 
     function getAttribute(element, localName) {
         if (!element?.attributes) return '';
@@ -106,6 +110,9 @@
 
     function getElementsByLocalName(root, localName) {
         if (!root?.getElementsByTagName) return [];
+        if (isNativeDomNode(root) && typeof root.getElementsByTagNameNS === 'function') {
+            return Array.from(root.getElementsByTagNameNS('*', localName));
+        }
         return Array.from(root.getElementsByTagName('*'))
             .filter(element => element.localName === localName || element.tagName === localName);
     }
@@ -211,9 +218,11 @@
                 : Number.isFinite(duration)
                     ? start + duration
                     : state.fallbackEnd;
-            const childElements = Array.from(element.childNodes || []).filter(child => child.nodeType === 1);
+            const childElements = isNativeDomNode(element) && typeof element.childElementCount === 'number'
+                ? element.childElementCount
+                : Array.from(element.childNodes || []).filter(child => child.nodeType === 1).length;
 
-            if (childElements.length > 0) {
+            if (childElements > 0) {
                 const nested = parseTimedNodes(element.childNodes, start, end, options);
                 state.text += nested.text;
                 state.syllables.push(...nested.syllables);

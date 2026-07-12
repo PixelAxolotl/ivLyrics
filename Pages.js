@@ -3092,6 +3092,52 @@ const applyKaraokeFillCorrectionCurve = (value) => {
 	return clampKaraokeFillCurveValue(correctedValue);
 };
 
+const KARAOKE_CHAR_STATE_CLASS_NAMES = {
+	pending: [
+		"lyrics-karaoke-char lyrics-karaoke-char--pending",
+		"lyrics-karaoke-char lyrics-karaoke-char--pending is-complete",
+		"lyrics-karaoke-char lyrics-karaoke-char--pending is-bouncing",
+		"lyrics-karaoke-char lyrics-karaoke-char--pending is-bouncing is-complete",
+	],
+	active: [
+		"lyrics-karaoke-char lyrics-karaoke-char--active",
+		"lyrics-karaoke-char lyrics-karaoke-char--active is-complete",
+		"lyrics-karaoke-char lyrics-karaoke-char--active is-bouncing",
+		"lyrics-karaoke-char lyrics-karaoke-char--active is-bouncing is-complete",
+	],
+	done: [
+		"lyrics-karaoke-char lyrics-karaoke-char--done",
+		"lyrics-karaoke-char lyrics-karaoke-char--done is-complete",
+		"lyrics-karaoke-char lyrics-karaoke-char--done is-bouncing",
+		"lyrics-karaoke-char lyrics-karaoke-char--done is-bouncing is-complete",
+	],
+};
+
+const KARAOKE_TEXT_RUN_STATE_CLASS_NAMES = {
+	pending: [
+		"lyrics-karaoke-text-run-segment lyrics-karaoke-text-run-segment--pending",
+		"lyrics-karaoke-text-run-segment lyrics-karaoke-text-run-segment--pending is-complete",
+		"lyrics-karaoke-text-run-segment lyrics-karaoke-text-run-segment--pending is-bouncing",
+		"lyrics-karaoke-text-run-segment lyrics-karaoke-text-run-segment--pending is-bouncing is-complete",
+	],
+	active: [
+		"lyrics-karaoke-text-run-segment lyrics-karaoke-text-run-segment--active",
+		"lyrics-karaoke-text-run-segment lyrics-karaoke-text-run-segment--active is-complete",
+		"lyrics-karaoke-text-run-segment lyrics-karaoke-text-run-segment--active is-bouncing",
+		"lyrics-karaoke-text-run-segment lyrics-karaoke-text-run-segment--active is-bouncing is-complete",
+	],
+	done: [
+		"lyrics-karaoke-text-run-segment lyrics-karaoke-text-run-segment--done",
+		"lyrics-karaoke-text-run-segment lyrics-karaoke-text-run-segment--done is-complete",
+		"lyrics-karaoke-text-run-segment lyrics-karaoke-text-run-segment--done is-bouncing",
+		"lyrics-karaoke-text-run-segment lyrics-karaoke-text-run-segment--done is-bouncing is-complete",
+	],
+};
+
+const getCachedKaraokeStateClassName = (classNames, state, isBouncing, isComplete) => (
+	classNames[state][(isBouncing ? 2 : 0) + (isComplete ? 1 : 0)]
+);
+
 const buildKaraokeWordElements = (timedChars, charElements) => {
 	if (!Array.isArray(timedChars) || !Array.isArray(charElements) || timedChars.length !== charElements.length) {
 		return charElements;
@@ -3250,13 +3296,12 @@ const buildKaraokeTextRunElements = (
 			segmentStyle["--karaoke-bounce-scale"] = bounce.scale;
 		}
 
-		let segmentClassName = `lyrics-karaoke-text-run-segment lyrics-karaoke-text-run-segment--${segmentState}`;
-		if (bounce.active) {
-			segmentClassName += " is-bouncing";
-		}
-		if (isComplete) {
-			segmentClassName += " is-complete";
-		}
+		const segmentClassName = getCachedKaraokeStateClassName(
+			KARAOKE_TEXT_RUN_STATE_CLASS_NAMES,
+			segmentState,
+			bounce.active,
+			isComplete
+		);
 
 		return react.createElement(
 			"span",
@@ -4764,13 +4809,12 @@ const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0
 			karaokeStyle["--karaoke-bounce-y"] = `${bounce.offsetY}px`;
 			karaokeStyle["--karaoke-bounce-scale"] = bounce.scale;
 		}
-		let className = `lyrics-karaoke-char lyrics-karaoke-char--${charState}`;
-		if (bounce.active) {
-			className += " is-bouncing";
-		}
-		if (isComplete) {
-			className += " is-complete";
-		}
+		const className = getCachedKaraokeStateClassName(
+			KARAOKE_CHAR_STATE_CLASS_NAMES,
+			charState,
+			bounce.active,
+			isComplete
+		);
 		const charNode = react.createElement(
 			"span",
 			{

@@ -1062,6 +1062,12 @@
             return `${trackId}:${lang}:${isPhonetic ? 'phonetic' : 'translation'}${providerSuffix}${sourceSuffix}`;
         },
 
+        _getTrackCacheKeyRange(trackId) {
+            return typeof trackId === 'string'
+                ? IDBKeyRange.bound(`${trackId}:`, `${trackId};`, false, true)
+                : null;
+        },
+
         async getTranslation(trackId, lang, isPhonetic = false, provider = null, sourceHash = null) {
             try {
                 const db = await this._openDB();
@@ -1396,18 +1402,17 @@
         async clearTranslationForTrack(trackId) {
             try {
                 const db = await this._openDB();
+                const trackKeyRange = this._getTrackCacheKeyRange(trackId);
 
                 return new Promise((resolve, reject) => {
                     const transTx = db.transaction('translations', 'readwrite');
                     const transStore = transTx.objectStore('translations');
-                    const transRequest = transStore.openCursor();
+                    const transRequest = transStore.openCursor(trackKeyRange || undefined);
 
                     transRequest.onsuccess = (event) => {
                         const cursor = event.target.result;
                         if (cursor) {
-                            if (cursor.value.trackId === trackId) {
-                                cursor.delete();
-                            }
+                            if (trackKeyRange || cursor.value.trackId === trackId) cursor.delete();
                             cursor.continue();
                         }
                     };
@@ -1427,6 +1432,7 @@
             try {
                 const db = await this._openDB();
                 const deletePromises = [];
+                const trackKeyRange = this._getTrackCacheKeyRange(trackId);
 
                 // 가사 삭제
                 deletePromises.push(new Promise((resolve, reject) => {
@@ -1449,13 +1455,11 @@
                 deletePromises.push(new Promise((resolve, reject) => {
                     const transTx = db.transaction('translations', 'readwrite');
                     const transStore = transTx.objectStore('translations');
-                    const transRequest = transStore.openCursor();
+                    const transRequest = transStore.openCursor(trackKeyRange || undefined);
                     transRequest.onsuccess = (event) => {
                         const cursor = event.target.result;
                         if (cursor) {
-                            if (cursor.value.trackId === trackId) {
-                                cursor.delete();
-                            }
+                            if (trackKeyRange || cursor.value.trackId === trackId) cursor.delete();
                             cursor.continue();
                         }
                     };
@@ -1475,13 +1479,11 @@
                 deletePromises.push(new Promise((resolve, reject) => {
                     const metaTx = db.transaction('metadata', 'readwrite');
                     const metaStore = metaTx.objectStore('metadata');
-                    const metaRequest = metaStore.openCursor();
+                    const metaRequest = metaStore.openCursor(trackKeyRange || undefined);
                     metaRequest.onsuccess = (event) => {
                         const cursor = event.target.result;
                         if (cursor) {
-                            if (cursor.value.trackId === trackId) {
-                                cursor.delete();
-                            }
+                            if (trackKeyRange || cursor.value.trackId === trackId) cursor.delete();
                             cursor.continue();
                         }
                     };

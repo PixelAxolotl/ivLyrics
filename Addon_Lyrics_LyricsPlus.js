@@ -882,14 +882,19 @@
         };
     }
 
-    function getLineSegmentationParts(line) {
+    function getLineSegmentationParts(line, partsCache = null) {
+        const cached = partsCache?.get(line);
+        if (cached) return cached;
+
         const lead = getLineLeadVocalPart(line);
         const background = Array.isArray(line?.vocals?.background)
             ? line.vocals.background
                 .map(part => cloneVocalPart(part, 'background'))
                 .filter(Boolean)
             : [];
-        return { lead, background };
+        const result = { lead, background };
+        partsCache?.set(line, result);
+        return result;
     }
 
     function rebuildSegmentLine(line, leadPart, backgroundParts = []) {
@@ -924,10 +929,10 @@
         return result;
     }
 
-    function annotateParallelComponentLines(lines) {
+    function annotateParallelComponentLines(lines, partsCache = null) {
         return lines.map(line => {
             const lineKey = String(line?.lyricsPlusLineKey || `line-${line?.sourceIndex ?? 0}`);
-            const { lead, background } = getLineSegmentationParts(line);
+            const { lead, background } = getLineSegmentationParts(line, partsCache);
             const annotatePart = (part, role, partIndex) => {
                 if (!part) return null;
                 const syllables = part.syllables.map((syllable, syllableIndex) => ({
@@ -968,8 +973,8 @@
         };
     }
 
-    function sliceLineBySyllableIds(line, allowedIds) {
-        const { lead, background } = getLineSegmentationParts(line);
+    function sliceLineBySyllableIds(line, allowedIds, partsCache = null) {
+        const { lead, background } = getLineSegmentationParts(line, partsCache);
         return rebuildSegmentLine(
             line,
             sliceVocalPartBySyllableIds(lead, allowedIds),
@@ -979,8 +984,8 @@
         );
     }
 
-    function getLineSourceSyllables(line) {
-        const { lead, background } = getLineSegmentationParts(line);
+    function getLineSourceSyllables(line, partsCache = null) {
+        const { lead, background } = getLineSegmentationParts(line, partsCache);
         return [lead, ...background]
             .filter(Boolean)
             .flatMap(part => part.syllables)
@@ -995,12 +1000,12 @@
         return new Set(lines.map(line => getCanonicalSingerId(line, agents)).filter(Boolean)).size;
     }
 
-    function partitionParallelComponent(lines, candidateTime) {
+    function partitionParallelComponent(lines, candidateTime, partsCache = null) {
         const leftIds = new Set();
         const rightIds = new Set();
 
         lines.forEach(line => {
-            getLineSourceSyllables(line).forEach(syllable => {
+            getLineSourceSyllables(line, partsCache).forEach(syllable => {
                 const midpoint = syllable.startTime + ((syllable.endTime - syllable.startTime) / 2);
                 const target = midpoint <= candidateTime ? leftIds : rightIds;
                 target.add(syllable.lyricsPlusSourceSyllableId);
@@ -1008,12 +1013,12 @@
         });
 
         return {
-            left: lines.map(line => sliceLineBySyllableIds(line, leftIds)).filter(Boolean),
-            right: lines.map(line => sliceLineBySyllableIds(line, rightIds)).filter(Boolean)
+            left: lines.map(line => sliceLineBySyllableIds(line, leftIds, partsCache)).filter(Boolean),
+            right: lines.map(line => sliceLineBySyllableIds(line, rightIds, partsCache)).filter(Boolean)
         };
     }
 
-    function findParallelSegmentSplit(lines, agents, currentStartTime) {
+    function findParallelSegmentSplit(lines, agents, currentStartTime, partsCache = null) {
         const orderedLines = [...lines]
             .sort((left, right) => left.startTime - right.startTime || left.sourceIndex - right.sourceIndex);
         if (countSegmentSourceLines(orderedLines) <= PARALLEL_VOCAL_MAX_SOURCE_LINES) return null;
@@ -1024,7 +1029,7 @@
 
         const candidateTimes = new Set([nominalBoundary]);
         orderedLines.slice(0, PARALLEL_VOCAL_MAX_SOURCE_LINES).forEach(line => {
-            getLineSourceSyllables(line).forEach(syllable => {
+            getLineSourceSyllables(line, partsCache).forEach(syllable => {
                 if (syllable.startTime > currentStartTime && syllable.startTime <= nominalBoundary) {
                     candidateTimes.add(syllable.startTime);
                 }
@@ -1035,7 +1040,7 @@
         });
 
         const candidates = [...candidateTimes].map(candidateTime => {
-            const partition = partitionParallelComponent(orderedLines, candidateTime);
+            const partition = partitionParallelComponent(orderedLines, candidateTime, partsCache);
             const leftKeyCount = countSegmentSourceLines(partition.left);
             if ([...partition.left, ...partition.right]
                 .some(line => line.lyricsPlusPromotedBackgroundFragment)
@@ -1046,8 +1051,8 @@
                 return null;
             }
 
-            const leftSyllables = partition.left.flatMap(getLineSourceSyllables);
-            const rightSyllables = partition.right.flatMap(getLineSourceSyllables);
+            const leftSyllables = partition.left.flatMap(line => getLineSourceSyllables(line, partsCache));
+            const rightSyllables = partition.right.flatMap(line => getLineSourceSyllables(line, partsCache));
             if (leftSyllables.length === 0 || rightSyllables.length === 0) return null;
 
             const leftEndTime = Math.max(...leftSyllables.map(syllable => syllable.endTime));
@@ -1080,8 +1085,8 @@
         ))[0] || null;
     }
 
-    function createParallelVocalSegments(lines, agents) {
-        const preparedLines = annotateParallelComponentLines(lines)
+    function createParallelVocalSegments(lines, agents, partsCache = null) {
+        const preparedLines = annotateParallelComponentLines(lines, partsCache)
             .sort((left, right) => left.startTime - right.startTime || left.sourceIndex - right.sourceIndex);
         const componentLeadLane = chooseLeadVocalLane(buildSingerVocalLanes(preparedLines, agents));
         const preferredLeadSingerId = componentLeadLane?.singerId || '';
@@ -1096,7 +1101,7 @@
 
         while (countSegmentSourceLines(remainingLines) > PARALLEL_VOCAL_MAX_SOURCE_LINES && guard < lines.length) {
             guard++;
-            const split = findParallelSegmentSplit(remainingLines, agents, forcedStartTime);
+            const split = findParallelSegmentSplit(remainingLines, agents, forcedStartTime, partsCache);
             if (!split) {
                 return [createParallelVocalLine(preparedLines, agents, preferredLeadSingerId)];
             }
@@ -1138,10 +1143,13 @@
         });
     }
 
-    function groupParallelVocalLines(lines, agents) {
+    function groupParallelVocalLines(lines, agents, parsedLeadParts = null) {
         // Pages activates only the latest top-level startTime. Grouping just one
         // overlapping pair would therefore cut a vocal that crosses the next line.
         // Build the full overlap component first, then fold it into singer lanes.
+        const canReuseParsedLeadParts = Array.isArray(parsedLeadParts)
+            && parsedLeadParts.length === lines.length;
+        const segmentationPartsCache = canReuseParsedLeadParts ? new WeakMap() : null;
         const parents = lines.map((_line, index) => index);
         const findRoot = index => {
             let root = index;
@@ -1162,12 +1170,16 @@
         const parallelSeeds = [];
         for (let leftIndex = 0; leftIndex < lines.length; leftIndex++) {
             const left = lines[leftIndex];
-            const leftPart = getLineLeadVocalPart(left);
+            const leftPart = canReuseParsedLeadParts
+                ? parsedLeadParts[leftIndex]
+                : getLineLeadVocalPart(left);
             if (!left?.hasWordTiming || !leftPart) continue;
 
             for (let rightIndex = leftIndex + 1; rightIndex < lines.length; rightIndex++) {
                 const right = lines[rightIndex];
-                const rightPart = getLineLeadVocalPart(right);
+                const rightPart = canReuseParsedLeadParts
+                    ? parsedLeadParts[rightIndex]
+                    : getLineLeadVocalPart(right);
                 if (!right?.hasWordTiming || !rightPart) continue;
                 if (rightPart.startTime >= leftPart.endTime) break;
 
@@ -1208,7 +1220,7 @@
 
             const component = components.get(root) || [line];
             if (component.length > 1) {
-                grouped.push(...createParallelVocalSegments(component, agents));
+                grouped.push(...createParallelVocalSegments(component, agents, segmentationPartsCache));
             } else {
                 grouped.push(line);
             }
@@ -1336,8 +1348,11 @@
         const hasCompleteWordTiming = hasCompleteTiming
             && (isWordType || inferTypeFromContent)
             && timedLines.every(line => line.hasWordTiming);
+        const parsedLeadParts = hasCompleteWordTiming
+            ? timedLines.map(getLineLeadVocalPart)
+            : null;
         const groupedKaraokeLines = hasCompleteWordTiming
-            ? groupParallelVocalLines(timedLines, agents)
+            ? groupParallelVocalLines(timedLines, agents, parsedLeadParts)
             : [];
         const karaokeLines = hasCompleteWordTiming
             ? splitLongSoloVocalLines(groupedKaraokeLines)

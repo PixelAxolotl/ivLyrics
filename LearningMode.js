@@ -586,11 +586,27 @@
                 return !/(^|\b)(instrumental|no lyrics|가사 없음|기악)(\b|$)/i.test(line.text);
             });
 
+        const startTimes = normalized.map((line) => Number(line.startTime));
+        const nextStartTimes = new Array(normalized.length).fill(null);
+        const greaterStartTimes = [];
+        for (let index = normalized.length - 1; index >= 0; index--) {
+            const currentStart = startTimes[index];
+            while (
+                greaterStartTimes.length > 0
+                && greaterStartTimes[greaterStartTimes.length - 1] <= currentStart
+            ) {
+                greaterStartTimes.pop();
+            }
+            if (greaterStartTimes.length > 0) {
+                nextStartTimes[index] = greaterStartTimes[greaterStartTimes.length - 1];
+            }
+            if (Number.isFinite(currentStart)) {
+                greaterStartTimes.push(currentStart);
+            }
+        }
+
         return normalized.map((line, index) => {
-            const nextStart = normalized
-                .slice(index + 1)
-                .map((nextLine) => Number(nextLine.startTime))
-                .find((value) => Number.isFinite(value) && value > Number(line.startTime));
+            const nextStart = nextStartTimes[index];
             const explicitEnd = Number(line.endTime);
             return {
                 ...line,

@@ -376,6 +376,10 @@
         return /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(character || '');
     }
 
+    function isNoSpaceLineBreakCharacter(character) {
+        return /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}]/u.test(character || '');
+    }
+
     function getSafeSoloLineBoundary(leftSyllable, rightSyllable) {
         const leftText = String(leftSyllable?.text || '');
         const rightText = String(rightSyllable?.text || '');
@@ -401,6 +405,8 @@
         ) || (
             isLatinOrNumber(leftCharacter) && isCjkCharacter(rightCharacter)
         );
+        const isNoSpaceScriptBoundary = isNoSpaceLineBreakCharacter(leftCharacter)
+            && isNoSpaceLineBreakCharacter(rightCharacter);
 
         // Some TTML sources split one English word into multiple timed spans
         // (for example, "Wond" + "er"). Never treat that as a line boundary.
@@ -410,12 +416,17 @@
             && !followsPunctuation) {
             return null;
         }
-        if (!hasWhitespace && !followsPunctuation && !changesBetweenCjkAndLatin) {
+        if (!hasWhitespace
+            && !followsPunctuation
+            && !changesBetweenCjkAndLatin
+            && !isNoSpaceScriptBoundary) {
             return null;
         }
 
         return {
-            penalty: hasWhitespace ? 0 : (followsPunctuation ? 0.25 : 2.5),
+            penalty: hasWhitespace
+                ? 0
+                : (followsPunctuation ? 0.25 : (isNoSpaceScriptBoundary ? 1 : 2.5)),
             gapMs: Math.max(0, rightStartTime - leftEndTime)
         };
     }

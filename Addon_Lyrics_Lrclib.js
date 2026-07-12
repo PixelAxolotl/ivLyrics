@@ -842,7 +842,23 @@
     }
 
     function getLineCharCounts(lines) {
-        return lines.map(line => Array.from(line).length);
+        return lines.map(line => {
+            if (typeof line !== 'string') {
+                return Array.from(line).length;
+            }
+
+            let count = line.length;
+            for (let index = 1; index < line.length; index += 1) {
+                const codeUnit = line.charCodeAt(index);
+                if (codeUnit < 0xDC00 || codeUnit > 0xDFFF) continue;
+
+                const previousCodeUnit = line.charCodeAt(index - 1);
+                if (previousCodeUnit >= 0xD800 && previousCodeUnit <= 0xDBFF) {
+                    count -= 1;
+                }
+            }
+            return count;
+        });
     }
 
     function getSyncDataLineCharCounts(syncData) {

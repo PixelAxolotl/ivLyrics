@@ -1650,7 +1650,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         let rtlCount = 0;
         let ltrCount = 0;
 
-        for (const char of normalizedText) {
+        for (const char of Array.from(normalizedText)) {
             if (KARAOKE_RTL_STRONG_CHAR_REGEX.test(char)) {
                 rtlCount++;
                 continue;

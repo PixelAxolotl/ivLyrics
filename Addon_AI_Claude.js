@@ -619,6 +619,33 @@ ${JSON.stringify(payload)}`;
         throw lastError || new Error('[Claude] All API keys and retries exhausted');
     }
 
+    function emitStreamingLines(accumulated, onLine, state, flush = false) {
+        if (!onLine) return;
+
+        if (flush) {
+            const finalLine = accumulated.slice(state.offset);
+            onLine(state.index, finalLine);
+            return;
+        }
+
+        let newlineIndex = accumulated.indexOf('\n', state.offset);
+        if (newlineIndex === -1) return;
+
+        const completedLines = [];
+        let lineStart = state.offset;
+        while (newlineIndex !== -1) {
+            completedLines.push(accumulated.slice(lineStart, newlineIndex));
+            lineStart = newlineIndex + 1;
+            newlineIndex = accumulated.indexOf('\n', lineStart);
+        }
+
+        for (const line of completedLines) {
+            onLine(state.index, line);
+            state.index += 1;
+            state.offset += line.length + 1;
+        }
+    }
+
     async function callClaudeAPIStream(prompt, onLine, maxRetries = 3) {
         const apiKeys = getApiKeys();
         if (apiKeys.length === 0) {
@@ -678,7 +705,7 @@ ${JSON.stringify(payload)}`;
                     const decoder = new TextDecoder();
                     let sseBuffer = '';
                     let accumulated = '';
-                    let emittedLines = 0;
+                    const lineState = { index: 0, offset: 0 };
 
                     while (true) {
                         const { value, done } = await reader.read();
@@ -706,22 +733,11 @@ ${JSON.stringify(payload)}`;
                         }
 
                         // Emit completed lines
-                        if (onLine) {
-                            const currentLines = accumulated.split('\n');
-                            for (let i = emittedLines; i < currentLines.length - 1; i++) {
-                                onLine(i, currentLines[i]);
-                                emittedLines = i + 1;
-                            }
-                        }
+                        emitStreamingLines(accumulated, onLine, lineState);
                     }
 
                     // Emit final line
-                    if (onLine) {
-                        const finalLines = accumulated.split('\n');
-                        if (finalLines.length > emittedLines) {
-                            onLine(emittedLines, finalLines[emittedLines]);
-                        }
-                    }
+                    emitStreamingLines(accumulated, onLine, lineState, true);
 
                     if (!accumulated) {
                         throw new Error('[Claude] Empty response from streaming API');

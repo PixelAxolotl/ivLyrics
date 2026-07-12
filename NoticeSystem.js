@@ -97,7 +97,7 @@ const getCurrentVersion = () => {
         window.Utils?.getCurrentVersion?.() ||
         window.CONFIG?.version ||
         window.ivLyricsVersion ||
-        "5.5.4"
+        "5.5.5"
     );
 };
 

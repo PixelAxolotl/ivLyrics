@@ -1644,6 +1644,15 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     const KARAOKE_NO_WORD_WRAP_SCRIPT_REGEX = /[\u3040-\u30ff\uff66-\uff9f\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u0e00-\u0e7f\u0e80-\u0eff\u1780-\u17ff\u1000-\u109f]/u;
     const KARAOKE_NON_WHITESPACE_CHAR_REGEX = /\S/u;
     const KARAOKE_TEXT_RUN_FILL_STEPS = 25;
+    const KARAOKE_PERCENT_STRING_CACHE = {
+        __proto__: null,
+        0: "0%", 2: "2%", 4: "4%", 6: "6%", 8: "8%", 10: "10%", 12: "12%", 14: "14%", 16: "16%", 18: "18%",
+        20: "20%", 22: "22%", 24: "24%", 26: "26%", 28: "28%", 30: "30%", 32: "32%", 34: "34%", 36: "36%", 38: "38%",
+        40: "40%", 42: "42%", 44: "44%", 46: "46%", 48: "48%", 50: "50%", 52: "52%", 54: "54%", 56: "56%", 58: "58%",
+        60: "60%", 62: "62%", 64: "64%", 66: "66%", 68: "68%", 70: "70%", 72: "72%", 74: "74%", 76: "76%", 78: "78%",
+        80: "80%", 82: "82%", 84: "84%", 86: "86%", 88: "88%", 90: "90%", 92: "92%", 94: "94%", 96: "96%", 98: "98%",
+        100: "100%"
+    };
 
     const getKaraokeTextDirection = (text) => {
         const normalizedText = typeof text === "string" ? text : "";
@@ -2556,10 +2565,20 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
 
                 if (isActive) {
                     const softEdge = 10;
+                    let percentText;
                     el.style.setProperty("--ivlyrics-panel-karaoke-gradient-direction", gradientDirection);
-                    el.style.setProperty("--ivlyrics-panel-karaoke-fill", String(fill) + "%");
-                    el.style.setProperty("--ivlyrics-panel-karaoke-fill-soft-start", String(Math.max(0, fill - softEdge)) + "%");
-                    el.style.setProperty("--ivlyrics-panel-karaoke-fill-soft-end", String(Math.min(100, fill + softEdge)) + "%");
+                    el.style.setProperty("--ivlyrics-panel-karaoke-fill",
+                        typeof (percentText = String(fill)) === "string"
+                            ? (KARAOKE_PERCENT_STRING_CACHE[percentText] ?? percentText + "%")
+                            : percentText + "%");
+                    el.style.setProperty("--ivlyrics-panel-karaoke-fill-soft-start",
+                        typeof (percentText = String(Math.max(0, fill - softEdge))) === "string"
+                            ? (KARAOKE_PERCENT_STRING_CACHE[percentText] ?? percentText + "%")
+                            : percentText + "%");
+                    el.style.setProperty("--ivlyrics-panel-karaoke-fill-soft-end",
+                        typeof (percentText = String(Math.min(100, fill + softEdge))) === "string"
+                            ? (KARAOKE_PERCENT_STRING_CACHE[percentText] ?? percentText + "%")
+                            : percentText + "%");
                 } else {
                     el.style.removeProperty("--ivlyrics-panel-karaoke-gradient-direction");
                     el.style.removeProperty("--ivlyrics-panel-karaoke-fill");

@@ -5,3 +5,7 @@ MARKETPLACE.md
 addon-manager.ps1
 __pycache__/
 *.pyc
+
+# Local test harnesses
+/test/
+/tests/

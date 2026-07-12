@@ -471,9 +471,16 @@
             }
             if (/^\[(ar|al|ti|by|re|ve|length):/i.test(rawLine)) return;
 
-            const timestamps = Array.from(rawLine.matchAll(/\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\]/g));
+            const timestamps = [];
+            const strippedLine = rawLine.replace(
+                /\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\]/g,
+                (match, minutes, seconds, fraction) => {
+                    timestamps.push([match, minutes, seconds, fraction]);
+                    return '';
+                }
+            );
             if (!timestamps.length) return;
-            const text = rawLine.replace(/\[(\d{1,3}):(\d{1,2})(?:[.:](\d{1,3}))?\]/g, '').trim();
+            const text = strippedLine.trim();
             if (!text) return;
 
             timestamps.forEach(match => {

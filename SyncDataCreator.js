@@ -8386,6 +8386,85 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		lyricsText && lyricsLines.length > 0 && (activeParallelPart || !hasCurrentParallelParts) && renderLineInspector()
 	);
 
+	const renderBulkCustomSpeakerDialog = () => showBulkCustomSpeakerDialog && react.createElement('div', {
+		style: s.lrcLibModal,
+		role: 'dialog',
+		'aria-modal': true,
+		onClick: (event) => {
+			if (event.target === event.currentTarget) setShowBulkCustomSpeakerDialog(false);
+		},
+		onKeyDown: (event) => {
+			if (event.key === 'Escape') setShowBulkCustomSpeakerDialog(false);
+		}
+	},
+		react.createElement('div', { style: { ...s.lrcLibContent, maxWidth: '440px' } },
+			react.createElement('h3', { style: s.lrcLibTitle },
+				`${I18n.t('syncCreator.bulkVocalLabel') || 'All vocals'} · CUSTOM`
+			),
+			react.createElement('div', {
+				style: {
+					...s.customSpeakerColorEditor,
+					marginTop: 0,
+					padding: 0,
+					border: 'none',
+					background: 'transparent'
+				}
+			},
+				react.createElement('input', {
+					type: 'color',
+					style: s.customSpeakerColorPicker,
+					value: sanitizeSyncCreatorSpeakerColor(
+						'CUSTOM',
+						bulkCustomSpeakerColor,
+						true,
+						bulkCustomSpeakerFallback
+					),
+					onChange: (event) => setBulkCustomSpeakerColor(event.target.value),
+					'aria-label': I18n.t('syncCreator.speakerCustomColor') || 'Custom speaker color'
+				}),
+				react.createElement('div', { style: s.customSpeakerColorFields },
+					react.createElement('div', { style: s.customSpeakerColorLabel }, I18n.t('syncCreator.speakerCustomColor') || 'Custom speaker color'),
+					react.createElement('input', {
+						type: 'text',
+						style: s.customSpeakerColorText,
+						value: bulkCustomSpeakerColor,
+						placeholder: '#00ff00',
+						maxLength: 7,
+						autoFocus: true,
+						onFocus: (event) => event.currentTarget.select(),
+						onChange: (event) => setBulkCustomSpeakerColor(event.target.value),
+						onKeyDown: (event) => {
+							if (event.key !== 'Enter') return;
+							event.preventDefault();
+							applyBulkCustomSpeaker();
+						}
+					}),
+					react.createElement('div', { style: s.customSpeakerColorLabel }, I18n.t('syncCreator.speakerCustomFallback') || 'Fallback color group'),
+					react.createElement('select', {
+						style: { ...s.select, width: '100%' },
+						value: bulkCustomSpeakerFallback,
+						onChange: (event) => setBulkCustomSpeakerFallback(event.target.value)
+					}, SYNC_CREATOR_CUSTOM_FALLBACK_OPTIONS.map(value => react.createElement('option', {
+						key: value,
+						value
+					}, value.replace(' 1', ''))))
+				)
+			),
+			react.createElement('div', { style: s.lrcLibBtnRow },
+				react.createElement('button', {
+					type: 'button',
+					style: s.lrcLibBtnCancel,
+					onClick: () => setShowBulkCustomSpeakerDialog(false)
+				}, I18n.t('cancel') || 'Cancel'),
+				react.createElement('button', {
+					type: 'button',
+					style: s.lrcLibBtn,
+					onClick: applyBulkCustomSpeaker
+				}, I18n.t('videoBackground.apply') || 'Apply')
+			)
+		)
+	);
+
 	const renderModals = () => {
 		const renderParentheticalLayoutChoice = (modeValue, title, description, previewLines, primary = false) => react.createElement('button', {
 			type: 'button',
@@ -8454,6 +8533,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				)
 			)
 		),
+		renderBulkCustomSpeakerDialog(),
 		showCharacterPronunciationConsent && react.createElement('div', {
 			style: s.lrcLibModal,
 			onClick: (e) => e.target === e.currentTarget && setShowCharacterPronunciationConsent(false)
@@ -9090,77 +9170,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			)
 		),
 
-		showBulkCustomSpeakerDialog && react.createElement('div', {
-			style: s.lrcLibModal,
-			onClick: (event) => {
-				if (event.target === event.currentTarget) setShowBulkCustomSpeakerDialog(false);
-			}
-		},
-			react.createElement('div', { style: { ...s.lrcLibContent, maxWidth: '440px' } },
-				react.createElement('h3', { style: s.lrcLibTitle },
-					`${I18n.t('syncCreator.bulkVocalLabel') || 'All vocals'} · CUSTOM`
-				),
-				react.createElement('div', {
-					style: {
-						...s.customSpeakerColorEditor,
-						marginTop: 0,
-						padding: 0,
-						border: 'none',
-						background: 'transparent'
-					}
-				},
-					react.createElement('input', {
-						type: 'color',
-						style: s.customSpeakerColorPicker,
-						value: sanitizeSyncCreatorSpeakerColor(
-							'CUSTOM',
-							bulkCustomSpeakerColor,
-							true,
-							bulkCustomSpeakerFallback
-						),
-						onChange: (event) => setBulkCustomSpeakerColor(event.target.value),
-						'aria-label': I18n.t('syncCreator.speakerCustomColor') || 'Custom speaker color'
-					}),
-					react.createElement('div', { style: s.customSpeakerColorFields },
-						react.createElement('div', { style: s.customSpeakerColorLabel }, I18n.t('syncCreator.speakerCustomColor') || 'Custom speaker color'),
-						react.createElement('input', {
-							type: 'text',
-							style: s.customSpeakerColorText,
-							value: bulkCustomSpeakerColor,
-							placeholder: '#00ff00',
-							maxLength: 7,
-							onChange: (event) => setBulkCustomSpeakerColor(event.target.value),
-							onKeyDown: (event) => {
-								if (event.key !== 'Enter') return;
-								event.preventDefault();
-								applyBulkCustomSpeaker();
-							}
-						}),
-						react.createElement('div', { style: s.customSpeakerColorLabel }, I18n.t('syncCreator.speakerCustomFallback') || 'Fallback color group'),
-						react.createElement('select', {
-							style: { ...s.select, width: '100%' },
-							value: bulkCustomSpeakerFallback,
-							onChange: (event) => setBulkCustomSpeakerFallback(event.target.value)
-						}, SYNC_CREATOR_CUSTOM_FALLBACK_OPTIONS.map(value => react.createElement('option', {
-							key: value,
-							value
-						}, value.replace(' 1', ''))))
-					)
-				),
-				react.createElement('div', { style: s.lrcLibBtnRow },
-					react.createElement('button', {
-						type: 'button',
-						style: s.lrcLibBtnCancel,
-						onClick: () => setShowBulkCustomSpeakerDialog(false)
-					}, I18n.t('cancel') || 'Cancel'),
-					react.createElement('button', {
-						type: 'button',
-						style: s.lrcLibBtn,
-						onClick: applyBulkCustomSpeaker
-					}, I18n.t('videoBackground.apply') || 'Apply')
-				)
-			)
-		),
+		renderBulkCustomSpeakerDialog(),
 
 		// AI character pronunciation token usage modal
 		showCharacterPronunciationConsent && react.createElement('div', {

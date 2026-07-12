@@ -2527,7 +2527,9 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         return react.createElement("span", {
             key: idx,
             ref: wordRef,
-            className: `ivlyrics-panel-karaoke-word ${isLinePast ? 'sung' : ''}`
+            className: isLinePast
+                ? "ivlyrics-panel-karaoke-word sung"
+                : "ivlyrics-panel-karaoke-word "
         }, text);
     });
 
@@ -2584,7 +2586,9 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         return react.createElement("span", {
             key: "text-run-" + idx,
             ref: segmentRef,
-            className: "ivlyrics-panel-karaoke-text-run-segment " + (isLinePast ? "sung" : ""),
+            className: isLinePast
+                ? "ivlyrics-panel-karaoke-text-run-segment sung"
+                : "ivlyrics-panel-karaoke-text-run-segment ",
             dir: segmentDirection
         }, text);
     });

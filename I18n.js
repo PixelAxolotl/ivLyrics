@@ -12,6 +12,16 @@
     var DEFAULT_LANGUAGE = "ko";
     var LANGUAGE_CODES = ["ko", "en", "zh-CN", "zh-TW", "ja", "es", "fr", "de", "it", "ru", "sv", "pt", "hi", "ar", "fa", "bn", "cs", "th", "tr", "vi", "id", "ms"];
     var AVAILABLE_LANGUAGES = [];
+    var KEY_PATH_CACHE_LIMIT = 2048;
+    var keyPathCache = new Map();
+    var keyPathSplit = null;
+    var lastKeyPath = null;
+    var lastKeyPathSegments = null;
+    var canCacheKeyPaths = false;
+    try {
+        keyPathSplit = String.prototype.split;
+        canCacheKeyPaths = /\{\s*\[native code\]\s*\}/.test(Function.prototype.toString.call(keyPathSplit));
+    } catch (e) { }
 
     function getStoredLanguage() {
         try {
@@ -165,9 +175,37 @@
     /**
      * Get nested value from object by key path
      */
+    function getKeyPathSegments(keyPath) {
+        if (
+            typeof keyPath !== "string"
+            || keyPath.length > 256
+            || !canCacheKeyPaths
+            || String.prototype.split !== keyPathSplit
+        ) {
+            return keyPath.split(".");
+        }
+
+        if (keyPath === lastKeyPath) return lastKeyPathSegments;
+
+        var cached = keyPathCache.get(keyPath);
+        if (cached) {
+            lastKeyPath = keyPath;
+            lastKeyPathSegments = cached;
+            return cached;
+        }
+
+        var keys = keyPath.split(".");
+        lastKeyPath = keyPath;
+        lastKeyPathSegments = keys;
+        if (keyPathCache.size < KEY_PATH_CACHE_LIMIT) {
+            keyPathCache.set(keyPath, keys);
+        }
+        return keys;
+    }
+
     function getNestedValue(obj, keyPath) {
         if (!obj || !keyPath) return null;
-        var keys = keyPath.split(".");
+        var keys = getKeyPathSegments(keyPath);
         var value = obj;
         for (var i = 0; i < keys.length; i++) {
             if (value && typeof value === "object" && keys[i] in value) {

@@ -890,8 +890,9 @@
                 }
 
                 for (let offset = 0; offset < chars.length; offset += maxSegmentChars) {
-                    const part = chars.slice(offset, offset + maxSegmentChars).join('');
-                    segments.push({ sourceLineIndex, charOffset: offset, text: part, charCount: Array.from(part).length });
+                    const partChars = chars.slice(offset, offset + maxSegmentChars);
+                    const part = partChars.join('');
+                    segments.push({ sourceLineIndex, charOffset: offset, text: part, charCount: partChars.length });
                 }
             });
 

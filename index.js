@@ -1842,6 +1842,8 @@ const DBExportManager = {
 const KARAOKE = 0;
 const SYNCED = 1;
 const UNSYNCED = 2;
+const LYRICS_MODE_TYPE_KEYS = ['karaoke', 'synced', 'unsynced'];
+const getLyricsModeTypeKey = (mode) => LYRICS_MODE_TYPE_KEYS[mode] || null;
 
 const CONFIG = {
   visual: {
@@ -3898,6 +3900,7 @@ class LyricsContainer extends react.Component {
     this.streamingApplyTimer = null;
     this.pendingStreamingPayload = null;
     this.floatingMenuCloseTimer = null;
+    this._sharedPresentationKeys = new Map();
 
     // Portrait viewport detection
     this._isPortraitViewport = typeof window !== "undefined" && typeof window.matchMedia === "function"
@@ -4544,7 +4547,16 @@ class LyricsContainer extends react.Component {
             title: this.state.title,
             artist: this.state.artist
           },
-          lyrics: finalLyrics
+          lyrics: finalLyrics,
+          provider: this.state.provider || null,
+          karaokeSource: this.state.karaokeSource || null,
+          lyricsType: getLyricsModeTypeKey(this.getCurrentMode()),
+          displayMode1: payload.displayMode1,
+          displayMode2: payload.displayMode2,
+          detectedLanguage: this.provideLanguageCode(payload.lyrics),
+          translationTargetLanguage: this.getTranslationTargetLanguage(),
+          translationSourceText: getNonSectionLyricsText(payload.lyrics),
+          presentationComplete: false
         }
       }));
     }, 50);
@@ -5226,7 +5238,30 @@ class LyricsContainer extends react.Component {
       this.clearPendingLyricsUpdates();
       this.lastProcessedUri = null;
       this.lastProcessedMode = null;
-      this.setState(this.getLoadingLyricsState(info, requestSeq));
+      if (refresh) {
+        window.LyricsService?.clearLyricsSnapshot?.(requestUri);
+      }
+      const sharedSnapshot = !refresh
+        ? window.LyricsService?.getLyricsSnapshot?.(requestUri)
+        : null;
+      const sharedDisplayLyrics = Array.isArray(sharedSnapshot?.displayLyrics)
+        ? sharedSnapshot.displayLyrics
+        : null;
+      const sharedPresentationIsComplete = sharedSnapshot?.presentationComplete === true;
+      const sharedRawResult = sharedSnapshot?.rawResult;
+      const loadingState = this.getLoadingLyricsState(info, requestSeq);
+      this.setState(sharedDisplayLyrics ? {
+        ...loadingState,
+        ...(sharedRawResult || {}),
+        uri: requestUri,
+        lyricsRequestSeq: requestSeq,
+        currentLyrics: sharedDisplayLyrics,
+        provider: sharedSnapshot.provider || sharedRawResult?.provider || "",
+        karaokeSource: sharedSnapshot.karaokeSource || sharedRawResult?.karaokeSource || null,
+        // Track overrides are asynchronous. Keep processing paused until the
+        // snapshot has been validated against them below.
+        isLoading: true,
+      } : loadingState);
 
       // 트랙별 언어 오버라이드 로드 (IndexedDB)
       let trackLanguageOverride = null;
@@ -5234,8 +5269,8 @@ class LyricsContainer extends react.Component {
       let trackBackgroundOverride = null;
       try {
         [trackLanguageOverride, trackLyricsProviderOverride, trackBackgroundOverride] = await Promise.all([
-          TrackLanguageDB.getLanguage(info.uri),
-          TrackLyricsProviderDB.getProvider(info.uri),
+          window.LyricsService?.getTrackLanguageOverride?.(info.uri) ?? TrackLanguageDB.getLanguage(info.uri),
+          window.LyricsService?.getTrackLyricsProviderOverride?.(info.uri) ?? TrackLyricsProviderDB.getProvider(info.uri),
           TrackBackgroundDB.getOverride(info.uri),
         ]);
       } catch (e) {
@@ -5303,6 +5338,34 @@ class LyricsContainer extends react.Component {
       this.resetDelay();
 
       let tempState;
+      const sharedProvider = sharedRawResult?.provider || sharedSnapshot?.provider || null;
+      const sharedOverride = sharedSnapshot?.trackLyricsProviderOverride || null;
+      const sharedHasLyrics = !!(
+        sharedRawResult &&
+        (
+          (Array.isArray(sharedRawResult.karaoke) && sharedRawResult.karaoke.length > 0) ||
+          (Array.isArray(sharedRawResult.synced) && sharedRawResult.synced.length > 0) ||
+          (Array.isArray(sharedRawResult.unsynced) && sharedRawResult.unsynced.length > 0)
+        )
+      );
+      const sharedOverrideMatches = trackLyricsProviderOverride
+        ? sharedProvider === trackLyricsProviderOverride
+        : !sharedOverride;
+      const canReuseSharedRawResult = !refresh &&
+        sharedHasLyrics &&
+        sharedOverrideMatches &&
+        isLyricsRenderCacheCurrent({
+          ...sharedRawResult,
+          trackLyricsProviderOverride: trackLyricsProviderOverride || null,
+        });
+
+      if (canReuseSharedRawResult) {
+        CACHE[info.uri] = {
+          ...sharedRawResult,
+          uri: info.uri,
+          trackLyricsProviderOverride: trackLyricsProviderOverride || null,
+        };
+      }
       if (CACHE[info.uri] && !isLyricsRenderCacheCurrent(CACHE[info.uri])) {
         delete CACHE[info.uri];
       }
@@ -5315,6 +5378,9 @@ class LyricsContainer extends react.Component {
           provider: "",
           contributors: null,
           ...CACHE[info.uri],
+          ...(canReuseSharedRawResult && sharedDisplayLyrics
+            ? { currentLyrics: sharedDisplayLyrics }
+            : {}),
           trackLyricsProviderOverride,
           trackBackgroundOverride,
           lyricsRequestSeq: requestSeq,
@@ -5432,6 +5498,45 @@ class LyricsContainer extends react.Component {
       }
 
       const initialLyricsForMode = this.resolveLyricsForMode(tempState, finalMode);
+      const configuredLanguageOverride = CONFIG.visual["translate:detect-language-override"];
+      const presentationLanguage = trackLanguageOverride ||
+        (configuredLanguageOverride && configuredLanguageOverride !== 'off'
+          ? configuredLanguageOverride
+          : Utils.detectLanguage(initialLyricsForMode || []));
+      let presentationModeKey = 'gemini';
+      try {
+        if (presentationLanguage) {
+          presentationModeKey = new Intl.DisplayNames(['en'], { type: 'language' })
+            .of(String(presentationLanguage).split('-')[0])
+            ?.toLowerCase() || 'gemini';
+        }
+      } catch (error) {
+        // Fall back to the generic Gemini mode key.
+      }
+      const expectedDisplayMode1 = CONFIG.visual[`translation-mode:${presentationModeKey}`] || 'none';
+      const expectedDisplayMode2 = CONFIG.visual[`translation-mode-2:${presentationModeKey}`] || 'none';
+      const sharedLyricsForMode = canReuseSharedRawResult &&
+        sharedDisplayLyrics &&
+        sharedPresentationIsComplete &&
+        sharedSnapshot?.lyricsType === getLyricsModeTypeKey(finalMode) &&
+        (sharedSnapshot.displayMode1 || 'none') === expectedDisplayMode1 &&
+        (sharedSnapshot.displayMode2 || 'none') === expectedDisplayMode2 &&
+        (sharedSnapshot.detectedLanguage || '') === (presentationLanguage || '') &&
+        (sharedSnapshot.translationTargetLanguage || '') === getCurrentTranslationTargetLanguage() &&
+        (!sharedSnapshot.translationSourceText ||
+          sharedSnapshot.translationSourceText === getNonSectionLyricsText(initialLyricsForMode || []))
+        ? sharedDisplayLyrics
+        : null;
+      const { currentLyrics: _ignoredCurrentLyrics, ...rawLyricsSnapshot } = tempState;
+      window.LyricsService?.publishLyricsSnapshot?.({
+        trackUri: info.uri,
+        trackInfo: info,
+        rawResult: rawLyricsSnapshot,
+        provider: tempState.provider || null,
+        karaokeSource: tempState.karaokeSource || null,
+        trackLyricsProviderOverride: trackLyricsProviderOverride || null,
+        source: 'ivlyrics-page-base'
+      });
 
       if (!isLatestLyricsRequest()) {
         return;
@@ -5461,7 +5566,7 @@ class LyricsContainer extends react.Component {
           ...tempState,
           language: defaultLanguage,
           ...this.applyTranslationStates(tempState),
-          currentLyrics: initialLyricsForMode || [],
+          currentLyrics: sharedLyricsForMode || initialLyricsForMode || [],
         });
         return;
       }
@@ -5470,7 +5575,7 @@ class LyricsContainer extends react.Component {
       this.setState({
         ...tempState,
         ...this.applyTranslationStates(tempState),
-        currentLyrics: initialLyricsForMode || [],
+        currentLyrics: sharedLyricsForMode || initialLyricsForMode || [],
       });
     } catch (error) {
       if (!isLatestLyricsRequest()) {
@@ -5523,7 +5628,13 @@ class LyricsContainer extends react.Component {
       window.dispatchEvent(new CustomEvent('ivLyrics:lyrics-ready', {
         detail: {
           trackInfo: { uri: lyricsState.uri, title: this.state.title, artist: this.state.artist },
-          lyrics: []
+          lyrics: [],
+          provider: lyricsState.provider || null,
+          karaokeSource: lyricsState.karaokeSource || null,
+          lyricsType: getLyricsModeTypeKey(mode),
+          detectedLanguage: null,
+          translationTargetLanguage: this.getTranslationTargetLanguage(),
+          presentationComplete: true
         }
       }));
       return;
@@ -5573,6 +5684,30 @@ class LyricsContainer extends react.Component {
     this.displayMode = displayMode1; // Keep for legacy compatibility
     this.displayMode2 = displayMode2;
 
+    const { uri } = lyricsState; // Capture the URI for this specific request
+    const sharedSnapshot = window.LyricsService?.getLyricsSnapshot?.(uri);
+    const sharedPresentationMatches = sharedSnapshot?.presentationComplete === true &&
+      Array.isArray(sharedSnapshot?.displayLyrics) &&
+      sharedSnapshot.trackUri === uri &&
+      (sharedSnapshot.provider || '') === (lyricsState.provider || '') &&
+      sharedSnapshot.lyricsType === getLyricsModeTypeKey(mode) &&
+      (sharedSnapshot.displayMode1 || 'none') === (displayMode1 || 'none') &&
+      (sharedSnapshot.displayMode2 || 'none') === (displayMode2 || 'none') &&
+      (sharedSnapshot.detectedLanguage || '') === (originalLanguage || '') &&
+      (sharedSnapshot.translationTargetLanguage || '') === this.getTranslationTargetLanguage() &&
+      (!sharedSnapshot.translationSourceText ||
+        sharedSnapshot.translationSourceText === getNonSectionLyricsText(lyrics));
+    if (sharedPresentationMatches) {
+      this._sharedPresentationKeys.set(
+        uri,
+        `${lyricsState.provider || ''}:${displayMode1 || 'none'}:${displayMode2 || 'none'}:${getSyncDataRendererCacheVersion(lyricsState)}`
+      );
+      if (this.state.currentLyrics !== sharedSnapshot.displayLyrics) {
+        this.setState({ currentLyrics: sharedSnapshot.displayLyrics });
+      }
+      return;
+    }
+
     const processMode = async (mode, baseLyrics, onProgress = null) => {
       if (!mode || mode === "none") {
         ivLyricsDebug("[processMode] Mode is none or empty:", mode);
@@ -5610,8 +5745,6 @@ class LyricsContainer extends react.Component {
       }
     };
 
-    const { uri } = lyricsState; // Capture the URI for this specific request
-
     // If no display modes are active, just optimize the original lyrics (e.g., to handle note lines)
     if (
       (!displayMode1 || displayMode1 === "none") &&
@@ -5632,7 +5765,16 @@ class LyricsContainer extends react.Component {
       window.dispatchEvent(new CustomEvent('ivLyrics:lyrics-ready', {
         detail: {
           trackInfo: { uri, title: this.state.title, artist: this.state.artist },
-          lyrics: finalLyrics
+          lyrics: finalLyrics,
+          provider: lyricsState.provider || null,
+          karaokeSource: lyricsState.karaokeSource || null,
+          lyricsType: getLyricsModeTypeKey(mode),
+          displayMode1,
+          displayMode2,
+          detectedLanguage: originalLanguage || null,
+          translationTargetLanguage: this.getTranslationTargetLanguage(),
+          translationSourceText: getNonSectionLyricsText(lyrics),
+          presentationComplete: true
         }
       }));
       return;
@@ -5660,7 +5802,16 @@ class LyricsContainer extends react.Component {
         window.dispatchEvent(new CustomEvent('ivLyrics:lyrics-ready', {
           detail: {
             trackInfo: { uri, title: this.state.title, artist: this.state.artist },
-            lyrics: originalLyrics
+            lyrics: originalLyrics,
+            provider: lyricsState.provider || null,
+            karaokeSource: lyricsState.karaokeSource || null,
+            lyricsType: getLyricsModeTypeKey(mode),
+            displayMode1,
+            displayMode2,
+            detectedLanguage: originalLanguage || null,
+            translationTargetLanguage: this.getTranslationTargetLanguage(),
+            translationSourceText: getNonSectionLyricsText(lyrics),
+            presentationComplete: false
           }
         }));
       }
@@ -5741,7 +5892,17 @@ class LyricsContainer extends react.Component {
       window.dispatchEvent(new CustomEvent('ivLyrics:lyrics-ready', {
         detail: {
           trackInfo: { uri, title: this.state.title, artist: this.state.artist },
-          lyrics: finalLyrics
+          lyrics: finalLyrics,
+          provider: lyricsState.provider || null,
+          karaokeSource: lyricsState.karaokeSource || null,
+          lyricsType: getLyricsModeTypeKey(mode),
+          displayMode1,
+          displayMode2,
+          detectedLanguage: originalLanguage || null,
+          translationTargetLanguage: this.getTranslationTargetLanguage(),
+          translationSourceText: getNonSectionLyricsText(lyrics),
+          presentationComplete: (!mode1Active || !!lyricsMode1) &&
+            (!mode2Active || !!lyricsMode2)
         }
       }));
     };
@@ -6756,6 +6917,20 @@ class LyricsContainer extends react.Component {
       ...nextLyrics,
       trackLyricsProviderOverride: null,
     };
+    window.LyricsService?.clearLyricsSnapshot?.(currentUri);
+    window.LyricsService?.publishLyricsSnapshot?.({
+      trackUri: currentUri,
+      trackInfo: {
+        uri: currentUri,
+        title: this.state.title,
+        artist: this.state.artist,
+      },
+      rawResult: CACHE[currentUri],
+      provider: 'local',
+      karaokeSource: nextLyrics.karaokeSource || null,
+      trackLyricsProviderOverride: null,
+      source: 'ivlyrics-page-base',
+    });
 
     this.setState(
       {
@@ -7753,6 +7928,7 @@ class LyricsContainer extends react.Component {
     // Only call lyricsSource on state/mode/translation changes, not every render
     if (
       !isSyncCreatorActive &&
+      !this.state.isLoading &&
       (
         this.lastProcessedUri !== this.state.uri ||
         this.lastProcessedMode !== currentModeKey
@@ -7792,14 +7968,19 @@ class LyricsContainer extends react.Component {
 
     // Gemini 번역이 실제로 로드되었는지 확인 (_dmResults 확인)
     const currentUri = this.state.uri;
+    const sharedPresentationKey = `${this.state.provider || ''}:${displayMode1 || 'none'}:${displayMode2 || 'none'}:${getSyncDataRendererCacheVersion(this.state)}`;
+    const hasLoadedSharedPresentation =
+      this._sharedPresentationKeys?.get(currentUri) === sharedPresentationKey;
     const hasLoadedGeminiTranslation = !!(
       hasGeminiTranslation &&
-      this._dmResults &&
-      this._dmResults[currentUri] &&
-      ((displayMode1?.startsWith("gemini") &&
-        this._dmResults[currentUri].mode1) ||
-        (displayMode2?.startsWith("gemini") &&
-          this._dmResults[currentUri].mode2))
+      (hasLoadedSharedPresentation || (
+        this._dmResults &&
+        this._dmResults[currentUri] &&
+        ((displayMode1?.startsWith("gemini") &&
+          this._dmResults[currentUri].mode1) ||
+          (displayMode2?.startsWith("gemini") &&
+            this._dmResults[currentUri].mode2))
+      ))
     );
 
     const canRegenerateTranslation = hasLoadedGeminiTranslation;
@@ -8077,6 +8258,69 @@ class LyricsContainer extends react.Component {
       }
     }
 
+    const generationStatuses = [
+      this.state.isTranslationLoading && {
+        key: "translation",
+        label: I18n.t("menu.translationLabel") || I18n.t("notifications.requestingTranslation"),
+        description: I18n.t("notifications.requestingTranslation"),
+      },
+      this.state.isPhoneticLoading && {
+        key: "pronunciation",
+        label: I18n.t("menu.pronunciation") || I18n.t("notifications.requestingPronunciation"),
+        description: I18n.t("notifications.requestingPronunciation"),
+      },
+    ].filter(Boolean);
+    const generationStatusStack = generationStatuses.length > 0 &&
+      !isSyncCreatorActive &&
+      !isFullscreenMarketplace
+      ? react.createElement(
+        "div",
+        {
+          className: "lyrics-generation-status-stack",
+          role: "status",
+          "aria-live": "polite",
+          "aria-atomic": "false",
+        },
+        generationStatuses.map((status) => react.createElement(
+          "div",
+          {
+            key: status.key,
+            className: "lyrics-translation-loading-indicator",
+            "data-kind": status.key,
+            dir: "auto",
+          },
+          react.createElement("div", {
+            className: "lyrics-translation-loading-spinner",
+            "aria-hidden": "true",
+          }),
+          react.createElement(
+            "span",
+            {
+              className: "lyrics-translation-loading-label",
+              "aria-hidden": "true",
+            },
+            status.label
+          ),
+          react.createElement(
+            "span",
+            { className: "lyrics-generation-status-description" },
+            status.description
+          )
+        ))
+      )
+      : null;
+    const hasTrackSyncLyrics =
+      (mode === KARAOKE && Array.isArray(this.state.karaoke) && this.state.karaoke.length > 0) ||
+      (mode === SYNCED && Array.isArray(this.state.synced) && this.state.synced.length > 0);
+    const trackSyncAdjustPill = hasTrackSyncLyrics &&
+      !this.state.showMarketplace &&
+      !this.state.isFullscreen &&
+      !isSyncCreatorActive &&
+      renderTrackUri &&
+      typeof TrackSyncAdjustPill !== "undefined"
+      ? react.createElement(TrackSyncAdjustPill, { trackUri: renderTrackUri })
+      : null;
+
     const out = react.createElement(
       "div",
       {
@@ -8145,53 +8389,8 @@ class LyricsContainer extends react.Component {
       shouldRenderStaticBackground && react.createElement("div", {
         className: "lyrics-lyricsContainer-LyricsBackground",
       }),
-      // Phonetic loading indicator
-      this.state.isPhoneticLoading &&
-      !isSyncCreatorActive &&
-      !isFullscreenMarketplace && react.createElement(
-        "div",
-        {
-          className: "lyrics-translation-loading-indicator",
-        },
-        react.createElement(
-          "div",
-          {
-            className: "lyrics-translation-loading-content",
-          },
-          react.createElement("div", {
-            className: "lyrics-translation-loading-spinner",
-          }),
-          react.createElement(
-            "span",
-            null,
-            I18n.t("notifications.requestingPronunciation")
-          )
-        )
-      ),
-      // Translation loading indicator
-      this.state.isTranslationLoading &&
-      !isSyncCreatorActive &&
-      !isFullscreenMarketplace && react.createElement(
-        "div",
-        {
-          className: "lyrics-translation-loading-indicator",
-          style: { top: this.state.isPhoneticLoading ? "100px" : "20px" },
-        },
-        react.createElement(
-          "div",
-          {
-            className: "lyrics-translation-loading-content",
-          },
-          react.createElement("div", {
-            className: "lyrics-translation-loading-spinner",
-          }),
-          react.createElement(
-            "span",
-            null,
-            I18n.t("notifications.requestingTranslation")
-          )
-        )
-      ),
+      generationStatusStack,
+      trackSyncAdjustPill,
       // ===== 플로팅 바 (일반 모드: 전체 표시, 전체화면: 메뉴 토글 방식) =====
       !isFullscreenMarketplace && !isSyncCreatorActive && react.createElement(
         "div",
@@ -8302,13 +8501,7 @@ class LyricsContainer extends react.Component {
           react.createElement(window.IvLyricsLearningMode.StudyButton, {
             disabled: !hasLyrics || this.state.isLoading,
           }),
-          react.createElement(SyncAdjustButtonFluent, {
-            trackUri: this.currentTrackUri,
-            provider: this.state.provider, // Pass provider
-            onOffsetChange: (offset) => {
-              this.forceUpdate();
-            },
-          }),
+          react.createElement(SyncAdjustButtonFluent),
           react.createElement(CommunityVideoButton, {
             trackUri: this.currentTrackUri,
             enabled: effectiveBackgroundMode === "video-background",

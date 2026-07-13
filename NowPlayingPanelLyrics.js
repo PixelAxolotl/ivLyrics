@@ -1533,7 +1533,24 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         lyrics: [],
         currentIndex: 0,
         isPlaying: false,
-        trackUri: null
+        trackUri: null,
+        karaokeSource: null
+    };
+
+    const getSharedLyricsSnapshot = (trackUri = Spicetify.Player.data?.item?.uri) => {
+        if (!trackUri) return null;
+        const snapshot = window.LyricsService?.getLyricsSnapshot?.(trackUri);
+        return snapshot?.trackUri === trackUri ? snapshot : null;
+    };
+
+    const publishPanelLyricsSnapshot = (update = {}) => {
+        const trackUri = update.trackUri || Spicetify.Player.data?.item?.uri;
+        if (!trackUri) return null;
+        return window.LyricsService?.publishLyricsSnapshot?.({
+            ...update,
+            trackUri,
+            source: update.source || 'now-playing-panel'
+        }) || null;
     };
 
     const clearInsertTimer = () => {
@@ -1586,7 +1603,9 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     // ============================================
     const getStorageValue = (key, defaultValue) => {
         try {
-            const value = localStorage.getItem(key);
+            const value = window.ivLyricsStoragePersistence?.getItem?.(key)
+                ?? Spicetify.LocalStorage?.get?.(key)
+                ?? localStorage.getItem(key);
             if (value === null) return defaultValue;
             if (value === "true") return true;
             if (value === "false") return false;
@@ -1955,7 +1974,14 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     };
 
     const getVocalRowsFromLine = (line) => {
-        if (!line?.vocals?.lead?.syllables) return null;
+        if (!Array.isArray(line?.vocals?.lead?.syllables) || line.vocals.lead.syllables.length === 0) return null;
+        const getPartText = (part) => {
+            const directText = typeof part?.text === 'string' ? part.text.trim() : '';
+            if (directText) return directText;
+            return Array.isArray(part?.syllables)
+                ? part.syllables.map(syllable => syllable?.text || '').join('').trim()
+                : '';
+        };
         const rows = [{
             key: line.vocals.lead.id || 'lead',
             role: line.vocals.lead.role || 'lead',
@@ -1967,7 +1993,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             speakerStyle: getPanelSpeakerStyle(line.vocals.lead.speaker, line.vocals.lead['speaker-color'], line.vocals.lead['speaker-fallback']),
             phonetic: line.vocals.lead.phonetic || '',
             translation: line.vocals.lead.translation || '',
-            text: line.vocals.lead.text || '',
+            text: getPartText(line.vocals.lead),
             syllables: splitRenderableSyllables(line.vocals.lead.syllables)
         }];
 
@@ -1985,7 +2011,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                         speakerStyle: getPanelSpeakerStyle(part.speaker, part['speaker-color'], part['speaker-fallback']),
                         phonetic: part.phonetic || '',
                         translation: part.translation || '',
-                        text: part.text || '',
+                        text: getPartText(part),
                         syllables: splitRenderableSyllables(part.syllables)
                     });
                 }
@@ -1995,13 +2021,30 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         return rows.length > 1 ? rows : null;
     };
 
+    const isPanelSectionHeader = (text) => {
+        const normalizedText = String(text || '').trim();
+        if (!/^\s*\[.*\]\s*$/.test(normalizedText)) return false;
+        return [
+            /^\s*\[\s*(verse|chorus|bridge|intro|outro|pre-?chorus|hook|refrain)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
+            /^\s*\[\s*(절|후렴|브릿지|인트로|아웃트로|간주|부분)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
+            /^\s*\[\s*(ヴァース|コーラス|ブリッジ|イントロ|アウトロ)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
+            /^\s*\[\s*(verse|chorus|bridge|intro|outro)\s*(\d+)?\s*(:|：)?\s*[^,\[\]]*\]\s*$/i
+        ].some(pattern => pattern.test(normalizedText));
+    };
+
     const buildPanelTranslationRequests = (lyrics = []) => {
         if (!Array.isArray(lyrics)) return [];
         const requests = [];
         lyrics.forEach((line, lineIndex) => {
+            const lineText = String(line?.originalText || line?.text || '').trim();
+            if (!lineText || isPanelSectionHeader(lineText)) {
+                return;
+            }
+
             const vocalRows = getVocalRowsFromLine(line);
             if (Array.isArray(vocalRows)) {
                 vocalRows.forEach((row, vocalRowIndex) => {
+                    if (!row.text) return;
                     requests.push({
                         lineIndex,
                         vocalRowIndex,
@@ -2014,7 +2057,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             requests.push({
                 lineIndex,
                 vocalRowIndex: null,
-                text: line?.text || line?.originalText || ''
+                text: lineText
             });
         });
         return requests;
@@ -2028,12 +2071,55 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
 
     const applyPanelTranslationResults = (lyrics, requests, phoneticLines, translationLines) => {
         const resultsByLine = new Map();
-        requests.forEach((request, requestIndex) => {
+        let phoneticIndex = 0;
+        let translationIndex = 0;
+        const normalizeForComparison = (text) => String(text || '')
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}\s]/gu, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        const isNoteLine = (text) => {
+            const value = String(text || '').trim();
+            return !value || /^[\s♪♩♫♬·•・。、…~\-]+$/.test(value);
+        };
+        const processPhoneticHyphen = (text) => {
+            const mode = getVisualSetting('phonetic-hyphen-replace', 'keep');
+            if (mode === 'space') return String(text || '').replace(/-/g, ' ');
+            if (mode === 'remove') return String(text || '').replace(/-/g, '');
+            return String(text || '');
+        };
+        const readResultLine = (lines, cursorName) => {
+            let cursor = cursorName === 'phonetic' ? phoneticIndex : translationIndex;
+            while (cursor < lines.length && isPanelSectionHeader(lines[cursor])) {
+                cursor += 1;
+            }
+            const value = String(lines[cursor] || '').trim();
+            if (cursorName === 'phonetic') {
+                phoneticIndex = cursor + 1;
+            } else {
+                translationIndex = cursor + 1;
+            }
+            return value;
+        };
+        requests.forEach((request) => {
+            const normalizedOriginal = normalizeForComparison(request.text);
+            let phonetic = processPhoneticHyphen(readResultLine(phoneticLines, 'phonetic'));
+            let translation = readResultLine(translationLines, 'translation');
+            if (isNoteLine(phonetic) || normalizeForComparison(phonetic) === normalizedOriginal) {
+                phonetic = '';
+            }
+            if (isNoteLine(translation) || normalizeForComparison(translation) === normalizedOriginal) {
+                translation = '';
+            }
+            if (phonetic && translation &&
+                normalizeForComparison(phonetic) === normalizeForComparison(translation)) {
+                phonetic = '';
+            }
             const results = resultsByLine.get(request.lineIndex) || [];
             results.push({
                 ...request,
-                phonetic: String(phoneticLines[requestIndex] || '').trim(),
-                translation: String(translationLines[requestIndex] || '').trim()
+                phonetic,
+                translation
             });
             resultsByLine.set(request.lineIndex, results);
         });
@@ -2042,9 +2128,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             const results = resultsByLine.get(lineIndex) || [];
             const isKaraokeLine = Array.isArray(line?.syllables)
                 || Array.isArray(line?.vocals?.lead?.syllables);
-            const originalText = isKaraokeLine && line?.originalText
-                ? line.originalText
-                : (line?.text || line?.originalText || '');
+            const originalText = line?.originalText || line?.text || '';
             const hasVocalResults = results.some(result => Number.isInteger(result.vocalRowIndex))
                 && line?.vocals?.lead;
 
@@ -3074,8 +3158,18 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     // 패널 가사 메인 컴포넌트
     // ============================================
     const PanelLyrics = () => {
-        const [lyrics, setLyrics] = useState([]);
-        const [karaokeSource, setKaraokeSource] = useState(null);
+        const initialTrackUri = Spicetify.Player.data?.item?.uri || null;
+        const initialSnapshot = getSharedLyricsSnapshot(initialTrackUri);
+        const hasInitialPresentation = Array.isArray(initialSnapshot?.displayLyrics);
+        const hasCompleteInitialPresentation = hasInitialPresentation &&
+            initialSnapshot?.presentationComplete === true;
+        const initialLyrics = hasInitialPresentation
+            ? initialSnapshot.displayLyrics
+            : (currentLyricsState.trackUri === initialTrackUri ? currentLyricsState.lyrics : []);
+        const initialKaraokeSource = initialSnapshot?.karaokeSource
+            || (currentLyricsState.trackUri === initialTrackUri ? currentLyricsState.karaokeSource : null);
+        const [lyrics, setLyrics] = useState(initialLyrics);
+        const [karaokeSource, setKaraokeSource] = useState(initialKaraokeSource);
         const [currentIndex, setCurrentIndex] = useState(0);
         const [activeTrailingInterludeKey, setActiveTrailingInterludeKey] = useState(null);
         // currentTime은 더 이상 상태로 관리하지 않음 - 전역 변수 사용
@@ -3090,12 +3184,43 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         const [isPlaybackPaused, setIsPlaybackPaused] = useState(getPlaybackPaused);
         const containerRef = useRef(null);
         const scrollRef = useRef(null);
-        const lastTrackUri = useRef(null);
+        const lastTrackUri = useRef(
+            hasCompleteInitialPresentation
+                ? initialTrackUri
+                : null
+        );
         const loadingRef = useRef(false);
         const loadSeqRef = useRef(0);
+        const songChangeTimerRef = useRef(null);
+        const offsetLoadSeqRef = useRef(0);
 
         const isActiveLoad = useCallback((loadSeq, trackUri) => {
             return loadSeqRef.current === loadSeq && Spicetify.Player.data?.item?.uri === trackUri;
+        }, []);
+
+        const loadTrackOffset = useCallback(async (trackUri) => {
+            const offsetLoadSeq = ++offsetLoadSeqRef.current;
+            if (!trackUri) {
+                setTrackOffset(0);
+                return;
+            }
+
+            try {
+                const offset = window.LyricsService?.getTrackSyncOffset
+                    ? await window.LyricsService.getTrackSyncOffset(trackUri)
+                    : await window.TrackSyncDB?.getOffset?.(trackUri);
+                if (offsetLoadSeqRef.current === offsetLoadSeq &&
+                    Spicetify.Player.data?.item?.uri === trackUri) {
+                    setTrackOffset(Number(offset) || 0);
+                    panelDebug("[PanelLyrics] Track offset:", Number(offset) || 0);
+                }
+            } catch (error) {
+                if (offsetLoadSeqRef.current === offsetLoadSeq &&
+                    Spicetify.Player.data?.item?.uri === trackUri) {
+                    setTrackOffset(0);
+                }
+                console.warn("[PanelLyrics] Failed to load track offset:", error);
+            }
         }, []);
 
         // LyricsService Extension을 사용해서 가사 직접 불러오기
@@ -3155,6 +3280,15 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 return;
             }
 
+            const [trackLyricsProviderOverride, trackLanguageOverride] = await Promise.all([
+                isLocalTrack ? null : window.LyricsService.getTrackLyricsProviderOverride?.(trackUri),
+                window.LyricsService.getTrackLanguageOverride?.(trackUri)
+            ]);
+            if (!isActiveLoad(loadSeq, loadingForTrackUri)) {
+                return;
+            }
+            trackInfo.languageOverride = trackLanguageOverride || null;
+
             try {
                 // ==========================================
                 // 1단계: 가사만 먼저 로드 (빠르게 표시)
@@ -3162,7 +3296,12 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 // 로컬 곡은 저장된 LRC를 우선하고, 없으면 로컬 조회 지원 provider를 사용한다.
                 let result = isLocalTrack ? getSavedPanelLocalLyrics(trackUri) : null;
                 if (!result) {
-                    result = await window.LyricsService.getLyricsFromProviders(trackInfo);
+                    result = await window.LyricsService.getLyricsFromProviders(
+                        trackInfo,
+                        [],
+                        1,
+                        trackLyricsProviderOverride || null
+                    );
                 }
                 if (isLocalTrack && result && window.PseudoKaraokeService?.applyToResult) {
                     result = await window.PseudoKaraokeService.applyToResult(result, trackInfo);
@@ -3181,9 +3320,14 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     }
 
                     // karaoke (노래방) → synced → unsynced 순서로 선택
-                    let lyricsData = result.karaoke || result.synced || result.unsynced || [];
-                    const isKaraoke = !!result.karaoke;
-                    const nextKaraokeSource = result.karaokeSource || null;
+                    const karaokeModeEnabled = getVisualSetting('karaoke-mode-enabled', true) !== false;
+                    const selectedKaraoke = karaokeModeEnabled ? result.karaoke : null;
+                    let lyricsData = selectedKaraoke || result.synced || result.unsynced || [];
+                    const isKaraoke = !!selectedKaraoke;
+                    const nextKaraokeSource = selectedKaraoke ? (result.karaokeSource || null) : null;
+                    const lyricsType = selectedKaraoke
+                        ? 'karaoke'
+                        : (result.synced ? 'synced' : 'unsynced');
 
                     if (lyricsData.length > 0) {
                         // endTime 계산 (없으면 다음 라인의 startTime 사용)
@@ -3206,23 +3350,43 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                         setKaraokeSource(nextKaraokeSource);
                         currentLyricsState.lyrics = lyricsData;
                         currentLyricsState.trackUri = loadingForTrackUri;
+                        currentLyricsState.karaokeSource = nextKaraokeSource;
+                        publishPanelLyricsSnapshot({
+                            trackUri: loadingForTrackUri,
+                            trackInfo,
+                            rawResult: result,
+                            displayLyrics: lyricsData,
+                            provider: result.provider || null,
+                            karaokeSource: nextKaraokeSource,
+                            lyricsType,
+                            trackLyricsProviderOverride: trackLyricsProviderOverride || null,
+                            displayMode1: null,
+                            displayMode2: null,
+                            translationSourceText: null,
+                            phoneticLines: null,
+                            translationLines: null,
+                            presentationComplete: false
+                        });
                         setCurrentIndex(0);
                         setActiveTrailingInterludeKey(null);
 
-                        // 곡별 싱크 오프셋 가져오기
-                        if (window.TrackSyncDB?.getOffset) {
-                            const offset = await window.TrackSyncDB.getOffset(trackUri);
-                            if (!isActiveLoad(loadSeq, loadingForTrackUri)) {
-                                return;
-                            }
-                            setTrackOffset(offset || 0);
-                            panelDebug("[PanelLyrics] Track offset:", offset || 0);
+                        // 곡별 싱크 오프셋은 가사 스냅샷 재사용 여부와 무관하게 복원한다.
+                        await loadTrackOffset(trackUri);
+                        if (!isActiveLoad(loadSeq, loadingForTrackUri)) {
+                            return;
                         }
 
                         // ==========================================
                         // 2단계: 발음/번역 비동기 요청 (가사 표시 후)
                         // ==========================================
-                        loadTranslationAsync(trackInfo, lyricsData, result.provider, loadSeq);
+                        loadTranslationAsync(
+                            trackInfo,
+                            lyricsData,
+                            result.provider,
+                            loadSeq,
+                            lyricsType,
+                            nextKaraokeSource
+                        );
                     } else {
                         panelDebug("[PanelLyrics] No lyrics in result");
                         setLyrics([]);
@@ -3246,11 +3410,18 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     loadingRef.current = false;
                 }
             }
-        }, []);
+        }, [loadTrackOffset]);
 
         // 발음/번역 비동기 로드 (가사 표시 후 백그라운드에서)
         // 사용자 설정에 따라 발음/번역 요청 여부 결정
-        const loadTranslationAsync = useCallback(async (trackInfo, lyricsData, provider, loadSeq) => {
+        const loadTranslationAsync = useCallback(async (
+            trackInfo,
+            lyricsData,
+            provider,
+            loadSeq,
+            lyricsType,
+            karaokeSource
+        ) => {
             if (!window.Translator?.callGemini) {
                 panelDebug("[PanelLyrics] Translator not available");
                 return;
@@ -3266,87 +3437,137 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 const lyricsText = translationRequests.map(request => request.text).join('\n');
                 const trackId = trackInfo.trackId;
 
-                // 언어 감지 (LyricsService.detectLanguage 사용)
-                // modeKey는 CONFIG의 translation-mode 키와 동일해야 함 (예: "japanese", "korean")
-                // LyricsService.detectLanguage는 언어 코드(ja, ko, zh 등)를 반환
-                const langCodeToKey = {
-                    'ja': 'japanese',
-                    'ko': 'korean',
-                    'zh': 'chinese',
-                    'ru': 'russian',
-                    'vi': 'vietnamese',
-                    'de': 'german',
-                    'es': 'spanish',
-                    'fr': 'french',
-                    'it': 'italian',
-                    'pt': 'portuguese',
-                    'nl': 'dutch',
-                    'pl': 'polish',
-                    'tr': 'turkish',
-                    'ar': 'arabic',
-                    'hi': 'hindi',
-                    'th': 'thai',
-                    'id': 'indonesian',
-                    'en': 'english'
-                };
-
-                let modeKey = 'english';
+                // 페이지와 동일하게 곡별/전역 override를 먼저 적용한 뒤
+                // Intl.DisplayNames로 translation-mode 키를 만든다.
+                const configuredLanguageOverride = getStorageValue(
+                    'ivLyrics:visual:translate:detect-language-override',
+                    'off'
+                );
+                const detectedLanguage = trackInfo.languageOverride
+                    || (configuredLanguageOverride && configuredLanguageOverride !== 'off'
+                        ? configuredLanguageOverride
+                        : window.LyricsService?.detectLanguage?.(lyricsData));
+                let friendlyLanguage = null;
                 try {
-                    if (window.LyricsService?.detectLanguage) {
-                        // LyricsService.detectLanguage는 배열을 받음
-                        const detected = window.LyricsService.detectLanguage(lyricsData);
-                        if (detected && langCodeToKey[detected]) {
-                            modeKey = langCodeToKey[detected];
-                        }
-                        panelDebug(`[PanelLyrics] Detected language code: ${detected} -> modeKey: ${modeKey}`);
-                    } else {
-                        // 폴백: 간단한 유니코드 감지
-                        if (/[\u3040-\u309F\u30A0-\u30FF]/.test(lyricsText)) {
-                            modeKey = 'japanese';
-                        } else if (/[\uAC00-\uD7AF]/.test(lyricsText)) {
-                            modeKey = 'korean';
-                        } else if (/[\u4E00-\u9FFF]/.test(lyricsText)) {
-                            modeKey = 'chinese';
-                        } else if (/[а-яА-ЯёЁ]/.test(lyricsText)) {
-                            modeKey = 'russian';
-                        }
-                        panelDebug(`[PanelLyrics] Fallback language detection: ${modeKey}`);
+                    if (detectedLanguage) {
+                        friendlyLanguage = new Intl.DisplayNames(['en'], { type: 'language' })
+                            .of(String(detectedLanguage).split('-')[0])
+                            ?.toLowerCase();
                     }
-                } catch (e) {
-                    console.warn("[PanelLyrics] Language detection failed:", e);
-                    // 폴백: 간단한 감지
-                    if (/[\u3040-\u309F\u30A0-\u30FF]/.test(lyricsText)) {
-                        modeKey = 'japanese';
-                    } else if (/[\uAC00-\uD7AF]/.test(lyricsText)) {
-                        modeKey = 'korean';
-                    } else if (/[\u4E00-\u9FFF]/.test(lyricsText)) {
-                        modeKey = 'chinese';
-                    }
+                } catch (error) {
+                    // Unsupported language tags fall back to the generic Gemini settings.
                 }
+                const modeKey = friendlyLanguage || 'gemini';
+                panelDebug(`[PanelLyrics] Detected language: ${detectedLanguage} -> modeKey: ${modeKey}`);
 
                 // 사용자 설정에서 발음/번역 모드 확인
                 const displayMode1 = window.CONFIG?.visual?.[`translation-mode:${modeKey}`] ||
                     localStorage.getItem(`ivLyrics:visual:translation-mode:${modeKey}`) || "none";
                 const displayMode2 = window.CONFIG?.visual?.[`translation-mode-2:${modeKey}`] ||
                     localStorage.getItem(`ivLyrics:visual:translation-mode-2:${modeKey}`) || "none";
+                const configuredTargetLanguage = getStorageValue(
+                    'ivLyrics:visual:translate:target-language',
+                    'auto'
+                );
+                const configuredInterfaceLanguage = getStorageValue(
+                    'ivLyrics:visual:language',
+                    null
+                );
+                const translationTargetLanguage = configuredTargetLanguage && configuredTargetLanguage !== 'auto'
+                    ? configuredTargetLanguage
+                    : (window.I18n?.getCurrentLanguage?.()
+                        || configuredInterfaceLanguage
+                        || Spicetify.Locale?.getLocale?.()?.split('-')[0]
+                        || 'en');
+
+                const publishCurrentPresentation = (displayLyrics, extra = {}) => {
+                    publishPanelLyricsSnapshot({
+                        trackUri: trackInfo.uri,
+                        trackInfo,
+                        displayLyrics,
+                        provider,
+                        karaokeSource,
+                        lyricsType,
+                        displayMode1,
+                        displayMode2,
+                        detectedLanguage: detectedLanguage || null,
+                        translationTargetLanguage,
+                        translationSourceText: lyricsText,
+                        presentationComplete: true,
+                        ...extra
+                    });
+                };
 
                 panelDebug(`[PanelLyrics] Language: ${modeKey}, Mode1: ${displayMode1}, Mode2: ${displayMode2}`);
 
                 // 발음/번역이 모두 비활성화되어 있으면 스킵
                 if ((!displayMode1 || displayMode1 === "none") && (!displayMode2 || displayMode2 === "none")) {
                     panelDebug("[PanelLyrics] Translation/phonetic disabled for this language");
+                    publishCurrentPresentation(lyricsData, {
+                        phoneticLines: [],
+                        translationLines: []
+                    });
                     return;
                 }
 
                 // 발음이 필요한지, 번역이 필요한지 확인
-                const needPhonetic = displayMode1 === "gemini_romaji" || displayMode2 === "gemini_romaji";
-                const needTranslation = (displayMode1 && displayMode1 !== "none" && displayMode1 !== "gemini_romaji") ||
-                    (displayMode2 && displayMode2 !== "none" && displayMode2 !== "gemini_romaji");
+                const activeModes = [displayMode1, displayMode2]
+                    .filter(mode => mode && mode !== 'none');
+                const needPhonetic = activeModes.includes('gemini_romaji');
+                const translationMode = [...activeModes]
+                    .reverse()
+                    .find(mode => mode !== 'gemini_romaji') || null;
+                const needTranslation = !!translationMode;
 
                 panelDebug(`[PanelLyrics] Need phonetic: ${needPhonetic}, Need translation: ${needTranslation}`);
 
                 let phoneticLines = [];
                 let translationLines = [];
+
+                const convertTraditionalMode = async (mode) => {
+                    if (!mode || String(mode).startsWith('gemini') || !window.Translator || !detectedLanguage) {
+                        return [];
+                    }
+
+                    const translator = new window.Translator(detectedLanguage);
+                    const languageCode = String(detectedLanguage).toLowerCase();
+                    const convertLine = async (text) => {
+                        if (languageCode.startsWith('ja')) {
+                            const japaneseModes = {
+                                romaji: { target: 'romaji', mode: 'spaced' },
+                                furigana: { target: 'hiragana', mode: 'furigana' },
+                                hiragana: { target: 'hiragana', mode: 'normal' },
+                                katakana: { target: 'katakana', mode: 'normal' }
+                            };
+                            const settings = japaneseModes[mode];
+                            return settings
+                                ? translator.romajifyText(text, settings.target, settings.mode)
+                                : text;
+                        }
+                        if (languageCode.startsWith('ko')) {
+                            return mode === 'romaja'
+                                ? translator.convertToRomaja(text, mode)
+                                : text;
+                        }
+                        if (languageCode.startsWith('zh')) {
+                            if (mode === 'pinyin') {
+                                return translator.convertToPinyin(text, {
+                                    toneType: 'mark',
+                                    type: 'string'
+                                });
+                            }
+                            if (languageCode.startsWith('zh-hant')) {
+                                const target = { cn: 'cn', hk: 'hk', tw: 'tw' }[mode];
+                                return target ? translator.convertChinese(text, 't', target) : text;
+                            }
+                            const target = { hk: 'hk', tw: 'tw' }[mode];
+                            return target ? translator.convertChinese(text, 'cn', target) : text;
+                        }
+                        return text;
+                    };
+
+                    return Promise.all(translationRequests.map(request => convertLine(request.text)));
+                };
 
                 // 발음 요청 (필요한 경우에만)
                 if (needPhonetic) {
@@ -3370,15 +3591,17 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     if (!isActiveLoad(loadSeq, trackInfo.uri)) {
                         return;
                     }
-                    panelDebug("[PanelLyrics] Requesting translation...");
-                    const translationResponse = await window.Translator.callGemini({
-                        trackId,
-                        artist: trackInfo.artist,
-                        title: trackInfo.title,
-                        text: lyricsText,
-                        wantSmartPhonetic: false,
-                        provider
-                    });
+                    panelDebug(`[PanelLyrics] Requesting display mode: ${translationMode}`);
+                    const translationResponse = String(translationMode).startsWith('gemini')
+                        ? await window.Translator.callGemini({
+                            trackId,
+                            artist: trackInfo.artist,
+                            title: trackInfo.title,
+                            text: lyricsText,
+                            wantSmartPhonetic: false,
+                            provider
+                        })
+                        : { translation: await convertTraditionalMode(translationMode) };
                     if (!isActiveLoad(loadSeq, trackInfo.uri)) {
                         return;
                     }
@@ -3404,6 +3627,15 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     panelDebug("[PanelLyrics] Applied translation:", phoneticLines.length, "phonetic,", translationLines.length, "translation");
                     setLyrics(updatedLyrics);
                     currentLyricsState.lyrics = updatedLyrics;
+                    publishCurrentPresentation(updatedLyrics, {
+                        phoneticLines,
+                        translationLines
+                    });
+                } else {
+                    publishCurrentPresentation(lyricsData, {
+                        phoneticLines: [],
+                        translationLines: []
+                    });
                 }
             } catch (error) {
                 console.warn("[PanelLyrics] Translation failed:", error);
@@ -3426,12 +3658,19 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 setKaraokeSource(null);
                 setCurrentIndex(0);
                 setActiveTrailingInterludeKey(null);
+                setTrackOffset(0);
                 currentLyricsState.lyrics = [];
                 currentLyricsState.currentIndex = 0;
 
+                loadTrackOffset(capturedUri);
+
                 // 약간의 딜레이 후 로드 (트랙 정보가 완전히 업데이트될 때까지 대기)
                 // 캡처한 URI를 전달하여 딜레이 중 곡이 변경되면 무시
-                setTimeout(() => {
+                if (songChangeTimerRef.current) {
+                    clearTimeout(songChangeTimerRef.current);
+                }
+                songChangeTimerRef.current = setTimeout(() => {
+                    songChangeTimerRef.current = null;
                     loadLyricsFromExtension(true, capturedUri);
                 }, 300);
             };
@@ -3459,6 +3698,19 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     event.detail?.name === 'prefer-lyrics-type-over-provider-order') {
                     const currentUri = Spicetify.Player.data?.item?.uri;
                     if (currentUri) {
+                        loadSeqRef.current += 1;
+                        loadingRef.current = false;
+                        lastTrackUri.current = null;
+                        loadLyricsFromExtension(true, currentUri);
+                    }
+                }
+                if (event.detail?.name?.startsWith?.('translation-mode') ||
+                    event.detail?.name === 'translate:target-language' ||
+                    event.detail?.name === 'translate:detect-language-override' ||
+                    event.detail?.name === 'phonetic-hyphen-replace') {
+                    const currentUri = Spicetify.Player.data?.item?.uri;
+                    if (currentUri) {
+                        window.LyricsService?.clearLyricsSnapshot?.(currentUri);
                         loadSeqRef.current += 1;
                         loadingRef.current = false;
                         lastTrackUri.current = null;
@@ -3496,6 +3748,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             const handleOffsetChange = (event) => {
                 const currentUri = Spicetify.Player.data?.item?.uri;
                 if (event.detail?.trackUri === currentUri) {
+                    offsetLoadSeqRef.current += 1;
                     setTrackOffset(event.detail.offset || 0);
                     panelDebug("[PanelLyrics] Offset changed:", event.detail.offset);
                 }
@@ -3516,6 +3769,10 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 }
                 loadSeqRef.current += 1;
                 loadingRef.current = false;
+                if (songChangeTimerRef.current) {
+                    clearTimeout(songChangeTimerRef.current);
+                    songChangeTimerRef.current = null;
+                }
                 lastTrackUri.current = null;
                 loadLyricsFromExtension(true, currentUri);
             };
@@ -3536,7 +3793,28 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 setIsPlaybackPaused(getPlaybackPaused());
             };
 
+            const handleSharedLyricsUpdate = (event) => {
+                const detail = event.detail || {};
+                const currentUri = Spicetify.Player.data?.item?.uri;
+                if (!['ivlyrics-page', 'external-update', 'now-playing-panel'].includes(detail.source) ||
+                    !currentUri || detail.trackUri !== currentUri || !Array.isArray(detail.displayLyrics)) {
+                    return;
+                }
+
+                if (detail.source !== 'now-playing-panel') {
+                    loadSeqRef.current += 1;
+                    loadingRef.current = false;
+                }
+                lastTrackUri.current = currentUri;
+                setLyrics(detail.displayLyrics);
+                setKaraokeSource(detail.karaokeSource || null);
+                currentLyricsState.lyrics = detail.displayLyrics;
+                currentLyricsState.trackUri = currentUri;
+                currentLyricsState.karaokeSource = detail.karaokeSource || null;
+            };
+
             handlePlaybackChange();
+            loadTrackOffset(Spicetify.Player.data?.item?.uri || null);
             Spicetify.Player.addEventListener('songchange', handleSongChange);
             Spicetify.Player?.addEventListener?.('onplaypause', handlePlaybackChange);
             Spicetify.Player?.addEventListener?.('songchange', handlePlaybackChange);
@@ -3545,11 +3823,19 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             window.addEventListener('ivLyrics:global-offset-changed', handleGlobalOffsetChange);
             window.addEventListener('ivLyrics:sync-data-updated', handleSyncDataUpdated);
             window.addEventListener('ivLyrics:local-lyrics-updated', handleLocalLyricsUpdated);
+            window.addEventListener('ivLyrics:shared-lyrics-updated', handleSharedLyricsUpdate);
 
             // 초기 로드 (현재 재생 중인 곡)
             loadLyricsFromExtension();
 
             return () => {
+                loadSeqRef.current += 1;
+                offsetLoadSeqRef.current += 1;
+                loadingRef.current = false;
+                if (songChangeTimerRef.current) {
+                    clearTimeout(songChangeTimerRef.current);
+                    songChangeTimerRef.current = null;
+                }
                 Spicetify.Player.removeEventListener('songchange', handleSongChange);
                 Spicetify.Player?.removeEventListener?.('onplaypause', handlePlaybackChange);
                 Spicetify.Player?.removeEventListener?.('songchange', handlePlaybackChange);
@@ -3558,8 +3844,9 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 window.removeEventListener('ivLyrics:global-offset-changed', handleGlobalOffsetChange);
                 window.removeEventListener('ivLyrics:sync-data-updated', handleSyncDataUpdated);
                 window.removeEventListener('ivLyrics:local-lyrics-updated', handleLocalLyricsUpdated);
+                window.removeEventListener('ivLyrics:shared-lyrics-updated', handleSharedLyricsUpdate);
             };
-        }, [loadLyricsFromExtension]);
+        }, [loadLyricsFromExtension, loadTrackOffset]);
 
         // 앨범 색상을 가져와서 카드 배경에 적용
         useEffect(() => {
@@ -4697,6 +4984,17 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     };
 
     const handleSettingsEvent = (event) => {
+        const settingName = event.detail?.name || '';
+        if (settingName.startsWith('translation-mode') ||
+            settingName === 'translate:target-language' ||
+            settingName === 'translate:detect-language-override' ||
+            settingName === 'phonetic-hyphen-replace' ||
+            settingName === 'prefer-sync-data-provider' ||
+            settingName === 'prefer-lyrics-type-over-provider-order' ||
+            settingName.includes('lyrics-provider')) {
+            window.LyricsService?.clearLyricsSnapshot?.();
+        }
+
         if (event.detail?.name === 'panel-lyrics-enabled') {
             if (event.detail.value) {
                 startRuntime();
@@ -4754,15 +5052,17 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             }
         },
         updateLyrics: (lyrics, index) => {
+            const trackUri = Spicetify.Player.data?.item?.uri || null;
             currentLyricsState.lyrics = lyrics || [];
             currentLyricsState.currentIndex = index || 0;
-            window.dispatchEvent(new CustomEvent('ivlyrics-panel-lyrics-update', {
-                detail: {
-                    lyrics: currentLyricsState.lyrics,
-                    currentIndex: currentLyricsState.currentIndex
-                }
-            }));
+            currentLyricsState.trackUri = trackUri;
+            publishPanelLyricsSnapshot({
+                trackUri,
+                displayLyrics: currentLyricsState.lyrics,
+                source: 'external-update'
+            });
         },
+        getLyricsSnapshot: (trackUri) => getSharedLyricsSnapshot(trackUri),
         updateStyles: updateStyles,
         updateCSSVariables: updateCSSVariables,
         destroy: () => {

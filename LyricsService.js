@@ -5534,6 +5534,94 @@
     // LyricsService - 통합 API
     // 다른 모듈에서 가사/번역/발음을 가져오는 통합 인터페이스
     // ============================================
+    const lyricsPresentationSnapshots = new Map();
+    const lyricsProviderInflightRequests = new Map();
+    const trackOverrideDatabases = new Map();
+    let lyricsProviderRequestGeneration = 0;
+    const MAX_LYRICS_PRESENTATION_SNAPSHOTS = 8;
+
+    const getRawLyricsPresentationSignature = (result) => {
+        if (!result || typeof result !== 'object') return '';
+        let hash = 2166136261;
+        const lengths = [];
+        const resultIdentity = [
+            result.provider || '',
+            result.cacheVersion || '',
+            result.karaokeSource || '',
+            result.providerSelectionPolicy || '',
+            result.syncDataRendererVersion || '',
+            result.pseudoKaraokeCacheVersion || ''
+        ].join(':');
+        for (const type of ['karaoke', 'synced', 'unsynced']) {
+            const lines = Array.isArray(result[type]) ? result[type] : [];
+            lengths.push(lines.length);
+            for (const line of lines) {
+                let value;
+                try {
+                    value = JSON.stringify({
+                        text: line?.text,
+                        originalText: line?.originalText,
+                        startTime: line?.startTime,
+                        endTime: line?.endTime,
+                        speaker: line?.speaker,
+                        speakerColor: line?.['speaker-color'],
+                        syllables: line?.syllables,
+                        vocals: line?.vocals
+                    });
+                } catch (error) {
+                    value = String(line?.originalText || line?.text || '');
+                }
+                value = String(value || '').normalize('NFC');
+                for (const char of `${type}:${value}\n`) {
+                    hash ^= char.codePointAt(0) || 0;
+                    hash = Math.imul(hash, 16777619);
+                }
+            }
+        }
+        return `${resultIdentity}:${lengths.join(':')}:${(hash >>> 0).toString(36)}`;
+    };
+
+    const openTrackOverrideDatabase = (dbName, storeName) => {
+        const cacheKey = `${dbName}:${storeName}`;
+        if (trackOverrideDatabases.has(cacheKey)) {
+            return trackOverrideDatabases.get(cacheKey);
+        }
+
+        const openPromise = new Promise((resolve, reject) => {
+            const request = indexedDB.open(dbName, 1);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve(request.result);
+            request.onupgradeneeded = (event) => {
+                const db = event.target.result;
+                if (!db.objectStoreNames.contains(storeName)) {
+                    db.createObjectStore(storeName);
+                }
+            };
+        }).catch((error) => {
+            trackOverrideDatabases.delete(cacheKey);
+            throw error;
+        });
+
+        trackOverrideDatabases.set(cacheKey, openPromise);
+        return openPromise;
+    };
+
+    const readTrackOverride = async (dbName, storeName, trackUri) => {
+        if (!trackUri || typeof indexedDB === 'undefined') return null;
+        try {
+            const db = await openTrackOverrideDatabase(dbName, storeName);
+            return await new Promise((resolve, reject) => {
+                const transaction = db.transaction([storeName], 'readonly');
+                const request = transaction.objectStore(storeName).get(trackUri);
+                request.onsuccess = () => resolve(request.result || null);
+                request.onerror = () => reject(request.error);
+            });
+        } catch (error) {
+            console.warn(`[LyricsService] Failed to read ${storeName}:`, error);
+            return null;
+        }
+    };
+
     const LyricsService = {
         // 버전 정보
         version: "1.0.0",
@@ -5543,6 +5631,97 @@
 
         // API 트래커 접근
         tracker: ApiTracker,
+
+        publishLyricsSnapshot(update = {}) {
+            const trackUri = update.trackUri || update.trackInfo?.uri || update.rawResult?.uri;
+            if (!trackUri) return null;
+
+            const previous = lyricsPresentationSnapshots.get(trackUri) || {};
+            const definedUpdate = Object.fromEntries(
+                Object.entries(update).filter(([, value]) => value !== undefined)
+            );
+            const nextProvider = definedUpdate.provider || definedUpdate.rawResult?.provider || null;
+            const sourceChanged = !!definedUpdate.rawResult && !!previous.rawResult && (
+                (nextProvider || '') !== (previous.provider || previous.rawResult?.provider || '') ||
+                (definedUpdate.trackLyricsProviderOverride || '') !== (previous.trackLyricsProviderOverride || '') ||
+                getRawLyricsPresentationSignature(definedUpdate.rawResult) !==
+                    getRawLyricsPresentationSignature(previous.rawResult)
+            );
+            const snapshot = {
+                ...(sourceChanged ? {
+                    trackUri: previous.trackUri,
+                    revision: previous.revision
+                } : previous),
+                ...definedUpdate,
+                trackUri,
+                revision: (previous.revision || 0) + 1,
+                updatedAt: Date.now()
+            };
+
+            if (!Object.prototype.hasOwnProperty.call(definedUpdate, 'provider') &&
+                !snapshot.provider && snapshot.rawResult?.provider) {
+                snapshot.provider = snapshot.rawResult.provider;
+            }
+            if (!Object.prototype.hasOwnProperty.call(definedUpdate, 'karaokeSource') &&
+                !snapshot.karaokeSource && snapshot.rawResult?.karaokeSource) {
+                snapshot.karaokeSource = snapshot.rawResult.karaokeSource;
+            }
+
+            lyricsPresentationSnapshots.delete(trackUri);
+            lyricsPresentationSnapshots.set(trackUri, snapshot);
+            while (lyricsPresentationSnapshots.size > MAX_LYRICS_PRESENTATION_SNAPSHOTS) {
+                const oldestKey = lyricsPresentationSnapshots.keys().next().value;
+                lyricsPresentationSnapshots.delete(oldestKey);
+            }
+
+            window.dispatchEvent(new CustomEvent('ivLyrics:shared-lyrics-updated', {
+                detail: snapshot
+            }));
+            return snapshot;
+        },
+
+        getLyricsSnapshot(trackUri) {
+            if (!trackUri) return null;
+            const snapshot = lyricsPresentationSnapshots.get(trackUri) || null;
+            if (snapshot) {
+                lyricsPresentationSnapshots.delete(trackUri);
+                lyricsPresentationSnapshots.set(trackUri, snapshot);
+            }
+            return snapshot;
+        },
+
+        clearLyricsSnapshot(trackUri) {
+            lyricsProviderRequestGeneration += 1;
+            if (trackUri) {
+                return lyricsPresentationSnapshots.delete(trackUri);
+            }
+            lyricsPresentationSnapshots.clear();
+            return true;
+        },
+
+        getTrackLanguageOverride(trackUri) {
+            return readTrackOverride(
+                'ivLyrics-lang-db',
+                'track-language-overrides',
+                trackUri
+            );
+        },
+
+        getTrackLyricsProviderOverride(trackUri) {
+            return readTrackOverride(
+                'ivLyrics-provider-db',
+                'track-lyrics-provider-overrides',
+                trackUri
+            );
+        },
+
+        getTrackSyncOffset(trackUri) {
+            return readTrackOverride(
+                'ivLyrics-db',
+                'track-sync-offsets',
+                trackUri
+            ).then((offset) => Number(offset) || 0);
+        },
 
         // Track ID / local track 판별
         trackIdentity: TrackIdentity,
@@ -5601,8 +5780,34 @@
         async getLyricsFromProviders(info, providerOrder = [], mode = 1, forcedProviderId = null) {
             // LyricsAddonManager를 통해 가사 가져오기
             if (window.LyricsAddonManager) {
-                const result = await window.LyricsAddonManager.getLyrics(info, forcedProviderId);
-                return result;
+                const requestGeneration = lyricsProviderRequestGeneration;
+                const requestKey = `${requestGeneration}:${info?.uri || ''}:${forcedProviderId || 'auto'}`;
+                if (lyricsProviderInflightRequests.has(requestKey)) {
+                    return lyricsProviderInflightRequests.get(requestKey);
+                }
+
+                const request = window.LyricsAddonManager.getLyrics(info, forcedProviderId)
+                    .then((result) => {
+                        if (requestGeneration === lyricsProviderRequestGeneration &&
+                            result && !result.error && info?.uri) {
+                            this.publishLyricsSnapshot({
+                                trackUri: info.uri,
+                                trackInfo: info,
+                                rawResult: result,
+                                provider: result.provider || null,
+                                karaokeSource: result.karaokeSource || null,
+                                trackLyricsProviderOverride: forcedProviderId || null,
+                                source: 'lyrics-service'
+                            });
+                        }
+                        return result;
+                    })
+                    .finally(() => {
+                        lyricsProviderInflightRequests.delete(requestKey);
+                    });
+
+                lyricsProviderInflightRequests.set(requestKey, request);
+                return request;
             }
 
             return { error: "No lyrics providers registered", uri: info.uri };
@@ -6260,6 +6465,13 @@
         if (window.StorageManager && typeof window.StorageManager.getItem === 'function') {
             return window.StorageManager.getItem(key);
         }
+        if (window.ivLyricsStoragePersistence &&
+            typeof window.ivLyricsStoragePersistence.getItem === 'function') {
+            const persistedValue = window.ivLyricsStoragePersistence.getItem(key);
+            if (persistedValue !== null && persistedValue !== undefined) {
+                return persistedValue;
+            }
+        }
         const spicetifyValue = Spicetify.LocalStorage.get(key);
         if (spicetifyValue !== null && spicetifyValue !== undefined) {
             return spicetifyValue;
@@ -6297,6 +6509,10 @@
         if (window.I18n && typeof window.I18n.getCurrentLanguage === 'function') {
             return window.I18n.getCurrentLanguage();
         }
+        const configuredLanguage = getStorageItem("ivLyrics:visual:language");
+        if (configuredLanguage) {
+            return configuredLanguage;
+        }
         return Spicetify.Locale?.getLocale()?.split('-')[0] || 'en';
     }
 
@@ -6304,7 +6520,7 @@
     function getTranslationTargetLanguage() {
         // window.CONFIG가 초기화되지 않았을 수 있으므로 localStorage도 확인
         const targetLang = window.CONFIG?.visual?.["translate:target-language"] ||
-            localStorage.getItem("ivLyrics:visual:translate:target-language");
+            getStorageItem("ivLyrics:visual:translate:target-language");
         if (targetLang && targetLang !== "auto") {
             return targetLang;
         }
@@ -6532,7 +6748,14 @@
                         });
 
                         if (result) {
-                            LyricsCache.setTranslation(finalTrackId, userLang, wantSmartPhonetic, result, provider, sourceHash).catch(() => { });
+                            await LyricsCache.setTranslation(
+                                finalTrackId,
+                                userLang,
+                                wantSmartPhonetic,
+                                result,
+                                provider,
+                                sourceHash
+                            ).catch(() => { });
                             return result;
                         }
                     } catch (e) {
@@ -7484,9 +7707,12 @@
             });
         },
 
-        async resendWithNewOffset(sendReason = 'explicit') {
-            // 오프셋 캐시 초기화
-            this._offsetCache = {};
+        async resendWithNewOffset(sendReason = 'explicit', offsetUpdate = null) {
+            const trackUri = offsetUpdate?.trackUri;
+            const trackOffset = Number(offsetUpdate?.offset);
+            this._offsetCache = trackUri && Number.isFinite(trackOffset)
+                ? { [trackUri]: trackOffset }
+                : {};
             if (this._lastTrackInfo && this._lastLyrics) {
                 helperDebug('[OverlaySender] 가사 재전송 (싱크 반영)');
                 await this.sendLyrics(this._lastTrackInfo, this._lastLyrics, true, sendReason);
@@ -7625,8 +7851,8 @@
                 this.resendWithNewOffset();
             };
 
-            this._offsetChangedListener = () => {
-                this.resendWithNewOffset();
+            this._offsetChangedListener = (event) => {
+                this.resendWithNewOffset('offset-event', event.detail || null);
             };
 
             // ivLyrics 페이지에서 가사가 준비되면 오버레이로 전송
@@ -8027,8 +8253,12 @@
             }
         },
         resendWithNewOffset: {
-            value: async function (sendReason = 'explicit') {
-                this._offsetCache = {};
+            value: async function (sendReason = 'explicit', offsetUpdate = null) {
+                const trackUri = offsetUpdate?.trackUri;
+                const trackOffset = Number(offsetUpdate?.offset);
+                this._offsetCache = trackUri && Number.isFinite(trackOffset)
+                    ? { [trackUri]: trackOffset }
+                    : {};
                 if (this._lastTrackInfo && this._lastLyrics) {
                     helperDebug('[lyricsHelperSender] 가사 재전송 (싱크 반영)');
                     await this.sendLyrics(this._lastTrackInfo, this._lastLyrics, true, sendReason);
@@ -8073,8 +8303,8 @@
                     this.resendWithNewOffset();
                 };
 
-                this._offsetChangedListener = () => {
-                    this.resendWithNewOffset();
+                this._offsetChangedListener = (event) => {
+                    this.resendWithNewOffset('offset-event', event.detail || null);
                 };
 
                 this._lyricsReadyListener = (e) => {
@@ -8411,6 +8641,32 @@
 
 
     window.LyricsService = LyricsService;
+
+    if (window.__ivLyricsSnapshotReadyListener) {
+        window.removeEventListener('ivLyrics:lyrics-ready', window.__ivLyricsSnapshotReadyListener);
+    }
+    window.__ivLyricsSnapshotReadyListener = (event) => {
+        const detail = event.detail || {};
+        const trackUri = detail.trackInfo?.uri || detail.trackUri;
+        if (!trackUri || !Array.isArray(detail.lyrics)) return;
+
+        LyricsService.publishLyricsSnapshot({
+            trackUri,
+            trackInfo: detail.trackInfo || { uri: trackUri },
+            displayLyrics: detail.lyrics,
+            provider: detail.provider,
+            karaokeSource: detail.karaokeSource,
+            lyricsType: detail.lyricsType,
+            displayMode1: detail.displayMode1,
+            displayMode2: detail.displayMode2,
+            detectedLanguage: detail.detectedLanguage,
+            translationTargetLanguage: detail.translationTargetLanguage,
+            translationSourceText: detail.translationSourceText,
+            presentationComplete: detail.presentationComplete,
+            source: 'ivlyrics-page'
+        });
+    };
+    window.addEventListener('ivLyrics:lyrics-ready', window.__ivLyricsSnapshotReadyListener);
 
     // OverlaySender 초기화 및 전역 등록
     OverlaySender.init();

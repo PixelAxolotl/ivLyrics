@@ -1702,14 +1702,17 @@ const Utils = {
     }
   },
 
-  async setTrackSyncOffset(trackUri, offset) {
+  async setTrackSyncOffset(trackUri, offset, options = {}) {
     if (!trackUri) return;
+    const shouldDispatch = options.dispatch !== false;
     try {
       await TrackSyncDB.setOffset(trackUri, offset);
-      // Dispatch custom event to notify offset change
-      window.dispatchEvent(new CustomEvent('ivLyrics:offset-changed', {
-        detail: { trackUri, offset }
-      }));
+      if (shouldDispatch) {
+        // Dispatch custom event to notify offset change
+        window.dispatchEvent(new CustomEvent('ivLyrics:offset-changed', {
+          detail: { trackUri, offset }
+        }));
+      }
     } catch (error) {
       console.error("[ivLyrics] Failed to set track sync offset:", error);
     }

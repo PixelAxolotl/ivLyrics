@@ -1514,12 +1514,14 @@ const getTrackBackgroundOptions = () => {
 };
 
 // 최적화 #5 - 재사용 가능한 Adjust 버튼 컴포넌트
-const AdjustButton = ({ value, onClick }) => {
+const AdjustButton = ({ value, onClick, ariaLabel = null }) => {
   return react.createElement(
     "button",
     {
+      type: "button",
       className: "ivlyrics-fluent-btn ivlyrics-adjust-btn",
       onClick,
+      "aria-label": ariaLabel || value,
     },
     value
   );
@@ -2336,6 +2338,7 @@ const TranslationMenu = react.memo(({ friendlyLanguage, hasTranslation }) => {
         }
 
         // 번역 캐시 클리어 및 강제 리로드
+        window.LyricsService?.clearLyricsSnapshot?.(trackUri);
         if (window.lyricContainer) {
           window.lyricContainer._dmResults = {};
           window.lyricContainer.lastProcessedUri = null;
@@ -2709,12 +2712,184 @@ const TrackBackgroundButton = react.memo(
   }
 );
 
-const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange }) => {
-  const [isOpen, setIsOpen] = useState(false);
+const clampSyncOffset = (value) => {
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue)
+    ? Math.max(-10000, Math.min(10000, Math.round(numericValue)))
+    : 0;
+};
+
+const formatSyncOffset = (value) => {
+  const safeOffset = clampSyncOffset(value);
+  return `${safeOffset > 0 ? "+" : ""}${safeOffset}ms`;
+};
+
+const TrackSyncAdjustPill = react.memo(({ trackUri }) => {
   const [offset, setOffset] = useState(0);
+  const activeTrackUriRef = useRef(trackUri || null);
+  const optimisticOffsetRef = useRef(0);
+  const loadSeqRef = useRef(0);
+  const pendingWriteRef = useRef(null);
+  const writeLoopRef = useRef(null);
+
+  const startWriteLoop = () => {
+    if (writeLoopRef.current) return;
+
+    writeLoopRef.current = (async () => {
+      while (pendingWriteRef.current) {
+        const nextWrite = pendingWriteRef.current;
+        pendingWriteRef.current = null;
+        await Utils.setTrackSyncOffset(nextWrite.trackUri, nextWrite.offset, {
+          dispatch: false,
+        });
+      }
+    })()
+      .catch((error) => {
+        console.error("[ivLyrics] Failed to persist track sync offset:", error);
+      })
+      .finally(() => {
+        writeLoopRef.current = null;
+        if (pendingWriteRef.current) {
+          startWriteLoop();
+        }
+      });
+  };
+
+  useEffect(() => {
+    activeTrackUriRef.current = trackUri || null;
+    optimisticOffsetRef.current = 0;
+    setOffset(0);
+    const loadSeq = ++loadSeqRef.current;
+    if (!trackUri) return undefined;
+
+    let active = true;
+    Promise.resolve(Utils.getTrackSyncOffset(trackUri))
+      .then((savedOffset) => {
+        if (!active || loadSeqRef.current !== loadSeq || activeTrackUriRef.current !== trackUri) {
+          return;
+        }
+        const safeOffset = clampSyncOffset(savedOffset);
+        optimisticOffsetRef.current = safeOffset;
+        setOffset(safeOffset);
+      })
+      .catch((error) => {
+        console.error("[ivLyrics] Failed to load track sync offset:", error);
+      });
+
+    return () => {
+      active = false;
+      loadSeqRef.current += 1;
+    };
+  }, [trackUri]);
+
+  useEffect(() => {
+    const handleOffsetChange = (event) => {
+      if (!trackUri || event.detail?.trackUri !== trackUri) return;
+      const nextOffset = clampSyncOffset(event.detail?.offset);
+      loadSeqRef.current += 1;
+      optimisticOffsetRef.current = nextOffset;
+      setOffset(nextOffset);
+    };
+
+    window.addEventListener("ivLyrics:offset-changed", handleOffsetChange);
+    return () => {
+      window.removeEventListener("ivLyrics:offset-changed", handleOffsetChange);
+    };
+  }, [trackUri]);
+
+  const handleOffsetChange = (newOffset) => {
+    if (!trackUri) return;
+    const safeOffset = clampSyncOffset(newOffset);
+    loadSeqRef.current += 1;
+    optimisticOffsetRef.current = safeOffset;
+    setOffset(safeOffset);
+    window.dispatchEvent(new CustomEvent("ivLyrics:offset-changed", {
+      detail: { trackUri, offset: safeOffset }
+    }));
+    pendingWriteRef.current = { trackUri, offset: safeOffset };
+    startWriteLoop();
+  };
+
+  const renderStepButton = (step) => {
+    const absoluteStep = Math.abs(step);
+    const displayValue = `${step > 0 ? "+" : "−"}${absoluteStep}ms`;
+    return react.createElement(
+      "button",
+      {
+        key: step,
+        type: "button",
+        className: "lyrics-track-sync-step",
+        "data-step-size": absoluteStep,
+        onClick: () => handleOffsetChange(optimisticOffsetRef.current + step),
+        onPointerUp: (event) => event.currentTarget.blur(),
+        "aria-label": `${I18n.t("menu.syncAdjustTitle")} ${displayValue}`,
+      },
+      displayValue
+    );
+  };
+
+  const compactControls = [];
+  [-100, -50, -10, "current", 10, 50, 100].forEach((control, index) => {
+    if (index > 0) {
+      compactControls.push(react.createElement("span", {
+        key: `separator-${index}`,
+        className: "lyrics-track-sync-separator",
+        "aria-hidden": "true",
+      }));
+    }
+
+    if (control === "current") {
+      compactControls.push(react.createElement(
+        "button",
+        {
+          key: "current-offset",
+          type: "button",
+          className: "lyrics-track-sync-value",
+          "data-active": offset !== 0 ? "true" : "false",
+          onClick: () => {
+            if (optimisticOffsetRef.current !== 0) handleOffsetChange(0);
+          },
+          onPointerUp: (event) => event.currentTarget.blur(),
+          title: I18n.t("syncAdjust.reset"),
+          "aria-label": `${formatSyncOffset(offset)}, ${I18n.t("syncAdjust.reset")}`,
+        },
+        react.createElement(
+          "span",
+          { "aria-live": "polite", "aria-atomic": "true" },
+          formatSyncOffset(offset)
+        )
+      ));
+      return;
+    }
+
+    compactControls.push(renderStepButton(control));
+  });
+
+  if (!trackUri) return null;
+
+  return react.createElement(
+    "div",
+    {
+      className: "lyrics-track-sync-pill",
+      role: "group",
+      "aria-label": I18n.t("menu.syncAdjustTitle"),
+      "data-offset-active": offset !== 0 ? "true" : "false",
+    },
+    react.createElement(
+      "div",
+      { className: "lyrics-track-sync-controls" },
+      compactControls
+    )
+  );
+});
+
+const SyncAdjustButtonFluent = react.memo(() => {
+  const [isOpen, setIsOpen] = useState(false);
   const [globalOffset, setGlobalOffset] = useState(() => Utils.getGlobalSyncOffset?.() || 0);
   const triggerRef = useRef(null);
   const panelRef = useRef(null);
+  const globalSliderRef = useRef(null);
+  const previousFocusRef = useRef(null);
   const reactDom = window.Spicetify?.ReactDOM ?? window.ReactDOM ?? null;
 
   useEffect(() => {
@@ -2722,29 +2897,8 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
   }, []);
 
   useEffect(() => {
-    const loadOffset = async () => {
-      const savedOffset = (await Utils.getTrackSyncOffset(trackUri)) || 0;
-      setOffset(savedOffset);
-      setGlobalOffset(Utils.getGlobalSyncOffset?.() || 0);
-    };
-    loadOffset();
-  }, [trackUri]);
-
-  useEffect(() => {
-    const handleCommunityOffsetChange = (event) => {
-      if (event.detail?.trackUri === trackUri) {
-        setOffset(event.detail.offset);
-      }
-    };
-    window.addEventListener("ivLyrics:offset-changed", handleCommunityOffsetChange);
-    return () => {
-      window.removeEventListener("ivLyrics:offset-changed", handleCommunityOffsetChange);
-    };
-  }, [trackUri]);
-
-  useEffect(() => {
     const handleGlobalOffsetChange = (event) => {
-      setGlobalOffset(event.detail?.offset || 0);
+      setGlobalOffset(clampSyncOffset(event.detail?.offset));
     };
 
     window.addEventListener("ivLyrics:global-offset-changed", handleGlobalOffsetChange);
@@ -2755,6 +2909,14 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
 
   useEffect(() => {
     if (!isOpen) return undefined;
+    setGlobalOffset(clampSyncOffset(Utils.getGlobalSyncOffset?.() || 0));
+    previousFocusRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+
+    const focusFrame = requestAnimationFrame(() => {
+      globalSliderRef.current?.focus();
+    });
 
     const handlePointerDown = (event) => {
       const target = event.target;
@@ -2764,33 +2926,57 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
       setIsOpen(false);
     };
 
-    const handleEscape = (event) => {
+    const handleKeyDown = (event) => {
       if (event.key === "Escape") {
+        event.preventDefault();
         setIsOpen(false);
+        return;
+      }
+      if (event.key !== "Tab" || !panelRef.current) return;
+
+      const focusable = Array.from(panelRef.current.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      ));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      } else if (!panelRef.current.contains(document.activeElement)) {
+        event.preventDefault();
+        first.focus();
       }
     };
 
     document.addEventListener("mousedown", handlePointerDown, true);
-    document.addEventListener("keydown", handleEscape);
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
+      cancelAnimationFrame(focusFrame);
       document.removeEventListener("mousedown", handlePointerDown, true);
-      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("keydown", handleKeyDown);
+      const previousFocus = previousFocusRef.current;
+      requestAnimationFrame(() => {
+        if (previousFocus && document.contains(previousFocus)) {
+          previousFocus.focus();
+        } else if (triggerRef.current && document.contains(triggerRef.current)) {
+          triggerRef.current.focus();
+        }
+      });
     };
   }, [isOpen]);
 
-  const handleOffsetChange = async (newOffset) => {
-    setOffset(newOffset);
-    await Utils.setTrackSyncOffset(trackUri, newOffset);
-    onOffsetChange?.(newOffset);
-  };
-
   const handleGlobalOffsetChange = (newOffset) => {
-    const safeOffset = Math.max(-10000, Math.min(10000, Number(newOffset) || 0));
+    const safeOffset = clampSyncOffset(newOffset);
     setGlobalOffset(safeOffset);
     Utils.setGlobalSyncOffset?.(safeOffset);
   };
 
+  const globalTitle = I18n.t("syncAdjust.globalTitle");
   const modalOverlay = isOpen
     ? react.createElement(
         "div",
@@ -2805,6 +2991,10 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
             ref: panelRef,
             className: "ivlyrics-fluent-shell lyrics-sync-adjust-modal-shell",
             "data-ui-theme": getSettingsSurfaceTheme(),
+            role: "dialog",
+            "aria-modal": "true",
+            "aria-labelledby": "ivlyrics-global-sync-title",
+            "aria-describedby": "ivlyrics-global-sync-description",
           },
           react.createElement(
             "div",
@@ -2812,15 +3002,20 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
             react.createElement(
               "div",
               { className: "ivlyrics-fluent-title-wrap" },
-              react.createElement("div", { className: "ivlyrics-fluent-title" }, I18n.t("menu.syncAdjustTitle")),
-              react.createElement("p", { className: "ivlyrics-fluent-subtitle" }, I18n.t("syncAdjust.info"))
+              react.createElement("div", { id: "ivlyrics-global-sync-title", className: "ivlyrics-fluent-title" }, globalTitle),
+              react.createElement("p", { id: "ivlyrics-global-sync-description", className: "ivlyrics-fluent-subtitle" }, I18n.t("syncAdjust.globalInfo"))
             ),
             react.createElement(
               "button",
-              { className: "ivlyrics-fluent-close", onClick: () => setIsOpen(false) },
+              {
+                type: "button",
+                className: "ivlyrics-fluent-close",
+                onClick: () => setIsOpen(false),
+                "aria-label": I18n.t("common.close") || "Close",
+              },
               react.createElement(
                 "svg",
-                { width: 16, height: 16, viewBox: "0 0 16 16", fill: "currentColor" },
+                { width: 16, height: 16, viewBox: "0 0 16 16", fill: "currentColor", "aria-hidden": "true" },
                 react.createElement("path", { d: "M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z" })
               )
             )
@@ -2838,22 +3033,25 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
                   "div",
                   { className: "lyrics-sync-adjust-slider-container" },
                   react.createElement("input", {
+                    ref: globalSliderRef,
                     type: "range",
                     className: "sync-slider",
                     min: -10000,
                     max: 10000,
                     step: 10,
-                    value: offset,
-                    onInput: (event) => handleOffsetChange(Number(event.target.value)),
+                    value: globalOffset,
+                    onInput: (event) => handleGlobalOffsetChange(Number(event.target.value)),
+                    "aria-label": globalTitle,
+                    "aria-valuetext": formatSyncOffset(globalOffset),
                     style: {
-                      "--progress-percent": `${((offset + 10000) / 20000) * 100}%`,
+                      "--progress-percent": `${((globalOffset + 10000) / 20000) * 100}%`,
                     },
                   }),
                   react.createElement(
                     "div",
                     { className: "lyrics-sync-adjust-slider-summary" },
                     react.createElement("span", null, "-10s"),
-                    react.createElement("span", { className: "lyrics-sync-adjust-current" }, `${offset}ms`),
+                    react.createElement("span", { className: "lyrics-sync-adjust-current" }, formatSyncOffset(globalOffset)),
                     react.createElement("span", null, "+10s")
                   )
                 )
@@ -2867,92 +3065,26 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
                   react.createElement(
                     "div",
                     { className: "lyrics-sync-adjust-quick" },
-                    react.createElement(AdjustButton, { value: "-1000", onClick: () => handleOffsetChange(Math.max(-10000, offset - 1000)) }),
-                    react.createElement(AdjustButton, { value: "-100", onClick: () => handleOffsetChange(Math.max(-10000, offset - 100)) }),
-                    react.createElement(AdjustButton, { value: "-10", onClick: () => handleOffsetChange(Math.max(-10000, offset - 10)) })
+                    react.createElement(AdjustButton, { value: "-1000", ariaLabel: `${globalTitle} -1000ms`, onClick: () => handleGlobalOffsetChange(globalOffset - 1000) }),
+                    react.createElement(AdjustButton, { value: "-100", ariaLabel: `${globalTitle} -100ms`, onClick: () => handleGlobalOffsetChange(globalOffset - 100) }),
+                    react.createElement(AdjustButton, { value: "-10", ariaLabel: `${globalTitle} -10ms`, onClick: () => handleGlobalOffsetChange(globalOffset - 10) })
                   ),
                   react.createElement(
                     "div",
                     { className: "lyrics-sync-adjust-quick" },
-                    react.createElement(AdjustButton, { value: "+1000", onClick: () => handleOffsetChange(Math.min(10000, offset + 1000)) }),
-                    react.createElement(AdjustButton, { value: "+100", onClick: () => handleOffsetChange(Math.min(10000, offset + 100)) }),
-                    react.createElement(AdjustButton, { value: "+10", onClick: () => handleOffsetChange(Math.min(10000, offset + 10)) })
+                    react.createElement(AdjustButton, { value: "+1000", ariaLabel: `${globalTitle} +1000ms`, onClick: () => handleGlobalOffsetChange(globalOffset + 1000) }),
+                    react.createElement(AdjustButton, { value: "+100", ariaLabel: `${globalTitle} +100ms`, onClick: () => handleGlobalOffsetChange(globalOffset + 100) }),
+                    react.createElement(AdjustButton, { value: "+10", ariaLabel: `${globalTitle} +10ms`, onClick: () => handleGlobalOffsetChange(globalOffset + 10) })
                   )
                 ),
                 react.createElement(
                   "button",
                   {
+                    type: "button",
                     className: "ivlyrics-fluent-btn lyrics-sync-adjust-reset",
-                    onClick: () => handleOffsetChange(0),
+                    onClick: () => handleGlobalOffsetChange(0),
                   },
                   I18n.t("syncAdjust.reset")
-                )
-              )
-            ),
-            react.createElement(
-              "div",
-              { className: "lyrics-sync-adjust-global-section" },
-              react.createElement("div", { className: "lyrics-sync-adjust-section-title" }, I18n.t("syncAdjust.globalTitle")),
-              react.createElement("p", { className: "lyrics-sync-adjust-section-desc" }, I18n.t("syncAdjust.globalInfo")),
-              react.createElement(
-                "div",
-                { className: "lyrics-sync-adjust-layout" },
-                react.createElement(
-                  "div",
-                  { className: "lyrics-sync-adjust-track" },
-                  react.createElement(
-                    "div",
-                    { className: "lyrics-sync-adjust-slider-container" },
-                    react.createElement("input", {
-                      type: "range",
-                      className: "sync-slider",
-                      min: -10000,
-                      max: 10000,
-                      step: 10,
-                      value: globalOffset,
-                      onInput: (event) => handleGlobalOffsetChange(Number(event.target.value)),
-                      style: {
-                        "--progress-percent": `${((globalOffset + 10000) / 20000) * 100}%`,
-                      },
-                    }),
-                    react.createElement(
-                      "div",
-                      { className: "lyrics-sync-adjust-slider-summary" },
-                      react.createElement("span", null, "-10s"),
-                      react.createElement("span", { className: "lyrics-sync-adjust-current" }, `${globalOffset}ms`),
-                      react.createElement("span", null, "+10s")
-                    )
-                  )
-                ),
-                react.createElement(
-                  "div",
-                  { className: "lyrics-sync-adjust-side" },
-                  react.createElement(
-                    "div",
-                    { className: "lyrics-sync-adjust-fine" },
-                    react.createElement(
-                      "div",
-                      { className: "lyrics-sync-adjust-quick" },
-                      react.createElement(AdjustButton, { value: "-1000", onClick: () => handleGlobalOffsetChange(Math.max(-10000, globalOffset - 1000)) }),
-                      react.createElement(AdjustButton, { value: "-100", onClick: () => handleGlobalOffsetChange(Math.max(-10000, globalOffset - 100)) }),
-                      react.createElement(AdjustButton, { value: "-10", onClick: () => handleGlobalOffsetChange(Math.max(-10000, globalOffset - 10)) })
-                    ),
-                    react.createElement(
-                      "div",
-                      { className: "lyrics-sync-adjust-quick" },
-                      react.createElement(AdjustButton, { value: "+1000", onClick: () => handleGlobalOffsetChange(Math.min(10000, globalOffset + 1000)) }),
-                      react.createElement(AdjustButton, { value: "+100", onClick: () => handleGlobalOffsetChange(Math.min(10000, globalOffset + 100)) }),
-                      react.createElement(AdjustButton, { value: "+10", onClick: () => handleGlobalOffsetChange(Math.min(10000, globalOffset + 10)) })
-                    )
-                  ),
-                  react.createElement(
-                    "button",
-                    {
-                      className: "ivlyrics-fluent-btn lyrics-sync-adjust-reset",
-                      onClick: () => handleGlobalOffsetChange(0),
-                    },
-                    I18n.t("syncAdjust.reset")
-                  )
                 )
               )
             )
@@ -2966,13 +3098,16 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
     null,
     react.createElement(
       Spicetify.ReactComponent.TooltipWrapper,
-      { label: I18n.t("menu.syncAdjust") },
+      { label: globalTitle },
       react.createElement(
         "button",
         {
           ref: triggerRef,
-          className: "lyrics-config-button",
+          type: "button",
+          className: "lyrics-config-button lyrics-global-sync-button",
           onClick: () => setIsOpen((prev) => !prev),
+          "aria-label": globalTitle,
+          "aria-expanded": isOpen,
         },
         react.createElement(
           "svg",
@@ -2982,12 +3117,13 @@ const SyncAdjustButtonFluent = react.memo(({ trackUri, provider, onOffsetChange 
             viewBox: "0 0 24 24",
             fill: "none",
             stroke: "currentColor",
-            strokeWidth: 2,
+            strokeWidth: 1.8,
             strokeLinecap: "round",
             strokeLinejoin: "round",
+            "aria-hidden": "true",
           },
-          react.createElement("circle", { cx: 12, cy: 12, r: 10 }),
-          react.createElement("polyline", { points: "12,6 12,12 16,14" })
+          react.createElement("circle", { cx: 12, cy: 12, r: 9 }),
+          react.createElement("path", { d: "M12 7v5l3 2" })
         )
       )
     ),

@@ -1320,7 +1320,6 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 .ivlyrics-panel-line.speaker-duet-5 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-duet-5.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-duet-5, #9d8cf2) !important; }
 
-.ivlyrics-panel-line.active .ivlyrics-panel-karaoke-word.active,
 .ivlyrics-panel-line.active .ivlyrics-panel-karaoke-text-run-segment.active {
   color: transparent !important;
   background-image: linear-gradient(var(--ivlyrics-panel-karaoke-gradient-direction, to right),
@@ -2676,58 +2675,27 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         const wordRef = useRef(null);
         const text = syllable.text || '';
 
-        // 외부에서 시간 업데이트 시 클래스/CSS 변수만 갱신 (리렌더링 없음)
+        // 외부에서 시간 업데이트 시 기존 단어 단위 하이라이트만 갱신 (리렌더링 없음)
         useEffect(() => {
             if (!wordRef.current) return;
-
-            let lastState = null;
-            let lastFill = null;
 
             const updateSungState = () => {
                 const el = wordRef.current;
                 if (!el) return;
 
-                const currentTime = window._ivLyricsPanelCurrentTime || 0;
-                const fill = isLinePast
-                    ? 100
-                    : (isLineActive ? getKaraokeTextRunFill(syllable, currentTime) : 0);
-                const isDone = fill >= 100;
-                const isActive = fill > 0 && fill < 100;
-                const state = isDone ? 'done' : (isActive ? 'active' : 'pending');
-                const stateChanged = state !== lastState;
-                if (!stateChanged && (!isActive || fill === lastFill)) return;
-
-                lastState = state;
-                lastFill = fill;
-
-                if (stateChanged) {
-                    el.classList.toggle('sung', isDone);
-                    el.classList.toggle('active', isActive);
+                if (isLinePast) {
+                    if (!el.classList.contains('sung')) {
+                        el.classList.add('sung');
+                    }
+                    return;
                 }
 
-                if (isActive) {
-                    const softEdge = 10;
-                    let percentText;
-                    if (stateChanged) {
-                        el.style.setProperty('--ivlyrics-panel-karaoke-gradient-direction', 'to right');
-                    }
-                    el.style.setProperty('--ivlyrics-panel-karaoke-fill',
-                        typeof (percentText = String(fill)) === 'string'
-                            ? (KARAOKE_PERCENT_STRING_CACHE[percentText] ?? percentText + '%')
-                            : percentText + '%');
-                    el.style.setProperty('--ivlyrics-panel-karaoke-fill-soft-start',
-                        typeof (percentText = String(Math.max(0, fill - softEdge))) === 'string'
-                            ? (KARAOKE_PERCENT_STRING_CACHE[percentText] ?? percentText + '%')
-                            : percentText + '%');
-                    el.style.setProperty('--ivlyrics-panel-karaoke-fill-soft-end',
-                        typeof (percentText = String(Math.min(100, fill + softEdge))) === 'string'
-                            ? (KARAOKE_PERCENT_STRING_CACHE[percentText] ?? percentText + '%')
-                            : percentText + '%');
-                } else if (stateChanged) {
-                    el.style.removeProperty('--ivlyrics-panel-karaoke-gradient-direction');
-                    el.style.removeProperty('--ivlyrics-panel-karaoke-fill');
-                    el.style.removeProperty('--ivlyrics-panel-karaoke-fill-soft-start');
-                    el.style.removeProperty('--ivlyrics-panel-karaoke-fill-soft-end');
+                const currentTime = window._ivLyricsPanelCurrentTime || 0;
+                const shouldBeSung = currentTime >= syllable.startTime;
+                if (shouldBeSung && !el.classList.contains('sung')) {
+                    el.classList.add('sung');
+                } else if (!shouldBeSung && el.classList.contains('sung')) {
+                    el.classList.remove('sung');
                 }
             };
 

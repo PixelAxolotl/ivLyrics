@@ -2718,6 +2718,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             const stackElement = vocalStackRef.current;
             if (!stackElement) return undefined;
 
+            let lastAppliedAnchorPosition = null;
+
             const updateAnchorRow = () => {
                 const currentTime = window._ivLyricsPanelCurrentTime || 0;
                 const anchorState = shouldUseVocalRowAnchor
@@ -2734,17 +2736,20 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 const activeRowIndex = Number.isFinite(activeAnchorPosition) && activeAnchorPosition >= 0
                     ? Math.round(activeAnchorPosition)
                     : -1;
-                if (activeAnchorPosition >= 0) {
-                    stackElement.setAttribute('data-panel-vocal-anchor-position', String(activeAnchorPosition));
-                } else {
-                    stackElement.removeAttribute('data-panel-vocal-anchor-position');
+                if (activeAnchorPosition !== lastAppliedAnchorPosition) {
+                    lastAppliedAnchorPosition = activeAnchorPosition;
+                    if (activeAnchorPosition >= 0) {
+                        stackElement.setAttribute('data-panel-vocal-anchor-position', String(activeAnchorPosition));
+                    } else {
+                        stackElement.removeAttribute('data-panel-vocal-anchor-position');
+                    }
+                    stackElement.querySelectorAll('[data-panel-vocal-row-index]').forEach((rowElement) => {
+                        rowElement.classList.toggle(
+                            'ivlyrics-panel-current-anchor',
+                            Number(rowElement.getAttribute('data-panel-vocal-row-index')) === activeRowIndex
+                        );
+                    });
                 }
-                stackElement.querySelectorAll('[data-panel-vocal-row-index]').forEach((rowElement) => {
-                    rowElement.classList.toggle(
-                        'ivlyrics-panel-current-anchor',
-                        Number(rowElement.getAttribute('data-panel-vocal-row-index')) === activeRowIndex
-                    );
-                });
                 window.dispatchEvent(new Event('ivlyrics-panel-anchor-update'));
             };
 
@@ -4060,6 +4065,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             if (!wrapper) return undefined;
 
             let frameId = null;
+            let lastAnchorLayoutKey = null;
             const updateStackPosition = () => {
                 frameId = null;
                 const stack = wrapper.querySelector('.ivlyrics-panel-lines-stack');
@@ -4107,6 +4113,19 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 }
                 frameId = requestAnimationFrame(updateStackPosition);
             };
+            const scheduleAnchorUpdate = () => {
+                const currentCell = wrapper.querySelector('.ivlyrics-panel-line-cell.current');
+                const anchorStack = currentCell?.querySelector('[data-panel-vocal-anchor-position]');
+                const anchorPosition = anchorStack?.getAttribute('data-panel-vocal-anchor-position') || '';
+                const anchorRowCount = anchorStack?.getAttribute('data-panel-vocal-row-count') || '';
+                const currentAnchorIndex = currentCell
+                    ?.querySelector('.ivlyrics-panel-current-anchor')
+                    ?.getAttribute('data-panel-vocal-row-index') || '';
+                const anchorLayoutKey = `${anchorPosition}:${anchorRowCount}:${currentAnchorIndex}`;
+                if (anchorLayoutKey === lastAnchorLayoutKey) return;
+                lastAnchorLayoutKey = anchorLayoutKey;
+                scheduleUpdate();
+            };
 
             scheduleUpdate();
             let observer = null;
@@ -4124,7 +4143,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 document.fonts.ready.then(scheduleUpdate).catch(() => {});
             }
             window.addEventListener('resize', scheduleUpdate);
-            window.addEventListener('ivlyrics-panel-anchor-update', scheduleUpdate);
+            window.addEventListener('ivlyrics-panel-anchor-update', scheduleAnchorUpdate);
 
             return () => {
                 if (frameId !== null) {
@@ -4132,7 +4151,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 }
                 observer?.disconnect?.();
                 window.removeEventListener('resize', scheduleUpdate);
-                window.removeEventListener('ivlyrics-panel-anchor-update', scheduleUpdate);
+                window.removeEventListener('ivlyrics-panel-anchor-update', scheduleAnchorUpdate);
             };
         }, [visibleLines, currentVisibleIndex, fontScale, panelLineSlotHeight, instrumentalBreakRevision, textEffectRevision]);
         const renderVisibleLine = (visLine, idx, keyPrefix) => react.createElement(LyricLine, {

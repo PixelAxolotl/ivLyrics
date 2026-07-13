@@ -725,6 +725,11 @@
 
     const restoreNormalPlayback = (player) => {
         const controlState = getPlayerControlState(player);
+        if (controlState.previousRate === null
+            && controlState.previousMuted === null
+            && !controlState.restoreTimer) {
+            return;
+        }
         if (controlState.restoreTimer) {
             clearTimeout(controlState.restoreTimer);
         }

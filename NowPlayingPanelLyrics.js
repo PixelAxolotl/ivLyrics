@@ -2214,24 +2214,31 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         return { startTime, endTime };
     };
 
-    const getVocalAnchorState = (vocalRows, currentTime) => {
-        if (!Array.isArray(vocalRows)) {
-            return { position: -1, key: "" };
+    const buildVocalAnchorTimeline = (vocalRows) => {
+        if (!Array.isArray(vocalRows)) return null;
+
+        const bounds = new Array(vocalRows.length);
+        const keyParts = new Array(vocalRows.length);
+        for (let rowIndex = 0; rowIndex < vocalRows.length; rowIndex++) {
+            const row = vocalRows[rowIndex];
+            const rowBounds = getVocalRowTimeBounds(row);
+            bounds[rowIndex] = rowBounds;
+            if (rowIndex in vocalRows) {
+                keyParts[rowIndex] = `${rowBounds.startTime}:${rowBounds.endTime}:${row?.text || ""}`;
+            }
         }
+
+        return { bounds, key: keyParts.join("|") };
+    };
+
+    const getVocalAnchorPosition = (timeline, currentTime) => {
+        if (!timeline) return -1;
 
         const canResolvePosition = Number.isFinite(currentTime);
         let firstActiveRowIndex = -1;
         let lastActiveRowIndex = -1;
-        const keyParts = new Array(vocalRows.length);
-
-        for (let rowIndex = 0; rowIndex < vocalRows.length; rowIndex++) {
-            const row = vocalRows[rowIndex];
-            const { startTime, endTime } = getVocalRowTimeBounds(row);
-
-            if (rowIndex in vocalRows) {
-                keyParts[rowIndex] = `${startTime}:${endTime}:${row?.text || ""}`;
-            }
-
+        for (let rowIndex = 0; rowIndex < timeline.bounds.length; rowIndex++) {
+            const { startTime, endTime } = timeline.bounds[rowIndex];
             if (canResolvePosition && currentTime >= startTime && currentTime <= endTime) {
                 if (firstActiveRowIndex < 0) {
                     firstActiveRowIndex = rowIndex;
@@ -2240,12 +2247,9 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             }
         }
 
-        return {
-            position: firstActiveRowIndex >= 0 && lastActiveRowIndex >= 0
-                ? Math.ceil((firstActiveRowIndex + lastActiveRowIndex) / 2)
-                : -1,
-            key: keyParts.join("|")
-        };
+        return firstActiveRowIndex >= 0 && lastActiveRowIndex >= 0
+            ? Math.ceil((firstActiveRowIndex + lastActiveRowIndex) / 2)
+            : -1;
     };
 
     const getStableVocalAnchorPosition = (stateRef, key, currentTime, nextAnchorPosition) => {
@@ -2872,18 +2876,22 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             if (!stackElement) return undefined;
 
             let lastAppliedAnchorPosition = null;
+            // vocalRows는 line 변경 시 새 배열로 생성되므로 effect 수명 동안 정적 timing을 재사용한다.
+            const vocalAnchorTimeline = shouldUseVocalRowAnchor
+                ? buildVocalAnchorTimeline(vocalRows)
+                : null;
 
             const updateAnchorRow = () => {
                 const currentTime = window._ivLyricsPanelCurrentTime || 0;
-                const anchorState = shouldUseVocalRowAnchor
-                    ? getVocalAnchorState(vocalRows, currentTime)
-                    : { position: -1, key: "" };
+                const nextAnchorPosition = shouldUseVocalRowAnchor
+                    ? getVocalAnchorPosition(vocalAnchorTimeline, currentTime)
+                    : -1;
                 const activeAnchorPosition = shouldUseVocalRowAnchor
                     ? getStableVocalAnchorPosition(
                         vocalAnchorStateRef,
-                        anchorState.key,
+                        vocalAnchorTimeline?.key || "",
                         currentTime,
-                        anchorState.position
+                        nextAnchorPosition
                     )
                     : -1;
                 const activeRowIndex = Number.isFinite(activeAnchorPosition) && activeAnchorPosition >= 0

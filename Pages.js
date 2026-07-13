@@ -4535,11 +4535,12 @@ const getActiveKaraokeTimedCharIndex = (timedChars, position) => {
 	let lastPassedCharIndex = -1;
 	let lastPassedCharEndTime = 0;
 	let lastPassedCharDuration = 100;
+	const timedCharCount = timedChars.length;
 
-	timedChars.forEach((charInfo, index) => {
+	for (let index = 0; index < timedCharCount; index++) {
+		const charInfo = timedChars[index];
 		const charStart = Number.isFinite(charInfo?.startTime) ? charInfo.startTime : 0;
 		const charEnd = Number.isFinite(charInfo?.endTime) ? charInfo.endTime : charStart;
-		const charDuration = Math.max(1, charEnd - charStart);
 
 		if (position >= charStart && position < charEnd) {
 			activeCharIndex = index;
@@ -4548,9 +4549,9 @@ const getActiveKaraokeTimedCharIndex = (timedChars, position) => {
 		if (position >= charEnd && charEnd > lastPassedCharEndTime) {
 			lastPassedCharEndTime = charEnd;
 			lastPassedCharIndex = index;
-			lastPassedCharDuration = charDuration || 100;
+			lastPassedCharDuration = Math.max(1, charEnd - charStart) || 100;
 		}
-	});
+	}
 
 	if (activeCharIndex === -1 && lastPassedCharIndex !== -1) {
 		const timeDiff = position - lastPassedCharEndTime;

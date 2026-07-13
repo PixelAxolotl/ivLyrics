@@ -4292,13 +4292,13 @@ const AnimationManager = {
 	animate() {
 		if (!this.active) return;
 
-		this.callbacks.forEach(callback => {
+		for (const callback of this.callbacks) {
 			try {
 				callback();
 			} catch (error) {
 				// Error ignored
 			}
-		});
+		}
 		this.lastTime = performance.now();
 		this.updateFrameInterval();
 		this.timerId = setTimeout(this.boundAnimate, document.hidden ? 250 : this.frameInterval);

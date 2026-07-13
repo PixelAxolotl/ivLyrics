@@ -423,15 +423,36 @@
      * @param {string} s - 정규화할 원본 문자열
      * @returns {string} 정규화된 문자열 (비어있으면 빈 문자열 반환)
      */
+    const NORMALIZE_CACHE_MAX_SIZE = 512;
+    const NORMALIZE_CACHE_MAX_KEY_LENGTH = 512;
+    let normalizeCache = null;
+
     function normalize(s) {
         if (!s) return '';  // null/undefined 처리
-        return s.normalize('NFKC')       // 유니코드 NFKC 정규화
+
+        const canCache = typeof s === 'string' && s.length <= NORMALIZE_CACHE_MAX_KEY_LENGTH;
+        const cached = canCache ? normalizeCache?.get(s) : undefined;
+        if (cached !== undefined) {
+            return cached;
+        }
+
+        const normalized = s.normalize('NFKC')       // 유니코드 NFKC 정규화
             .toLowerCase()               // 소문자 변환
             .trim()                      // 앞뒤 공백 제거
             .replace(/[\u2018\u2019]/g, "'")   // ''(스마트 작은따옴표) → '
             .replace(/[\u201c\u201d]/g, '"')   // ""(스마트 큰따옴표) → "
             .replace(/[()[\]{}]/g, '')   // 모든 괄호류 제거: () [] {}
             .replace(/\s+/g, ' ');       // 연속 공백 → 단일 공백
+
+        if (canCache && typeof normalized === 'string') {
+            const cache = normalizeCache || (normalizeCache = new Map());
+            if (cache.size >= NORMALIZE_CACHE_MAX_SIZE) {
+                cache.delete(cache.keys().next().value);
+            }
+            cache.set(s, normalized);
+        }
+
+        return normalized;
     }
 
     /**

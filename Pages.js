@@ -2893,7 +2893,17 @@ const countKaraokeCharacters = (value) => {
 	}
 
 	let count = 0;
-	for (const _character of text) {
+	for (let index = 0; index < text.length; index++) {
+		const firstCodeUnit = text.charCodeAt(index);
+		if (
+			firstCodeUnit >= 0xD800 && firstCodeUnit <= 0xDBFF &&
+			index + 1 < text.length
+		) {
+			const secondCodeUnit = text.charCodeAt(index + 1);
+			if (secondCodeUnit >= 0xDC00 && secondCodeUnit <= 0xDFFF) {
+				index++;
+			}
+		}
 		count++;
 	}
 	return count;

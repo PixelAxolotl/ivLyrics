@@ -3947,6 +3947,56 @@ const useSyncedLyricsEngine = ({
 		};
 	}, [compact, isScrolling, activeLineIndex, activeTrailingInterludeKey, containerRef, activeLineRef, preparedLyrics]);
 
+	const stableLineStyles = useMemo(() => {
+		if (compact && isScrolling) {
+			return null;
+		}
+
+		const hasActiveTrailingInterlude = !!activeTrailingInterludeLine;
+		return linesToRender.map((line, visibleIndex) => {
+			const {
+				lineNumber = visibleIndex,
+				displayLineNumber = lineNumber,
+			} = line;
+			const compactVisibleIndex = compact
+				? displayLineNumber - compactWindowStartIndex
+				: visibleIndex;
+			let animationIndex = getSyncedAnimationIndex({
+				compact,
+				isScrolling,
+				activeLineIndex: compact && !isScrolling ? activeDisplayLineIndex : activeLineIndex,
+				lineNumber: compact && !isScrolling ? displayLineNumber : lineNumber,
+				visibleIndex: compactVisibleIndex,
+			});
+			if (hasActiveTrailingInterlude && lineNumber <= activeLineIndex) {
+				animationIndex -= 1;
+			}
+
+			return {
+				cursor: "pointer",
+				...getKaraokeSpeakerStyle(line?.speaker, line?.['speaker-color'], line?.['speaker-fallback']),
+				"--position-index": animationIndex,
+				"--animation-index": Math.abs(animationIndex) + 1,
+				"--line-shift-duration": isScrolling
+					? "0s"
+					: formatKaraokeLineShiftSeconds(Math.max(0.28, 0.46 - Math.min(Math.abs(animationIndex), 4) * 0.04)),
+				"--line-shift-delay": isScrolling
+					? "0s"
+					: formatKaraokeLineShiftSeconds(animationIndex > 0 ? Math.min(animationIndex, 3) * 0.02 : 0),
+				"--blur-index": Math.min(Math.abs(animationIndex), 3),
+			};
+		});
+	}, [
+		linesToRender,
+		compact,
+		isScrolling,
+		activeLineIndex,
+		activeDisplayLineIndex,
+		compactWindowStartIndex,
+		activeTrailingInterludeKey,
+		settingsRevision,
+	]);
+
 	const renderItems = useMemo(() => {
 		if (compact && isScrolling) {
 			const activePreparedIndex = Math.max(0, activeLineIndex - leadingEmptyLines);
@@ -3986,7 +4036,7 @@ const useSyncedLyricsEngine = ({
 						canSeek: Number.isFinite(startTime),
 						karaokeActive: isOriginalActiveLine,
 						globalCharOffset: globalCharOffsets[index] || 0,
-						activeGlobalCharIndex,
+						activeGlobalCharIndex: isOriginalActiveLine ? activeGlobalCharIndex : -1,
 					};
 
 					if (!trailingInterludeLine) {
@@ -4011,7 +4061,7 @@ const useSyncedLyricsEngine = ({
 							canSeek: false,
 							karaokeActive: false,
 							globalCharOffset: 0,
-							activeGlobalCharIndex,
+							activeGlobalCharIndex: -1,
 						}
 					];
 				});
@@ -4082,19 +4132,7 @@ const useSyncedLyricsEngine = ({
 				type: "line",
 				key: lineNumber,
 				className,
-				style: {
-					cursor: "pointer",
-					...getKaraokeSpeakerStyle(line?.speaker, line?.['speaker-color'], line?.['speaker-fallback']),
-					"--position-index": animationIndex,
-					"--animation-index": Math.abs(animationIndex) + 1,
-					"--line-shift-duration": isScrolling
-						? "0s"
-						: formatKaraokeLineShiftSeconds(Math.max(0.28, 0.46 - Math.min(Math.abs(animationIndex), 4) * 0.04)),
-					"--line-shift-delay": isScrolling
-						? "0s"
-						: formatKaraokeLineShiftSeconds(animationIndex > 0 ? Math.min(animationIndex, 3) * 0.02 : 0),
-					"--blur-index": Math.min(Math.abs(animationIndex), 3),
-				},
+				style: stableLineStyles[visibleIndex],
 				line,
 				startTime,
 				originalText,
@@ -4108,7 +4146,7 @@ const useSyncedLyricsEngine = ({
 				globalCharOffset: lineNumber >= leadingEmptyLines && lineNumber - leadingEmptyLines < globalCharOffsets.length
 					? globalCharOffsets[lineNumber - leadingEmptyLines]
 					: 0,
-				activeGlobalCharIndex,
+				activeGlobalCharIndex: isCurrentRenderedLine ? activeGlobalCharIndex : -1,
 			};
 
 			if (!activeTrailingInterludeLine || lineNumber !== activeLineIndex) {
@@ -4145,7 +4183,7 @@ const useSyncedLyricsEngine = ({
 					canSeek: false,
 					karaokeActive: false,
 					globalCharOffset: 0,
-					activeGlobalCharIndex,
+					activeGlobalCharIndex: -1,
 				}
 			];
 		});
@@ -4166,6 +4204,7 @@ const useSyncedLyricsEngine = ({
 		visualAnchorLineNumber,
 		globalCharOffsets,
 		activeGlobalCharIndex,
+		stableLineStyles,
 		settingsRevision,
 	]);
 

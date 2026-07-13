@@ -2639,6 +2639,9 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         useEffect(() => {
             if (!segmentRef.current || !text || segment?.type === "space") return;
 
+            let lastState = null;
+            let lastFill = null;
+
             const updateSegmentState = () => {
                 const el = segmentRef.current;
                 if (!el) return;
@@ -2647,14 +2650,24 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 const fill = isLinePast ? 100 : getKaraokeTextRunFill(segment, currentTime);
                 const isDone = fill >= 100;
                 const isActive = fill > 0 && fill < 100;
+                const state = isDone ? "done" : (isActive ? "active" : "pending");
+                const stateChanged = state !== lastState;
+                if (!stateChanged && (!isActive || fill === lastFill)) return;
 
-                el.classList.toggle("sung", isDone);
-                el.classList.toggle("active", isActive);
+                lastState = state;
+                lastFill = fill;
+
+                if (stateChanged) {
+                    el.classList.toggle("sung", isDone);
+                    el.classList.toggle("active", isActive);
+                }
 
                 if (isActive) {
                     const softEdge = 10;
                     let percentText;
-                    el.style.setProperty("--ivlyrics-panel-karaoke-gradient-direction", gradientDirection);
+                    if (stateChanged) {
+                        el.style.setProperty("--ivlyrics-panel-karaoke-gradient-direction", gradientDirection);
+                    }
                     el.style.setProperty("--ivlyrics-panel-karaoke-fill",
                         typeof (percentText = String(fill)) === "string"
                             ? (KARAOKE_PERCENT_STRING_CACHE[percentText] ?? percentText + "%")
@@ -2667,7 +2680,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                         typeof (percentText = String(Math.min(100, fill + softEdge))) === "string"
                             ? (KARAOKE_PERCENT_STRING_CACHE[percentText] ?? percentText + "%")
                             : percentText + "%");
-                } else {
+                } else if (stateChanged) {
                     el.style.removeProperty("--ivlyrics-panel-karaoke-gradient-direction");
                     el.style.removeProperty("--ivlyrics-panel-karaoke-fill");
                     el.style.removeProperty("--ivlyrics-panel-karaoke-fill-soft-start");

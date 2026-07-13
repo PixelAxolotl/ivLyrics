@@ -5895,6 +5895,25 @@
     let lyricsProviderRequestGeneration = 0;
     const MAX_LYRICS_PRESENTATION_SNAPSHOTS = 8;
 
+    const updateRawLyricsPresentationHash = (initialHash, value) => {
+        let hash = initialHash;
+        for (let index = 0; index < value.length; index++) {
+            const firstCodeUnit = value.charCodeAt(index);
+            let codePoint = firstCodeUnit;
+            if (firstCodeUnit >= 0xD800 && firstCodeUnit <= 0xDBFF && index + 1 < value.length) {
+                const secondCodeUnit = value.charCodeAt(index + 1);
+                if (secondCodeUnit >= 0xDC00 && secondCodeUnit <= 0xDFFF) {
+                    codePoint = ((firstCodeUnit - 0xD800) * 0x400)
+                        + secondCodeUnit - 0xDC00 + 0x10000;
+                    index++;
+                }
+            }
+            hash ^= codePoint || 0;
+            hash = Math.imul(hash, 16777619);
+        }
+        return hash;
+    };
+
     const getRawLyricsPresentationSignature = (result) => {
         if (!result || typeof result !== 'object') return '';
         let hash = 2166136261;
@@ -5909,6 +5928,7 @@
         ].join(':');
         for (const type of ['karaoke', 'synced', 'unsynced']) {
             const lines = Array.isArray(result[type]) ? result[type] : [];
+            const typePrefix = `${type}:`;
             lengths.push(lines.length);
             for (const line of lines) {
                 let value;
@@ -5927,10 +5947,10 @@
                     value = String(line?.originalText || line?.text || '');
                 }
                 value = String(value || '').normalize('NFC');
-                for (const char of `${type}:${value}\n`) {
-                    hash ^= char.codePointAt(0) || 0;
-                    hash = Math.imul(hash, 16777619);
-                }
+                hash = updateRawLyricsPresentationHash(hash, typePrefix);
+                hash = updateRawLyricsPresentationHash(hash, value);
+                hash ^= 10;
+                hash = Math.imul(hash, 16777619);
             }
         }
         return `${resultIdentity}:${lengths.join(':')}:${(hash >>> 0).toString(36)}`;

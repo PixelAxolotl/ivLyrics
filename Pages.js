@@ -1841,9 +1841,8 @@ const useGlobalSyncOffsetState = () => {
 };
 
 // Quantize playback position so identical values within a step don't trigger
-// setState. SyncedLyricsPage's renderItems useMemo depends on `position`, so
-// every change there cascades into rebuilding every line's style/className
-// object on every frame, defeating LyricsLineBlock/KaraokeLine's react.memo.
+// setState. Karaoke fill and active-line calculations consume `position`, so
+// updates beyond the configured display rate only create redundant React work.
 const DEFAULT_TRACK_POSITION_FPS = 60;
 const MIN_TRACK_POSITION_FPS = 10;
 const MAX_TRACK_POSITION_FPS = 60;
@@ -4027,6 +4026,9 @@ const useSyncedLyricsEngine = ({
 		activeTrailingInterludeKey,
 		settingsRevision,
 	]);
+	const renderPosition = isKara || (compact && activeLineIndex <= leadingEmptyLines)
+		? position
+		: 0;
 
 	const renderItems = useMemo(() => {
 		if (compact && isScrolling) {
@@ -4225,7 +4227,7 @@ const useSyncedLyricsEngine = ({
 		leadingEmptyLines,
 		lyrics,
 		preparedLyrics,
-		position,
+		renderPosition,
 		paddedLyrics,
 		isScrolling,
 		isKara,

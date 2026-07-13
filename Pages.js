@@ -3164,6 +3164,8 @@ const KARAOKE_TEXT_RUN_STATE_CLASS_NAMES = {
 	],
 };
 
+const KARAOKE_WHITESPACE_CHAR_REGEX = /\s/u;
+
 const getCachedKaraokeStateClassName = (classNames, state, isBouncing, isComplete) => (
 	classNames[state][(isBouncing ? 2 : 0) + (isComplete ? 1 : 0)]
 );
@@ -3176,27 +3178,17 @@ const buildKaraokeWordElements = (timedChars, charElements) => {
 	const wordElements = [];
 	let currentWord = [];
 	let currentWordStart = 0;
+	const timedCharCount = timedChars.length;
 
-	const flushWord = () => {
-		if (currentWord.length === 0) {
-			return;
+	for (let index = 0; index < timedCharCount; index++) {
+		if (!(index in timedChars)) {
+			continue;
 		}
 
-		wordElements.push(react.createElement(
-			"span",
-			{
-				className: "lyrics-karaoke-word",
-				key: `karaoke-word-${currentWordStart}`,
-			},
-			currentWord
-		));
-		currentWord = [];
-	};
-
-	timedChars.forEach((charInfo, index) => {
+		const charInfo = timedChars[index];
 		const char = charInfo?.char || "";
 		const element = charElements[index];
-		const isWhitespace = /\s/u.test(char);
+		const isWhitespace = KARAOKE_WHITESPACE_CHAR_REGEX.test(char);
 
 		if (!isWhitespace && currentWord.length === 0) {
 			currentWordStart = index;
@@ -3205,17 +3197,34 @@ const buildKaraokeWordElements = (timedChars, charElements) => {
 		if (isWhitespace) {
 			if (currentWord.length > 0) {
 				currentWord.push(element);
-				flushWord();
+				wordElements.push(react.createElement(
+					"span",
+					{
+						className: "lyrics-karaoke-word",
+						key: `karaoke-word-${currentWordStart}`,
+					},
+					currentWord
+				));
+				currentWord = [];
 			} else {
 				wordElements.push(element);
 			}
-			return;
+			continue;
 		}
 
 		currentWord.push(element);
-	});
+	}
 
-	flushWord();
+	if (currentWord.length > 0) {
+		wordElements.push(react.createElement(
+			"span",
+			{
+				className: "lyrics-karaoke-word",
+				key: `karaoke-word-${currentWordStart}`,
+			},
+			currentWord
+		));
+	}
 	return wordElements;
 };
 

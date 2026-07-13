@@ -2889,7 +2889,7 @@ const countKaraokeCharacters = (value) => {
 };
 
 const buildGlobalCharState = (lyrics, position) => {
-	const offsets = [];
+	const offsets = new Array(lyrics.length);
 	let totalChars = 0;
 	let activeCharIndex = -1;
 	let lastPassedCharIndex = -1;
@@ -2898,36 +2898,45 @@ const buildGlobalCharState = (lyrics, position) => {
 
 	for (let i = 0; i < lyrics.length; i++) {
 		const line = lyrics[i];
-		offsets.push(totalChars);
+		offsets[i] = totalChars;
 
-		const syllables = getTimedSyllablesFromLine(line);
-		if (!Array.isArray(syllables) || syllables.length === 0) {
-			continue;
-		}
+		const backgroundVocals = line?.vocals?.background;
+		const backgroundVocalCount = Array.isArray(backgroundVocals) ? backgroundVocals.length : 0;
+		const sourceCount = 2 + backgroundVocalCount;
+		for (let sourceIndex = 0; sourceIndex < sourceCount; sourceIndex++) {
+			const syllables = sourceIndex === 0
+				? line?.syllables
+				: sourceIndex === 1
+					? line?.vocals?.lead?.syllables
+					: backgroundVocals[sourceIndex - 2]?.syllables;
+			if (!Array.isArray(syllables) || syllables.length === 0) continue;
 
-		for (const syllable of syllables) {
-			if (!syllable || !syllable.text) continue;
+			const syllableCount = syllables.length;
+			for (let syllableIndex = 0; syllableIndex < syllableCount; syllableIndex++) {
+				const syllable = syllables[syllableIndex];
+				if (!syllable || !syllable.text) continue;
 
-			const charCount = countKaraokeCharacters(syllable.text);
-			const syllableStart = syllable.startTime || 0;
-			const syllableEnd = syllable.endTime || syllableStart + 500;
+				const charCount = countKaraokeCharacters(syllable.text);
+				const syllableStart = syllable.startTime || 0;
+				const syllableEnd = syllable.endTime || syllableStart + 500;
 
-			for (let charIdx = 0; charIdx < charCount; charIdx++) {
-				const charDuration = (syllableEnd - syllableStart) / charCount;
-				const charStart = syllableStart + (charIdx * charDuration);
-				const charEnd = charStart + charDuration;
+				for (let charIdx = 0; charIdx < charCount; charIdx++) {
+					const charDuration = (syllableEnd - syllableStart) / charCount;
+					const charStart = syllableStart + (charIdx * charDuration);
+					const charEnd = charStart + charDuration;
 
-				if (position >= charStart && position < charEnd) {
-					activeCharIndex = totalChars;
+					if (position >= charStart && position < charEnd) {
+						activeCharIndex = totalChars;
+					}
+
+					if (position >= charEnd && charEnd > lastPassedCharEndTime) {
+						lastPassedCharEndTime = charEnd;
+						lastPassedCharIndex = totalChars;
+						lastPassedCharDuration = charDuration || 100;
+					}
+
+					totalChars++;
 				}
-
-				if (position >= charEnd && charEnd > lastPassedCharEndTime) {
-					lastPassedCharEndTime = charEnd;
-					lastPassedCharIndex = totalChars;
-					lastPassedCharDuration = charDuration || 100;
-				}
-
-				totalChars++;
 			}
 		}
 	}

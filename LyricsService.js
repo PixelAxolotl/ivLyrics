@@ -7467,6 +7467,7 @@
             });
 
             await this.queueLyricsSend('/lyrics', trackInfo.uri, {
+                trackUri: trackInfo.uri || null,
                 track: {
                     title: currentTitle,
                     artist: currentArtist,
@@ -7583,6 +7584,7 @@
                     } catch (e) { }
 
                     await this.sendToEndpoint('/progress', {
+                        trackUri: currentUri || null,
                         position: position,
                         isPlaying: getOverlayProgressIsPlaying(),
                         duration: duration,

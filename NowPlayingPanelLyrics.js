@@ -4172,8 +4172,19 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 let right = lyrics.length - 1;
                 let result = 0;
 
+                if (right <= 0) {
+                    if (right === 0) {
+                        // Preserve the original property access and comparison coercion.
+                        const startTime = lyrics[0].startTime;
+                        if (startTime !== undefined) {
+                            void (startTime <= time);
+                        }
+                    }
+                    return result;
+                }
+
                 while (left <= right) {
-                    const mid = Math.floor((left + right) / 2);
+                    const mid = left + ((right - left) >>> 1);
                     const startTime = lyrics[mid].startTime;
 
                     if (startTime === undefined || startTime <= time) {

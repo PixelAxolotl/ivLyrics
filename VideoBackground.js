@@ -38,6 +38,8 @@ const disableYouTubeCaptions = (player) => {
     } catch (e) { }
 };
 
+const YOUTUBE_IFRAME_UI_CONCEAL_MS = 600;
+
 const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, coverMode, videoScale, externalVideoInfo }) => {
     const { useState, useEffect, useRef, useCallback } = react;
     const VIDEO_BACKGROUND_DEBUG = false;
@@ -97,6 +99,8 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
     const playerInitRetryRef = useRef(null);
     const statusMessageTimeoutRef = useRef(null);
     const lastCaptionDisableRef = useRef(0);
+    const youtubeUiConcealTimeoutRef = useRef(null);
+    const [isYouTubeUiConcealed, setIsYouTubeUiConcealed] = useState(false);
     const clearStatusMessageTimeout = useCallback(() => {
         if (statusMessageTimeoutRef.current) {
             clearTimeout(statusMessageTimeoutRef.current);
@@ -111,6 +115,27 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
             statusMessageTimeoutRef.current = null;
         }, duration);
     }, [clearStatusMessageTimeout]);
+    const clearYouTubeUiConcealTimeout = useCallback(() => {
+        if (youtubeUiConcealTimeoutRef.current) {
+            clearTimeout(youtubeUiConcealTimeoutRef.current);
+            youtubeUiConcealTimeoutRef.current = null;
+        }
+    }, []);
+    const concealYouTubeUi = useCallback(() => {
+        clearYouTubeUiConcealTimeout();
+
+        const container = containerRef.current;
+        if (container) {
+            container.style.transition = "none";
+            container.style.opacity = "0";
+        }
+
+        setIsYouTubeUiConcealed(true);
+        youtubeUiConcealTimeoutRef.current = setTimeout(() => {
+            youtubeUiConcealTimeoutRef.current = null;
+            setIsYouTubeUiConcealed(false);
+        }, YOUTUBE_IFRAME_UI_CONCEAL_MS);
+    }, [clearYouTubeUiConcealTimeout]);
     const brightnessValue = Math.min(Math.max(Number(brightness) || 0, 0), 100);
     const brightnessRatio = brightnessValue / 100;
     const blurValue = Math.min(Math.max(Number(blurAmount) || 0, 0), 80);
@@ -147,6 +172,10 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
     useEffect(() => {
         return () => clearStatusMessageTimeout();
     }, [clearStatusMessageTimeout]);
+
+    useEffect(() => {
+        return () => clearYouTubeUiConcealTimeout();
+    }, [clearYouTubeUiConcealTimeout]);
 
     // 외부에서 전달된 videoInfo가 있으면 사용
     useEffect(() => {
@@ -785,16 +814,18 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
             const playerState = player.getPlayerState();
             if (!isPlaying) {
                 if (playerState === 1) {
+                    concealYouTubeUi();
                     player.pauseVideo();
                 }
                 return;
             }
 
             if (playerState !== 1) {
+                concealYouTubeUi();
                 player.playVideo();
             }
         } catch (e) { }
-    }, [useHelper, isPlaying, isPlayerReady, helperVideoUrl, videoInfo]);
+    }, [useHelper, isPlaying, isPlayerReady, helperVideoUrl, videoInfo, concealYouTubeUi]);
 
     // 헬퍼 모드: 동기화 로직
     useEffect(() => {
@@ -908,6 +939,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                         setIsPlayerReady(true);
                         scheduleCaptionDisable(event.target);
                         event.target.mute();
+                        concealYouTubeUi();
                         event.target.playVideo();
                     },
                     onStateChange: (event) => {
@@ -942,7 +974,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
             }
         };
 
-    }, [useHelper, videoInfo]);
+    }, [useHelper, videoInfo, concealYouTubeUi]);
 
     // 일반 모드 (YouTube IFrame): Sync Logic
     useEffect(() => {
@@ -991,13 +1023,14 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
             if (targetVideoTime >= 0) {
                 const currentVideoTime = player.getCurrentTime();
                 if (Math.abs(currentVideoTime - targetVideoTime) > 0.5) {
+                    concealYouTubeUi();
                     player.seekTo(targetVideoTime, true);
                 }
             }
         }, 500);
 
         return () => clearInterval(syncInterval);
-    }, [isPlayerReady, videoInfo, firstLyricTime, trackOffsetMs, isPlaying]);
+    }, [isPlayerReady, videoInfo, firstLyricTime, trackOffsetMs, isPlaying, concealYouTubeUi]);
 
     // Render Album Art Background (Fallback)
     const renderFallback = () => {
@@ -1247,8 +1280,8 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                 minWidth: useCoverMode ? "100%" : undefined,
                 minHeight: useCoverMode ? "100%" : undefined,
                 transform: videoTransform,
-                opacity: isPlayerReady && isPlaying ? 1 : 0, // Hide when paused or not ready
-                transition: "opacity 0.5s ease",
+                opacity: isPlayerReady && isPlaying && !isYouTubeUiConcealed ? 1 : 0, // Hide YouTube's transient command overlay
+                transition: isYouTubeUiConcealed ? "none" : "opacity 0.5s ease",
                 zIndex: 1,
                 pointerEvents: "none",
                 filter: blurValue ? `blur(${blurValue}px)` : "none",

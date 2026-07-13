@@ -1271,6 +1271,22 @@ window.LANG_FR = {
         "clearAll": "Tout supprimer",
         "clearCurrent": "Supprimer piste actuelle",
         "stats": "Paroles: {lyrics}, Traductions: {translations}, Métadonnées: {metadata}"
+      },
+      "openDb": {
+        "label": "Cache d’index OpenDB",
+        "desc": "L’index base + delta utilisé pour trouver les fournisseurs de paroles disposant de sync-data.",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "{isrcCount} ISRC · {providerCount} fournisseurs",
+        "notDownloaded": "Aucun index n’a encore été téléchargé.",
+        "lastChecked": "Dernière vérification",
+        "justNow": "à l’instant",
+        "stale": "Hors ligne · utilisation du cache existant",
+        "update": "Récupérer à nouveau base + delta",
+        "updating": "Mise à jour…",
+        "unavailable": "Le service de cache OpenDB n’est pas disponible.",
+        "updateSuccess": "Les fichiers base et delta d’OpenDB ont été téléchargés de nouveau.",
+        "updateFailed": "Impossible de mettre OpenDB à jour. Le cache existant a été conservé.",
+        "updateFailedNoCache": "Impossible de mettre OpenDB à jour et aucun cache existant n’est disponible."
       }
     },
     "languageDetection": {

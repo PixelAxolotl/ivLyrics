@@ -2232,6 +2232,60 @@ const toFiniteTime = (value) => {
 	return Number.isFinite(numeric) ? numeric : null;
 };
 
+const getFiniteLyricsStyleNumber = (value, fallback) => {
+	const parsed = Number(value);
+	return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+// Keep the settings preview and the playback renderer on one typography contract.
+// Container geometry and playback transforms stay local to each surface, but every
+// glyph, ruby and auxiliary-line metric comes from this shared variable set.
+const getLyricsTypographyStyleVariables = (visual = CONFIG?.visual || {}) => {
+	const baseFontFamily = visual["font-family"] || "var(--font-family)";
+	const shadowColor = visual["text-shadow-color"] || "#000000";
+	const shadowOpacity = getFiniteLyricsStyleNumber(visual["text-shadow-opacity"], 50);
+	const shadowBlur = getFiniteLyricsStyleNumber(visual["text-shadow-blur"], 2);
+	const colorMatch = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(shadowColor);
+	const resolvedShadowColor = colorMatch
+		? `rgba(${parseInt(colorMatch[1], 16)}, ${parseInt(colorMatch[2], 16)}, ${parseInt(colorMatch[3], 16)}, ${shadowOpacity / 100})`
+		: shadowColor;
+	const textShadow = visual["text-shadow-enabled"]
+		? `0 0 ${shadowBlur}px ${resolvedShadowColor}`
+		: "none";
+
+	return {
+		"--lyrics-align-text": visual.alignment || "center",
+		"--lyrics-font-size": `${getFiniteLyricsStyleNumber(visual["font-size"], 32)}px`,
+		"--lyrics-font-family": baseFontFamily,
+		"--lyrics-original-font-family": visual["original-font-family"] || baseFontFamily,
+		"--lyrics-original-font-size": `${getFiniteLyricsStyleNumber(visual["original-font-size"], 44)}px`,
+		"--lyrics-original-font-weight": getFiniteLyricsStyleNumber(visual["original-font-weight"], 600),
+		"--lyrics-original-opacity": getFiniteLyricsStyleNumber(visual["original-opacity"], 95) / 100,
+		"--lyrics-original-letter-spacing": `${getFiniteLyricsStyleNumber(visual["original-letter-spacing"], 0)}px`,
+		"--lyrics-phonetic-font-family": visual["phonetic-font-family"] || baseFontFamily,
+		"--lyrics-phonetic-font-size": `${getFiniteLyricsStyleNumber(visual["phonetic-font-size"], 16)}px`,
+		"--lyrics-phonetic-font-weight": getFiniteLyricsStyleNumber(visual["phonetic-font-weight"], 100),
+		"--lyrics-phonetic-opacity": getFiniteLyricsStyleNumber(visual["phonetic-opacity"], 70) / 100,
+		"--lyrics-phonetic-spacing": `${getFiniteLyricsStyleNumber(visual["phonetic-spacing"], -1)}px`,
+		"--lyrics-phonetic-letter-spacing": `${getFiniteLyricsStyleNumber(visual["phonetic-letter-spacing"], 0)}px`,
+		"--lyrics-translation-font-family": visual["translation-font-family"] || baseFontFamily,
+		"--lyrics-translation-font-size": `${getFiniteLyricsStyleNumber(visual["translation-font-size"], 22)}px`,
+		"--lyrics-translation-font-weight": getFiniteLyricsStyleNumber(visual["translation-font-weight"], 300),
+		"--lyrics-translation-opacity": getFiniteLyricsStyleNumber(visual["translation-opacity"], 85) / 100,
+		"--lyrics-translation-spacing": `${getFiniteLyricsStyleNumber(visual["translation-spacing"], 0)}px`,
+		"--lyrics-translation-letter-spacing": `${getFiniteLyricsStyleNumber(visual["translation-letter-spacing"], 0)}px`,
+		"--lyrics-furigana-font-size": `${getFiniteLyricsStyleNumber(visual["furigana-font-size"], 14)}px`,
+		"--lyrics-furigana-font-weight": getFiniteLyricsStyleNumber(visual["furigana-font-weight"], 300),
+		"--lyrics-furigana-opacity": getFiniteLyricsStyleNumber(visual["furigana-opacity"], 80) / 100,
+		"--lyrics-furigana-spacing": `${getFiniteLyricsStyleNumber(visual["furigana-spacing"], 2)}px`,
+		"--lyrics-line-spacing": `${getFiniteLyricsStyleNumber(visual["line-spacing"], 8)}px`,
+		"--lyrics-text-shadow": textShadow,
+		"--lyrics-text-drop-shadow": visual["text-shadow-enabled"]
+			? `drop-shadow(0 0 ${shadowBlur}px ${resolvedShadowColor})`
+			: "none",
+	};
+};
+
 const getCurrentTrackDurationMs = () => {
 	if (typeof Spicetify === "undefined") {
 		return null;
@@ -4799,7 +4853,7 @@ const getKaraokeBounceValues = (position, isActive, startTime, endTime, attenuat
 	};
 };
 
-const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0, globalCharOffset = 0, activeGlobalCharIndex = -1, phonetic = null, translation = null }) => {
+const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0, globalCharOffset = 0, activeGlobalCharIndex = -1, phonetic = null, translation = null, furiganaMapOverride = null }) => {
   if (!line) {
           return "";
   }
@@ -4918,12 +4972,16 @@ const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0
 		const rawLineText = sourceSyllables.map((syllable) => syllable?.text || "").join("")
 			|| getCopyableText(line.text)
 			|| "";
-		const processedText = Utils.applyFuriganaIfEnabled(rawLineText);
+		const processedText = furiganaMapOverride instanceof Map
+			? ""
+			: Utils.applyFuriganaIfEnabled(rawLineText);
 		const compensatedTimedChars = applyKaraokeWhitespaceCompensation(buildKaraokeTimedChars(line));
 		const detectedTextDirection = getKaraokeTextDirection(rawLineText);
 
 		return {
-			furiganaMap: buildKaraokeFuriganaMap(processedText),
+			furiganaMap: furiganaMapOverride instanceof Map
+				? furiganaMapOverride
+				: buildKaraokeFuriganaMap(processedText),
 			timedChars: compensatedTimedChars,
 			endTime: compensatedTimedChars.reduce(
 				(maxEndTime, charInfo) => Math.max(maxEndTime, Number.isFinite(charInfo?.endTime) ? charInfo.endTime : 0),
@@ -4933,7 +4991,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0
 			textDirection: detectedTextDirection,
 			useTextRun: shouldUseKaraokeTextRun(rawLineText),
 		};
-	}, [line, furiganaEnabled, furiganaReady, detectedLanguage]);
+	}, [line, furiganaEnabled, furiganaReady, detectedLanguage, furiganaMapOverride]);
 	const isComplete = isActive && position >= endTime;
 
 	const charElements = useTextRun ? [] : timedChars.map((charInfo, index) => {

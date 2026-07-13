@@ -1271,6 +1271,22 @@ window.LANG_DE = {
         "clearAll": "Alles löschen",
         "clearCurrent": "Aktuellen Song löschen",
         "stats": "Texte: {lyrics}, Übersetzungen: {translations}, Metadaten: {metadata}"
+      },
+      "openDb": {
+        "label": "OpenDB-Index-Cache",
+        "desc": "Der Base- und Delta-Index zum Finden von Liedtextanbietern mit Sync-Daten.",
+        "versionSummary": "Base {baseDate} + Delta {deltaCount}",
+        "coverageSummary": "{isrcCount} ISRC · Anbieter: {providerCount}",
+        "notDownloaded": "Es wurde noch kein Index heruntergeladen.",
+        "lastChecked": "Zuletzt geprüft",
+        "justNow": "gerade eben",
+        "stale": "Offline · vorhandener Cache wird verwendet",
+        "update": "Base + Delta erneut abrufen",
+        "updating": "Wird aktualisiert…",
+        "unavailable": "Der OpenDB-Cache-Dienst ist nicht verfügbar.",
+        "updateSuccess": "Die Base- und Delta-Dateien von OpenDB wurden erneut heruntergeladen.",
+        "updateFailed": "OpenDB konnte nicht aktualisiert werden. Der vorhandene Cache wurde beibehalten.",
+        "updateFailedNoCache": "OpenDB konnte nicht aktualisiert werden und es ist kein vorhandener Cache verfügbar."
       }
     },
     "languageDetection": {
@@ -2175,7 +2191,7 @@ window.LANG_DE = {
     "loading": "Lade...",
     "loadLyrics": "Songtext laden",
     "reload": "Neu laden",
-    "loadingLyrics": "Lade Songtext...",
+    "loadingLyrics": "Songtext wird geladen…",
     "selectProvider": "Bitte wähle links in der Seitenleiste einen Liedtextanbieter aus",
     "noLyrics": "Songtext nicht gefunden",
     "loadError": "Fehler beim Laden des Songtextes",

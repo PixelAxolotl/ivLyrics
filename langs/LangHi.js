@@ -1271,6 +1271,22 @@ window.LANG_HI = {
         "clearAll": "सभी हटाएं",
         "clearCurrent": "वर्तमान गीत हटाएं",
         "stats": "लिरिक्स: {lyrics}, अनुवाद: {translations}, मेटाडेटा: {metadata}"
+      },
+      "openDb": {
+        "label": "OpenDB इंडेक्स कैश",
+        "desc": "sync-data वाले लिरिक्स प्रदाताओं को खोजने के लिए उपयोग किया जाने वाला base + delta इंडेक्स।",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "{isrcCount} ISRC · {providerCount} प्रदाता",
+        "notDownloaded": "अभी तक कोई इंडेक्स डाउनलोड नहीं किया गया है।",
+        "lastChecked": "अंतिम जाँच",
+        "justNow": "अभी",
+        "stale": "ऑफ़लाइन · मौजूदा कैश का उपयोग किया जा रहा है",
+        "update": "base + delta फिर से प्राप्त करें",
+        "updating": "अपडेट हो रहा है…",
+        "unavailable": "OpenDB कैश सेवा उपलब्ध नहीं है।",
+        "updateSuccess": "OpenDB की base और delta फ़ाइलें फिर से डाउनलोड की गईं।",
+        "updateFailed": "OpenDB को अपडेट नहीं किया जा सका। मौजूदा कैश सुरक्षित रखा गया।",
+        "updateFailedNoCache": "OpenDB को अपडेट नहीं किया जा सका और कोई मौजूदा कैश उपलब्ध नहीं है।"
       }
     },
     "languageDetection": {

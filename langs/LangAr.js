@@ -1271,6 +1271,22 @@ window.LANG_AR = {
         "clearAll": "حذف الكل",
         "clearCurrent": "حذف الأغنية الحالية",
         "stats": "الكلمات: {lyrics}، الترجمات: {translations}، البيانات الوصفية: {metadata}"
+      },
+      "openDb": {
+        "label": "ذاكرة التخزين المؤقت لفهرس OpenDB",
+        "desc": "فهرس base + delta المستخدم للعثور على موفري كلمات الأغاني الذين لديهم sync-data.",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "{isrcCount} ISRC · عدد الموفّرين: {providerCount}",
+        "notDownloaded": "لم يتم تنزيل أي فهرس بعد.",
+        "lastChecked": "آخر تحقق",
+        "justNow": "الآن",
+        "stale": "غير متصل · يتم استخدام ذاكرة التخزين المؤقت الحالية",
+        "update": "إعادة جلب base + delta",
+        "updating": "جارٍ التحديث…",
+        "unavailable": "خدمة التخزين المؤقت لـ OpenDB غير متاحة.",
+        "updateSuccess": "تم تنزيل ملفي base وdelta لـ OpenDB مرة أخرى.",
+        "updateFailed": "تعذر تحديث OpenDB. تم الاحتفاظ بذاكرة التخزين المؤقت الحالية.",
+        "updateFailedNoCache": "تعذر تحديث OpenDB ولا توجد ذاكرة تخزين مؤقت حالية يمكن استخدامها."
       }
     },
     "languageDetection": {
@@ -2175,7 +2191,7 @@ window.LANG_AR = {
     "loading": "جارٍ التحميل...",
     "loadLyrics": "تحميل الكلمات",
     "reload": "إعادة التحميل",
-    "loadingLyrics": "جارٍ تحميل الكلمات...",
+    "loadingLyrics": "جارٍ تحميل كلمات الأغنية…",
     "selectProvider": "يرجى اختيار موفر كلمات الأغاني من الشريط الجانبي الأيسر",
     "noLyrics": "تعذر العثور على الكلمات",
     "loadError": "حدث خطأ أثناء تحميل الكلمات",

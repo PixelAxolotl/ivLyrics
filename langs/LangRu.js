@@ -1271,6 +1271,22 @@ window.LANG_RU = {
         "clearAll": "Удалить всё",
         "clearCurrent": "Удалить текущий трек",
         "stats": "Тексты: {lyrics}, Переводы: {translations}, Метаданные: {metadata}"
+      },
+      "openDb": {
+        "label": "Кеш индекса OpenDB",
+        "desc": "Индекс base + delta для поиска поставщиков текстов с sync-data.",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "ISRC: {isrcCount} · провайдеры: {providerCount}",
+        "notDownloaded": "Индекс ещё не загружен.",
+        "lastChecked": "Последняя проверка",
+        "justNow": "только что",
+        "stale": "Нет подключения · используется существующий кеш",
+        "update": "Повторно загрузить base + delta",
+        "updating": "Обновление…",
+        "unavailable": "Сервис кеша OpenDB недоступен.",
+        "updateSuccess": "Файлы base и delta OpenDB загружены повторно.",
+        "updateFailed": "Не удалось обновить OpenDB. Существующий кеш сохранён.",
+        "updateFailedNoCache": "Не удалось обновить OpenDB, и существующий кеш недоступен."
       }
     },
     "languageDetection": {

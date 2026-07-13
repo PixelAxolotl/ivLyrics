@@ -1271,6 +1271,22 @@ window.LANG_JA = {
         "clearAll": "すべて削除",
         "clearCurrent": "現在の曲を削除",
         "stats": "歌詞: {lyrics}件, 翻訳: {translations}件, メタデータ: {metadata}件"
+      },
+      "openDb": {
+        "label": "OpenDB インデックスキャッシュ",
+        "desc": "sync-data がある歌詞プロバイダーを検索するための base + delta インデックスです。",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "ISRC {isrcCount}件 · プロバイダー {providerCount}件",
+        "notDownloaded": "インデックスはまだダウンロードされていません。",
+        "lastChecked": "最終確認",
+        "justNow": "たった今",
+        "stale": "オフライン · 既存のキャッシュを使用中",
+        "update": "base + delta を再取得",
+        "updating": "更新中…",
+        "unavailable": "OpenDB キャッシュサービスを利用できません。",
+        "updateSuccess": "OpenDB の base と delta ファイルを再ダウンロードしました。",
+        "updateFailed": "OpenDB を更新できませんでした。既存のキャッシュは保持されています。",
+        "updateFailedNoCache": "OpenDB を更新できず、利用可能な既存キャッシュもありません。"
       }
     },
     "languageDetection": {
@@ -1745,7 +1761,7 @@ window.LANG_JA = {
     "label": "歌詞プラス"
   },
   "generationStatus": {
-    "complete": "完了!"
+    "complete": "完了！"
   },
   "videoBackground": {
     "loading": "動画情報を読み込み中...",

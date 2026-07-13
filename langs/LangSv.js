@@ -1271,6 +1271,22 @@ window.LANG_SV = {
         "clearAll": "Ta bort alla",
         "clearCurrent": "Ta bort aktuellt spår",
         "stats": "Text: {lyrics}, Översättningar: {translations}, Metadata: {metadata}"
+      },
+      "openDb": {
+        "label": "OpenDB-indexcache",
+        "desc": "Indexet base + delta som används för att hitta textleverantörer med sync-data.",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "{isrcCount} ISRC · {providerCount} leverantörer",
+        "notDownloaded": "Inget index har hämtats ännu.",
+        "lastChecked": "Senast kontrollerad",
+        "justNow": "nyss",
+        "stale": "Offline · använder befintlig cache",
+        "update": "Hämta base + delta igen",
+        "updating": "Uppdaterar…",
+        "unavailable": "OpenDB:s cachetjänst är inte tillgänglig.",
+        "updateSuccess": "OpenDB:s base- och deltafiler har hämtats igen.",
+        "updateFailed": "OpenDB kunde inte uppdateras. Den befintliga cachen behölls.",
+        "updateFailedNoCache": "OpenDB kunde inte uppdateras och det finns ingen befintlig cache."
       }
     },
     "languageDetection": {

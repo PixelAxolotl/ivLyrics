@@ -1271,6 +1271,22 @@ window.LANG_EN = {
         "clearAll": "Delete All",
         "clearCurrent": "Delete Current Track",
         "stats": "Lyrics: {lyrics}, Translations: {translations}, Metadata: {metadata}"
+      },
+      "openDb": {
+        "label": "OpenDB Index Cache",
+        "desc": "The base + delta index used to find lyric providers with sync-data.",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "{isrcCount} ISRC · {providerCount} providers",
+        "notDownloaded": "No index has been downloaded yet.",
+        "lastChecked": "Last checked",
+        "justNow": "just now",
+        "stale": "Offline · using the existing cache",
+        "update": "Fetch base + delta again",
+        "updating": "Updating…",
+        "unavailable": "The OpenDB cache service is unavailable.",
+        "updateSuccess": "OpenDB base and delta files were downloaded again.",
+        "updateFailed": "OpenDB could not be updated. The existing cache was kept.",
+        "updateFailedNoCache": "OpenDB could not be updated and no existing cache is available."
       }
     },
     "languageDetection": {

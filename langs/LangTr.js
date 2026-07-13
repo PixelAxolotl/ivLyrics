@@ -1271,6 +1271,22 @@ window.LANG_TR = {
       "clearAll": "Tümünü Sil",
       "clearCurrent": "Geçerli Parçayı Sil",
       "stats": "Sözler: {lyrics}, Çeviriler: {translations}, Meta Veriler: {metadata}"
+    },
+    "openDb": {
+      "label": "OpenDB Dizin Önbelleği",
+      "desc": "sync-data içeren söz sağlayıcılarını bulmak için kullanılan base + delta dizini.",
+      "versionSummary": "base {baseDate} + delta {deltaCount}",
+      "coverageSummary": "{isrcCount} ISRC · {providerCount} sağlayıcı",
+      "notDownloaded": "Henüz bir dizin indirilmedi.",
+      "lastChecked": "Son kontrol",
+      "justNow": "az önce",
+      "stale": "Çevrimdışı · mevcut önbellek kullanılıyor",
+      "update": "base + delta'yı yeniden getir",
+      "updating": "Güncelleniyor…",
+      "unavailable": "OpenDB önbellek hizmeti kullanılamıyor.",
+      "updateSuccess": "OpenDB base ve delta dosyaları yeniden indirildi.",
+      "updateFailed": "OpenDB güncellenemedi. Mevcut önbellek korundu.",
+      "updateFailedNoCache": "OpenDB güncellenemedi ve kullanılabilir mevcut bir önbellek yok."
     }
   },
   "languageDetection": {

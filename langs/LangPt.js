@@ -1271,6 +1271,22 @@ window.LANG_PT = {
         "clearAll": "Excluir Tudo",
         "clearCurrent": "Excluir Atual",
         "stats": "Letras: {lyrics}, Traduções: {translations}, Metadados: {metadata}"
+      },
+      "openDb": {
+        "label": "Cache do índice OpenDB",
+        "desc": "O índice base + delta usado para encontrar provedores de letras com sync-data.",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "{isrcCount} ISRC · {providerCount} provedores",
+        "notDownloaded": "Nenhum índice foi baixado ainda.",
+        "lastChecked": "Última verificação",
+        "justNow": "agora mesmo",
+        "stale": "Offline · usando o cache existente",
+        "update": "Baixar base + delta novamente",
+        "updating": "Atualizando…",
+        "unavailable": "O serviço de cache do OpenDB não está disponível.",
+        "updateSuccess": "Os arquivos base e delta do OpenDB foram baixados novamente.",
+        "updateFailed": "Não foi possível atualizar o OpenDB. O cache existente foi mantido.",
+        "updateFailedNoCache": "Não foi possível atualizar o OpenDB e não há nenhum cache existente disponível."
       }
     },
     "languageDetection": {

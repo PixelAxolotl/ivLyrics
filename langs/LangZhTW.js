@@ -1271,6 +1271,22 @@ window.LANG_ZH_TW = {
         "clearAll": "全部刪除",
         "clearCurrent": "刪除目前歌曲",
         "stats": "歌詞: {lyrics} 則, 翻譯: {translations} 則, 詮釋資料: {metadata} 筆"
+      },
+      "openDb": {
+        "label": "OpenDB 索引快取",
+        "desc": "用於尋找具有 sync-data 的歌詞提供者的 base + delta 索引。",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "ISRC {isrcCount} 筆 · 提供者 {providerCount} 個",
+        "notDownloaded": "尚未下載索引。",
+        "lastChecked": "上次檢查",
+        "justNow": "剛剛",
+        "stale": "離線 · 正在使用現有快取",
+        "update": "重新取得 base + delta",
+        "updating": "正在更新…",
+        "unavailable": "OpenDB 快取服務無法使用。",
+        "updateSuccess": "已重新下載 OpenDB 的 base 與 delta 檔案。",
+        "updateFailed": "無法更新 OpenDB，已保留現有快取。",
+        "updateFailedNoCache": "無法更新 OpenDB，且沒有可用的現有快取。"
       }
     },
     "languageDetection": {

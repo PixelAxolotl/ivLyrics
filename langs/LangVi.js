@@ -1271,6 +1271,22 @@ window.LANG_VI = {
         "clearAll": "Xóa tất cả",
         "clearCurrent": "Xóa bài hiện tại",
         "stats": "Lời: {lyrics}, Dịch: {translations}, Metadata: {metadata}"
+      },
+      "openDb": {
+        "label": "Bộ nhớ đệm chỉ mục OpenDB",
+        "desc": "Chỉ mục base + delta dùng để tìm các nhà cung cấp lời bài hát có sync-data.",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "{isrcCount} ISRC · {providerCount} nhà cung cấp",
+        "notDownloaded": "Chưa có chỉ mục nào được tải xuống.",
+        "lastChecked": "Kiểm tra lần cuối",
+        "justNow": "vừa xong",
+        "stale": "Ngoại tuyến · đang dùng bộ nhớ đệm hiện có",
+        "update": "Tải lại base + delta",
+        "updating": "Đang cập nhật…",
+        "unavailable": "Dịch vụ bộ nhớ đệm OpenDB không khả dụng.",
+        "updateSuccess": "Các tệp base và delta của OpenDB đã được tải xuống lại.",
+        "updateFailed": "Không thể cập nhật OpenDB. Bộ nhớ đệm hiện có đã được giữ lại.",
+        "updateFailedNoCache": "Không thể cập nhật OpenDB và không có bộ nhớ đệm hiện có để sử dụng."
       }
     },
     "languageDetection": {

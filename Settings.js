@@ -1,12 +1,15 @@
 const ButtonSVG = react.memo(
-  ({ icon, active = true, onClick }) => {
+  ({ icon, active = true, onClick, disabled = false, label }) => {
     return react.createElement(
       "button",
       {
+        type: "button",
         className: `switch-checkbox${active ? " active" : ""}`,
         onClick,
+        disabled,
         "aria-checked": active,
-        role: "checkbox",
+        "aria-label": label,
+        role: "switch",
       },
       react.createElement("svg", {
         width: 12,
@@ -18,10 +21,6 @@ const ButtonSVG = react.memo(
         },
       })
     );
-  },
-  (prevProps, nextProps) => {
-    // active 상태가 변경되면 리렌더링 필요
-    return prevProps.active === nextProps.active;
   }
 );
 
@@ -1017,7 +1016,18 @@ const AddonSettingsCard = ({ addon, isEnabled, onToggle, isExpanded, onExpandTog
   const hasCapabilities = addon.supports && Object.keys(addon.supports).some(k => addon.supports[k]);
 
   return react.createElement("div", {
-    className: `lyrics-provider-card ${isExpanded ? 'expanded' : ''} ${isEnabled ? '' : 'disabled'}`
+    className: `lyrics-provider-card ${isExpanded ? 'expanded' : ''} ${isEnabled ? '' : 'disabled'}`,
+    "data-setting-key": `ai-provider:${addon.id}`,
+    "data-search-text": [
+      addon.name,
+      addon.author,
+      getLocalizedDescription(addon.description),
+      ...Object.keys(addon.supports || {})
+        .filter((capability) => addon.supports[capability])
+        .map((capability) =>
+          `${capability} ${I18n.t(`settings.aiProviders.supports.${capability}`) || ""}`
+        ),
+    ].filter(Boolean).join(" "),
   },
     // 카드 헤더
     react.createElement("div", {
@@ -1158,7 +1168,19 @@ const LyricsProviderCard = ({ provider, isEnabled, onToggle, isExpanded, onExpan
   const showUnsyncedToggle = provider.supports?.unsynced;
 
   return react.createElement("div", {
-    className: `lyrics-provider-card ${isExpanded ? 'expanded' : ''} ${isEnabled ? '' : 'disabled'}`
+    className: `lyrics-provider-card ${isExpanded ? 'expanded' : ''} ${isEnabled ? '' : 'disabled'}`,
+    "data-setting-key": `lyrics-provider:${provider.id}`,
+    "data-search-text": [
+      provider.name,
+      provider.author,
+      getLocalizedDescription(provider.description),
+      ...Object.keys(provider.supports || {})
+        .filter((lyricsType) => provider.supports[lyricsType])
+        .map((lyricsType) =>
+          `${lyricsType} ${I18n.t(`settings.lyricsProviders.types.${lyricsType}`) || ""}`
+        ),
+      provider.useIvLyricsSync ? "ivLyrics Sync" : "",
+    ].filter(Boolean).join(" "),
   },
     // 카드 헤더
     react.createElement("div", {
@@ -1315,12 +1337,6 @@ const LyricsProvidersTab = () => {
   return react.createElement("div", { className: "settings-section lyrics-providers-section" },
     // 통합 컨테이너
     react.createElement("div", { className: "lyrics-providers-container" },
-      // 헤더
-      react.createElement("div", { className: "lyrics-providers-header", style: { marginBottom: "16px" } },
-        react.createElement("h3", null, I18n.t("settings.lyricsProviders.title") || "가사 제공자"),
-        react.createElement("p", null, I18n.t("settings.lyricsProviders.description") || "가사를 가져올 제공자를 선택하고 우선순위를 설정합니다.")
-      ),
-
       react.createElement(OptionList, {
         items: [
           {
@@ -1478,12 +1494,6 @@ const AIProvidersTab = () => {
   return react.createElement("div", { className: "settings-section lyrics-providers-section" },
     // 통합 컨테이너
     react.createElement("div", { className: "lyrics-providers-container" },
-      // 헤더
-      react.createElement("div", { className: "lyrics-providers-header", style: { marginBottom: "16px" } },
-        react.createElement("h3", null, I18n.t("settings.aiProviders.title") || "AI 제공자"),
-        react.createElement("p", null, I18n.t("settings.aiProviders.description") || "AI 번역 및 TMI 생성에 사용할 제공자를 선택하고 우선순위를 설정합니다. 상위 제공자 실패 시 다음 제공자로 자동 전환됩니다.")
-      ),
-
       // Provider 목록
       providers.length > 0 && react.createElement("div", { className: "lyrics-providers-list" },
         sortedProviders.map((provider, index) =>
@@ -1534,18 +1544,24 @@ const AIProvidersTab = () => {
 // 로컬 캐시 관리 컴포넌트 (IndexedDB)
 const LocalCacheManager = () => {
   const [stats, setStats] = useState(null);
+  const [openDbInfo, setOpenDbInfo] = useState(null);
+  const [openDbUpdating, setOpenDbUpdating] = useState(false);
+  const [openDbError, setOpenDbError] = useState("");
   const [loading, setLoading] = useState(true);
 
   // 캐시 통계 로드
   const loadStats = async () => {
+    setLoading(true);
     try {
       const cacheStats = await LyricsCache.getStats();
       setStats(cacheStats);
     } catch (e) {
       console.error('[LocalCacheManager] Failed to load stats:', e);
       setStats(null);
+    } finally {
+      setOpenDbInfo(window.SyncDataService?.getOpenDbCacheInfo?.() || null);
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // 컴포넌트 마운트 시 통계 로드
@@ -1581,7 +1597,7 @@ const LocalCacheManager = () => {
       }
 
       // SyncDataService 메모리 캐시 초기화
-      window.SyncDataService?.clearCache();
+      window.SyncDataService?.clearCache(undefined, { preserveOpenDb: true });
 
       await LyricsCache.clearAll();
       await loadStats();
@@ -1633,7 +1649,7 @@ const LocalCacheManager = () => {
       }
 
       // SyncDataService 메모리 캐시 초기화
-      window.SyncDataService?.clearCache(trackId);
+      window.SyncDataService?.clearCache(trackId, { preserveOpenDb: true });
 
       await LyricsCache.clearTrack(trackId);
       await loadStats();
@@ -1657,11 +1673,141 @@ const LocalCacheManager = () => {
       .replace("{metadata}", stats.metadata || 0);
   };
 
+  const formatOpenDbRelativeTime = (timestamp) => {
+    const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(timestamp || ""));
+    const time = dateOnlyMatch
+      ? new Date(
+        Number(dateOnlyMatch[1]),
+        Number(dateOnlyMatch[2]) - 1,
+        Number(dateOnlyMatch[3])
+      ).getTime()
+      : new Date(timestamp).getTime();
+    if (!Number.isFinite(time)) return "";
+
+    const difference = time - Date.now();
+    const absoluteDifference = Math.abs(difference);
+    if (absoluteDifference < 60 * 1000) {
+      return getSettingsText(
+        "settingsAdvanced.cacheManagement.openDb.justNow",
+        "방금"
+      );
+    }
+    const units = absoluteDifference >= 24 * 60 * 60 * 1000
+      ? ["day", 24 * 60 * 60 * 1000]
+      : absoluteDifference >= 60 * 60 * 1000
+        ? ["hour", 60 * 60 * 1000]
+        : ["minute", 60 * 1000];
+
+    try {
+      const locale = CONFIG.visual.language || navigator.language;
+      return new Intl.RelativeTimeFormat(locale, { numeric: "auto" })
+        .format(Math.round(difference / units[1]), units[0]);
+    } catch (error) {
+      return "";
+    }
+  };
+
+  const formatOpenDbDate = (value) => {
+    const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || ""));
+    const time = dateOnlyMatch
+      ? new Date(
+        Number(dateOnlyMatch[1]),
+        Number(dateOnlyMatch[2]) - 1,
+        Number(dateOnlyMatch[3])
+      ).getTime()
+      : new Date(value).getTime();
+    if (!Number.isFinite(time)) return value || "";
+    try {
+      return new Intl.DateTimeFormat(CONFIG.visual.language || navigator.language, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      }).format(time);
+    } catch (error) {
+      return value || "";
+    }
+  };
+
+  const handleRefreshOpenDb = async () => {
+    const refreshOpenDbCache = window.SyncDataService?.refreshOpenDbCache;
+    if (typeof refreshOpenDbCache !== "function") {
+      setOpenDbError(getSettingsText(
+        "settingsAdvanced.cacheManagement.openDb.unavailable",
+        "OpenDB 캐시 서비스를 사용할 수 없습니다."
+      ));
+      return;
+    }
+
+    setOpenDbUpdating(true);
+    setOpenDbError("");
+    try {
+      const nextInfo = await refreshOpenDbCache();
+      setOpenDbInfo(nextInfo);
+      Toast.success(getSettingsText(
+        "settingsAdvanced.cacheManagement.openDb.updateSuccess",
+        "OpenDB base와 delta를 다시 가져왔습니다."
+      ));
+    } catch (error) {
+      console.error('[LocalCacheManager] OpenDB refresh failed:', error);
+      const failedInfo =
+        error?.cacheInfo
+        || window.SyncDataService?.getOpenDbCacheInfo?.()
+        || null;
+      setOpenDbInfo(failedInfo);
+      const message = getSettingsText(
+        failedInfo?.available
+          ? "settingsAdvanced.cacheManagement.openDb.updateFailed"
+          : "settingsAdvanced.cacheManagement.openDb.updateFailedNoCache",
+        failedInfo?.available
+          ? "OpenDB를 갱신하지 못했습니다. 기존 캐시는 유지됩니다."
+          : "OpenDB를 갱신하지 못했고 사용할 기존 캐시가 없습니다."
+      );
+      setOpenDbError(message);
+      Toast.error(message);
+    } finally {
+      setOpenDbUpdating(false);
+    }
+  };
+
   const totalCount = stats ? (stats.lyrics || 0) + (stats.translations || 0) + (stats.metadata || 0) + (stats.youtube || 0) : 0;
+
+  const openDbVersionDate = openDbInfo?.dataVersionAt || openDbInfo?.latestDeltaDate || openDbInfo?.baseDate;
+  const openDbVersionRelative = openDbVersionDate
+    ? formatOpenDbRelativeTime(openDbVersionDate)
+    : "";
+  const openDbVersionText = openDbVersionDate
+    ? `${formatOpenDbDate(openDbVersionDate)}${openDbVersionRelative ? ` · ${openDbVersionRelative}` : ""}`
+    : getSettingsText(
+      "settingsAdvanced.cacheManagement.openDb.notDownloaded",
+      "아직 내려받은 인덱스가 없습니다."
+    );
+  const openDbLastCheckedText = openDbInfo?.lastCheckedAt
+    ? formatOpenDbRelativeTime(openDbInfo.lastCheckedAt)
+    : "";
+  const openDbVersionSummary = getSettingsText(
+    "settingsAdvanced.cacheManagement.openDb.versionSummary",
+    "base {baseDate} + delta {deltaCount}"
+  )
+    .replace("{baseDate}", openDbInfo?.baseDate || "-")
+    .replace("{deltaCount}", openDbInfo?.deltaCount || 0);
+  const openDbCoverageSummary = getSettingsText(
+    "settingsAdvanced.cacheManagement.openDb.coverageSummary",
+    "{isrcCount} ISRC · {providerCount} providers"
+  )
+    .replace(
+      "{isrcCount}",
+      Number(openDbInfo?.distinctIsrcCount || 0).toLocaleString(
+        CONFIG.visual.language || navigator.language
+      )
+    )
+    .replace("{providerCount}", openDbInfo?.providerCount || 0);
 
   return react.createElement(
     "div",
-    { className: "setting-row" },
+    { className: "option-list-wrapper cache-management-list" },
+    react.createElement(
+      "div",
+      { className: "setting-row" },
     react.createElement(
       "div",
       { className: "setting-row-content" },
@@ -1681,10 +1827,11 @@ const LocalCacheManager = () => {
       ),
       react.createElement(
         "div",
-        { className: "setting-row-right", style: { display: "flex", gap: "8px" } },
+        { className: "setting-row-right cache-action-buttons" },
         react.createElement(
           "button",
           {
+            type: "button",
             className: "btn",
             onClick: handleClearCurrent,
           },
@@ -1693,11 +1840,121 @@ const LocalCacheManager = () => {
         react.createElement(
           "button",
           {
+            type: "button",
             className: "btn",
             onClick: handleClearAll,
             disabled: totalCount === 0,
           },
           I18n.t("settingsAdvanced.cacheManagement.localCache.clearAll")
+        )
+      )
+    )
+    ),
+    react.createElement(
+      "div",
+      { className: "setting-row opendb-cache-row" },
+      react.createElement(
+        "div",
+        { className: "setting-row-content" },
+        react.createElement(
+          "div",
+          { className: "setting-row-left" },
+          react.createElement(
+            "div",
+            { className: "setting-name" },
+            getSettingsText(
+              "settingsAdvanced.cacheManagement.openDb.label",
+              "OpenDB 인덱스 캐시"
+            )
+          ),
+          react.createElement(
+            "div",
+            { className: "setting-description" },
+            getSettingsText(
+              "settingsAdvanced.cacheManagement.openDb.desc",
+              "sync-data가 있는 가사 제공자를 찾는 base + delta 인덱스입니다."
+            )
+          ),
+          react.createElement(
+            "div",
+            {
+              className: "opendb-cache-status",
+              role: "status",
+              "aria-live": "polite",
+              "aria-atomic": "true",
+              "aria-busy": openDbUpdating,
+            },
+            react.createElement(
+              "div",
+              { className: "opendb-cache-status-primary" },
+              react.createElement(
+                "span",
+                {
+                  className: `opendb-cache-chip${
+                    openDbInfo?.available && !openDbInfo?.stale && !openDbInfo?.networkUnavailable
+                      ? " current"
+                      : ""
+                  }`,
+                  dir: "auto",
+                },
+                openDbVersionText
+              ),
+              openDbInfo?.available && (openDbInfo?.stale || openDbInfo?.networkUnavailable) && react.createElement(
+                "span",
+                { className: "opendb-cache-chip warning", dir: "auto" },
+                getSettingsText(
+                  "settingsAdvanced.cacheManagement.openDb.stale",
+                  "오프라인 · 기존 캐시 사용 중"
+                )
+              )
+            ),
+            openDbInfo?.available && react.createElement(
+              "div",
+              { className: "opendb-cache-meta" },
+              react.createElement(
+                "span",
+                { dir: "auto" },
+                openDbVersionSummary
+              ),
+              react.createElement(
+                "span",
+                { dir: "auto" },
+                openDbCoverageSummary
+              ),
+              openDbLastCheckedText && react.createElement(
+                "span",
+                { dir: "auto" },
+                `${getSettingsText("settingsAdvanced.cacheManagement.openDb.lastChecked", "마지막 확인")} ${openDbLastCheckedText}`
+              )
+            )
+          ),
+          openDbError && react.createElement(
+            "div",
+            { className: "setting-description opendb-cache-error", role: "status" },
+            openDbError
+          )
+        ),
+        react.createElement(
+          "div",
+          { className: "setting-row-right" },
+          react.createElement(
+            "button",
+            {
+              type: "button",
+              className: "btn opendb-cache-refresh-btn",
+              onClick: handleRefreshOpenDb,
+              disabled: openDbUpdating,
+            },
+            openDbUpdating
+              ? getSettingsText(
+                "settingsAdvanced.cacheManagement.openDb.updating",
+                "갱신 중…"
+              )
+              : getSettingsText(
+                "settingsAdvanced.cacheManagement.openDb.update",
+                "base + delta 다시 가져오기"
+              )
+          )
         )
       )
     )
@@ -2173,6 +2430,7 @@ const ConfigButton = ({ name, settingKey, info, text, onChange = () => { } }) =>
     "div",
     {
       className: "setting-row",
+      "data-setting-key": settingKey,
     },
     react.createElement(
       "div",
@@ -2227,6 +2485,7 @@ const ConfigSlider = react.memo(
       active,
       onClick: toggleState,
       disabled,
+      label: name,
     });
   }
 );
@@ -2239,11 +2498,12 @@ const ConfigSliderRange = ({
   step = 1,
   unit = "",
   disabled,
+  className = "",
+  showStepMarkers = false,
+  ariaValueFormatter,
   onChange = () => { },
 }) => {
   const [value, setValue] = useState(defaultValue);
-  const sliderRef = useRef(null);
-
   useEffect(() => {
     setValue(defaultValue);
   }, [defaultValue]);
@@ -2265,23 +2525,22 @@ const ConfigSliderRange = ({
     [updateValue]
   );
 
-  const handleChange = useCallback(
-    (event) => {
-      const newValue = Number(event.target.value);
-      updateValue(newValue);
-    },
-    [updateValue]
-  );
-
   const sliderStyle = {
     "--progress-percent": `${((value - min) / (max - min)) * 100}%`,
   };
+  const stepValues = showStepMarkers
+    ? Array.from(
+      { length: Math.floor((max - min) / step) + 1 },
+      (_, index) => min + index * step
+    )
+    : [];
 
   return react.createElement(
     "div",
-    { className: `slider-container` },
+    {
+      className: `slider-container${showStepMarkers ? " has-step-markers" : ""}${className ? ` ${className}` : ""}${disabled ? " disabled" : ""}`,
+    },
     react.createElement("input", {
-      ref: sliderRef,
       type: "range",
       min,
       max,
@@ -2289,36 +2548,127 @@ const ConfigSliderRange = ({
       value,
       disabled,
       onInput: handleInput,
-      onChange: handleChange,
-      onMouseDown: (e) => {
-        if (disabled) return;
-        // 마우스 다운 시 즉시 값 업데이트
-        const newValue = Number(e.target.value);
-        updateValue(newValue);
-      },
+      "aria-label": name,
+      "aria-valuetext": ariaValueFormatter
+        ? ariaValueFormatter(Number(value))
+        : `${value}${unit}`,
       className: "config-slider",
       style: sliderStyle,
     }),
     react.createElement(
-      "span",
+      "output",
       { className: "slider-value" },
       `${value}${unit}`
+    ),
+    showStepMarkers && react.createElement(
+      "div",
+      { className: "slider-step-markers", "aria-hidden": "true" },
+      stepValues.map((stepValue) =>
+        react.createElement("span", {
+          key: stepValue,
+          className: `slider-step-marker${Number(value) === stepValue ? " active" : ""}`,
+        })
+      )
     )
   );
 };
 
+const FONT_WEIGHT_NAMES = {
+  100: "Thin",
+  200: "Extra Light",
+  300: "Light",
+  400: "Regular",
+  500: "Medium",
+  600: "Semi Bold",
+  700: "Bold",
+  800: "Extra Bold",
+  900: "Black",
+};
+
+const ConfigFontWeightSlider = (props) =>
+  react.createElement(ConfigSliderRange, {
+    ...props,
+    min: 100,
+    max: 900,
+    step: 100,
+    unit: "",
+    showStepMarkers: true,
+    className: `font-weight-slider${props.className ? ` ${props.className}` : ""}`,
+    ariaValueFormatter: (value) => `${value} ${FONT_WEIGHT_NAMES[value] || ""}`.trim(),
+  });
+
+const normalizeSettingsHexColor = (value) => {
+  const color = String(value || "").trim();
+  if (/^#[0-9a-f]{6}$/i.test(color)) return color.toLowerCase();
+  if (/^#[0-9a-f]{3}$/i.test(color)) {
+    return `#${color.slice(1).split("").map((character) => character + character).join("")}`.toLowerCase();
+  }
+  return "";
+};
+
+const ConfigColorControl = ({
+  value,
+  label,
+  onDraftChange = () => { },
+  onCommit = () => { },
+}) => {
+  const normalizedColor = normalizeSettingsHexColor(value);
+  const isValid = Boolean(normalizedColor);
+
+  return react.createElement(
+    "div",
+    { className: `config-color-control${isValid ? "" : " invalid"}` },
+    react.createElement("input", {
+      type: "color",
+      value: normalizedColor || "#000000",
+      onChange: (event) => {
+        const nextColor = event.target.value.toLowerCase();
+        onDraftChange(nextColor);
+        onCommit(nextColor);
+      },
+      className: "config-color-picker",
+      "aria-label": `${label || "Color"} 색상 선택`,
+      title: `${label || "Color"} 색상 선택`,
+    }),
+    react.createElement("input", {
+      type: "text",
+      value: value || "",
+      onChange: (event) => onDraftChange(event.target.value),
+      onBlur: (event) => onCommit(event.target.value),
+      onKeyDown: (event) => {
+        if (event.key === "Enter") event.currentTarget.blur();
+      },
+      className: "config-color-input",
+      pattern: "^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$",
+      placeholder: "#000000",
+      spellCheck: false,
+      "aria-label": `${label || "Color"} HEX 값`,
+      "aria-invalid": !isValid,
+    })
+  );
+};
+
 const ConfigColorPicker = ({ name, defaultValue, onChange = () => { } }) => {
-  const [value, setValue] = useState(defaultValue);
+  const initialColor = normalizeSettingsHexColor(defaultValue) || "#000000";
+  const [value, setValue] = useState(initialColor);
+  const committedValueRef = useRef(initialColor);
 
   useEffect(() => {
-    setValue(defaultValue);
+    const nextColor = normalizeSettingsHexColor(defaultValue) || "#000000";
+    committedValueRef.current = nextColor;
+    setValue(nextColor);
   }, [defaultValue]);
 
-  const handleChange = useCallback(
-    (event) => {
-      const newValue = event.target.value;
-      setValue(newValue);
-      onChange(newValue);
+  const handleCommit = useCallback(
+    (nextValue) => {
+      const normalizedColor = normalizeSettingsHexColor(nextValue);
+      if (!normalizedColor) {
+        setValue(committedValueRef.current);
+        return;
+      }
+      committedValueRef.current = normalizedColor;
+      setValue(normalizedColor);
+      onChange(normalizedColor);
     },
     [onChange]
   );
@@ -2326,19 +2676,11 @@ const ConfigColorPicker = ({ name, defaultValue, onChange = () => { } }) => {
   return react.createElement(
     "div",
     { className: "color-picker-container" },
-    react.createElement("input", {
-      type: "color",
+    react.createElement(ConfigColorControl, {
       value,
-      onChange: handleChange,
-      className: "config-color-picker",
-    }),
-    react.createElement("input", {
-      type: "text",
-      value,
-      onChange: handleChange,
-      className: "config-color-input",
-      pattern: "^#[0-9A-Fa-f]{6}$",
-      placeholder: "#000000",
+      label: name,
+      onDraftChange: setValue,
+      onCommit: handleCommit,
     })
   );
 };
@@ -2458,33 +2800,21 @@ const ConfigMultiVocalColorSettings = () => {
     Toast?.success?.(I18n.t("settingsAdvanced.multiVocalColors.resetDone") || "Multi-vocal colors were reset.");
   };
 
-  const sharedInputStyle = {
-    background: "var(--glass-bg-hover)",
-    border: "1px solid var(--glass-border)",
-    borderRadius: "8px",
-    color: "var(--text-primary)",
-    minHeight: "34px",
-    boxSizing: "border-box",
-  };
-
   return react.createElement(
     "div",
-    { className: "option-list-wrapper", "data-setting-key": "multi-vocal-colors" },
+    { className: "option-list-wrapper multi-vocal-color-settings", "data-setting-key": "multi-vocal-colors" },
     react.createElement(
       "div",
-      {
-        className: "setting-row",
-        style: { alignItems: "stretch" },
-      },
+      { className: "setting-row multi-vocal-color-setting-row" },
       react.createElement(
         "div",
-        { className: "setting-row-content", style: { flexDirection: "column", alignItems: "stretch", gap: "16px" } },
+        { className: "setting-row-content multi-vocal-color-content" },
         react.createElement(
           "div",
-          { style: { display: "flex", justifyContent: "space-between", gap: "12px", alignItems: "flex-start" } },
+          { className: "multi-vocal-color-header" },
           react.createElement(
             "div",
-            { style: { minWidth: 0 } },
+            { className: "multi-vocal-color-copy" },
             react.createElement("div", { className: "setting-name" }, I18n.t("settingsAdvanced.multiVocalColors.description") || "Customize the lyric color for each multi-vocal speaker."),
             react.createElement("div", { className: "setting-description" }, I18n.t("settingsAdvanced.multiVocalColors.subtitle") || "These colors are used in karaoke lyrics, the Now Playing panel, and the sync creator.")
           ),
@@ -2496,70 +2826,27 @@ const ConfigMultiVocalColorSettings = () => {
         ),
         react.createElement(
           "div",
-          { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "14px" } },
+          { className: "multi-vocal-color-groups" },
           ...MULTI_VOCAL_COLOR_GROUPS.map((group) =>
             react.createElement(
               "div",
-              {
-                key: group.id,
-                style: {
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: "8px",
-                  padding: "12px",
-                  borderRadius: "12px",
-                  border: "1px solid var(--glass-border)",
-                  background: "var(--glass-bg)",
-                },
-              },
+              { key: group.id, className: "multi-vocal-color-group" },
               react.createElement(
                 "div",
-                {
-                  style: {
-                    fontSize: "11px",
-                    fontWeight: 800,
-                    color: "var(--text-secondary)",
-                    letterSpacing: "0.08em",
-                    textTransform: "uppercase",
-                  },
-                },
+                { className: "multi-vocal-color-group-title" },
                 I18n.t(group.labelKey) || group.fallbackLabel
               ),
               ...group.speakers.map((speaker) => {
                 const color = colors[speaker] || helper.defaultColors?.[speaker] || "#ffffff";
-                const safeColor = helper.normalizeColor?.(color) || helper.defaultColors?.[speaker] || "#ffffff";
                 return react.createElement(
-                  "label",
-                  {
-                    key: speaker,
-                    style: {
-                      display: "grid",
-                      gridTemplateColumns: "minmax(58px, auto) 38px minmax(92px, 1fr)",
-                      alignItems: "center",
-                      gap: "8px",
-                      minWidth: 0,
-                    },
-                  },
-                  react.createElement("span", { style: { fontSize: "12px", fontWeight: 700, color: "var(--text-primary)" } }, speaker),
-                  react.createElement("input", {
-                    type: "color",
-                    value: safeColor,
-                    onChange: (event) => commitColor(speaker, event.target.value),
-                    "aria-label": speaker,
-                    style: { ...sharedInputStyle, width: "38px", padding: "3px", cursor: "pointer" },
-                  }),
-                  react.createElement("input", {
-                    type: "text",
+                  "div",
+                  { key: speaker, className: "multi-vocal-color-row" },
+                  react.createElement("span", { className: "multi-vocal-color-speaker" }, speaker),
+                  react.createElement(ConfigColorControl, {
                     value: color,
-                    pattern: "^#[0-9A-Fa-f]{6}$",
-                    onChange: (event) => setColors((prev) => ({ ...prev, [speaker]: event.target.value })) ,
-                    onBlur: (event) => commitColor(speaker, event.target.value),
-                    onKeyDown: (event) => {
-                      if (event.key === "Enter") {
-                        event.currentTarget.blur();
-                      }
-                    },
-                    style: { ...sharedInputStyle, width: "100%", padding: "0 9px", fontFamily: "ui-monospace, SFMono-Regular, Consolas, monospace", fontSize: "12px" },
+                    label: speaker,
+                    onDraftChange: (nextColor) => setColors((prev) => ({ ...prev, [speaker]: nextColor })),
+                    onCommit: (nextColor) => commitColor(speaker, nextColor),
                   })
                 );
               })
@@ -2649,6 +2936,7 @@ const ColorPresetSelector = ({ name, defaultValue, onChange = () => { } }) => {
         "button",
         {
           className: "btn color-preset-toggle-btn",
+          type: "button",
           onClick: () => setShowAll(!showAll),
         },
         showAll ? I18n.t("settings.colors.showLess") : I18n.t("settings.colors.showMore")
@@ -2662,6 +2950,7 @@ const ColorPresetSelector = ({ name, defaultValue, onChange = () => { } }) => {
       ...colorPresets.map((preset, index) =>
         react.createElement("button", {
           key: index,
+          type: "button",
           className: "color-preset-grid-item",
           onClick: () => handleColorClick(preset.color),
           title: preset.name,
@@ -2676,11 +2965,12 @@ const ColorPresetSelector = ({ name, defaultValue, onChange = () => { } }) => {
   );
 };
 
-const ConfigWarning = ({ message }) => {
+const ConfigWarning = ({ message, settingKey }) => {
   return react.createElement(
     "div",
     {
       className: "setting-row",
+      "data-setting-key": settingKey,
       style: {
         backgroundColor: "rgba(var(--spice-rgb-warning), 0.25)",
       },
@@ -2713,11 +3003,12 @@ const ConfigWarning = ({ message }) => {
 };
 
 // 정보 표시용 컴포넌트 (헬퍼 프로그램 안내 등)
-const ConfigInfo = ({ message, buttonText, onButtonClick }) => {
+const ConfigInfo = ({ message, buttonText, onButtonClick, settingKey }) => {
   return react.createElement(
     "div",
     {
       className: "setting-row config-info-row",
+      "data-setting-key": settingKey,
     },
     react.createElement(
       "div",
@@ -3170,7 +3461,7 @@ const ConfigSettingsPresets = () => {
 };
 
 // 비디오 헬퍼 토글 컴포넌트 (연결 상태 표시 포함)
-const VideoHelperToggle = ({ name, defaultValue, disabled, onChange = () => { } }) => {
+const VideoHelperToggle = ({ name, settingKey, defaultValue, disabled, onChange = () => { } }) => {
   const [enabled, setEnabled] = useState(defaultValue === "true" || defaultValue === true);
   const [isConnected, setIsConnected] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -3253,7 +3544,7 @@ const VideoHelperToggle = ({ name, defaultValue, disabled, onChange = () => { } 
 
   return react.createElement(
     "div",
-    { className: "setting-row" },
+    { className: "setting-row", "data-setting-key": settingKey },
     react.createElement(
       "div",
       { className: "setting-row-content" },
@@ -3324,7 +3615,7 @@ const VideoHelperToggle = ({ name, defaultValue, disabled, onChange = () => { } 
 };
 
 // Lyrics Helper Toggle - 가사 헬퍼 연결 토글
-const LyricsHelperToggle = ({ name, defaultValue, disabled, onChange = () => { } }) => {
+const LyricsHelperToggle = ({ name, settingKey, defaultValue, disabled, onChange = () => { } }) => {
   const [enabled, setEnabled] = useState(defaultValue === "true" || defaultValue === true);
   const [isConnected, setIsConnected] = useState(false);
   const [checking, setChecking] = useState(false);
@@ -3416,7 +3707,7 @@ const LyricsHelperToggle = ({ name, defaultValue, disabled, onChange = () => { }
 
   return react.createElement(
     "div",
-    { className: "setting-row" },
+    { className: "setting-row", "data-setting-key": settingKey },
     react.createElement(
       "div",
       { className: "setting-row-content" },
@@ -3720,19 +4011,24 @@ const ConfigInstrumentalBreakIconPicker = ({
 const ConfigInput = ({ name, settingKey, defaultValue, onChange = () => { }, inputType = "text" }) => {
   const [value, setValue] = useState(defaultValue);
 
+  useEffect(() => {
+    setValue(defaultValue ?? "");
+  }, [defaultValue]);
+
   const setValueCallback = useCallback(
     (event) => {
-      const value = event.target.value;
-      setValue(value);
-      onChange(settingKey || name, value);
+      const nextValue = event.target.value;
+      setValue(nextValue);
+      onChange(settingKey || name, nextValue);
     },
-    [value, name, settingKey]
+    [name, settingKey, onChange]
   );
 
   return react.createElement(
     "div",
     {
       className: "setting-row",
+      "data-setting-key": settingKey,
     },
     react.createElement(
       "div",
@@ -3748,8 +4044,9 @@ const ConfigInput = ({ name, settingKey, defaultValue, onChange = () => { }, inp
         react.createElement("input", {
           className: "config-text-input",
           type: inputType,
-          value,
+          value: value ?? "",
           onChange: setValueCallback,
+          "aria-label": name,
         })
       )
     )
@@ -3821,9 +4118,25 @@ const ConfigFontSelector = ({
     }
     return "";
   });
+  const fontChangeSourceRef = useRef(null);
 
   useEffect(() => {
     const safeVal = getSafeValue(defaultValue);
+    const localChangeSource = fontChangeSourceRef.current;
+    fontChangeSourceRef.current = null;
+
+    if (localChangeSource === "custom") {
+      setUseCustomFont(true);
+      setCustomFont(safeVal);
+      return;
+    }
+
+    if (localChangeSource === "preset") {
+      setUseCustomFont(false);
+      if (safeVal && GOOGLE_FONTS.includes(safeVal)) setSelectedFont(safeVal);
+      return;
+    }
+
     const isCustom = isCustomFontValue(safeVal);
     setUseCustomFont(isCustom);
     if (isCustom) {
@@ -3838,6 +4151,7 @@ const ConfigFontSelector = ({
     const font = event.target.value;
     setSelectedFont(font);
     if (!useCustomFont) {
+      fontChangeSourceRef.current = "preset";
       onChange(settingKey || name, font);
     }
   };
@@ -3847,54 +4161,86 @@ const ConfigFontSelector = ({
     const font = event.target.value;
     setCustomFont(font);
     if (useCustomFont) {
+      fontChangeSourceRef.current = "custom";
       onChange(settingKey || name, font);
     }
   };
 
-  const handleCheckboxChange = () => {
+  const handleModeChange = (nextMode) => {
     if (disabled) return;
-    const newUseCustom = !useCustomFont;
-    setUseCustomFont(newUseCustom);
-    if (newUseCustom) {
-      onChange(settingKey || name, customFont || "");
-    } else {
+    const nextUseCustom = nextMode === "custom";
+    if (nextUseCustom === useCustomFont) return;
+
+    setUseCustomFont(nextUseCustom);
+    if (!nextUseCustom) {
+      fontChangeSourceRef.current = "preset";
       onChange(settingKey || name, selectedFont);
+    } else if (customFont.trim()) {
+      fontChangeSourceRef.current = "custom";
+      onChange(settingKey || name, customFont.trim());
     }
   };
 
   const fontSelector = react.createElement(
     "div",
     { className: "config-font-selector" },
-    useCustomFont
-      ? react.createElement("input", {
-        className: "config-font-selector-control config-text-input",
-        type: "text",
-        value: customFont,
-        onChange: handleCustomFontChange,
-        disabled,
-        placeholder: I18n.t("settings.fontPlaceholder") || "폰트명 입력 (예: Arial, 맑은 고딕)",
-      })
-      : react.createElement(
-        "select",
-        {
-          className: "config-font-selector-control config-select",
-          value: selectedFont,
-          onChange: handleFontChange,
-          disabled,
-        },
-        GOOGLE_FONTS.map((font) =>
-          react.createElement("option", { key: font, value: font }, font)
-        )
-      ),
     react.createElement(
       "div",
-      { className: "config-font-selector-action" },
-      react.createElement(ButtonSVG, {
-        icon: Spicetify.SVGIcons.edit,
-        active: useCustomFont,
-        onClick: handleCheckboxChange,
-        disabled,
-      })
+      {
+        className: "config-font-mode",
+        role: "group",
+        "aria-label": getSettingsText("settings.fontSelector.mode", "폰트 입력 방식"),
+      },
+      react.createElement(
+        "button",
+        {
+          type: "button",
+          className: `config-font-mode-button${useCustomFont ? "" : " active"}`,
+          onClick: () => handleModeChange("preset"),
+          disabled,
+          "aria-pressed": !useCustomFont,
+        },
+        getSettingsText("settings.fontSelector.preset", "폰트 목록")
+      ),
+      react.createElement(
+        "button",
+        {
+          type: "button",
+          className: `config-font-mode-button${useCustomFont ? " active" : ""}`,
+          onClick: () => handleModeChange("custom"),
+          disabled,
+          "aria-pressed": useCustomFont,
+        },
+        getSettingsText("settings.fontSelector.custom", "직접 입력")
+      )
+    ),
+    react.createElement(
+      "div",
+      { className: "config-font-field" },
+      useCustomFont
+        ? react.createElement("input", {
+          className: "config-font-selector-control config-text-input",
+          type: "text",
+          value: customFont,
+          onChange: handleCustomFontChange,
+          disabled,
+          placeholder: I18n.t("settings.fontPlaceholder") || "폰트명 입력 (예: Arial, 맑은 고딕)",
+          "aria-label": `${name || "Font"} ${getSettingsText("settings.fontSelector.custom", "직접 입력")}`,
+          spellCheck: false,
+        })
+        : react.createElement(
+          "select",
+          {
+            className: "config-font-selector-control config-select",
+            value: selectedFont,
+            onChange: handleFontChange,
+            disabled,
+            "aria-label": `${name || "Font"} ${getSettingsText("settings.fontSelector.preset", "폰트 목록")}`,
+          },
+          GOOGLE_FONTS.map((font) =>
+            react.createElement("option", { key: font, value: font }, font)
+          )
+        )
     )
   );
 
@@ -3904,6 +4250,7 @@ const ConfigFontSelector = ({
       "div",
       {
         className: "setting-row",
+        "data-setting-key": settingKey,
         style: disabled ? { opacity: 0.5, pointerEvents: "none" } : {},
       },
       react.createElement(
@@ -3961,6 +4308,50 @@ const loadGoogleFontFamily = (fontFamily) => {
       )}:wght@100;200;300;400;500;600;700;800;900&display=swap`;
     }
   });
+};
+
+const SETTINGS_LYRICS_PREVIEW_TEXT = "此処に歌詞があります";
+const SETTINGS_LYRICS_PREVIEW_LINE = Object.freeze({
+  text: SETTINGS_LYRICS_PREVIEW_TEXT,
+  startTime: 0,
+  endTime: 1200,
+  syllables: Object.freeze(
+    Array.from(SETTINGS_LYRICS_PREVIEW_TEXT).map((text, index) => Object.freeze({
+      text,
+      startTime: index * 100,
+      endTime: (index + 1) * 100,
+    }))
+  ),
+});
+const SETTINGS_LYRICS_PREVIEW_FURIGANA = new Map([
+  [0, "こ"],
+  [1, "こ"],
+  [3, "か"],
+  [4, "し"],
+]);
+
+const getSettingsLyricsPreviewStyle = () => {
+  return {
+    ...getLyricsTypographyStyleVariables(CONFIG.visual),
+    textAlign: CONFIG.visual.alignment || "center",
+  };
+};
+
+const syncSettingsLyricsPreviewStyles = () => {
+  const preview = document.getElementById("settings-live-lyrics-preview");
+  if (!preview) return;
+
+  const style = getSettingsLyricsPreviewStyle();
+  Object.entries(style).forEach(([name, value]) => {
+    if (name.startsWith("--")) {
+      preview.style.setProperty(name, String(value));
+    } else {
+      preview.style[name] = value;
+    }
+  });
+  preview.dataset.furiganaEnabled = CONFIG.visual["furigana-enabled"] === true
+    ? "true"
+    : "false";
 };
 
 // NowPlaying 패널 가사 미리보기 컴포넌트
@@ -4094,8 +4485,7 @@ const NowPlayingPanelPreview = () => {
   return react.createElement(
     "div",
     {
-      className: "option-list-wrapper",
-      style: { marginBottom: "16px" }
+      className: "option-list-wrapper"
     },
     react.createElement(
       "div",
@@ -4520,33 +4910,122 @@ const ConfigKaraokeFillCurveEditor = ({
   );
 };
 
+const SETTINGS_HOTKEY_LABELS = {
+  ctrl: "⌃",
+  control: "⌃",
+  alt: "⌥",
+  option: "⌥",
+  shift: "⇧",
+  meta: "⌘",
+  command: "⌘",
+  cmd: "⌘",
+  left: "←",
+  right: "→",
+  up: "↑",
+  down: "↓",
+  space: "Space",
+  enter: "Enter",
+  return: "Enter",
+  esc: "Esc",
+  escape: "Esc",
+  backspace: "Backspace",
+  delete: "Delete",
+  tab: "Tab",
+  numpaddivide: "Num /",
+};
+
+const normalizeSettingsHotkeyEvent = (event) => {
+  const aliases = {
+    ArrowLeft: "left",
+    ArrowRight: "right",
+    ArrowUp: "up",
+    ArrowDown: "down",
+    " ": "space",
+    Spacebar: "space",
+    Enter: "enter",
+    Escape: "esc",
+    Esc: "esc",
+    Control: "ctrl",
+    Meta: "meta",
+    Alt: "alt",
+    Shift: "shift",
+    Del: "delete",
+  };
+  const baseKey = event.code === "NumpadDivide"
+    ? "numpaddivide"
+    : aliases[event.key] || String(event.key || "").toLowerCase();
+
+  if (!baseKey || ["ctrl", "alt", "shift", "meta"].includes(baseKey)) return "";
+
+  const parts = [];
+  if (event.ctrlKey) parts.push("ctrl");
+  if (event.altKey) parts.push("alt");
+  if (event.shiftKey) parts.push("shift");
+  if (event.metaKey) parts.push("meta");
+  parts.push(baseKey);
+  return [...new Set(parts)].join("+");
+};
+
+const getSettingsHotkeyTokens = (value) => String(value || "")
+  .split("+")
+  .map((token) => token.trim().toLowerCase())
+  .filter(Boolean);
+
 const ConfigHotkey = ({ name, settingKey, defaultValue, onChange = () => { } }) => {
-  const [value, setValue] = useState(defaultValue);
-  const [trap] = useState(new Spicetify.Mousetrap());
+  const [value, setValue] = useState(defaultValue || "");
+  const [isRecording, setIsRecording] = useState(false);
+  const recorderRef = useRef(null);
 
-  function record() {
-    trap.handleKey = (character, modifiers, e) => {
-      if (e.type === "keydown") {
-        const sequence = [...new Set([...modifiers, character])];
-        if (sequence.length === 1 && sequence[0] === "esc") {
-          onChange(settingKey || name, "");
-          setValue("");
-          return;
-        }
-        setValue(sequence.join("+"));
+  useEffect(() => {
+    setValue(defaultValue || "");
+  }, [defaultValue]);
+
+  const commitHotkey = useCallback((nextValue) => {
+    setValue(nextValue);
+    onChange(settingKey || name, nextValue);
+  }, [name, onChange, settingKey]);
+
+  useEffect(() => {
+    if (!isRecording) return undefined;
+
+    const handleRecordingKeyDown = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
+
+      if (event.key === "Escape") {
+        setIsRecording(false);
+        return;
       }
-    };
-  }
 
-  function finishRecord() {
-    trap.handleKey = () => { };
-    onChange(settingKey || name, value);
-  }
+      if (event.key === "Backspace" || event.key === "Delete") {
+        commitHotkey("");
+        setIsRecording(false);
+        return;
+      }
+
+      const nextValue = normalizeSettingsHotkeyEvent(event);
+      if (!nextValue) return;
+
+      commitHotkey(nextValue);
+      setIsRecording(false);
+    };
+
+    window.addEventListener("keydown", handleRecordingKeyDown, true);
+    return () => window.removeEventListener("keydown", handleRecordingKeyDown, true);
+  }, [commitHotkey, isRecording]);
+
+  const tokens = getSettingsHotkeyTokens(value);
+  const startRecording = () => {
+    setIsRecording(true);
+    recorderRef.current?.focus();
+  };
 
   return react.createElement(
     "div",
     {
       className: "setting-row",
+      "data-setting-key": settingKey,
     },
     react.createElement(
       "div",
@@ -4559,12 +5038,74 @@ const ConfigHotkey = ({ name, settingKey, defaultValue, onChange = () => { } }) 
       react.createElement(
         "div",
         { className: "setting-row-right" },
-        react.createElement("input", {
-          type: "text",
-          value,
-          onFocus: record,
-          onBlur: finishRecord,
-        })
+        react.createElement(
+          "div",
+          { className: "config-hotkey-control" },
+          react.createElement(
+            "button",
+            {
+              ref: recorderRef,
+              type: "button",
+              className: `config-hotkey-recorder${isRecording ? " recording" : ""}`,
+              onClick: startRecording,
+              onBlur: () => setIsRecording(false),
+              "aria-label": isRecording
+                ? `${name}: ${getSettingsText("settings.hotkey.recording", "키 조합을 누르세요")}`
+                : `${name}: ${value || getSettingsText("settings.hotkey.unassigned", "지정 안 됨")}`,
+              "aria-pressed": isRecording,
+              title: getSettingsText("settings.hotkey.hint", "클릭한 뒤 원하는 키 조합을 누르세요"),
+            },
+            isRecording
+              ? react.createElement(
+                "span",
+                { className: "config-hotkey-recording-state" },
+                react.createElement("span", { className: "config-hotkey-recording-dot", "aria-hidden": "true" }),
+                getSettingsText("settings.hotkey.recording", "키 조합을 누르세요")
+              )
+              : tokens.length > 0
+                ? react.createElement(
+                  "span",
+                  { className: "config-hotkey-keycaps", "aria-hidden": "true" },
+                  ...tokens.map((token, index) =>
+                    react.createElement(
+                      "kbd",
+                      { className: "config-hotkey-keycap", key: `${token}-${index}` },
+                      SETTINGS_HOTKEY_LABELS[token] || (token.length === 1 ? token.toUpperCase() : token)
+                    )
+                  )
+                )
+                : react.createElement(
+                  "span",
+                  { className: "config-hotkey-empty" },
+                  getSettingsText("settings.hotkey.unassigned", "지정 안 됨")
+                ),
+            react.createElement(
+              "span",
+              { className: "config-hotkey-edit-label", "aria-hidden": "true" },
+              isRecording ? "Esc" : getSettingsText("settings.hotkey.change", "변경")
+            )
+          ),
+          value && !isRecording && react.createElement(
+            "button",
+            {
+              type: "button",
+              className: "config-hotkey-clear",
+              onClick: () => commitHotkey(""),
+              "aria-label": `${name} ${getSettingsText("settings.hotkey.clear", "단축키 지우기")}`,
+              title: getSettingsText("settings.hotkey.clear", "단축키 지우기"),
+            },
+            "×"
+          ),
+          react.createElement(
+            "span",
+            { className: "settings-visually-hidden", "aria-live": "polite" },
+            isRecording
+              ? getSettingsText("settings.hotkey.recording", "키 조합을 누르세요")
+              : value
+                ? `${getSettingsText("settings.hotkey.saved", "저장됨")}: ${value}`
+                : getSettingsText("settings.hotkey.unassigned", "지정 안 됨")
+          )
+        )
       )
     )
   );
@@ -4612,6 +5153,7 @@ const ConfigKeyList = ({ name, settingKey, defaultValue, onChange = () => { } })
     "div",
     {
       className: "setting-row",
+      "data-setting-key": settingKey,
     },
     react.createElement(
       "div",
@@ -5012,6 +5554,7 @@ const ConfigModal = ({
 }) => {
   const [activeTab, setActiveTab] = react.useState(initialTab || "general");
   const [searchQuery, setSearchQuery] = react.useState("");
+  const searchOriginTabRef = react.useRef(initialTab || "general");
   const shouldReduceMotion = getEffectiveReducedMotionPreference();
   const [uiTheme, setUiTheme] = react.useState(getSettingsUiTheme);
 
@@ -5019,17 +5562,23 @@ const ConfigModal = ({
   const handleSearchChange = (e) => {
     const query = e.target.value;
     setSearchQuery(query);
-    if (query.length > 0) {
+
+    if (query.trim()) {
+      if (activeTab !== "search") {
+        searchOriginTabRef.current = activeTab;
+      }
       setActiveTab("search");
-    } else {
-      setActiveTab("general");
+    } else if (activeTab === "search") {
+      setActiveTab(searchOriginTabRef.current || "general");
     }
   };
 
   // 검색 지우기
   const handleClearSearch = () => {
     setSearchQuery("");
-    setActiveTab("general");
+    if (activeTab === "search") {
+      setActiveTab(searchOriginTabRef.current || "general");
+    }
   };
 
   react.useEffect(() => {
@@ -5045,7 +5594,19 @@ const ConfigModal = ({
   const shouldRestoreSidebarScrollRef = react.useRef(false);
   const isProgrammaticScrollRef = react.useRef(false);
   const programmaticScrollTimerRef = react.useRef(null);
+  const programmaticScrollEndCleanupRef = react.useRef(null);
   const highlightTimeoutRef = react.useRef(null);
+
+  const holdProgrammaticScroll = react.useCallback((delay = 1400) => {
+    isProgrammaticScrollRef.current = true;
+    if (programmaticScrollTimerRef.current) {
+      clearTimeout(programmaticScrollTimerRef.current);
+    }
+    programmaticScrollTimerRef.current = window.setTimeout(() => {
+      isProgrammaticScrollRef.current = false;
+      programmaticScrollTimerRef.current = null;
+    }, delay);
+  }, []);
 
   /**
    * Scroll the settings-content container so that the element with
@@ -5063,33 +5624,57 @@ const ConfigModal = ({
       const activePanel = container.querySelector(".tab-content.active");
       if (!activePanel) return false;
 
-      const targetElement =
-        activePanel.querySelector(`[data-setting-key="${settingKey}"]`);
+      const targetElement = Array.from(
+        activePanel.querySelectorAll("[data-setting-key]")
+      ).find((element) => element.getAttribute("data-setting-key") === String(settingKey));
       if (!targetElement) return false;
 
-      // Mark scroll as programmatic so the scroll-spy ignores it
-      isProgrammaticScrollRef.current = true;
-      if (programmaticScrollTimerRef.current) {
-        clearTimeout(programmaticScrollTimerRef.current);
+      // Keep scroll-spy locked while the smooth scroll is in flight. The
+      // browser's scrollend event releases it; the timer is only a fallback.
+      holdProgrammaticScroll(behavior === "smooth" ? 1800 : 120);
+
+      if (programmaticScrollEndCleanupRef.current) {
+        programmaticScrollEndCleanupRef.current();
+        programmaticScrollEndCleanupRef.current = null;
+      }
+
+      if (behavior === "smooth") {
+        const handleScrollEnd = () => {
+          programmaticScrollEndCleanupRef.current = null;
+          // Keep the clicked destination stable through the browser's final
+          // layout/scrollbar update before returning control to scroll-spy.
+          holdProgrammaticScroll(260);
+        };
+        const cleanupScrollEnd = () => {
+          container.removeEventListener("scrollend", handleScrollEnd);
+        };
+        programmaticScrollEndCleanupRef.current = cleanupScrollEnd;
+        container.addEventListener("scrollend", handleScrollEnd, { once: true });
       }
 
       // Calculate target position relative to the scroll container
       const containerRect = container.getBoundingClientRect();
       const targetRect = targetElement.getBoundingClientRect();
+      const stickyPreview = activePanel.querySelector(".settings-live-preview-sticky");
+      const targetFollowsPreview = stickyPreview
+        && typeof Node !== "undefined"
+        && Boolean(
+          stickyPreview.compareDocumentPosition(targetElement)
+          & Node.DOCUMENT_POSITION_FOLLOWING
+        );
+      const stickyPreviewOffset = targetFollowsPreview
+        ? stickyPreview.getBoundingClientRect().height + 12
+        : 0;
       const scrollTop =
-        container.scrollTop + (targetRect.top - containerRect.top) - 12;
+        container.scrollTop
+        + (targetRect.top - containerRect.top)
+        - stickyPreviewOffset
+        - 12;
 
       container.scrollTo({
         top: Math.max(0, scrollTop),
         behavior,
       });
-
-      // Re-enable scroll spy after animation settles
-      const delay = behavior === "smooth" ? 500 : 60;
-      programmaticScrollTimerRef.current = window.setTimeout(() => {
-        isProgrammaticScrollRef.current = false;
-        programmaticScrollTimerRef.current = null;
-      }, delay);
 
       if (highlight) {
         targetElement.classList.add("setting-highlight-flash");
@@ -5103,29 +5688,36 @@ const ConfigModal = ({
 
       return true;
     },
-    []
+    [holdProgrammaticScroll]
   );
 
   // 텍스트 하이라이트 헬퍼 함수
   const highlightText = (text, query) => {
     if (!query.trim() || !text) return text;
 
-    const lowerText = text.toLowerCase();
-    const lowerQuery = query.toLowerCase().trim();
-    const index = lowerText.indexOf(lowerQuery);
+    const tokens = [...new Set(
+      query
+        .normalize("NFKC")
+        .trim()
+        .split(/\s+/)
+        .filter(Boolean)
+    )].sort((a, b) => b.length - a.length);
+    if (tokens.length === 0) return text;
 
-    if (index === -1) return text;
-
-    const before = text.substring(0, index);
-    const match = text.substring(index, index + query.trim().length);
-    const after = text.substring(index + query.trim().length);
+    const escapedTokens = tokens.map((token) =>
+      token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+    );
+    const tokenPattern = new RegExp(`(${escapedTokens.join("|")})`, "giu");
+    const normalizedTokens = new Set(tokens.map((token) => token.toLocaleLowerCase()));
 
     return react.createElement(
       react.Fragment,
       null,
-      before,
-      react.createElement("mark", { className: "search-highlight" }, match),
-      after
+      ...String(text).split(tokenPattern).map((part, index) =>
+        normalizedTokens.has(part.normalize("NFKC").toLocaleLowerCase())
+          ? react.createElement("mark", { key: index, className: "search-highlight" }, part)
+          : part
+      )
     );
   };
 
@@ -5225,7 +5817,7 @@ const ConfigModal = ({
     {
       section: I18n.t("tabs.appearance"),
       sectionKey: "appearance",
-      settingKey: "backgroundBrightness",
+      settingKey: "background-brightness",
       name: I18n.t("settings.backgroundBrightness.label"),
       desc: I18n.t("settings.backgroundBrightness.desc"),
       i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.backgroundBrightness.label", "settings.backgroundBrightness.desc"]
@@ -5645,28 +6237,339 @@ const ConfigModal = ({
     },
   ], []);
 
-  const searchableSettingEntries = react.useMemo(() => {
-    return searchableSettings.map((setting) => {
-      const allTranslations = (setting.i18nKeys || []).flatMap((key) =>
-        I18n.getAllTranslations(key)
+  const [discoveredSearchSettings, setDiscoveredSearchSettings] = react.useState([]);
+  const discoveredSearchSignatureRef = react.useRef("");
+
+  // 실제로 렌더된 설정 행을 색인한다. 수동 목록은 다국어 별칭과 보조 설명으로만
+  // 사용하므로 설정이 추가되거나 키가 바뀌어도 검색 목적지가 어긋나지 않는다.
+  react.useEffect(() => {
+    const container = settingsContentRef.current;
+    if (!container) return;
+
+    const manualByDestination = new Map(
+      searchableSettings.map((setting) => [
+        `${setting.sectionKey}:${setting.settingKey}`,
+        setting,
+      ])
+    );
+    let frameId = null;
+    let disposed = false;
+
+    const readOwnedText = (node, selector) => {
+      const isSettingRow = node.classList.contains("setting-row");
+      const ownedElement = Array.from(node.querySelectorAll(selector)).find((candidate) => {
+        if (isSettingRow) {
+          return candidate.closest(".setting-row") === node;
+        }
+        if (candidate.closest(".setting-row")) return false;
+        return candidate.closest("[data-setting-key]") === node;
+      });
+      return ownedElement?.textContent?.replace(/\s+/g, " ").trim() || "";
+    };
+
+    const readNodeTextWithoutNestedSettings = (node) => {
+      const clone = node.cloneNode(true);
+      clone.querySelectorAll("[data-setting-key]").forEach((nestedNode) => {
+        nestedNode.remove();
+      });
+      return clone.textContent?.replace(/\s+/g, " ").trim() || "";
+    };
+
+    const scanRenderedSettings = () => {
+      frameId = null;
+      if (disposed) return;
+
+      const tabLabels = {
+        general: I18n.t("tabs.general"),
+        appearance: I18n.t("tabs.appearance"),
+        performance: I18n.t("tabs.performance"),
+        lyrics: I18n.t("tabs.behavior"),
+        "lyrics-providers": I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
+        "ai-providers": I18n.t("tabs.aiProviders") || "AI Providers",
+        fullscreen: I18n.t("tabs.fullscreen"),
+        nowplaying: I18n.t("tabs.nowplaying"),
+        advanced: I18n.t("tabs.advanced"),
+        debug: I18n.t("tabs.debug"),
+        about: I18n.t("tabs.about"),
+      };
+      const tabI18nKeys = {
+        general: "tabs.general",
+        appearance: "tabs.appearance",
+        performance: "tabs.performance",
+        lyrics: "tabs.behavior",
+        "lyrics-providers": "tabs.lyricsProviders",
+        "ai-providers": "tabs.aiProviders",
+        fullscreen: "tabs.fullscreen",
+        nowplaying: "tabs.nowplaying",
+        advanced: "tabs.advanced",
+        debug: "tabs.debug",
+        about: "tabs.about",
+      };
+      const standaloneTabs = new Set(["lyrics-providers", "ai-providers"]);
+      const settingsByResultKey = new Map();
+
+      const mergeSearchSetting = (candidate) => {
+        const existing = settingsByResultKey.get(candidate.resultKey);
+        if (!existing) {
+          settingsByResultKey.set(candidate.resultKey, candidate);
+          return;
+        }
+
+        if (candidate.preferVisibleText && candidate.name) {
+          existing.name = candidate.name;
+        }
+        if (candidate.preferVisibleText && candidate.desc) {
+          existing.desc = candidate.desc;
+        }
+        existing.i18nKeys = [...new Set([
+          ...(existing.i18nKeys || []),
+          ...(candidate.i18nKeys || []),
+        ])];
+        existing.directKeywords = [...new Set([
+          ...(existing.directKeywords || []),
+          ...(candidate.directKeywords || []),
+        ])];
+        existing.contextKeywords = [...new Set([
+          ...(existing.contextKeywords || []),
+          ...(candidate.contextKeywords || []),
+        ])];
+      };
+
+      container
+        .querySelectorAll('.tab-content[data-tab-id]:not([data-tab-id="search"])')
+        .forEach((tabNode) => {
+          const tabId = tabNode.getAttribute("data-tab-id");
+          if (!tabId) return;
+
+          const tabLabel = tabLabels[tabId] || tabId;
+          if (!standaloneTabs.has(tabId)) {
+            mergeSearchSetting({
+              resultKey: `${tabId}:__tab__`,
+              section: tabLabel,
+              sectionKey: tabId,
+              settingKey: null,
+              navItemId: tabId,
+              name: tabLabel,
+              desc: "",
+              i18nKeys: tabI18nKeys[tabId] ? [tabI18nKeys[tabId]] : [],
+              directKeywords: [tabLabel],
+              contextKeywords: [],
+              isTabResult: true,
+            });
+          }
+
+          let currentSectionKey = "";
+          let currentSectionLabel = "";
+          let currentSectionDescription = "";
+          let unanchoredRowIndex = 0;
+
+          tabNode.querySelectorAll("[data-setting-key], .setting-row").forEach((node) => {
+            const explicitSettingKey = node.getAttribute("data-setting-key") || "";
+            const isSectionTitle = node.classList.contains("section-title");
+            if (isSectionTitle) {
+              currentSectionKey = explicitSettingKey || currentSectionKey;
+              currentSectionLabel = readOwnedText(node, "h3") || currentSectionLabel;
+              currentSectionDescription =
+                readOwnedText(node, "p") || currentSectionDescription;
+            }
+
+            const ancestorSettingKey = explicitSettingKey
+              ? ""
+              : node.closest("[data-setting-key]")?.getAttribute("data-setting-key") || "";
+            const settingKey =
+              explicitSettingKey || ancestorSettingKey || currentSectionKey || null;
+            const resultKey = explicitSettingKey
+              ? `${tabId}:${explicitSettingKey}`
+              : `${tabId}:${settingKey || "top"}:row-${unanchoredRowIndex++}`;
+
+            const manualSetting = settingKey
+              ? manualByDestination.get(`${tabId}:${settingKey}`)
+              : null;
+            const visibleName = readOwnedText(
+              node,
+              ".setting-name, .lyrics-provider-name, h3"
+            );
+            const visibleDescription = readOwnedText(
+              node,
+              ".setting-description, .lyrics-provider-summary, p"
+            );
+            const fallbackVisibleText = !visibleName && !visibleDescription
+              ? readNodeTextWithoutNestedSettings(node)
+              : "";
+            const declaredSearchText = node.getAttribute("data-search-text") || "";
+            if (
+              !explicitSettingKey &&
+              !visibleName &&
+              !visibleDescription &&
+              !fallbackVisibleText &&
+              !declaredSearchText
+            ) {
+              return;
+            }
+
+            const name =
+              visibleName ||
+              manualSetting?.name ||
+              fallbackVisibleText ||
+              currentSectionLabel ||
+              settingKey ||
+              tabLabel;
+            const description =
+              visibleDescription ||
+              manualSetting?.desc ||
+              (isSectionTitle ? currentSectionDescription : currentSectionLabel) ||
+              "";
+
+            mergeSearchSetting({
+              resultKey,
+              section: tabLabel,
+              sectionKey: tabId,
+              settingKey,
+              navItemId: standaloneTabs.has(tabId)
+                ? tabId
+                : currentSectionKey || tabId,
+              name,
+              desc: description,
+              i18nKeys: manualSetting?.i18nKeys || [],
+              directKeywords: [
+                ...(manualSetting?.keywords || []),
+                manualSetting?.name || "",
+                manualSetting?.desc || "",
+                declaredSearchText,
+                fallbackVisibleText,
+              ].filter(Boolean),
+              contextKeywords: [
+                tabLabel,
+                currentSectionLabel,
+                currentSectionDescription,
+              ].filter(Boolean),
+              preferVisibleText: !isSectionTitle,
+            });
+          });
+        });
+
+      const nextSettings = Array.from(settingsByResultKey.values()).map(
+        (setting, order) => ({ ...setting, order })
       );
-      const keywords = (setting.keywords || []).join(" ");
+
+      const signature = JSON.stringify(
+        nextSettings.map((setting) => [
+          setting.resultKey,
+          setting.sectionKey,
+          setting.settingKey,
+          setting.navItemId,
+          setting.name,
+          setting.desc,
+          setting.directKeywords.join(" "),
+          setting.contextKeywords.join(" "),
+        ])
+      );
+      if (signature !== discoveredSearchSignatureRef.current) {
+        discoveredSearchSignatureRef.current = signature;
+        setDiscoveredSearchSettings(nextSettings);
+      }
+    };
+
+    const scheduleScan = () => {
+      if (frameId != null) return;
+      frameId = requestAnimationFrame(scanRenderedSettings);
+    };
+
+    const observer = new MutationObserver(scheduleScan);
+    container
+      .querySelectorAll('.tab-content[data-tab-id]:not([data-tab-id="search"])')
+      .forEach((tabNode) => {
+        observer.observe(tabNode, {
+          childList: true,
+          subtree: true,
+          characterData: true,
+        });
+      });
+    scheduleScan();
+
+    return () => {
+      disposed = true;
+      observer.disconnect();
+      if (frameId != null) cancelAnimationFrame(frameId);
+    };
+  }, [searchableSettings]);
+
+  const normalizeSettingsSearchText = (value) =>
+    String(value || "")
+      .normalize("NFKC")
+      .toLocaleLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const searchableSettingEntries = react.useMemo(() => {
+    return discoveredSearchSettings.map((setting) => {
+      const directTranslations = [];
+      const contextTranslations = [];
+      (setting.i18nKeys || []).forEach((key) => {
+        const translations = I18n.getAllTranslations?.(key) || [];
+        if (setting.isTabResult || !/^(tabs|sections)\./.test(key)) {
+          directTranslations.push(...translations);
+        } else {
+          contextTranslations.push(...translations);
+        }
+      });
+      const directKeywords = (setting.directKeywords || []).join(" ");
+      const contextKeywords = (setting.contextKeywords || []).join(" ");
+      const directSearchText = normalizeSettingsSearchText([
+        setting.name,
+        setting.desc,
+        setting.settingKey,
+        directTranslations.join(" "),
+        directKeywords,
+      ].join(" "));
+      const contextSearchText = normalizeSettingsSearchText([
+        setting.section,
+        contextTranslations.join(" "),
+        contextKeywords,
+      ].join(" "));
 
       return {
         setting,
-        searchText: `${allTranslations.join(" ")} ${keywords}`.toLowerCase(),
+        directSearchText,
+        contextSearchText,
+        searchText: `${directSearchText} ${contextSearchText}`.trim(),
+        normalizedName: normalizeSettingsSearchText(setting.name),
+        normalizedDescription: normalizeSettingsSearchText(setting.desc),
       };
     });
-  }, [searchableSettings]);
+  }, [discoveredSearchSettings]);
 
-  // 검색 결과 필터링 (모든 언어의 번역을 검색 대상에 포함)
+  // 공백과 입력 순서에 상관없이 모든 검색어가 포함된 실제 설정만 반환한다.
   const searchResults = react.useMemo(() => {
-    if (!searchQuery.trim()) return [];
+    const query = normalizeSettingsSearchText(searchQuery);
+    if (!query) return [];
 
-    const query = searchQuery.toLowerCase().trim();
+    const tokens = [...new Set(query.split(" ").filter(Boolean))];
+    const rankEntry = (entry) => {
+      if (entry.normalizedName === query) return 0;
+      if (entry.normalizedName.startsWith(query)) return 1;
+      if (tokens.every((token) => entry.normalizedName.includes(token))) return 2;
+      if (tokens.every((token) => entry.normalizedDescription.includes(token))) return 3;
+      if (tokens.every((token) => entry.directSearchText.includes(token))) return 4;
+      return 5;
+    };
+
     return searchableSettingEntries
-      .filter(({ searchText }) => searchText.includes(query))
-      .map(({ setting }) => setting);
+      .filter(({ directSearchText, searchText }) => {
+        const directMatch = tokens.every((token) => directSearchText.includes(token));
+        if (directMatch) return true;
+
+        return (
+          tokens.length > 1 &&
+          tokens.some((token) => directSearchText.includes(token)) &&
+          tokens.every((token) => searchText.includes(token))
+        );
+      })
+      .map((entry) => ({ entry, rank: rankEntry(entry) }))
+      .sort((a, b) =>
+        a.rank - b.rank || a.entry.setting.order - b.entry.setting.order
+      )
+      .map(({ entry }) => entry.setting);
   }, [searchQuery, searchableSettingEntries]);
 
   // 검색 결과 컴포넌트
@@ -5696,13 +6599,17 @@ const ConfigModal = ({
       );
     }
 
-    // 섹션별로 그룹화
-    const groupedResults = {};
+    // 번역명이 같아도 섞이지 않도록 실제 탭 ID 기준으로 그룹화한다.
+    const groupedResults = new Map();
     searchResults.forEach(result => {
-      if (!groupedResults[result.section]) {
-        groupedResults[result.section] = [];
+      const groupKey = result.sectionKey || result.section;
+      if (!groupedResults.has(groupKey)) {
+        groupedResults.set(groupKey, {
+          section: result.section,
+          items: [],
+        });
       }
-      groupedResults[result.section].push(result);
+      groupedResults.get(groupKey).items.push(result);
     });
 
     return react.createElement(
@@ -5717,10 +6624,10 @@ const ConfigModal = ({
           I18n.t("search.resultCount").replace("{count}", searchResults.length)
         )
       ),
-      Object.entries(groupedResults).map(([section, items]) =>
+      Array.from(groupedResults.entries()).map(([groupKey, group]) =>
         react.createElement(
           "div",
-          { key: section, className: "search-result-group" },
+          { key: groupKey, className: "search-result-group" },
           react.createElement(
             "div",
             { className: "section-title" },
@@ -5730,19 +6637,21 @@ const ConfigModal = ({
               react.createElement(
                 "div",
                 { className: "section-text" },
-                react.createElement("h3", null, section)
+                react.createElement("h3", null, group.section)
               )
             )
           ),
           react.createElement(
             "div",
             { className: "option-list-wrapper" },
-            items.map((item, index) =>
+            group.items.map((item) =>
               react.createElement(
                 "div",
                 {
-                  key: `${section}-${item.name}-${index}`,
+                  key: item.resultKey,
                   className: "setting-row search-result-item",
+                  role: "button",
+                  tabIndex: 0,
                   onMouseDown: (e) => {
                     // blur 이벤트가 발생하기 전에 클릭을 처리하기 위해 preventDefault
                     e.preventDefault();
@@ -5753,7 +6662,17 @@ const ConfigModal = ({
                     navigateToDestination(
                       item.sectionKey,
                       item.settingKey,
-                      resolveNavItemId(item.sectionKey, item.settingKey),
+                      item.navItemId || resolveNavItemId(item.sectionKey, item.settingKey),
+                      true
+                    );
+                  },
+                  onKeyDown: (e) => {
+                    if (e.key !== "Enter" && e.key !== " ") return;
+                    e.preventDefault();
+                    navigateToDestination(
+                      item.sectionKey,
+                      item.settingKey,
+                      item.navItemId || resolveNavItemId(item.sectionKey, item.settingKey),
                       true
                     );
                   },
@@ -5863,6 +6782,10 @@ const ConfigModal = ({
       if (programmaticScrollTimerRef.current) {
         clearTimeout(programmaticScrollTimerRef.current);
       }
+      if (programmaticScrollEndCleanupRef.current) {
+        programmaticScrollEndCleanupRef.current();
+        programmaticScrollEndCleanupRef.current = null;
+      }
       if (highlightTimeoutRef.current) {
         clearTimeout(highlightTimeoutRef.current);
       }
@@ -5946,61 +6869,12 @@ const ConfigModal = ({
   react.useEffect(() => {
     if (activeTab === "appearance") {
       window.__ivLyricsDebugLog?.(
-        `[ivLyrics] Appearance tab activated, updating preview fonts`
+        `[ivLyrics] Appearance tab activated, updating lyrics preview`
       );
-      // 약간의 지연을 주어 DOM이 렌더링된 후 실행
-      setTimeout(() => {
-        const lyricsPreview = document.getElementById("lyrics-preview");
-        const phoneticPreview = document.getElementById("phonetic-preview");
-        const translationPreview = document.getElementById(
-          "translation-preview"
-        );
-
-        const originalFont = CONFIG.visual["original-font-family"];
-        const phoneticFont = CONFIG.visual["phonetic-font-family"];
-        const translationFont = CONFIG.visual["translation-font-family"];
-
-        window.__ivLyricsDebugLog?.(
-          `[ivLyrics] Fonts - original: ${originalFont}, phonetic: ${phoneticFont}, translation: ${translationFont}`
-        );
-
-        if (lyricsPreview) {
-          // 기본값으로 초기화
-          lyricsPreview.style.fontFamily = "var(--font-family)";
-          // 짧은 지연 후 실제 폰트 적용
-          setTimeout(() => {
-            window.__ivLyricsDebugLog?.(
-              `[ivLyrics] Setting lyrics preview font to: ${originalFont}`
-            );
-            lyricsPreview.style.fontFamily =
-              originalFont || "Pretendard Variable";
-          }, 10);
-        }
-
-        if (phoneticPreview) {
-          phoneticPreview.style.fontFamily = "var(--font-family)";
-          setTimeout(() => {
-            window.__ivLyricsDebugLog?.(
-              `[ivLyrics] Setting phonetic preview font to: ${phoneticFont}`
-            );
-            phoneticPreview.style.fontFamily =
-              phoneticFont || "Pretendard Variable";
-          }, 10);
-        }
-
-        if (translationPreview) {
-          translationPreview.style.fontFamily = "var(--font-family)";
-          setTimeout(() => {
-            window.__ivLyricsDebugLog?.(
-              `[ivLyrics] Setting translation preview font to: ${translationFont}`
-            );
-            translationPreview.style.fontFamily =
-              translationFont || "Pretendard Variable";
-          }, 10);
-        }
-      }, 50);
+      const frameId = requestAnimationFrame(syncSettingsLyricsPreviewStyles);
+      return () => cancelAnimationFrame(frameId);
     }
-	  }, [activeTab]);
+	  }, [activeTab, uiTheme]);
 
   // 패치노트 불러오기
   useEffect(() => {
@@ -6383,6 +7257,20 @@ const ConfigModal = ({
       description: tabMeta.general.description,
     },
     {
+      id: "lyrics-providers",
+      label: I18n.t("tabs.lyricsProviders"),
+      badge: tabMeta["lyrics-providers"].badge,
+      description: tabMeta["lyrics-providers"].description,
+      standalone: true,
+    },
+    {
+      id: "ai-providers",
+      label: I18n.t("tabs.aiProviders"),
+      badge: tabMeta["ai-providers"].badge,
+      description: tabMeta["ai-providers"].description,
+      standalone: true,
+    },
+    {
       id: "appearance",
       label: I18n.t("tabs.appearance"),
       badge: tabMeta.appearance.badge,
@@ -6399,20 +7287,6 @@ const ConfigModal = ({
       label: I18n.t("tabs.behavior"),
       badge: tabMeta.lyrics.badge,
       description: tabMeta.lyrics.description,
-    },
-    {
-      id: "lyrics-providers",
-      label: I18n.t("tabs.lyricsProviders"),
-      badge: tabMeta["lyrics-providers"].badge,
-      description: tabMeta["lyrics-providers"].description,
-      standalone: true,
-    },
-    {
-      id: "ai-providers",
-      label: I18n.t("tabs.aiProviders"),
-      badge: tabMeta["ai-providers"].badge,
-      description: tabMeta["ai-providers"].description,
-      standalone: true,
     },
     {
       id: "fullscreen",
@@ -6553,13 +7427,14 @@ const ConfigModal = ({
       if (navItemId) {
         setActiveNavItemId(navItemId);
       }
-      if (clearSearch) {
+      if (clearSearch || (activeTab === "search" && tabId !== "search")) {
         setSearchQuery("");
       }
 
       // Different tab → switch tab and schedule scroll
       if (tabId !== activeTab) {
         if (settingKey) {
+          holdProgrammaticScroll();
           pendingTabScrollRef.current = settingKey;
           shouldResetContentScrollRef.current = false;
         } else {
@@ -6572,20 +7447,16 @@ const ConfigModal = ({
 
       // Same tab → scroll directly
       if (settingKey) {
-        isProgrammaticScrollRef.current = true;
+        holdProgrammaticScroll();
         requestAnimationFrame(() => {
           scrollToSetting(settingKey);
         });
       } else if (settingsContentRef.current) {
-        isProgrammaticScrollRef.current = true;
+        holdProgrammaticScroll();
         settingsContentRef.current.scrollTo({ top: 0, behavior: "smooth" });
-        if (programmaticScrollTimerRef.current) clearTimeout(programmaticScrollTimerRef.current);
-        programmaticScrollTimerRef.current = setTimeout(() => {
-          isProgrammaticScrollRef.current = false;
-        }, 500);
       }
     },
-    [activeTab, scrollToSetting]
+    [activeTab, holdProgrammaticScroll, scrollToSetting]
   );
 
   // ---- 3. Keep activeNavItemId valid for the current tab ----
@@ -6606,13 +7477,14 @@ const ConfigModal = ({
 
   // ---- 4. Auto-expand the sidebar group for the active tab ----
   react.useEffect(() => {
-    if (activeTab === "search" || !activeSidebarTab?.id || activeSidebarTab.standalone) {
+    const currentTab = sidebarTabs.find((tab) => tab.id === activeTab);
+    if (activeTab === "search" || !currentTab?.id || currentTab.standalone) {
       return;
     }
     setExpandedGroupIds((prev) =>
-      prev.includes(activeSidebarTab.id) ? prev : [...prev, activeSidebarTab.id]
+      prev.includes(currentTab.id) ? prev : [...prev, currentTab.id]
     );
-  }, [activeSidebarTab, activeTab]);
+  }, [activeTab]);
 
   // ---- 5. Scroll-spy: update sidebar highlight on user scroll ----
   react.useEffect(() => {
@@ -6633,8 +7505,18 @@ const ConfigModal = ({
       if (nodes.length === 0) return;
 
       const containerTop = currentContainer.getBoundingClientRect().top;
-      const anchorLine =
+      const defaultAnchorLine =
         containerTop + Math.min(120, Math.max(72, currentContainer.clientHeight * 0.2));
+      const stickyPreview = currentContainer.querySelector(
+        ".tab-content.active .settings-live-preview-sticky"
+      );
+      const stickyPreviewRect = stickyPreview?.getBoundingClientRect();
+      const stickyPreviewIsPinned = stickyPreviewRect
+        && stickyPreviewRect.top <= containerTop + 1
+        && stickyPreviewRect.bottom > containerTop;
+      const anchorLine = stickyPreviewIsPinned
+        ? Math.max(defaultAnchorLine, stickyPreviewRect.bottom + 12)
+        : defaultAnchorLine;
 
       let bestNode = nodes[0];
       for (const node of nodes) {
@@ -6652,6 +7534,11 @@ const ConfigModal = ({
     };
 
     const scheduleUpdate = () => {
+      if (isProgrammaticScrollRef.current) {
+        // `scrollend` (with the safety timer in scrollToSetting) owns the
+        // unlock. Intermediate section positions must never update selection.
+        return;
+      }
       if (frameId != null) return;
       frameId = requestAnimationFrame(() => {
         frameId = null;
@@ -6670,7 +7557,7 @@ const ConfigModal = ({
         cancelAnimationFrame(frameId);
       }
     };
-  }, [activeTab, searchQuery, sidebarSectionsByTab]);
+  }, [activeTab, holdProgrammaticScroll, searchQuery, sidebarSectionsByTab]);
 
   // ---- 6. Restore sidebar scroll position after tab / group changes ----
   react.useLayoutEffect(() => {
@@ -6718,6 +7605,7 @@ const ConfigModal = ({
     const handleVisualChange = (name, value) => {
       CONFIG.visual[name] = value;
       StorageManager.saveConfig(name, value);
+      if (name === "alignment") syncSettingsLyricsPreviewStyles();
       dispatchVisualUpdate(name, value);
     };
 
@@ -6982,7 +7870,7 @@ const ConfigModal = ({
           const hasSubmenu = !tab.standalone && sectionItems.length > 0;
           const isExpanded = expandedGroupIds.includes(tab.id);
           const isTabActive = activeTab === tab.id;
-          const isGroupOpen = isExpanded || isTabActive;
+          const submenuId = `${APP_NAME}-settings-nav-${tab.id}`;
 
           if (!hasSubmenu) {
             return react.createElement(
@@ -6991,6 +7879,7 @@ const ConfigModal = ({
                 key: tab.id,
                 className: `settings-nav-card ${isTabActive ? "active" : ""}`,
                 type: "button",
+                "aria-current": isTabActive ? "page" : undefined,
                 onClick: () =>
                   navigateToDestination(tab.id, null, resolveNavItemId(tab.id)),
               },
@@ -7017,8 +7906,8 @@ const ConfigModal = ({
               "button",
                 {
                   className: `settings-nav-group-toggle ${
-                    isGroupOpen ? "expanded" : ""
-                  }`,
+                    isExpanded ? "expanded" : ""
+                  } ${isTabActive ? "active" : ""}`,
                   type: "button",
                 onClick: () => {
                   if (activeTab !== tab.id) {
@@ -7033,7 +7922,8 @@ const ConfigModal = ({
 
                   toggleNavigationGroup(tab.id);
                   },
-                  "aria-expanded": isGroupOpen,
+                  "aria-expanded": isExpanded,
+                  "aria-controls": isExpanded ? submenuId : undefined,
                 },
               react.createElement(
                 "span",
@@ -7042,14 +7932,32 @@ const ConfigModal = ({
               ),
                 react.createElement(
                   "span",
-                  { className: "settings-nav-group-indicator" },
-                  isGroupOpen ? "-" : "+"
+                  { className: "settings-nav-group-indicator", "aria-hidden": "true" },
+                  react.createElement(
+                    "svg",
+                    {
+                      viewBox: "0 0 16 16",
+                      fill: "none",
+                      stroke: "currentColor",
+                      strokeWidth: 1.5,
+                      strokeLinecap: "round",
+                      strokeLinejoin: "round",
+                    },
+                    react.createElement("path", {
+                      d: isExpanded ? "M4 6l4 4 4-4" : "M6 4l4 4-4 4",
+                    })
+                  )
                 )
               ),
-              isGroupOpen &&
+              isExpanded &&
                 react.createElement(
                   "div",
-                  { className: "settings-nav-group-items" },
+                  {
+                    id: submenuId,
+                    className: "settings-nav-group-items",
+                    role: "group",
+                    "aria-label": tab.label,
+                  },
                 sectionItems.map((item) => {
                   const isItemActive =
                     activeTab === item.tabId && activeNavItemId === item.settingKey;
@@ -7062,6 +7970,7 @@ const ConfigModal = ({
                         isItemActive ? "active" : ""
                       }`,
                       type: "button",
+                      "aria-current": isItemActive ? "location" : undefined,
                       onClick: () =>
                         navigateToDestination(
                           item.tabId,
@@ -8445,7 +9354,6 @@ const ConfigModal = ({
 #${APP_NAME}-config-container input[type="password"]:not(.settings-search-input),
 #${APP_NAME}-config-container input[type="number"]:not(.settings-search-input),
 #${APP_NAME}-config-container input[type="url"]:not(.settings-search-input),
-#${APP_NAME}-config-container input:not(.settings-search-input),
 #${APP_NAME}-config-container textarea {
     background: var(--glass-bg) !important;
     border: 1px solid var(--glass-border) !important;
@@ -8492,7 +9400,6 @@ const ConfigModal = ({
 #${APP_NAME}-config-container input[type="password"]:not(.settings-search-input):hover,
 #${APP_NAME}-config-container input[type="number"]:not(.settings-search-input):hover,
 #${APP_NAME}-config-container input[type="url"]:not(.settings-search-input):hover,
-#${APP_NAME}-config-container input:not(.settings-search-input):hover,
 #${APP_NAME}-config-container select:hover,
 #${APP_NAME}-config-container textarea:hover {
     background: var(--glass-bg-active) !important;
@@ -8503,7 +9410,6 @@ const ConfigModal = ({
 #${APP_NAME}-config-container input[type="password"]:not(.settings-search-input):focus,
 #${APP_NAME}-config-container input[type="number"]:not(.settings-search-input):focus,
 #${APP_NAME}-config-container input[type="url"]:not(.settings-search-input):focus,
-#${APP_NAME}-config-container input:not(.settings-search-input):focus,
 #${APP_NAME}-config-container select:focus,
 #${APP_NAME}-config-container textarea:focus {
     background: var(--glass-bg-active) !important;
@@ -10157,7 +11063,6 @@ const ConfigModal = ({
 #${APP_NAME}-config-container input[type="password"]:not(.settings-search-input),
 #${APP_NAME}-config-container input[type="number"]:not(.settings-search-input),
 #${APP_NAME}-config-container input[type="url"]:not(.settings-search-input),
-#${APP_NAME}-config-container input:not(.settings-search-input),
 #${APP_NAME}-config-container textarea,
 #${APP_NAME}-config-container select,
 #${APP_NAME}-config-container .config-select,
@@ -10171,7 +11076,6 @@ const ConfigModal = ({
 #${APP_NAME}-config-container[data-ui-theme="light"] input[type="password"]:not(.settings-search-input),
 #${APP_NAME}-config-container[data-ui-theme="light"] input[type="number"]:not(.settings-search-input),
 #${APP_NAME}-config-container[data-ui-theme="light"] input[type="url"]:not(.settings-search-input),
-#${APP_NAME}-config-container[data-ui-theme="light"] input:not(.settings-search-input),
 #${APP_NAME}-config-container[data-ui-theme="light"] textarea,
 #${APP_NAME}-config-container[data-ui-theme="light"] select,
 #${APP_NAME}-config-container[data-ui-theme="light"] .config-select,
@@ -10385,7 +11289,6 @@ const ConfigModal = ({
 #${APP_NAME}-config-container input[type="password"]:not(.settings-search-input),
 #${APP_NAME}-config-container input[type="number"]:not(.settings-search-input),
 #${APP_NAME}-config-container input[type="url"]:not(.settings-search-input),
-#${APP_NAME}-config-container input:not(.settings-search-input),
 #${APP_NAME}-config-container textarea,
 #${APP_NAME}-config-container select,
 #${APP_NAME}-config-container .config-select,
@@ -10971,6 +11874,1951 @@ const ConfigModal = ({
         padding: 0;
     }
 }
+
+/* ========================================
+   Compact Glass Overrides
+   Shared with the compact toolbar/status-pill visual language.
+   ======================================== */
+#${APP_NAME}-config-container {
+    --settings-accent-rgb: var(--spice-rgb-accent, 30, 215, 96);
+    --accent-primary: rgb(var(--settings-accent-rgb));
+    --accent-primary-light: rgba(var(--settings-accent-rgb), 0.14);
+    --settings-glass: rgba(var(--spice-rgb-card, 32, 32, 32), 0.5);
+    --settings-glass-strong: rgba(var(--spice-rgb-card, 32, 32, 32), 0.66);
+    --settings-glass-soft: rgba(var(--spice-rgb-text, 255, 255, 255), 0.035);
+    --settings-glass-hover: rgba(var(--spice-rgb-text, 255, 255, 255), 0.075);
+    --settings-glass-active: rgba(var(--settings-accent-rgb), 0.14);
+    --settings-border: rgba(var(--spice-rgb-text, 255, 255, 255), 0.11);
+    --settings-border-strong: rgba(var(--spice-rgb-text, 255, 255, 255), 0.17);
+    --settings-divider: rgba(var(--spice-rgb-text, 255, 255, 255), 0.1);
+    --settings-section-surface: rgba(var(--spice-rgb-text, 255, 255, 255), 0.026);
+    --settings-section-surface-hover: rgba(var(--spice-rgb-text, 255, 255, 255), 0.048);
+    --settings-section-outline: rgba(var(--spice-rgb-text, 255, 255, 255), 0.075);
+    --settings-row-divider: rgba(var(--spice-rgb-text, 255, 255, 255), 0.07);
+    --settings-section-radius: 12px;
+    --settings-field-radius: 10px;
+    --settings-row-min-height: 64px;
+    --settings-row-padding-x: 18px;
+    --settings-shell-radius: 22px;
+    --settings-panel-radius: 18px;
+    --settings-card-radius: 15px;
+    --settings-control-radius: 999px;
+    --settings-control-height: 36px;
+    --settings-glass-blur: blur(18px) saturate(135%);
+    --radius-sm: 10px;
+    --radius-md: 12px;
+    --radius-lg: 15px;
+    --radius-xl: 22px;
+    --glass-bg: var(--settings-glass-soft);
+    --glass-bg-hover: var(--settings-glass-hover);
+    --glass-bg-active: var(--settings-glass-active);
+    --glass-border: var(--settings-border);
+    --glass-border-light: var(--settings-border-strong);
+    --shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.12);
+    --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.18);
+    --shadow-lg: 0 20px 54px rgba(0, 0, 0, 0.28);
+    grid-template-columns: 236px minmax(0, 1fr);
+    border-radius: var(--settings-shell-radius);
+    background: #0f1215;
+}
+
+#${APP_NAME}-config-container[data-ui-theme="light"] {
+    --settings-glass: rgba(255, 255, 255, 0.68);
+    --settings-glass-strong: rgba(255, 255, 255, 0.86);
+    --settings-glass-soft: rgba(255, 255, 255, 0.48);
+    --settings-glass-hover: rgba(255, 255, 255, 0.78);
+    --settings-glass-active: rgba(var(--settings-accent-rgb), 0.11);
+    --settings-border: rgba(15, 23, 42, 0.1);
+    --settings-border-strong: rgba(15, 23, 42, 0.16);
+    --settings-divider: rgba(15, 23, 42, 0.09);
+    --settings-section-surface: rgba(255, 255, 255, 0.58);
+    --settings-section-surface-hover: rgba(255, 255, 255, 0.82);
+    --settings-section-outline: rgba(15, 23, 42, 0.08);
+    --settings-row-divider: rgba(15, 23, 42, 0.07);
+    background: #f1f3f6;
+}
+
+#${APP_NAME}-config-container .settings-header::before {
+    display: none;
+}
+
+.ivlyrics-settings-modal-shell {
+    border-radius: 24px !important;
+    background: rgba(var(--spice-rgb-card, 24, 24, 24), 0.7) !important;
+    border: 1px solid rgba(var(--spice-rgb-text, 255, 255, 255), 0.12) !important;
+    box-shadow: 0 28px 72px rgba(0, 0, 0, 0.42) !important;
+    backdrop-filter: blur(24px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(24px) saturate(140%) !important;
+}
+
+.ivlyrics-settings-modal-shell:has(#${APP_NAME}-config-container[data-ui-theme="light"]) {
+    background: rgba(248, 250, 252, 0.78) !important;
+    border-color: rgba(15, 23, 42, 0.12) !important;
+    box-shadow: 0 28px 72px rgba(15, 23, 42, 0.2) !important;
+}
+
+/* One compact capsule for all header actions. */
+#${APP_NAME}-config-container .settings-buttons {
+    display: flex;
+    align-items: stretch;
+    flex-wrap: nowrap;
+    gap: 0;
+    max-width: 100%;
+    padding: 3px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    border: 1px solid var(--settings-border);
+    border-radius: var(--settings-control-radius) !important;
+    background: var(--settings-glass);
+    box-shadow: var(--shadow-sm) !important;
+    backdrop-filter: var(--settings-glass-blur) !important;
+    -webkit-backdrop-filter: var(--settings-glass-blur) !important;
+    scrollbar-width: none;
+}
+
+#${APP_NAME}-config-container .settings-buttons::-webkit-scrollbar {
+    display: none;
+}
+
+#${APP_NAME}-config-container .settings-theme-btn,
+#${APP_NAME}-config-container .settings-github-btn,
+#${APP_NAME}-config-container .settings-discord-btn,
+#${APP_NAME}-config-container .settings-coffee-btn,
+#${APP_NAME}-config-container .settings-close-btn {
+    flex: 0 0 auto;
+    min-height: 34px;
+    height: 34px;
+    padding: 0 12px;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: var(--text-secondary);
+    box-shadow: none !important;
+}
+
+#${APP_NAME}-config-container .settings-buttons > button + button {
+    border-left: 1px solid var(--settings-divider) !important;
+}
+
+#${APP_NAME}-config-container .settings-theme-btn:hover,
+#${APP_NAME}-config-container .settings-github-btn:hover,
+#${APP_NAME}-config-container .settings-discord-btn:hover,
+#${APP_NAME}-config-container .settings-coffee-btn:hover,
+#${APP_NAME}-config-container .settings-close-btn:hover {
+    background: var(--settings-glass-hover) !important;
+    color: var(--text-primary);
+}
+
+#${APP_NAME}-config-container .settings-close-btn {
+    width: 36px;
+    padding: 0;
+    border-radius: 0 var(--settings-control-radius) var(--settings-control-radius) 0 !important;
+}
+
+#${APP_NAME}-config-container .settings-version,
+#${APP_NAME}-config-container .settings-panel-badge,
+#${APP_NAME}-config-container .settings-nav-card-badge,
+#${APP_NAME}-config-container .support-badge,
+#${APP_NAME}-config-container .setting-name > span[style*="border-radius"] {
+    border-radius: var(--settings-control-radius) !important;
+}
+
+/* Compact tree navigation without capsule-shaped group buttons. */
+#${APP_NAME}-config-container .settings-sidebar {
+    padding: 14px 10px 18px 14px;
+    background: rgba(var(--spice-rgb-text, 255, 255, 255), 0.012);
+    border-right-color: var(--settings-divider);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+#${APP_NAME}-config-container .settings-sidebar-nav {
+    gap: 0;
+    padding-right: 4px;
+}
+
+#${APP_NAME}-config-container .settings-nav-group {
+    margin: 0 0 6px;
+    padding: 0;
+    border-bottom: 0;
+}
+
+#${APP_NAME}-config-container .settings-nav-group-toggle,
+#${APP_NAME}-config-container .settings-nav-card,
+#${APP_NAME}-config-container .settings-nav-subitem {
+    border-radius: 6px !important;
+}
+
+#${APP_NAME}-config-container .settings-nav-group-toggle {
+    min-height: 32px;
+    padding: 0 7px;
+    border: 0;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    text-transform: none;
+}
+
+#${APP_NAME}-config-container .settings-nav-group-toggle:hover,
+#${APP_NAME}-config-container .settings-nav-group-toggle.expanded,
+#${APP_NAME}-config-container .settings-nav-group-toggle.active {
+    border: 0;
+    color: var(--text-primary);
+}
+
+#${APP_NAME}-config-container .settings-nav-group-toggle:hover {
+    background: var(--settings-glass-soft);
+}
+
+#${APP_NAME}-config-container .settings-nav-group-toggle.expanded {
+    background: transparent;
+}
+
+#${APP_NAME}-config-container .settings-nav-group-items {
+    position: relative;
+    margin: 1px 0 7px 10px;
+    padding: 1px 0 1px 10px;
+    border-left: 1px solid var(--settings-divider);
+}
+
+#${APP_NAME}-config-container .settings-nav-card,
+#${APP_NAME}-config-container .settings-nav-subitem {
+    position: relative;
+    width: 100%;
+    min-height: 30px;
+    margin: 0;
+    padding: 0 8px;
+    border: 0 !important;
+    background: transparent;
+    font-size: 12.5px;
+    font-weight: 550;
+}
+
+#${APP_NAME}-config-container .settings-nav-subitem::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: -11px;
+    width: 8px;
+    height: 1px;
+    background: var(--settings-divider);
+}
+
+#${APP_NAME}-config-container .settings-nav-card:hover,
+#${APP_NAME}-config-container .settings-nav-subitem:hover {
+    background: var(--settings-glass-soft);
+}
+
+#${APP_NAME}-config-container .settings-nav-card.active,
+#${APP_NAME}-config-container .settings-nav-subitem.active {
+    border: 0 !important;
+    background: transparent;
+    color: rgb(var(--settings-accent-rgb));
+    font-weight: 700;
+    box-shadow: none !important;
+}
+
+#${APP_NAME}-config-container .settings-nav-subitem.active::before {
+    background: rgba(var(--settings-accent-rgb), 0.72);
+}
+
+#${APP_NAME}-config-container .settings-nav-subitem.active::after {
+    content: "";
+    position: absolute;
+    top: 7px;
+    bottom: 7px;
+    left: -11px;
+    width: 2px;
+    border-radius: 2px;
+    background: rgb(var(--settings-accent-rgb));
+}
+
+#${APP_NAME}-config-container .settings-nav-card.active {
+    box-shadow: inset 2px 0 0 rgb(var(--settings-accent-rgb)) !important;
+}
+
+#${APP_NAME}-config-container .settings-nav-group-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    border: 0;
+    border-radius: 0 !important;
+    background: transparent;
+    color: var(--text-tertiary);
+}
+
+#${APP_NAME}-config-container .settings-nav-group-indicator svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Search and main content use the same translucent shells. */
+#${APP_NAME}-config-container .settings-search-wrapper {
+    border-radius: var(--settings-control-radius) !important;
+}
+
+#${APP_NAME}-config-container .settings-search-wrapper .settings-search-input {
+    height: 40px !important;
+    border: 1px solid var(--settings-border) !important;
+    border-radius: var(--settings-control-radius) !important;
+    background: var(--settings-glass) !important;
+    box-shadow: var(--shadow-sm) !important;
+    backdrop-filter: var(--settings-glass-blur) !important;
+    -webkit-backdrop-filter: var(--settings-glass-blur) !important;
+}
+
+#${APP_NAME}-config-container .settings-search-input:hover,
+#${APP_NAME}-config-container .settings-search-input:focus {
+    border-color: var(--settings-border-strong) !important;
+    background: var(--settings-glass-strong) !important;
+}
+
+#${APP_NAME}-config-container .settings-search-clear {
+    width: 28px;
+    height: 28px;
+    border-radius: 50% !important;
+    background: var(--settings-glass-soft);
+}
+
+#${APP_NAME}-config-container .settings-main-panel {
+    border: 0;
+    border-radius: 0 !important;
+    background: transparent;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+#${APP_NAME}-config-container[data-ui-theme="light"] .settings-main-panel {
+    background: transparent;
+}
+
+#${APP_NAME}-config-container .settings-content {
+    padding: 26px 30px 44px;
+}
+
+#${APP_NAME}-config-container .settings-panel-hero {
+    margin-bottom: 0;
+    padding-bottom: 20px;
+    border-bottom: 0;
+}
+
+#${APP_NAME}-config-container .settings-panel-badge {
+    border: 1px solid rgba(var(--settings-accent-rgb), 0.25);
+    background: var(--settings-glass-active);
+}
+
+/* Section labels are separate from the rows so the content can breathe. */
+#${APP_NAME}-config-container .section-title {
+    margin: 30px 2px 10px;
+    padding: 0;
+    border: 0;
+    border-radius: 0 !important;
+    background: transparent;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+#${APP_NAME}-config-container .tab-content > .section-title:first-child,
+#${APP_NAME}-config-container .search-result-group:first-child .section-title {
+    margin-top: 20px;
+}
+
+#${APP_NAME}-config-container .section-title:has(+ .option-list-wrapper),
+#${APP_NAME}-config-container .section-title:has(+ .service-list-wrapper) {
+    margin-bottom: 10px;
+    border: 0;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+#${APP_NAME}-config-container .option-list-wrapper,
+#${APP_NAME}-config-container .service-list-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    overflow: hidden;
+    margin: 0 0 30px;
+    border: 1px solid var(--settings-section-outline);
+    border-radius: var(--settings-section-radius) !important;
+    background: var(--settings-section-surface);
+    box-shadow: none !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+#${APP_NAME}-config-container .section-title + .option-list-wrapper,
+#${APP_NAME}-config-container .section-title + .service-list-wrapper {
+    margin-top: 0;
+}
+
+#${APP_NAME}-config-container .option-list-wrapper:has(+ .option-list-wrapper:not(:empty)),
+#${APP_NAME}-config-container .option-list-wrapper:has(+ .service-list-wrapper:not(:empty)),
+#${APP_NAME}-config-container .service-list-wrapper:has(+ .option-list-wrapper:not(:empty)),
+#${APP_NAME}-config-container .service-list-wrapper:has(+ .service-list-wrapper:not(:empty)) {
+    margin-bottom: 0;
+    border-bottom: 0;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+#${APP_NAME}-config-container .option-list-wrapper + .option-list-wrapper:not(:empty),
+#${APP_NAME}-config-container .option-list-wrapper + .service-list-wrapper:not(:empty),
+#${APP_NAME}-config-container .service-list-wrapper + .option-list-wrapper:not(:empty),
+#${APP_NAME}-config-container .service-list-wrapper + .service-list-wrapper:not(:empty) {
+    margin-top: 0;
+    border-top: 0;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+}
+
+#${APP_NAME}-config-container .option-list-wrapper:empty,
+#${APP_NAME}-config-container .service-list-wrapper:empty {
+    display: none;
+}
+
+#${APP_NAME}-config-container .option-list-wrapper[style*="margin-bottom"],
+#${APP_NAME}-config-container .service-list-wrapper[style*="margin-bottom"] {
+    margin-bottom: 30px !important;
+}
+
+#${APP_NAME}-config-container .setting-row,
+#${APP_NAME}-config-container .search-result-item {
+    margin: 0;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent;
+    box-shadow: none !important;
+}
+
+#${APP_NAME}-config-container .option-list-wrapper > .setting-row,
+#${APP_NAME}-config-container .service-list-wrapper > .setting-row {
+    margin: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent;
+    box-shadow: none !important;
+}
+
+#${APP_NAME}-config-container .option-list-wrapper > .setting-row:last-child,
+#${APP_NAME}-config-container .service-list-wrapper > .setting-row:last-child {
+    border-bottom: 0 !important;
+}
+
+#${APP_NAME}-config-container .setting-row:hover,
+#${APP_NAME}-config-container .search-result-item:hover {
+    background: var(--settings-section-surface-hover);
+}
+
+#${APP_NAME}-config-container .option-list-wrapper > .setting-row:hover,
+#${APP_NAME}-config-container .service-list-wrapper > .setting-row:hover {
+    background: var(--settings-section-surface-hover);
+}
+
+#${APP_NAME}-config-container[data-ui-theme="light"] .setting-row:hover,
+#${APP_NAME}-config-container[data-ui-theme="light"] .search-result-item:hover,
+#${APP_NAME}-config-container[data-ui-theme="light"] .option-list-wrapper > .setting-row:hover,
+#${APP_NAME}-config-container[data-ui-theme="light"] .service-list-wrapper > .setting-row:hover {
+    background: var(--settings-section-surface-hover);
+}
+
+#${APP_NAME}-config-container .option-list-wrapper > .setting-row + .setting-row::before,
+#${APP_NAME}-config-container .service-list-wrapper > .setting-row + .setting-row::before,
+#${APP_NAME}-config-container .option-list-wrapper + .option-list-wrapper:not(:empty) > .setting-row:first-child::before,
+#${APP_NAME}-config-container .option-list-wrapper + .service-list-wrapper:not(:empty) > .setting-row:first-child::before,
+#${APP_NAME}-config-container .service-list-wrapper + .option-list-wrapper:not(:empty) > .setting-row:first-child::before,
+#${APP_NAME}-config-container .service-list-wrapper + .service-list-wrapper:not(:empty) > .setting-row:first-child::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    left: var(--settings-row-padding-x);
+    right: var(--settings-row-padding-x);
+    height: 1px;
+    background: var(--settings-row-divider);
+    pointer-events: none;
+}
+
+/* A hand-built first row and a following option list still form one section. */
+#${APP_NAME}-config-container .tab-content > .section-title + .setting-row {
+    overflow: hidden;
+    border: 1px solid var(--settings-section-outline) !important;
+    border-radius: var(--settings-section-radius) !important;
+    background: var(--settings-section-surface);
+}
+
+#${APP_NAME}-config-container .tab-content > .section-title + .setting-row:has(+ .option-list-wrapper),
+#${APP_NAME}-config-container .tab-content > .section-title + .setting-row:has(+ .service-list-wrapper),
+#${APP_NAME}-config-container .tab-content > .setting-row:has(+ .setting-row) {
+    border-bottom: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+}
+
+#${APP_NAME}-config-container .tab-content > .setting-row + .option-list-wrapper,
+#${APP_NAME}-config-container .tab-content > .setting-row + .service-list-wrapper,
+#${APP_NAME}-config-container .tab-content > .setting-row + .setting-row {
+    margin-top: 0;
+    border-top: 0 !important;
+    border-top-left-radius: 0 !important;
+    border-top-right-radius: 0 !important;
+}
+
+#${APP_NAME}-config-container .tab-content > .setting-row + .option-list-wrapper > .setting-row:first-child::before,
+#${APP_NAME}-config-container .tab-content > .setting-row + .service-list-wrapper > .setting-row:first-child::before,
+#${APP_NAME}-config-container .tab-content > .setting-row + .setting-row::before {
+    content: "";
+    position: absolute;
+    z-index: 1;
+    top: 0;
+    left: var(--settings-row-padding-x);
+    right: var(--settings-row-padding-x);
+    height: 1px;
+    background: var(--settings-row-divider);
+    pointer-events: none;
+}
+
+#${APP_NAME}-config-container .setting-row-content {
+    min-height: var(--settings-row-min-height);
+    padding: 13px var(--settings-row-padding-x);
+    gap: 24px;
+    grid-template-columns: minmax(220px, 1fr) minmax(260px, 360px);
+}
+
+#${APP_NAME}-config-container .setting-row-content[style*="flex-direction: column"] {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+#${APP_NAME}-config-container .setting-row-left {
+    gap: 4px;
+    padding-right: 8px;
+}
+
+#${APP_NAME}-config-container .setting-row-right {
+    gap: 12px;
+    padding-right: 0;
+}
+
+#${APP_NAME}-config-container .settings-subsection-label {
+    margin: 28px 2px 10px;
+}
+
+#${APP_NAME}-config-container .search-result-group .option-list-wrapper {
+    gap: 0;
+}
+
+#${APP_NAME}-config-container .section-title + .setting-row {
+    margin-top: 0;
+}
+
+#${APP_NAME}-config-container .tab-content > .setting-row + .setting-row {
+    margin-top: 0;
+}
+
+#${APP_NAME}-config-container .settings-card-grid {
+    gap: 10px;
+    overflow: visible;
+    border: 0;
+    border-radius: 0 !important;
+    background: transparent;
+    box-shadow: none !important;
+}
+
+#${APP_NAME}-config-container .settings-choice-card {
+    border: 0 !important;
+    border-radius: 12px !important;
+    background: var(--settings-section-surface) !important;
+}
+
+#${APP_NAME}-config-container .settings-choice-card:hover {
+    background: var(--settings-section-surface-hover) !important;
+}
+
+#${APP_NAME}-config-container .settings-choice-card.active {
+    border: 0 !important;
+    background: var(--settings-glass-active) !important;
+    box-shadow: none !important;
+}
+
+#${APP_NAME}-config-container .settings-choice-card.active::before {
+    display: none;
+}
+
+#${APP_NAME}-config-container .settings-choice-icon {
+    border-radius: 12px !important;
+    background: var(--settings-glass-hover);
+}
+
+#${APP_NAME}-config-container .font-preview-container,
+#${APP_NAME}-config-container .info-card,
+#${APP_NAME}-config-container .about-info-card,
+#${APP_NAME}-config-container .lyrics-providers-container,
+#${APP_NAME}-config-container .debug-info-panel {
+    border: 1px solid var(--settings-section-outline) !important;
+    border-radius: var(--settings-section-radius) !important;
+    background: var(--settings-section-surface) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+#${APP_NAME}-config-container .font-preview {
+    border-radius: 12px !important;
+}
+
+/* Provider cards keep their hierarchy but join the rounded glass system. */
+#${APP_NAME}-config-container .lyrics-provider-card {
+    overflow: hidden;
+    border: 1px solid var(--settings-section-outline);
+    border-radius: var(--settings-section-radius) !important;
+    background: var(--settings-section-surface);
+    box-shadow: none !important;
+}
+
+#${APP_NAME}-config-container .lyrics-provider-card-header,
+#${APP_NAME}-config-container .lyrics-provider-card-description,
+#${APP_NAME}-config-container .lyrics-provider-card-body {
+    border-radius: 0 !important;
+}
+
+#${APP_NAME}-config-container .lyrics-provider-card-header:hover {
+    background: var(--settings-glass-hover);
+}
+
+#${APP_NAME}-config-container .lyrics-provider-card-body {
+    background: transparent;
+}
+
+#${APP_NAME}-config-container .lyrics-providers-list {
+    gap: 10px;
+}
+
+#${APP_NAME}-config-container .lyrics-provider-toggle .toggle-slider,
+#${APP_NAME}-config-container .ios-toggle-slider {
+    border-radius: var(--settings-control-radius) !important;
+}
+
+#${APP_NAME}-config-container .lyrics-provider-toggle .toggle-slider::before,
+#${APP_NAME}-config-container .ios-toggle-slider::before {
+    border-radius: 50% !important;
+}
+
+#${APP_NAME}-config-container .lyrics-type-toggle-chip,
+#${APP_NAME}-config-container .ai-addon-cap-chip,
+#${APP_NAME}-config-container .color-preset-chip {
+    border-radius: var(--settings-control-radius) !important;
+}
+
+/* Compact pill actions and switches. */
+#${APP_NAME}-config-container .btn,
+#${APP_NAME}-config-container .btn-primary,
+#${APP_NAME}-config-container .order-btn,
+#${APP_NAME}-config-container .swap-button,
+#${APP_NAME}-config-container .ai-addon-btn,
+#${APP_NAME}-config-container .about-client-copy-btn,
+#${APP_NAME}-config-container .karaoke-fill-curve-reset {
+    min-width: 0;
+    min-height: 34px;
+    height: 34px;
+    padding: 0 13px;
+    border: 1px solid var(--settings-border) !important;
+    border-radius: var(--settings-control-radius) !important;
+    background: var(--settings-glass-soft);
+    color: var(--text-primary);
+    box-shadow: none !important;
+}
+
+#${APP_NAME}-config-container .btn:hover:not(:disabled),
+#${APP_NAME}-config-container .btn-primary:hover:not(:disabled),
+#${APP_NAME}-config-container .order-btn:hover:not(:disabled),
+#${APP_NAME}-config-container .swap-button:hover:not(:disabled),
+#${APP_NAME}-config-container .ai-addon-btn:hover:not(:disabled),
+#${APP_NAME}-config-container .about-client-copy-btn:hover:not(:disabled),
+#${APP_NAME}-config-container .karaoke-fill-curve-reset:hover:not(:disabled) {
+    border-color: var(--settings-border-strong) !important;
+    background: var(--settings-glass-hover);
+}
+
+#${APP_NAME}-config-container .order-btn,
+#${APP_NAME}-config-container .swap-button {
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    min-height: 30px;
+    padding: 0;
+    border-radius: 50% !important;
+}
+
+#${APP_NAME}-config-container .instrumental-break-selected-preview,
+#${APP_NAME}-config-container .instrumental-break-preview-option {
+    border: 1px solid var(--settings-border) !important;
+    border-radius: 12px !important;
+    background: var(--settings-glass-soft);
+    box-shadow: none !important;
+}
+
+#${APP_NAME}-config-container .instrumental-break-preview-option:hover,
+#${APP_NAME}-config-container .instrumental-break-preview-option.active {
+    border-color: rgba(var(--settings-accent-rgb), 0.4) !important;
+    background: var(--settings-glass-active);
+}
+
+#${APP_NAME}-config-container .btn-primary {
+    border-color: rgba(var(--settings-accent-rgb), 0.4) !important;
+    background: var(--settings-glass-active) !important;
+}
+
+#${APP_NAME}-config-container .switch-checkbox {
+    width: 46px;
+    height: 24px;
+    border: 1px solid var(--settings-border) !important;
+    border-radius: var(--settings-control-radius) !important;
+    background: var(--settings-glass-soft);
+}
+
+#${APP_NAME}-config-container .switch-checkbox::after {
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50% !important;
+    background: var(--text-secondary);
+}
+
+#${APP_NAME}-config-container .switch-checkbox.active {
+    border-color: rgba(var(--settings-accent-rgb), 0.48) !important;
+    background: rgba(var(--settings-accent-rgb), 0.2);
+}
+
+#${APP_NAME}-config-container .switch-checkbox.active::after {
+    background: rgb(var(--settings-accent-rgb));
+    transform: translateX(22px);
+}
+
+/* Long fields stay compact and rounded without becoming oversized pills. */
+#${APP_NAME}-config-container input[type="text"]:not(.settings-search-input),
+#${APP_NAME}-config-container input[type="password"],
+#${APP_NAME}-config-container input[type="number"],
+#${APP_NAME}-config-container input[type="url"],
+#${APP_NAME}-config-container textarea,
+#${APP_NAME}-config-container select,
+#${APP_NAME}-config-container .config-select,
+#${APP_NAME}-config-container .config-text-input,
+#${APP_NAME}-config-container .config-font-selector-control,
+#${APP_NAME}-config-container .config-color-input {
+    min-height: var(--settings-control-height);
+    border: 1px solid var(--settings-border) !important;
+    border-radius: var(--settings-field-radius) !important;
+    background: var(--settings-glass-soft) !important;
+    color: var(--text-primary) !important;
+    box-shadow: none !important;
+}
+
+#${APP_NAME}-config-container input[type="text"]:not(.settings-search-input):hover,
+#${APP_NAME}-config-container input[type="password"]:hover,
+#${APP_NAME}-config-container input[type="number"]:hover,
+#${APP_NAME}-config-container input[type="url"]:hover,
+#${APP_NAME}-config-container textarea:hover,
+#${APP_NAME}-config-container select:hover {
+    border-color: var(--settings-border-strong) !important;
+    background: var(--settings-glass-hover) !important;
+}
+
+#${APP_NAME}-config-container .config-color-picker,
+#${APP_NAME}-config-container .color-preset-summary,
+#${APP_NAME}-config-container .color-preset-grid,
+#${APP_NAME}-config-container .color-preset-swatch,
+#${APP_NAME}-config-container .color-preset-grid-item {
+    border-radius: var(--settings-field-radius) !important;
+}
+
+#${APP_NAME}-config-container #patch-notes-container {
+    border: 1px solid var(--settings-section-outline) !important;
+    border-radius: var(--settings-section-radius) !important;
+    background: var(--settings-section-surface) !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+#${APP_NAME}-config-container .slider-value {
+    border: 1px solid var(--settings-border);
+    border-radius: var(--settings-control-radius) !important;
+    background: var(--settings-glass-soft);
+}
+
+#${APP_NAME}-config-container .config-slider::-webkit-slider-runnable-track,
+#${APP_NAME}-config-container .config-slider::-moz-range-track,
+#${APP_NAME}-config-container .config-slider::-moz-range-progress {
+    border-radius: var(--settings-control-radius);
+}
+
+#${APP_NAME}-config-container .config-slider::-webkit-slider-thumb,
+#${APP_NAME}-config-container .config-slider::-moz-range-thumb {
+    border-radius: 50% !important;
+}
+
+#${APP_NAME}-config-container .setting-row-content > [style*="grid-template-columns"],
+#${APP_NAME}-config-container .setting-row-content [style*="grid-template-columns"][style*="border"] {
+    border-radius: 12px !important;
+}
+
+/* Keyboard focus remains visible on every interactive control. */
+#${APP_NAME}-config-container button:not([disabled]):focus-visible,
+#${APP_NAME}-config-container input[type]:not([disabled]):focus-visible,
+#${APP_NAME}-config-container select:not([disabled]):focus-visible,
+#${APP_NAME}-config-container textarea:not([disabled]):focus-visible,
+#${APP_NAME}-config-container [tabindex]:not([tabindex="-1"]):focus-visible {
+    outline: 2px solid rgba(var(--settings-accent-rgb), 0.82) !important;
+    outline-offset: 2px !important;
+    border-color: rgba(var(--settings-accent-rgb), 0.56) !important;
+    box-shadow: 0 0 0 4px rgba(var(--settings-accent-rgb), 0.12) !important;
+}
+
+#${APP_NAME}-config-container .settings-buttons > button:focus-visible,
+#${APP_NAME}-config-container .settings-choice-card:focus-visible {
+    outline-offset: -2px !important;
+    box-shadow: inset 0 0 0 2px rgba(var(--settings-accent-rgb), 0.8) !important;
+}
+
+#${APP_NAME}-config-container.motion-reduced *,
+#${APP_NAME}-config-container.motion-reduced *::before,
+#${APP_NAME}-config-container.motion-reduced *::after {
+    scroll-behavior: auto !important;
+}
+
+@media (max-width: 1100px) {
+    #${APP_NAME}-config-container {
+        grid-template-columns: 1fr;
+    }
+
+    #${APP_NAME}-config-container .settings-sidebar {
+        background: rgba(var(--spice-rgb-text, 255, 255, 255), 0.012);
+        border-right: 0;
+        border-bottom: 1px solid var(--settings-divider);
+    }
+
+    #${APP_NAME}-config-container .settings-main-panel {
+        border-radius: 0 !important;
+    }
+
+    #${APP_NAME}-config-container .setting-row-content {
+        grid-template-columns: minmax(0, 1fr);
+        align-items: start;
+        gap: 12px;
+    }
+
+    #${APP_NAME}-config-container .setting-row-right {
+        width: 100%;
+        max-width: none;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 800px) {
+    .ivlyrics-settings-modal-shell {
+        border-radius: 20px !important;
+    }
+
+    #${APP_NAME}-config-container {
+        border-radius: 20px;
+    }
+
+    #${APP_NAME}-config-container .settings-buttons {
+        width: 100%;
+    }
+
+    #${APP_NAME}-config-container .setting-row-content {
+        padding: 13px 14px;
+    }
+
+    #${APP_NAME}-config-container .settings-content {
+        padding: 22px 20px 36px;
+    }
+}
+
+@media (max-width: 650px) {
+    .ivlyrics-settings-modal-shell {
+        border-radius: 0 !important;
+        border-left: 0 !important;
+        border-right: 0 !important;
+    }
+
+    #${APP_NAME}-config-container {
+        border-radius: 0;
+    }
+
+    #${APP_NAME}-config-container .settings-theme-btn span,
+    #${APP_NAME}-config-container .settings-github-btn span,
+    #${APP_NAME}-config-container .settings-discord-btn span,
+    #${APP_NAME}-config-container .settings-coffee-btn span {
+        display: none;
+    }
+
+    #${APP_NAME}-config-container .settings-theme-btn,
+    #${APP_NAME}-config-container .settings-github-btn,
+    #${APP_NAME}-config-container .settings-discord-btn,
+    #${APP_NAME}-config-container .settings-coffee-btn,
+    #${APP_NAME}-config-container .settings-close-btn {
+        width: 36px;
+        min-width: 36px;
+        padding: 0;
+        border-radius: 0 !important;
+    }
+
+    #${APP_NAME}-config-container .settings-close-btn {
+        border-radius: 0 var(--settings-control-radius) var(--settings-control-radius) 0 !important;
+    }
+
+    #${APP_NAME}-config-container .section-title,
+    #${APP_NAME}-config-container .option-list-wrapper,
+    #${APP_NAME}-config-container .service-list-wrapper,
+    #${APP_NAME}-config-container .setting-row,
+    #${APP_NAME}-config-container .settings-card-grid {
+        --settings-card-radius: 13px;
+    }
+}
+
+/* ========================================
+   Unified Settings Controls
+   Compact, explicit controls shared across every settings section.
+   ======================================== */
+#${APP_NAME}-config-container {
+    grid-template-rows: auto minmax(0, 1fr);
+}
+
+#${APP_NAME}-config-container .settings-sidebar {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+#${APP_NAME}-config-container .settings-main-panel {
+    grid-column: 2;
+    grid-row: 2;
+}
+
+/* Category changes should not re-composite translucent children. */
+#${APP_NAME}-config-container .tab-content.active {
+    animation: none !important;
+}
+
+#${APP_NAME}-config-container .setting-row,
+#${APP_NAME}-config-container .search-result-item,
+#${APP_NAME}-config-container .option-list-wrapper > .setting-row,
+#${APP_NAME}-config-container .service-list-wrapper > .setting-row {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    transition: background-color 120ms ease !important;
+}
+
+/* Search belongs to the navigation tree instead of floating over the content. */
+#${APP_NAME}-config-container .settings-search-container {
+    position: relative;
+    z-index: 2;
+    display: block;
+    grid-column: auto;
+    grid-row: auto;
+    width: 100%;
+    padding: 0 4px 12px 0;
+    background: transparent;
+}
+
+#${APP_NAME}-config-container .settings-search-wrapper {
+    width: 100%;
+    border-radius: 9px !important;
+}
+
+#${APP_NAME}-config-container .settings-search-wrapper .settings-search-input {
+    width: 100% !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 0 32px 0 32px !important;
+    border-radius: 9px !important;
+    background: var(--settings-glass-soft) !important;
+    font-size: 12.5px !important;
+    font-weight: 550 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+#${APP_NAME}-config-container .settings-search-wrapper .settings-search-input::-webkit-search-cancel-button {
+    display: none;
+}
+
+#${APP_NAME}-config-container .settings-search-icon {
+    left: 10px;
+    width: 14px;
+    height: 14px;
+}
+
+#${APP_NAME}-config-container .settings-search-clear {
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    border: 0;
+    background: transparent;
+}
+
+#${APP_NAME}-config-container .settings-search-clear::before {
+    font-size: 16px;
+}
+
+/* Long text fields share one restrained surface. */
+#${APP_NAME}-config-container input.config-text-input,
+#${APP_NAME}-config-container input.config-font-selector-control,
+#${APP_NAME}-config-container select.config-font-selector-control {
+    width: 100% !important;
+    max-width: none !important;
+    height: var(--settings-control-height) !important;
+    min-height: var(--settings-control-height) !important;
+    padding: 0 12px !important;
+    border: 1px solid var(--settings-border) !important;
+    border-radius: var(--settings-field-radius) !important;
+    background-color: var(--settings-glass-soft) !important;
+    color: var(--text-primary) !important;
+    font-size: 13px !important;
+    box-shadow: none !important;
+}
+
+#${APP_NAME}-config-container input.config-text-input:focus,
+#${APP_NAME}-config-container input.config-font-selector-control:focus,
+#${APP_NAME}-config-container select.config-font-selector-control:focus {
+    border-color: rgba(var(--settings-accent-rgb), 0.58) !important;
+    background-color: var(--settings-glass-hover) !important;
+    box-shadow: 0 0 0 3px rgba(var(--settings-accent-rgb), 0.11) !important;
+}
+
+/* Range slider: filled pill track, circular thumb and compact value. */
+#${APP_NAME}-config-container .slider-container {
+    display: grid;
+    grid-template-columns: minmax(150px, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    width: min(390px, 100%);
+    min-width: 220px;
+    max-width: 390px;
+}
+
+#${APP_NAME}-config-container input.config-slider {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+}
+
+#${APP_NAME}-config-container input.config-slider::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 6px;
+    border: 0;
+    border-radius: 999px !important;
+    background: linear-gradient(
+        90deg,
+        rgb(var(--settings-accent-rgb)) 0,
+        rgb(var(--settings-accent-rgb)) var(--progress-percent),
+        var(--settings-border) var(--progress-percent),
+        var(--settings-border) 100%
+    );
+    box-shadow: inset 0 0 0 1px rgba(var(--spice-rgb-text, 255, 255, 255), 0.035);
+}
+
+#${APP_NAME}-config-container input.config-slider::-webkit-slider-thumb {
+    width: 16px;
+    height: 16px;
+    margin-top: -5px;
+    border: 3px solid var(--text-primary) !important;
+    border-radius: 50% !important;
+    background: rgb(var(--settings-accent-rgb)) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28) !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    transition: transform 120ms ease, box-shadow 120ms ease !important;
+}
+
+#${APP_NAME}-config-container input.config-slider:hover::-webkit-slider-thumb,
+#${APP_NAME}-config-container input.config-slider:focus-visible::-webkit-slider-thumb {
+    transform: scale(1.08) !important;
+    box-shadow: 0 0 0 4px rgba(var(--settings-accent-rgb), 0.13), 0 2px 8px rgba(0, 0, 0, 0.28) !important;
+}
+
+#${APP_NAME}-config-container input.config-slider::-moz-range-track {
+    height: 6px;
+    border: 0;
+    border-radius: 999px !important;
+    background: var(--settings-border);
+}
+
+#${APP_NAME}-config-container input.config-slider::-moz-range-progress {
+    height: 6px;
+    border-radius: 999px !important;
+    background: rgb(var(--settings-accent-rgb));
+}
+
+#${APP_NAME}-config-container input.config-slider::-moz-range-thumb {
+    width: 12px;
+    height: 12px;
+    border: 3px solid var(--text-primary) !important;
+    border-radius: 50% !important;
+    background: rgb(var(--settings-accent-rgb)) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28) !important;
+}
+
+#${APP_NAME}-config-container .slider-value {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 52px;
+    height: 30px;
+    padding: 0 9px;
+    border: 1px solid var(--settings-border) !important;
+    border-radius: 999px !important;
+    background: var(--settings-glass-soft) !important;
+    color: var(--text-primary);
+    font-size: 11.5px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+}
+
+#${APP_NAME}-config-container .slider-container.disabled {
+    opacity: 0.45;
+}
+
+/* Color swatch and HEX value are one compact control. */
+#${APP_NAME}-config-container .color-picker-container {
+    display: block;
+    width: min(180px, 100%);
+    max-width: 100%;
+}
+
+#${APP_NAME}-config-container .config-color-control {
+    display: grid;
+    grid-template-columns: 34px minmax(0, 1fr);
+    align-items: center;
+    width: 100%;
+    height: var(--settings-control-height);
+    overflow: hidden;
+    border: 1px solid var(--settings-border);
+    border-radius: var(--settings-field-radius);
+    background: var(--settings-glass-soft);
+    box-shadow: none;
+    transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+#${APP_NAME}-config-container .config-color-control:hover {
+    border-color: var(--settings-border-strong);
+    background: var(--settings-glass-hover);
+}
+
+#${APP_NAME}-config-container .config-color-control:focus-within {
+    border-color: rgba(var(--settings-accent-rgb), 0.58);
+    box-shadow: 0 0 0 3px rgba(var(--settings-accent-rgb), 0.11);
+}
+
+#${APP_NAME}-config-container .config-color-control.invalid:not(:focus-within) {
+    border-color: rgba(248, 113, 113, 0.58);
+}
+
+#${APP_NAME}-config-container input.config-color-picker {
+    width: 30px !important;
+    min-width: 30px !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    margin: 0 0 0 2px !important;
+    padding: 4px !important;
+    border: 0 !important;
+    border-radius: 8px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    cursor: pointer;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    transform: none !important;
+}
+
+#${APP_NAME}-config-container input.config-color-picker::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+#${APP_NAME}-config-container input.config-color-picker::-webkit-color-swatch {
+    border: 1px solid rgba(var(--spice-rgb-text, 255, 255, 255), 0.2);
+    border-radius: 6px;
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+#${APP_NAME}-config-container input.config-color-picker::-moz-color-swatch {
+    border: 1px solid rgba(var(--spice-rgb-text, 255, 255, 255), 0.2);
+    border-radius: 6px;
+}
+
+#${APP_NAME}-config-container .config-color-control input.config-color-input {
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    margin: 0 !important;
+    padding: 0 9px !important;
+    border: 0 !important;
+    border-left: 1px solid var(--settings-divider) !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    color: var(--text-primary) !important;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace !important;
+    font-size: 11.5px !important;
+    font-weight: 650 !important;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+#${APP_NAME}-config-container .config-color-control input.config-color-input:focus-visible,
+#${APP_NAME}-config-container input.config-color-picker:focus-visible {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Multi-vocal colors use aligned columns and only lightweight separators. */
+#${APP_NAME}-config-container .multi-vocal-color-setting-row .multi-vocal-color-content {
+    display: flex !important;
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 0;
+    padding: 17px var(--settings-row-padding-x) 18px;
+    gap: 16px;
+}
+
+#${APP_NAME}-config-container .multi-vocal-color-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+#${APP_NAME}-config-container .multi-vocal-color-copy {
+    min-width: 0;
+}
+
+#${APP_NAME}-config-container .multi-vocal-color-groups {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--settings-row-divider);
+}
+
+#${APP_NAME}-config-container .multi-vocal-color-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 0 15px;
+}
+
+#${APP_NAME}-config-container .multi-vocal-color-group:first-child {
+    padding-left: 0;
+}
+
+#${APP_NAME}-config-container .multi-vocal-color-group:last-child {
+    padding-right: 0;
+}
+
+#${APP_NAME}-config-container .multi-vocal-color-group + .multi-vocal-color-group {
+    border-left: 1px solid var(--settings-row-divider);
+}
+
+#${APP_NAME}-config-container .multi-vocal-color-group-title {
+    margin: 0 0 6px;
+    color: var(--text-tertiary);
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+#${APP_NAME}-config-container .multi-vocal-color-row {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 39px;
+}
+
+#${APP_NAME}-config-container .multi-vocal-color-row + .multi-vocal-color-row {
+    border-top: 1px solid var(--settings-row-divider);
+}
+
+#${APP_NAME}-config-container .multi-vocal-color-speaker {
+    color: var(--text-secondary);
+    font-size: 11px;
+    font-weight: 750;
+    white-space: nowrap;
+}
+
+#${APP_NAME}-config-container .multi-vocal-color-row .config-color-control {
+    height: 32px;
+}
+
+#${APP_NAME}-config-container .multi-vocal-color-row input.config-color-picker {
+    height: 28px !important;
+    min-height: 28px !important;
+}
+
+#${APP_NAME}-config-container .multi-vocal-color-row .config-color-input {
+    height: 30px !important;
+    min-height: 30px !important;
+}
+
+/* Font source is an explicit choice instead of an unlabeled edit toggle. */
+#${APP_NAME}-config-container .config-font-selector {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 7px;
+    width: min(380px, 100%);
+    max-width: 380px;
+}
+
+#${APP_NAME}-config-container .config-font-mode {
+    display: inline-flex;
+    align-self: flex-start;
+    gap: 2px;
+    padding: 2px;
+    overflow: hidden;
+    border: 1px solid var(--settings-border);
+    border-radius: 999px !important;
+    background: var(--settings-glass-soft);
+}
+
+#${APP_NAME}-config-container .config-font-mode-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 26px;
+    min-height: 26px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 999px !important;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 120ms ease, background-color 120ms ease;
+}
+
+#${APP_NAME}-config-container .config-font-mode-button:hover {
+    color: var(--text-primary);
+}
+
+#${APP_NAME}-config-container .config-font-mode-button.active {
+    background: var(--settings-glass-active);
+    color: rgb(var(--settings-accent-rgb));
+}
+
+#${APP_NAME}-config-container .config-font-field {
+    position: relative;
+    width: 100%;
+}
+
+#${APP_NAME}-config-container .config-font-field:has(select)::after {
+    content: "⌄";
+    position: absolute;
+    top: 50%;
+    right: 11px;
+    color: var(--text-tertiary);
+    font-size: 14px;
+    line-height: 1;
+    transform: translateY(-58%);
+    pointer-events: none;
+}
+
+#${APP_NAME}-config-container select.config-font-selector-control {
+    padding-right: 32px !important;
+    background-image: none !important;
+    appearance: none !important;
+    -webkit-appearance: none !important;
+}
+
+/* Hotkeys are recorded as keycaps, never presented as editable text. */
+#${APP_NAME}-config-container .config-hotkey-control {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: min(360px, 100%);
+}
+
+#${APP_NAME}-config-container .config-hotkey-recorder {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    min-width: 210px;
+    height: var(--settings-control-height);
+    padding: 4px 8px 4px 6px;
+    border: 1px solid var(--settings-border);
+    border-radius: var(--settings-field-radius);
+    background: var(--settings-glass-soft);
+    color: var(--text-primary);
+    cursor: pointer;
+    box-shadow: none;
+    transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+#${APP_NAME}-config-container .config-hotkey-recorder:hover {
+    border-color: var(--settings-border-strong);
+    background: var(--settings-glass-hover);
+}
+
+#${APP_NAME}-config-container .config-hotkey-recorder.recording {
+    border-color: rgba(var(--settings-accent-rgb), 0.58);
+    background: var(--settings-glass-active);
+    box-shadow: 0 0 0 3px rgba(var(--settings-accent-rgb), 0.11);
+}
+
+#${APP_NAME}-config-container .config-hotkey-keycaps {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+}
+
+#${APP_NAME}-config-container .config-hotkey-keycap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 7px;
+    border: 1px solid var(--settings-border-strong);
+    border-bottom-width: 2px;
+    border-radius: 6px;
+    background: var(--settings-glass-strong);
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 750;
+    line-height: 1;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.16);
+}
+
+#${APP_NAME}-config-container .config-hotkey-edit-label,
+#${APP_NAME}-config-container .config-hotkey-empty {
+    color: var(--text-tertiary);
+    font-size: 10.5px;
+    font-weight: 650;
+    white-space: nowrap;
+}
+
+#${APP_NAME}-config-container .config-hotkey-recording-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--text-primary);
+    font-size: 11.5px;
+    font-weight: 700;
+}
+
+#${APP_NAME}-config-container .config-hotkey-recording-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: rgb(var(--settings-accent-rgb));
+    box-shadow: 0 0 0 4px rgba(var(--settings-accent-rgb), 0.12);
+    animation: hotkeyRecordingPulse 900ms ease-in-out infinite alternate;
+}
+
+#${APP_NAME}-config-container .config-hotkey-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid var(--settings-border);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--text-tertiary);
+    font-size: 16px;
+    cursor: pointer;
+}
+
+#${APP_NAME}-config-container .config-hotkey-clear:hover {
+    border-color: var(--settings-border-strong);
+    background: var(--settings-glass-hover);
+    color: var(--text-primary);
+}
+
+#${APP_NAME}-config-container .settings-visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+/* Header baseline, nine-step weight controls and cache status share the same compact rhythm. */
+#${APP_NAME}-config-container .settings-title-section {
+    align-items: center;
+    gap: 10px;
+}
+
+#${APP_NAME}-config-container .settings-title-section h1 {
+    line-height: 1;
+}
+
+#${APP_NAME}-config-container .settings-version {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    box-sizing: border-box;
+    height: 22px;
+    padding: 0 8px;
+    line-height: 1;
+    position: relative;
+    top: 1px;
+}
+
+#${APP_NAME}-config-container .font-weight-slider .slider-step-markers {
+    grid-column: 1;
+    display: grid;
+    grid-template-columns: repeat(9, minmax(0, 1fr));
+    align-items: center;
+    margin: -8px 7px 0;
+    pointer-events: none;
+}
+
+#${APP_NAME}-config-container .font-weight-slider .slider-step-marker {
+    justify-self: center;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--settings-border-strong);
+    transition: width 120ms ease, height 120ms ease, background-color 120ms ease;
+}
+
+#${APP_NAME}-config-container .font-weight-slider .slider-step-marker.active {
+    width: 6px;
+    height: 6px;
+    background: rgb(var(--settings-accent-rgb));
+    box-shadow: 0 0 0 3px rgba(var(--settings-accent-rgb), 0.1);
+}
+
+#${APP_NAME}-config-container .cache-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+#${APP_NAME}-config-container .cache-management-list .setting-row-content {
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+#${APP_NAME}-config-container .cache-management-list .setting-row-right {
+    width: auto;
+    max-width: none;
+}
+
+#${APP_NAME}-config-container .opendb-cache-row .setting-row-content {
+    align-items: center;
+}
+
+#${APP_NAME}-config-container .opendb-cache-status {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+#${APP_NAME}-config-container .opendb-cache-status-primary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+
+#${APP_NAME}-config-container .opendb-cache-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 0 8px;
+    border: 1px solid var(--settings-border);
+    border-radius: 999px !important;
+    background: var(--settings-glass-soft);
+    color: var(--text-tertiary);
+    font-size: 10.5px;
+    font-weight: 650;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+#${APP_NAME}-config-container .opendb-cache-chip.current {
+    border-color: rgba(var(--settings-accent-rgb), 0.26);
+    background: rgba(var(--settings-accent-rgb), 0.11);
+    color: rgb(var(--settings-accent-rgb));
+}
+
+#${APP_NAME}-config-container .opendb-cache-chip.warning {
+    border-color: rgba(245, 158, 11, 0.3);
+    background: rgba(245, 158, 11, 0.11);
+    color: #fbbf24;
+}
+
+#${APP_NAME}-config-container .opendb-cache-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    color: var(--text-tertiary);
+    font-size: 10.5px;
+    font-weight: 550;
+    line-height: 1.45;
+    font-variant-numeric: tabular-nums;
+}
+
+#${APP_NAME}-config-container .opendb-cache-meta > span + span::before {
+    content: "·";
+    margin: 0 7px;
+    color: var(--settings-border-strong);
+}
+
+#${APP_NAME}-config-container .opendb-cache-error {
+    margin-top: 7px;
+    color: #fca5a5;
+}
+
+#${APP_NAME}-config-container .opendb-cache-refresh-btn {
+    min-width: 168px;
+}
+
+/* The preview mirrors the real lyric line metrics and stays visible while typography is tuned. */
+#${APP_NAME}-config-container .settings-live-preview-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 18;
+    margin: 30px 0 0;
+    padding: 12px 0 14px;
+    border-bottom: 1px solid var(--settings-divider);
+    background: rgba(var(--spice-rgb-main, 18, 18, 18), 0.98);
+    isolation: isolate;
+}
+
+#${APP_NAME}-config-container[data-ui-theme="light"] .settings-live-preview-sticky {
+    background: rgba(246, 248, 251, 0.98);
+}
+
+#${APP_NAME}-config-container .settings-live-preview-sticky > .section-title {
+    margin: 0 2px 9px !important;
+}
+
+#${APP_NAME}-config-container .settings-live-preview-sticky .font-preview-container {
+    margin: 0;
+    overflow: hidden;
+}
+
+#${APP_NAME}-config-container .settings-live-preview-sticky .font-preview {
+    --lyrics-color-active: #f5f7fa;
+    --lyrics-color-inactive: rgba(245, 247, 250, 0.44);
+    min-height: 150px;
+    padding: 24px 22px 20px !important;
+    border-radius: 12px !important;
+    background: #121416 !important;
+    color: #f5f7fa;
+    overflow: visible;
+}
+
+#${APP_NAME}-config-container .settings-live-preview-lyrics.lyrics-lyricsContainer-LyricsContainer {
+    position: relative;
+    top: auto;
+    display: block;
+    width: auto;
+    height: auto;
+    contain: none;
+    overflow: visible;
+}
+
+#${APP_NAME}-config-container .settings-live-preview-stage {
+    position: relative;
+    display: block;
+    overflow: visible;
+    text-align: var(--lyrics-align-text, center);
+}
+
+#${APP_NAME}-config-container .settings-live-preview-line.lyrics-lyricsContainer-SyncedLyrics {
+    display: block;
+    grid-area: auto;
+    height: auto;
+    min-width: 0;
+    color: var(--text-primary);
+    text-align: inherit;
+}
+
+#${APP_NAME}-config-container .settings-live-preview-line > .lyrics-lyricsContainer-LyricsLine {
+    margin: 0 !important;
+    color: var(--lyrics-color-active, var(--spice-text));
+    opacity: 1;
+    transform: none !important;
+    transition: none !important;
+    will-change: auto;
+    pointer-events: none;
+    text-align: inherit;
+}
+
+#${APP_NAME}-config-container .settings-live-preview-line > .lyrics-lyricsContainer-LyricsLine > p {
+    margin: 0;
+}
+
+#${APP_NAME}-config-container .settings-live-preview-line .lyrics-lyricsContainer-LyricsLine > p,
+#${APP_NAME}-config-container .settings-live-preview-line .lyrics-lyricsContainer-LyricsLine-phonetic,
+#${APP_NAME}-config-container .settings-live-preview-line .lyrics-lyricsContainer-LyricsLine-translation,
+#${APP_NAME}-config-container .settings-live-preview-line .lyrics-karaoke-line {
+    transition: none !important;
+}
+
+#${APP_NAME}-config-container .settings-live-preview-lyrics[data-furigana-enabled="false"] .lyrics-karaoke-ruby rt {
+    display: none;
+}
+
+#${APP_NAME}-config-container .settings-live-preview-lyrics[data-furigana-enabled="false"] .lyrics-karaoke-ruby {
+    display: inline;
+    padding-inline: 0;
+    margin-inline: 0;
+}
+
+@media (max-width: 800px) {
+    #${APP_NAME}-config-container .settings-live-preview-sticky {
+        top: 0;
+        margin-top: 24px;
+    }
+
+    #${APP_NAME}-config-container .opendb-cache-refresh-btn {
+        width: 100%;
+    }
+}
+
+@keyframes hotkeyRecordingPulse {
+    from { opacity: 0.45; transform: scale(0.86); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+#${APP_NAME}-config-container.motion-reduced .config-hotkey-recording-dot {
+    animation: none;
+}
+
+/* Provider pages share the same single-surface row hierarchy as other settings. */
+#${APP_NAME}-config-container .lyrics-providers-section {
+    margin-top: 20px;
+}
+
+#${APP_NAME}-config-container .lyrics-providers-container {
+    padding: 0;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+#${APP_NAME}-config-container .lyrics-providers-container > .option-list-wrapper {
+    margin-bottom: 16px;
+}
+
+#${APP_NAME}-config-container .lyrics-providers-list {
+    gap: 0;
+    overflow: hidden;
+    margin: 0;
+    border: 1px solid var(--settings-section-outline);
+    border-radius: var(--settings-section-radius) !important;
+    background: var(--settings-section-surface);
+}
+
+#${APP_NAME}-config-container .lyrics-provider-item {
+    position: relative;
+    align-items: stretch;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+#${APP_NAME}-config-container .lyrics-provider-item + .lyrics-provider-item::before {
+    content: "";
+    position: absolute;
+    z-index: 2;
+    top: 0;
+    left: 14px;
+    right: 14px;
+    height: 1px;
+    background: var(--settings-row-divider);
+    pointer-events: none;
+}
+
+#${APP_NAME}-config-container .lyrics-provider-order-buttons {
+    flex: 0 0 40px;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 12px 8px;
+}
+
+#${APP_NAME}-config-container .lyrics-provider-order-buttons .order-btn {
+    width: 24px;
+    min-width: 24px;
+    height: 24px;
+    min-height: 24px;
+    padding: 0;
+    border: 0 !important;
+    border-radius: 7px !important;
+    background: transparent;
+    color: var(--text-tertiary);
+}
+
+#${APP_NAME}-config-container .lyrics-provider-order-buttons .order-btn:hover:not(:disabled) {
+    border: 0 !important;
+    background: var(--settings-section-surface-hover);
+    color: var(--text-primary);
+}
+
+#${APP_NAME}-config-container .lyrics-provider-card,
+#${APP_NAME}-config-container .lyrics-provider-card:hover,
+#${APP_NAME}-config-container .lyrics-provider-card.expanded {
+    overflow: hidden;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+#${APP_NAME}-config-container .lyrics-provider-card-header {
+    min-height: 68px;
+    padding: 13px 16px 13px 10px;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+#${APP_NAME}-config-container .lyrics-provider-card-header:hover {
+    background: var(--settings-section-surface-hover) !important;
+}
+
+#${APP_NAME}-config-container .lyrics-provider-card-body {
+    margin: 0 16px 14px 10px;
+    padding: 14px 0 0;
+    border-top: 1px solid var(--settings-row-divider);
+    background: transparent !important;
+}
+
+#${APP_NAME}-config-container .lyrics-provider-card-body .ai-addon-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+#${APP_NAME}-config-container .lyrics-provider-card-body .ai-addon-setting {
+    margin: 0;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--settings-row-divider);
+    background: transparent !important;
+}
+
+#${APP_NAME}-config-container .lyrics-provider-card-body .ai-addon-setting:first-child {
+    padding-top: 0;
+}
+
+#${APP_NAME}-config-container .lyrics-provider-card-body .ai-addon-setting:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+@media (max-width: 1100px) {
+    #${APP_NAME}-config-container {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto minmax(0, 1fr);
+    }
+
+    #${APP_NAME}-config-container .settings-header {
+        grid-column: 1;
+        grid-row: 1;
+    }
+
+    #${APP_NAME}-config-container .settings-sidebar {
+        grid-column: 1;
+        grid-row: 2;
+    }
+
+    #${APP_NAME}-config-container .settings-main-panel {
+        grid-column: 1;
+        grid-row: 3;
+    }
+
+    #${APP_NAME}-config-container .settings-search-container {
+        padding: 0 4px 10px 0;
+    }
+
+    #${APP_NAME}-config-container .cache-management-list .setting-row-content {
+        grid-template-columns: minmax(0, 1fr);
+        align-items: start;
+    }
+
+    #${APP_NAME}-config-container .cache-management-list .setting-row-right {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 800px) {
+    #${APP_NAME}-config-container .multi-vocal-color-groups {
+        grid-template-columns: 1fr;
+    }
+
+    #${APP_NAME}-config-container .multi-vocal-color-group,
+    #${APP_NAME}-config-container .multi-vocal-color-group:first-child,
+    #${APP_NAME}-config-container .multi-vocal-color-group:last-child {
+        padding: 12px 0;
+    }
+
+    #${APP_NAME}-config-container .multi-vocal-color-group:first-child {
+        padding-top: 0;
+    }
+
+    #${APP_NAME}-config-container .multi-vocal-color-group + .multi-vocal-color-group {
+        border-top: 1px solid var(--settings-row-divider);
+        border-left: 0;
+    }
+
+    #${APP_NAME}-config-container .config-hotkey-control,
+    #${APP_NAME}-config-container .config-font-selector,
+    #${APP_NAME}-config-container .slider-container {
+        width: 100%;
+        max-width: none;
+    }
+}
 `,
       },
     }),
@@ -10978,48 +13826,55 @@ const ConfigModal = ({
     react.createElement(
       SettingsSidebarShell,
       { sidebarRef: settingsSidebarRef },
-      react.createElement(SidebarNavigation)
-    ),
-    // 검색창
-    react.createElement(
-      "div",
-      { className: "settings-search-container" },
       react.createElement(
         "div",
-        { className: `settings-search-wrapper${searchQuery ? " has-query" : ""}` },
+        { className: "settings-search-container" },
         react.createElement(
-          "svg",
-          {
-            className: "settings-search-icon",
-            viewBox: "0 0 20 20",
-            fill: "currentColor",
-          },
-          react.createElement("path", {
-            fillRule: "evenodd",
-            d: "M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z",
-            clipRule: "evenodd",
-          })
-        ),
-        react.createElement("input", {
-          type: "text",
-          className: "settings-search-input",
-          placeholder: I18n.t("search.placeholder"),
-          "aria-label": I18n.t("search.placeholder"),
-          value: searchQuery,
-          onChange: handleSearchChange,
-        }),
-        searchQuery && react.createElement(
-          "button",
-          {
-            className: "settings-search-clear",
-            type: "button",
-            onClick: handleClearSearch,
-            title: I18n.t("search.clear"),
-            "aria-label": I18n.t("search.clear"),
-          },
-          "×"
+          "div",
+          { className: `settings-search-wrapper${searchQuery ? " has-query" : ""}` },
+          react.createElement(
+            "svg",
+            {
+              className: "settings-search-icon",
+              viewBox: "0 0 20 20",
+              fill: "currentColor",
+              "aria-hidden": "true",
+            },
+            react.createElement("path", {
+              fillRule: "evenodd",
+              d: "M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z",
+              clipRule: "evenodd",
+            })
+          ),
+          react.createElement("input", {
+            type: "search",
+            className: "settings-search-input",
+            placeholder: I18n.t("search.placeholder"),
+            "aria-label": I18n.t("search.placeholder"),
+            value: searchQuery,
+            onChange: handleSearchChange,
+            onKeyDown: (event) => {
+              if (event.key === "Escape" && searchQuery) {
+                event.preventDefault();
+                event.stopPropagation();
+                handleClearSearch();
+              }
+            },
+          }),
+          searchQuery && react.createElement(
+            "button",
+            {
+              className: "settings-search-clear",
+              type: "button",
+              onClick: handleClearSearch,
+              title: I18n.t("search.clear"),
+              "aria-label": I18n.t("search.clear"),
+            },
+            "×"
+          )
         )
-      )
+      ),
+      react.createElement(SidebarNavigation)
     ),
     react.createElement(
       SettingsMainPanelShell,
@@ -11317,18 +14172,7 @@ const ConfigModal = ({
               desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontWeight.label") || "Text Label Weight",
               key: "instrumental-break-label-font-weight",
               info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontWeight.desc") || "Font weight for the text label",
-              type: ConfigSelection,
-              options: {
-                100: "Thin (100)",
-                200: "Extra Light (200)",
-                300: "Light (300)",
-                400: "Regular (400)",
-                500: "Medium (500)",
-                600: "Semi Bold (600)",
-                700: "Bold (700)",
-                800: "Extra Bold (800)",
-                900: "Black (900)",
-              },
+              type: ConfigFontWeightSlider,
               defaultValue: getInstrumentalBreakLabelStyleDefault("font-weight", null, 200),
               disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
             },
@@ -11369,108 +14213,72 @@ const ConfigModal = ({
             );
           },
         }),
-        react.createElement(SectionTitle, {
-          title: I18n.t("settingsAdvanced.livePreview.title"),
-          subtitle: I18n.t("settingsAdvanced.livePreview.subtitle"),
-          sectionKey: "live-preview",
-        }),
         react.createElement(
           "div",
           {
-            className: "font-preview-container",
+            className: "settings-live-preview-sticky",
           },
+          react.createElement(SectionTitle, {
+            title: I18n.t("settingsAdvanced.livePreview.title"),
+            subtitle: I18n.t("settingsAdvanced.livePreview.subtitle"),
+            sectionKey: "live-preview",
+          }),
           react.createElement(
             "div",
             {
-              className: "font-preview",
+              className: "font-preview-container",
             },
             react.createElement(
               "div",
               {
-                id: "lyrics-preview",
-                style: {
-                  fontSize: `${CONFIG.visual["original-font-size"] || 20}px`,
-                  fontWeight: CONFIG.visual["original-font-weight"] || "400",
-                  fontFamily:
-                    CONFIG.visual["original-font-family"] ||
-                    "Pretendard Variable",
-                  textAlign: CONFIG.visual["alignment"] || "left",
-                  color: uiTheme === "light" ? "#0f172a" : "#f6f8fb",
-                  opacity: (CONFIG.visual["original-opacity"] || 100) / 100,
-                  letterSpacing: `${CONFIG.visual["original-letter-spacing"] || 0}px`,
-                  textShadow: CONFIG.visual["text-shadow-enabled"]
-                    ? `0 0 ${CONFIG.visual["text-shadow-blur"] || 2}px ${CONFIG.visual["text-shadow-color"] || "#000000"
-                    }${Math.round(
-                      (CONFIG.visual["text-shadow-opacity"] || 50) * 2.55
-                    )
-                      .toString(16)
-                      .padStart(2, "0")}`
-                    : "none",
-                },
+                className: "font-preview settings-live-preview-lyrics lyrics-lyricsContainer-LyricsContainer",
+                id: "settings-live-lyrics-preview",
+                style: getSettingsLyricsPreviewStyle(),
+                "data-furigana-enabled": CONFIG.visual["furigana-enabled"] === true
+                  ? "true"
+                  : "false",
               },
-              I18n.t("settingsAdvanced.livePreview.sampleTextMixed")
-            ),
-            react.createElement(
-              "div",
-              {
-                id: "phonetic-preview",
-                style: {
-                  fontSize: `${CONFIG.visual["phonetic-font-size"] || 20}px`,
-                  fontWeight: CONFIG.visual["phonetic-font-weight"] || "400",
-                  fontFamily:
-                    CONFIG.visual["phonetic-font-family"] ||
-                    "Pretendard Variable",
-                  textAlign: CONFIG.visual["alignment"] || "left",
-                  lineHeight: "1.3",
-                  opacity: (CONFIG.visual["phonetic-opacity"] || 70) / 100,
-                  color: uiTheme === "light"
-                    ? "rgba(15, 23, 42, 0.66)"
-                    : "rgba(246, 248, 251, 0.7)",
-                  marginTop: `${(parseInt(CONFIG.visual["phonetic-spacing"]) || 4) - 10
-                    }px`,
-                  letterSpacing: `${CONFIG.visual["phonetic-letter-spacing"] || 0}px`,
-                  textShadow: CONFIG.visual["text-shadow-enabled"]
-                    ? `0 0 ${CONFIG.visual["text-shadow-blur"] || 2}px ${CONFIG.visual["text-shadow-color"] || "#000000"
-                    }${Math.round(
-                      (CONFIG.visual["text-shadow-opacity"] || 50) * 2.55
-                    )
-                      .toString(16)
-                      .padStart(2, "0")}`
-                    : "none",
+              react.createElement(
+                "div",
+                {
+                  className: `settings-live-preview-stage lyrics-lyricsContainer-SyncedLyricsPage is-karaoke${CONFIG.visual["karaoke-line-transition"] ? " karaoke-line-transition-enabled" : ""}`,
                 },
-              },
-              I18n.t("settingsAdvanced.livePreview.sampleTextPhonetic")
-            ),
-            react.createElement(
-              "div",
-              {
-                id: "translation-preview",
-                style: {
-                  fontSize: `${CONFIG.visual["translation-font-size"] || 16}px`,
-                  fontWeight: CONFIG.visual["translation-font-weight"] || "400",
-                  fontFamily:
-                    CONFIG.visual["translation-font-family"] ||
-                    "Pretendard Variable",
-                  textAlign: CONFIG.visual["alignment"] || "left",
-                  lineHeight: "1.4",
-                  opacity: (CONFIG.visual["translation-opacity"] || 100) / 100,
-                  color: uiTheme === "light"
-                    ? "rgba(15, 23, 42, 0.72)"
-                    : "rgba(246, 248, 251, 0.76)",
-                  marginTop: `${parseInt(CONFIG.visual["translation-spacing"]) || 8
-                    }px`,
-                  letterSpacing: `${CONFIG.visual["translation-letter-spacing"] || 0}px`,
-                  textShadow: CONFIG.visual["text-shadow-enabled"]
-                    ? `0 0 ${CONFIG.visual["text-shadow-blur"] || 2}px ${CONFIG.visual["text-shadow-color"] || "#000000"
-                    }${Math.round(
-                      (CONFIG.visual["text-shadow-opacity"] || 50) * 2.55
+                react.createElement(
+                  "div",
+                  { className: "settings-live-preview-line lyrics-lyricsContainer-SyncedLyrics" },
+                  react.createElement(
+                    "div",
+                    {
+                      className: "lyrics-lyricsContainer-LyricsLine lyrics-lyricsContainer-LyricsLine-active",
+                      style: {
+                        "--position-index": 0,
+                        "--offset": "0px",
+                        "--animation-index": 0,
+                      },
+                    },
+                    react.createElement(
+                      "p",
+                      null,
+                      react.createElement(KaraokeLine, {
+                        line: SETTINGS_LYRICS_PREVIEW_LINE,
+                        position: SETTINGS_LYRICS_PREVIEW_LINE.endTime,
+                        isActive: true,
+                        furiganaMapOverride: SETTINGS_LYRICS_PREVIEW_FURIGANA,
+                      })
+                    ),
+                    react.createElement(
+                      "p",
+                      { className: "lyrics-lyricsContainer-LyricsLine-phonetic" },
+                      I18n.t("settingsAdvanced.livePreview.sampleTextPhonetic")
+                    ),
+                    react.createElement(
+                      "p",
+                      { className: "lyrics-lyricsContainer-LyricsLine-translation" },
+                      I18n.t("settingsAdvanced.livePreview.sampleText")
                     )
-                      .toString(16)
-                      .padStart(2, "0")}`
-                    : "none",
-                },
-              },
-              I18n.t("settingsAdvanced.livePreview.sampleText")
+                  )
+                )
+              )
             )
           )
         ),
@@ -11568,11 +14376,7 @@ const ConfigModal = ({
                     });
                   }
 
-                  const lyricsPreview =
-                    document.getElementById("lyrics-preview");
-                  if (lyricsPreview) {
-                    lyricsPreview.style.fontFamily = value;
-                  }
+                  syncSettingsLyricsPreviewStyles();
 
                   lyricContainerUpdate?.();
                   window.dispatchEvent(
@@ -11605,18 +14409,7 @@ const ConfigModal = ({
               desc: I18n.t("settingsAdvanced.originalStyle.fontWeight.label"),
               info: I18n.t("settingsAdvanced.originalStyle.fontWeight.desc"),
               key: "original-font-weight",
-              type: ConfigSelection,
-              options: {
-                100: "Thin (100)",
-                200: "Extra Light (200)",
-                300: "Light (300)",
-                400: "Regular (400)",
-                500: "Medium (500)",
-                600: "Semi Bold (600)",
-                700: "Bold (700)",
-                800: "Extra Bold (800)",
-                900: "Black (900)",
-              },
+              type: ConfigFontWeightSlider,
             },
             {
               desc: I18n.t("settingsAdvanced.originalStyle.opacity.label"),
@@ -11642,17 +14435,7 @@ const ConfigModal = ({
           onChange: (name, value) => {
             CONFIG.visual[name] = value;
             StorageManager.setItem(`${APP_NAME}:visual:${name}`, value);
-            const lyricsPreview = document.getElementById("lyrics-preview");
-            if (lyricsPreview) {
-              if (name === "original-font-size")
-                lyricsPreview.style.fontSize = `${value}px`;
-              if (name === "original-font-weight")
-                lyricsPreview.style.fontWeight = value;
-              if (name === "original-opacity")
-                lyricsPreview.style.opacity = value / 100;
-              if (name === "original-letter-spacing")
-                lyricsPreview.style.letterSpacing = `${value}px`;
-            }
+            syncSettingsLyricsPreviewStyles();
             lyricContainerUpdate?.();
             window.dispatchEvent(
               new CustomEvent("ivLyrics", {
@@ -11728,11 +14511,7 @@ const ConfigModal = ({
                     });
                   }
 
-                  const phoneticPreview =
-                    document.getElementById("phonetic-preview");
-                  if (phoneticPreview) {
-                    phoneticPreview.style.fontFamily = value;
-                  }
+                  syncSettingsLyricsPreviewStyles();
 
                   lyricContainerUpdate?.();
                   window.dispatchEvent(
@@ -11765,18 +14544,7 @@ const ConfigModal = ({
               desc: I18n.t("settingsAdvanced.originalStyle.fontWeight.label"),
               info: I18n.t("settingsAdvanced.pronunciationStyle.fontWeight.desc"),
               key: "phonetic-font-weight",
-              type: ConfigSelection,
-              options: {
-                100: "Thin (100)",
-                200: "Extra Light (200)",
-                300: "Light (300)",
-                400: "Regular (400)",
-                500: "Medium (500)",
-                600: "Semi Bold (600)",
-                700: "Bold (700)",
-                800: "Extra Bold (800)",
-                900: "Black (900)",
-              },
+              type: ConfigFontWeightSlider,
             },
             {
               desc: I18n.t("settingsAdvanced.originalStyle.opacity.label"),
@@ -11823,19 +14591,7 @@ const ConfigModal = ({
           onChange: (name, value) => {
             CONFIG.visual[name] = value;
             StorageManager.setItem(`${APP_NAME}:visual:${name}`, value);
-            const phoneticPreview = document.getElementById("phonetic-preview");
-            if (phoneticPreview) {
-              if (name === "phonetic-font-size")
-                phoneticPreview.style.fontSize = `${value}px`;
-              if (name === "phonetic-font-weight")
-                phoneticPreview.style.fontWeight = value;
-              if (name === "phonetic-opacity")
-                phoneticPreview.style.opacity = value / 100;
-              if (name === "phonetic-spacing")
-                phoneticPreview.style.marginTop = `${parseInt(value) || 0}px`;
-              if (name === "phonetic-letter-spacing")
-                phoneticPreview.style.letterSpacing = `${value}px`;
-            }
+            syncSettingsLyricsPreviewStyles();
             // Reload lyrics when hyphen replacement setting changes
             if (name === "phonetic-hyphen-replace") {
               reloadLyrics?.();
@@ -11916,12 +14672,7 @@ const ConfigModal = ({
                     });
                   }
 
-                  const translationPreview = document.getElementById(
-                    "translation-preview"
-                  );
-                  if (translationPreview) {
-                    translationPreview.style.fontFamily = value;
-                  }
+                  syncSettingsLyricsPreviewStyles();
 
                   lyricContainerUpdate?.();
                   window.dispatchEvent(
@@ -11954,18 +14705,7 @@ const ConfigModal = ({
               desc: I18n.t("settingsAdvanced.originalStyle.fontWeight.label"),
               info: I18n.t("settingsAdvanced.translationStyle.fontWeight.desc"),
               key: "translation-font-weight",
-              type: ConfigSelection,
-              options: {
-                100: "Thin (100)",
-                200: "Extra Light (200)",
-                300: "Light (300)",
-                400: "Regular (400)",
-                500: "Medium (500)",
-                600: "Semi Bold (600)",
-                700: "Bold (700)",
-                800: "Extra Bold (800)",
-                900: "Black (900)",
-              },
+              type: ConfigFontWeightSlider,
             },
             {
               desc: I18n.t("settingsAdvanced.originalStyle.opacity.label"),
@@ -12001,22 +14741,7 @@ const ConfigModal = ({
           onChange: (name, value) => {
             CONFIG.visual[name] = value;
             StorageManager.setItem(`${APP_NAME}:visual:${name}`, value);
-            const translationPreview = document.getElementById(
-              "translation-preview"
-            );
-            if (translationPreview) {
-              if (name === "translation-font-size")
-                translationPreview.style.fontSize = `${value}px`;
-              if (name === "translation-font-weight")
-                translationPreview.style.fontWeight = value;
-              if (name === "translation-opacity")
-                translationPreview.style.opacity = value / 100;
-              if (name === "translation-spacing")
-                translationPreview.style.marginTop = `${parseInt(value) || 0
-                  }px`;
-              if (name === "translation-letter-spacing")
-                translationPreview.style.letterSpacing = `${value}px`;
-            }
+            syncSettingsLyricsPreviewStyles();
             lyricContainerUpdate?.();
             window.dispatchEvent(
               new CustomEvent("ivLyrics", {
@@ -12052,18 +14777,7 @@ const ConfigModal = ({
               desc: I18n.t("settingsAdvanced.furiganaStyle.fontWeight.label"),
               info: I18n.t("settingsAdvanced.furiganaStyle.fontWeight.desc"),
               key: "furigana-font-weight",
-              type: ConfigSelection,
-              options: {
-                100: "Thin (100)",
-                200: "Extra Light (200)",
-                300: "Light (300)",
-                400: "Regular (400)",
-                500: "Medium (500)",
-                600: "Semi Bold (600)",
-                700: "Bold (700)",
-                800: "Extra Bold (800)",
-                900: "Black (900)",
-              },
+              type: ConfigFontWeightSlider,
             },
             {
               desc: I18n.t("settingsAdvanced.furiganaStyle.opacity.label"),
@@ -12089,6 +14803,7 @@ const ConfigModal = ({
           onChange: (name, value) => {
             CONFIG.visual[name] = value;
             StorageManager.setItem(`${APP_NAME}:visual:${name}`, value);
+            syncSettingsLyricsPreviewStyles();
             lyricContainerUpdate?.();
             window.dispatchEvent(
               new CustomEvent("ivLyrics", {
@@ -12140,29 +14855,7 @@ const ConfigModal = ({
           onChange: (name, value) => {
             CONFIG.visual[name] = value;
             StorageManager.setItem(`${APP_NAME}:visual:${name}`, value);
-            const lyricsPreview = document.getElementById("lyrics-preview");
-            const phoneticPreview = document.getElementById("phonetic-preview");
-            const translationPreview = document.getElementById(
-              "translation-preview"
-            );
-
-            if (lyricsPreview || phoneticPreview || translationPreview) {
-              const shadowEnabled = CONFIG.visual["text-shadow-enabled"];
-              const shadowColor =
-                CONFIG.visual["text-shadow-color"] || "#000000";
-              const shadowOpacity = CONFIG.visual["text-shadow-opacity"] || 50;
-              const shadowBlur = CONFIG.visual["text-shadow-blur"] || 2;
-              const shadowAlpha = Math.round(shadowOpacity * 2.55)
-                .toString(16)
-                .padStart(2, "0");
-              const shadow = shadowEnabled
-                ? `0 0 ${shadowBlur}px ${shadowColor}${shadowAlpha}`
-                : "none";
-              if (lyricsPreview) lyricsPreview.style.textShadow = shadow;
-              if (phoneticPreview) phoneticPreview.style.textShadow = shadow;
-              if (translationPreview)
-                translationPreview.style.textShadow = shadow;
-            }
+            syncSettingsLyricsPreviewStyles();
             lyricContainerUpdate?.();
             window.dispatchEvent(
               new CustomEvent("ivLyrics", {
@@ -14689,6 +17382,13 @@ function openConfig(options = {}) {
 
   const modalContainer = document.createElement("div");
   modalContainer.className = "ivlyrics-settings-modal-shell";
+  modalContainer.setAttribute("role", "dialog");
+  modalContainer.setAttribute("aria-modal", "true");
+  modalContainer.setAttribute("aria-label", "ivLyrics Settings");
+  modalContainer.tabIndex = -1;
+  const previouslyFocused = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : null;
 
   const dom =
     window.ivLyricsEnsureReactDOM?.() ||
@@ -14715,7 +17415,10 @@ function openConfig(options = {}) {
       if (overlay.parentNode) {
         overlay.remove();
       }
-      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("keydown", handleModalKeydown);
+      if (previouslyFocused && document.contains(previouslyFocused)) {
+        previouslyFocused.focus();
+      }
     }, getSettingsMotionDurationMs());
   };
 
@@ -14727,18 +17430,47 @@ function openConfig(options = {}) {
   });
 
   // Close on escape key
-  const handleEscape = (e) => {
+  const getFocusableElements = () => Array.from(modalContainer.querySelectorAll(
+    'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+  )).filter((element) => !element.hidden && element.getAttribute("aria-hidden") !== "true");
+
+  const handleModalKeydown = (e) => {
     if (e.key === "Escape") {
+      e.preventDefault();
       closeOverlay();
+      return;
+    }
+
+    if (e.key === "Tab") {
+      const focusable = getFocusableElements();
+      if (!focusable.length) {
+        e.preventDefault();
+        modalContainer.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
   };
-  document.addEventListener("keydown", handleEscape);
+  document.addEventListener("keydown", handleModalKeydown);
 
   overlay.appendChild(modalContainer);
   document.body.appendChild(overlay);
   window.requestAnimationFrame(() => {
     overlay.classList.remove("is-entering");
     overlay.classList.add("is-open");
+    const focusTarget = modalContainer.querySelector(
+      '.settings-close-btn, button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    (focusTarget ?? modalContainer).focus?.();
   });
 
   dom.render(

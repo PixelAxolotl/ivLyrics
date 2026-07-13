@@ -1271,6 +1271,22 @@ window.LANG_TH = {
         "clearAll": "ลบทั้งหมด",
         "clearCurrent": "ลบเพลงปัจจุบัน",
         "stats": "เนื้อเพลง: {lyrics} รายการ, คำแปล: {translations} รายการ, Metadata: {metadata} รายการ"
+      },
+      "openDb": {
+        "label": "แคชดัชนี OpenDB",
+        "desc": "ดัชนี base + delta ที่ใช้ค้นหาผู้ให้บริการเนื้อเพลงที่มี sync-data",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "ISRC {isrcCount} รายการ · ผู้ให้บริการ {providerCount} ราย",
+        "notDownloaded": "ยังไม่ได้ดาวน์โหลดดัชนี",
+        "lastChecked": "ตรวจสอบล่าสุด",
+        "justNow": "เมื่อสักครู่",
+        "stale": "ออฟไลน์ · กำลังใช้แคชเดิม",
+        "update": "ดึง base + delta อีกครั้ง",
+        "updating": "กำลังอัปเดต…",
+        "unavailable": "ไม่สามารถใช้บริการแคช OpenDB ได้",
+        "updateSuccess": "ดาวน์โหลดไฟล์ base และ delta ของ OpenDB อีกครั้งแล้ว",
+        "updateFailed": "ไม่สามารถอัปเดต OpenDB ได้ โดยยังคงเก็บแคชเดิมไว้",
+        "updateFailedNoCache": "ไม่สามารถอัปเดต OpenDB ได้และไม่มีแคชเดิมให้ใช้งาน"
       }
     },
     "languageDetection": {

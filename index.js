@@ -3801,7 +3801,7 @@ const LyricsCacheEditModal = ({
   );
 };
 
-// Translation, pronunciation, and video background pills share one timing contract.
+// Lyrics, translation, pronunciation, and video background pills share one timing contract.
 const GENERATION_PILL_TIMING = Object.freeze({
   loadingDelayMs: 1000,
   completeHoldMs: 520,
@@ -3809,6 +3809,13 @@ const GENERATION_PILL_TIMING = Object.freeze({
 });
 
 const GENERATION_REQUEST_PILL_CONFIG = Object.freeze({
+  lyrics: Object.freeze({
+    tokensKey: "_activeLyricsLoadingTokens",
+    sequenceKey: "_lyricsLoadingSeq",
+    timerKey: "lyricsLoadingTimer",
+    failureKey: "_lyricsLoadingHadFailure",
+    loadingStateKey: null,
+  }),
   pronunciation: Object.freeze({
     tokensKey: "_activePhoneticLoadingTokens",
     sequenceKey: "_phoneticLoadingSeq",
@@ -3869,6 +3876,7 @@ class LyricsContainer extends react.Component {
       isPhoneticLoading: false,
       isTranslationLoading: false,
       generationPills: {
+        lyrics: { phase: "idle", revision: 0 },
         translation: { phase: "idle", revision: 0 },
         pronunciation: { phase: "idle", revision: 0 },
         "video-background": { phase: "idle", revision: 0 },
@@ -3920,12 +3928,16 @@ class LyricsContainer extends react.Component {
     this.lastProcessedMode = null;
 
     // Requests are tracked per kind; pill timing and visual lifecycle are shared.
+    this.lyricsLoadingTimer = null;
     this.phoneticLoadingTimer = null;
     this.translationLoadingTimer = null;
+    this._lyricsLoadingSeq = 0;
     this._phoneticLoadingSeq = 0;
     this._translationLoadingSeq = 0;
+    this._activeLyricsLoadingTokens = new Set();
     this._activePhoneticLoadingTokens = new Set();
     this._activeTranslationLoadingTokens = new Set();
+    this._lyricsLoadingHadFailure = false;
     this._phoneticLoadingHadFailure = false;
     this._translationLoadingHadFailure = false;
     this._generationPillTimers = new Map();
@@ -4620,6 +4632,7 @@ class LyricsContainer extends react.Component {
       this.streamingApplyTimer = null;
     }
     this.pendingStreamingPayload = null;
+    this.clearLyricsLoading();
     this.clearPhoneticLoading();
     this.clearTranslationLoading();
   }
@@ -4695,7 +4708,9 @@ class LyricsContainer extends react.Component {
     this[config.timerKey] = setTimeout(() => {
       this[config.timerKey] = null;
       if (activeTokens.size > 0 && this._isComponentMounted) {
-        this.setState({ [config.loadingStateKey]: true });
+        if (config.loadingStateKey) {
+          this.setState({ [config.loadingStateKey]: true });
+        }
         this.showGenerationPillLoading(kind);
       }
     }, GENERATION_PILL_TIMING.loadingDelayMs);
@@ -4729,7 +4744,7 @@ class LyricsContainer extends react.Component {
       !this[config.failureKey] &&
       this._visibleGenerationPills.has(kind);
     this[config.failureKey] = false;
-    if (this._isComponentMounted) {
+    if (this._isComponentMounted && config.loadingStateKey) {
       this.setState({ [config.loadingStateKey]: false });
     }
     if (shouldComplete) {
@@ -4737,6 +4752,14 @@ class LyricsContainer extends react.Component {
     } else {
       this.hideGenerationPill(kind);
     }
+  }
+
+  startLyricsLoading() {
+    return this.startGenerationRequestLoading("lyrics");
+  }
+
+  clearLyricsLoading(token = null, options = {}) {
+    this.clearGenerationRequestLoading("lyrics", token, options);
   }
 
   startPhoneticLoading() {
@@ -5500,6 +5523,8 @@ class LyricsContainer extends react.Component {
 
   async fetchLyrics(track, mode = -1, refresh = false) {
     let isLatestLyricsRequest = () => true;
+    let lyricsLoadingToken = null;
+    let lyricsLoadingCompleted = false;
 
     try {
       const info = this.infoFromTrack(track);
@@ -5677,6 +5702,7 @@ class LyricsContainer extends react.Component {
         // Save current mode before loading to maintain UI consistency
         const currentMode = this.getCurrentMode();
         this.lastModeBeforeLoading = currentMode !== -1 ? currentMode : SYNCED;
+        lyricsLoadingToken = this.startLyricsLoading();
         this.setState({
           ...emptyState,
           uri: requestUri,
@@ -5762,7 +5788,6 @@ class LyricsContainer extends react.Component {
           error: "Instrumental"
         };
       }
-
       let finalMode = mode;
       if (mode === -1) {
         if (this.state.explicitMode !== -1) {
@@ -5780,6 +5805,10 @@ class LyricsContainer extends react.Component {
       }
 
       const initialLyricsForMode = this.resolveLyricsForMode(tempState, finalMode);
+      const canCompleteLyricsLoading = lyricsLoadingToken !== null &&
+        isLatestLyricsRequest() &&
+        Array.isArray(initialLyricsForMode) &&
+        initialLyricsForMode.length > 0;
       const configuredLanguageOverride = CONFIG.visual["translate:detect-language-override"];
       const presentationLanguage = trackLanguageOverride ||
         (configuredLanguageOverride && configuredLanguageOverride !== 'off'
@@ -5850,6 +5879,7 @@ class LyricsContainer extends react.Component {
           ...this.applyTranslationStates(tempState),
           currentLyrics: sharedLyricsForMode || initialLyricsForMode || [],
         });
+        lyricsLoadingCompleted = canCompleteLyricsLoading && isLatestLyricsRequest();
         return;
       }
 
@@ -5859,6 +5889,7 @@ class LyricsContainer extends react.Component {
         ...this.applyTranslationStates(tempState),
         currentLyrics: sharedLyricsForMode || initialLyricsForMode || [],
       });
+      lyricsLoadingCompleted = canCompleteLyricsLoading && isLatestLyricsRequest();
     } catch (error) {
       if (!isLatestLyricsRequest()) {
         return;
@@ -5871,6 +5902,12 @@ class LyricsContainer extends react.Component {
         uri: this.currentTrackUri,
         lyricsRequestSeq: this._activeLyricsFetchSeq,
       });
+    } finally {
+      if (lyricsLoadingToken !== null) {
+        this.clearLyricsLoading(lyricsLoadingToken, {
+          completed: lyricsLoadingCompleted && isLatestLyricsRequest(),
+        });
+      }
     }
   }
 
@@ -7606,10 +7643,17 @@ class LyricsContainer extends react.Component {
           this.fullscreenContainer.style.setProperty("--fullscreen-tmi-font-size", tmiScale);
           document.body.append(this.fullscreenContainer);
         }
-        this.mousetrap.bind("esc", this.toggleFullscreen);
+        const hasOpenIvLyricsDialog = () => Boolean(document.querySelector(
+          '.ivlyrics-fluent-overlay:not([aria-hidden="true"]), .lyrics-sync-adjust-floating [role="dialog"], .ivlyrics-settings-overlay.is-open, .community-video-overlay, .ivlyrics-cache-edit-overlay'
+        ));
+        this.mousetrap.bind("esc", () => {
+          if (hasOpenIvLyricsDialog()) return;
+          this.toggleFullscreen();
+        });
         // 전체화면 키 직접 리스너 추가 (Mousetrap이 캡처하지 못할 경우 대비)
         this._escHandler = (e) => {
           if (e.key === "Escape" && this.state.isFullscreen) {
+            if (hasOpenIvLyricsDialog()) return;
             e.preventDefault();
             e.stopPropagation();
             this.toggleFullscreen();
@@ -7803,10 +7847,11 @@ class LyricsContainer extends react.Component {
     }
 
     // Clean up generation loading and completion timers
+    this.clearLyricsLoading();
     this.clearPhoneticLoading();
     this.clearTranslationLoading();
     this.clearVideoBackgroundLoadingDelay();
-    ["translation", "pronunciation", "video-background"].forEach((kind) => {
+    ["lyrics", "translation", "pronunciation", "video-background"].forEach((kind) => {
       this.clearGenerationPillTimers(kind);
     });
     this._visibleGenerationPills.clear();
@@ -7883,17 +7928,8 @@ class LyricsContainer extends react.Component {
 
     this.styleVariables = {
       ...this.styleVariables,
-      "--lyrics-align-text": CONFIG.visual.alignment,
-      "--lyrics-font-size": `${CONFIG.visual["font-size"]}px`,
+      ...getLyricsTypographyStyleVariables(CONFIG.visual),
       "--animation-tempo": this.state.tempo,
-      "--lyrics-font-family":
-        CONFIG.visual["font-family"] || "var(--font-family)",
-      "--lyrics-original-font-family":
-        CONFIG.visual["original-font-family"] || "var(--font-family)",
-      "--lyrics-phonetic-font-family":
-        CONFIG.visual["phonetic-font-family"] || "var(--font-family)",
-      "--lyrics-translation-font-family":
-        CONFIG.visual["translation-font-family"] || "var(--font-family)",
       "--lyrics-fullscreen-right-padding": `${CONFIG.visual["fullscreen-lyrics-right-padding"] || 40}px`,
       "--fullscreen-tmi-font-size": (CONFIG.visual["fullscreen-tmi-font-size"] || 100) / 100,
     };
@@ -8094,70 +8130,9 @@ class LyricsContainer extends react.Component {
       backgroundStyle.filter = `brightness(${brightness})`;
     }
 
-    // Helper function to convert hex color with opacity
-    const hexToRgba = (hex, opacity) => {
-      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-      if (result) {
-        const r = parseInt(result[1], 16);
-        const g = parseInt(result[2], 16);
-        const b = parseInt(result[3], 16);
-        return `rgba(${r}, ${g}, ${b}, ${opacity / 100})`;
-      }
-      return hex;
-    };
-
-    // Build text shadow CSS value
-    const shadowColor = hexToRgba(
-      CONFIG.visual["text-shadow-color"],
-      CONFIG.visual["text-shadow-opacity"]
-    );
-    const textShadow = CONFIG.visual["text-shadow-enabled"]
-      ? `0 0 ${CONFIG.visual["text-shadow-blur"]}px ${shadowColor}`
-      : "none";
-    const textDropShadow = CONFIG.visual["text-shadow-enabled"]
-      ? `drop-shadow(0 0 ${CONFIG.visual["text-shadow-blur"]}px ${shadowColor})`
-      : "none";
-
     this.styleVariables = {
       ...this.styleVariables,
-      "--lyrics-align-text": CONFIG.visual.alignment,
-      "--lyrics-font-size": `${CONFIG.visual["font-size"]}px`,
-      "--lyrics-font-family":
-        CONFIG.visual["font-family"] || "var(--font-family)",
-      "--lyrics-original-font-family":
-        CONFIG.visual["original-font-family"] || "var(--font-family)",
-      "--lyrics-phonetic-font-family":
-        CONFIG.visual["phonetic-font-family"] || "var(--font-family)",
-      "--lyrics-translation-font-family":
-        CONFIG.visual["translation-font-family"] || "var(--font-family)",
-      "--lyrics-original-font-weight": CONFIG.visual["original-font-weight"],
-      "--lyrics-original-font-size": `${CONFIG.visual["original-font-size"]}px`,
-      "--lyrics-translation-font-weight":
-        CONFIG.visual["translation-font-weight"],
-      "--lyrics-translation-font-size": `${CONFIG.visual["translation-font-size"]}px`,
-      "--lyrics-translation-spacing": `${CONFIG.visual["translation-spacing"] || 8
-        }px`,
-      "--lyrics-phonetic-font-weight":
-        CONFIG.visual["phonetic-font-weight"] || "400",
-      "--lyrics-phonetic-font-size": `${CONFIG.visual["phonetic-font-size"] || 20
-        }px`,
-      "--lyrics-phonetic-opacity":
-        (CONFIG.visual["phonetic-opacity"] || 70) / 100,
-      "--lyrics-phonetic-spacing": `${CONFIG.visual["phonetic-spacing"] || 4
-        }px`,
-      "--lyrics-original-letter-spacing": `${CONFIG.visual["original-letter-spacing"] || 0}px`,
-      "--lyrics-phonetic-letter-spacing": `${CONFIG.visual["phonetic-letter-spacing"] || 0}px`,
-      "--lyrics-translation-letter-spacing": `${CONFIG.visual["translation-letter-spacing"] || 0}px`,
-      "--lyrics-furigana-font-weight": CONFIG.visual["furigana-font-weight"],
-      "--lyrics-furigana-font-size": `${CONFIG.visual["furigana-font-size"]}px`,
-      "--lyrics-furigana-opacity": CONFIG.visual["furigana-opacity"] / 100,
-      "--lyrics-furigana-spacing": `${CONFIG.visual["furigana-spacing"]}px`,
-      "--lyrics-line-spacing": `${CONFIG.visual["line-spacing"] || 8}px`,
-      "--lyrics-text-shadow": textShadow,
-      "--lyrics-text-drop-shadow": textDropShadow,
-      "--lyrics-original-opacity": CONFIG.visual["original-opacity"] / 100,
-      "--lyrics-translation-opacity":
-        CONFIG.visual["translation-opacity"] / 100,
+      ...getLyricsTypographyStyleVariables(CONFIG.visual),
       "--highlight-inactive-opacity":
         (100 - (CONFIG.visual["highlight-intensity"] || 70)) / 100,
       "--animation-tempo": this.state.tempo,
@@ -8433,6 +8408,13 @@ class LyricsContainer extends react.Component {
     const shouldUseVideoBackground =
       !isSyncCreatorActive && !this.state.isFADMode && effectiveBackgroundMode === "video-background";
     const shouldRenderStaticBackground = !shouldUseVideoBackground;
+    const renderFloatingToolbarIcon = (name, size = 18) =>
+      window.IvLyricsToolbarIcon
+        ? react.createElement(window.IvLyricsToolbarIcon, { name, size })
+        : react.createElement("span", {
+          className: "ivlyrics-toolbar-icon-fallback",
+          "aria-hidden": "true",
+        });
     const modeButtons = [
       this.state.karaoke &&
       CONFIG.visual["karaoke-mode-enabled"] &&
@@ -8446,20 +8428,9 @@ class LyricsContainer extends react.Component {
             className: `lyrics-config-button lyrics-mode-button ${mode === KARAOKE ? "active" : ""}`,
             onClick: () => this.switchTo(KARAOKE),
             "aria-pressed": mode === KARAOKE,
+            "aria-label": I18n.t("modes.karaoke"),
           },
-          react.createElement("svg", {
-            width: 18,
-            height: 18,
-            viewBox: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            strokeWidth: 2,
-            strokeLinecap: "round",
-            strokeLinejoin: "round",
-            dangerouslySetInnerHTML: {
-              __html: '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/>',
-            },
-          })
+          renderFloatingToolbarIcon("karaoke")
         )
       ),
       this.state.synced &&
@@ -8473,20 +8444,9 @@ class LyricsContainer extends react.Component {
             className: `lyrics-config-button lyrics-mode-button ${mode === SYNCED ? "active" : ""}`,
             onClick: () => this.switchTo(SYNCED),
             "aria-pressed": mode === SYNCED,
+            "aria-label": I18n.t("modes.synced"),
           },
-          react.createElement("svg", {
-            width: 18,
-            height: 18,
-            viewBox: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            strokeWidth: 2,
-            strokeLinecap: "round",
-            strokeLinejoin: "round",
-            dangerouslySetInnerHTML: {
-              __html: '<path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>',
-            },
-          })
+          renderFloatingToolbarIcon("synced")
         )
       ),
       this.state.unsynced &&
@@ -8500,20 +8460,9 @@ class LyricsContainer extends react.Component {
             className: `lyrics-config-button lyrics-mode-button ${mode === UNSYNCED ? "active" : ""}`,
             onClick: () => this.switchTo(UNSYNCED),
             "aria-pressed": mode === UNSYNCED,
+            "aria-label": I18n.t("modes.unsynced"),
           },
-          react.createElement("svg", {
-            width: 18,
-            height: 18,
-            viewBox: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            strokeWidth: 2,
-            strokeLinecap: "round",
-            strokeLinejoin: "round",
-            dangerouslySetInnerHTML: {
-              __html: '<path d="M17 6.1H3"/><path d="M21 12.1H3"/><path d="M15.1 18H3"/>',
-            },
-          })
+          renderFloatingToolbarIcon("unsynced")
         )
       ),
     ].filter(Boolean);
@@ -8554,6 +8503,11 @@ class LyricsContainer extends react.Component {
 
     const generationCompleteLabel = I18n.t("generationStatus.complete") || "완료!";
     const generationStatusDefinitions = [
+      {
+        key: "lyrics",
+        label: I18n.t("syncCreator.loadLyrics") || "가사 불러오기",
+        description: I18n.t("syncCreator.loadingLyrics") || "가사를 불러오는 중...",
+      },
       {
         key: "translation",
         label: I18n.t("menu.translationLabel") || I18n.t("notifications.requestingTranslation"),
@@ -8663,7 +8617,7 @@ class LyricsContainer extends react.Component {
       (mode === SYNCED && Array.isArray(this.state.synced) && this.state.synced.length > 0);
     const trackSyncAdjustPill = hasTrackSyncLyrics &&
       !this.state.showMarketplace &&
-      !this.state.isFullscreen &&
+      !shouldHideFullscreenLyrics &&
       !isSyncCreatorActive &&
       renderTrackUri &&
       typeof TrackSyncAdjustPill !== "undefined"
@@ -8787,26 +8741,16 @@ class LyricsContainer extends react.Component {
           {
             className: "lyrics-config-button lyrics-floating-menu-toggle",
             type: "button",
+            "aria-label": this.state.isFloatingMenuOpen
+              ? (I18n.t("common.close") || "Close")
+              : "ivLyrics menu",
+            "aria-expanded": this.state.isFloatingMenuOpen,
             onClick: (e) => {
               e.stopPropagation();
               this.toggleFloatingMenu();
             },
           },
-          react.createElement("svg", {
-            width: 20,
-            height: 20,
-            viewBox: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            strokeWidth: 2,
-            strokeLinecap: "round",
-            strokeLinejoin: "round",
-            dangerouslySetInnerHTML: {
-              __html: this.state.isFloatingMenuOpen
-                ? '<line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line>' // X 아이콘
-                : '<line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line>', // 햄버거 아이콘
-            },
-          })
+          renderFloatingToolbarIcon(this.state.isFloatingMenuOpen ? "close" : "menu")
         ),
         // 메뉴 내용 (일반 모드: 항상 표시, 전체화면: 열렸을 때만 표시)
         shouldRenderFloatingMenu && react.createElement(
@@ -8821,166 +8765,152 @@ class LyricsContainer extends react.Component {
               }
             },
           },
-          showTranslationButton &&
-          react.createElement(TranslationMenu, {
-            friendlyLanguage,
-            hasTranslation: {},
-          }),
-          react.createElement(LyricsProviderSelectButton, {
-            currentProvider: this.state.provider,
-            selectedProvider: this.state.trackLyricsProviderOverride,
-            isLoading: this.state.isLoading,
-            onSelectProvider: this.selectLyricsProviderForCurrentTrack,
-            isLocalTrack,
-            trackInfo: currentTrackInfo,
-            onImportLocalLyricsFile: this.importLocalLyricsFile,
-            onApplyLocalLyrics: this.applyLocalLyricsFromLrclibCandidate,
-          }),
-          react.createElement(TrackBackgroundButton, {
-            trackUri: this.currentTrackUri,
-            overrideMode: getIvLyricsTrackBackgroundMode(this.state.trackBackgroundOverride),
-            effectiveMode: effectiveBackgroundMode,
-            onSelectBackground: this.selectBackgroundForCurrentTrack,
-          }),
-          react.createElement(RegenerateTranslationButton, {
-            onRegenerate: this.handleRegenerateTranslationRequest,
-            isEnabled: canRegenerateTranslation,
-            isLoading: this.state.isTranslationLoading || this.state.isPhoneticLoading,
-          }),
-          window.IvLyricsLearningMode?.StudyButton &&
-          react.createElement(window.IvLyricsLearningMode.StudyButton, {
-            disabled: !hasLyrics || this.state.isLoading,
-          }),
-          react.createElement(SyncAdjustButtonFluent),
-          react.createElement(CommunityVideoButton, {
-            trackUri: this.currentTrackUri,
-            enabled: effectiveBackgroundMode === "video-background",
-            videoInfo: this.state.videoInfo,
-            defaultStartTime: defaultCommunityVideoStartTime,
-            onVideoSelect: async (newVideoInfo) => {
-              this.setState({ videoInfo: newVideoInfo });
-              if (newVideoInfo && this.currentTrackUri) {
-                await Utils.saveSelectedVideo(this.currentTrackUri, newVideoInfo);
-              }
-            },
-          }),
-          react.createElement(ShareImageButton, {
-            lyrics: this.state.currentLyrics || [],
-            trackInfo: {
-              name: Spicetify.Player.data?.item?.name || Spicetify.Player.data?.item?.metadata?.title || '',
-              artist: Spicetify.Player.data?.item?.artists?.map(a => a.name).join(', ') || Spicetify.Player.data?.item?.metadata?.artist_name || '',
-              cover: Spicetify.Player.data?.item?.metadata?.image_xlarge_url ||
-                Spicetify.Player.data?.item?.metadata?.image_large_url ||
-                Spicetify.Player.data?.item?.metadata?.image_url ||
-                Spicetify.Player.data?.item?.album?.images?.[0]?.url || '',
-            },
-          }),
-          hasLyrics &&
-          react.createElement(
-            Spicetify.ReactComponent.TooltipWrapper,
-            {
-              label: I18n.t("lyricsCacheEditor.button"),
-            },
-            react.createElement(
-              "button",
-              {
-                className: "lyrics-config-button lyrics-cache-edit-button",
-                type: "button",
-                onClick: () => this.openLyricsEditModal(),
-                disabled:
-                  this.state.isLyricsEditLoading || this.state.isLyricsEditSaving,
-                "data-active": this.state.isLyricsEditModalOpen ? "true" : "false",
-              },
-              react.createElement("svg", {
-                width: 18,
-                height: 18,
-                viewBox: "0 0 24 24",
-                fill: "none",
-                stroke: "currentColor",
-                strokeWidth: 2,
-                strokeLinecap: "round",
-                strokeLinejoin: "round",
-                dangerouslySetInnerHTML: {
-                  __html:
-                    '<path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4Z"></path>',
-                },
-              })
-            )
-          ),
-          // 마켓플레이스 버튼
-          react.createElement(
-            Spicetify.ReactComponent.TooltipWrapper,
-            { label: I18n.t("marketplace.title") },
-            react.createElement(
-              "button",
-              {
-                className: `lyrics-config-button lyrics-marketplace-button${this.state.showMarketplace ? " active" : ""}`,
-                type: "button",
-                onClick: () => {
-                  this.clearFloatingMenuCloseTimer();
-                  this.setState((prevState) => ({
-                    showMarketplace: !prevState.showMarketplace,
-                    isFloatingMenuOpen: false,
-                    isFloatingMenuClosing: false,
-                  }));
-                },
-              },
-              react.createElement("svg", {
-                width: 18,
-                height: 18,
-                viewBox: "0 0 24 24",
-                fill: "none",
-                stroke: "currentColor",
-                strokeWidth: 2,
-                strokeLinecap: "round",
-                strokeLinejoin: "round",
-                dangerouslySetInnerHTML: {
-                  __html: '<path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 01-8 0"></path>',
-                },
-              })
-            )
-          ),
-          react.createElement(SettingsMenu),
-          // 전체화면 토글 버튼
-          (() => !document.getElementById("fad-ivLyrics-container"))() && react.createElement(
-            Spicetify.ReactComponent.TooltipWrapper,
-            {
-              label: this.state.isFullscreen ? I18n.t("menu.exitFullscreen") || "Exit Fullscreen" : I18n.t("menu.fullscreen"),
-            },
-            react.createElement(
-              "button",
-              {
-                className: "lyrics-config-button lyrics-fullscreen-toggle-button",
-                type: "button",
-                onClick: () => {
-                  if (this.state.isFullscreen) {
-                    this.closeFloatingMenu();
-                  }
-                  this.toggleFullscreen();
-                },
-              },
-              react.createElement("svg", {
-                width: 20,
-                height: 20,
-                viewBox: "0 0 24 24",
-                fill: "none",
-                stroke: "currentColor",
-                strokeWidth: 2,
-                strokeLinecap: "round",
-                strokeLinejoin: "round",
-                dangerouslySetInnerHTML: {
-                  __html: this.state.isFullscreen
-                    ? '<path d="M4 14h6v6"/><path d="M20 10h-6V4"/><path d="M14 10l7-7"/><path d="M3 21l7-7"/>'
-                    : '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
-                },
-              })
-            )
-          ),
-          modeButtons.length > 0 &&
           react.createElement(
             "div",
-            { className: "lyrics-config-mode-section" },
-            react.createElement("div", { className: "lyrics-config-separator" }),
+            {
+              className: "lyrics-floating-menu-group",
+              "data-group": "lyrics",
+            },
+            showTranslationButton && react.createElement(TranslationMenu, {
+              friendlyLanguage,
+              hasTranslation: {},
+            }),
+            react.createElement(LyricsProviderSelectButton, {
+              currentProvider: this.state.provider,
+              selectedProvider: this.state.trackLyricsProviderOverride,
+              isLoading: this.state.isLoading,
+              onSelectProvider: this.selectLyricsProviderForCurrentTrack,
+              isLocalTrack,
+              trackInfo: currentTrackInfo,
+              onImportLocalLyricsFile: this.importLocalLyricsFile,
+              onApplyLocalLyrics: this.applyLocalLyricsFromLrclibCandidate,
+            }),
+            react.createElement(TrackBackgroundButton, {
+              trackUri: this.currentTrackUri,
+              overrideMode: getIvLyricsTrackBackgroundMode(this.state.trackBackgroundOverride),
+              effectiveMode: effectiveBackgroundMode,
+              onSelectBackground: this.selectBackgroundForCurrentTrack,
+            }),
+            react.createElement(RegenerateTranslationButton, {
+              onRegenerate: this.handleRegenerateTranslationRequest,
+              isEnabled: canRegenerateTranslation,
+              isLoading: this.state.isTranslationLoading || this.state.isPhoneticLoading,
+            }),
+            window.IvLyricsLearningMode?.StudyButton &&
+            react.createElement(window.IvLyricsLearningMode.StudyButton, {
+              disabled: !hasLyrics || this.state.isLoading,
+            })
+          ),
+          react.createElement(
+            "div",
+            {
+              className: "lyrics-floating-menu-group",
+              "data-group": "playback",
+            },
+            react.createElement(SyncAdjustButtonFluent),
+            react.createElement(CommunityVideoButton, {
+              trackUri: this.currentTrackUri,
+              enabled: effectiveBackgroundMode === "video-background",
+              videoInfo: this.state.videoInfo,
+              defaultStartTime: defaultCommunityVideoStartTime,
+              onVideoSelect: async (newVideoInfo) => {
+                this.setState({ videoInfo: newVideoInfo });
+                if (newVideoInfo && this.currentTrackUri) {
+                  await Utils.saveSelectedVideo(this.currentTrackUri, newVideoInfo);
+                }
+              },
+            }),
+            react.createElement(ShareImageButton, {
+              lyrics: this.state.currentLyrics || [],
+              trackInfo: {
+                name: Spicetify.Player.data?.item?.name || Spicetify.Player.data?.item?.metadata?.title || '',
+                artist: Spicetify.Player.data?.item?.artists?.map(a => a.name).join(', ') || Spicetify.Player.data?.item?.metadata?.artist_name || '',
+                cover: Spicetify.Player.data?.item?.metadata?.image_xlarge_url ||
+                  Spicetify.Player.data?.item?.metadata?.image_large_url ||
+                  Spicetify.Player.data?.item?.metadata?.image_url ||
+                  Spicetify.Player.data?.item?.album?.images?.[0]?.url || '',
+              },
+            }),
+            hasLyrics && react.createElement(
+              Spicetify.ReactComponent.TooltipWrapper,
+              {
+                label: I18n.t("lyricsCacheEditor.button"),
+              },
+              react.createElement(
+                "button",
+                {
+                  className: "lyrics-config-button lyrics-cache-edit-button",
+                  type: "button",
+                  onClick: () => this.openLyricsEditModal(),
+                  disabled:
+                    this.state.isLyricsEditLoading || this.state.isLyricsEditSaving,
+                  "data-active": this.state.isLyricsEditModalOpen ? "true" : "false",
+                  "aria-label": I18n.t("lyricsCacheEditor.button"),
+                },
+                renderFloatingToolbarIcon("editLyrics")
+              )
+            )
+          ),
+          react.createElement(
+            "div",
+            {
+              className: "lyrics-floating-menu-group",
+              "data-group": "app",
+            },
+            react.createElement(
+              Spicetify.ReactComponent.TooltipWrapper,
+              { label: I18n.t("marketplace.title") },
+              react.createElement(
+                "button",
+                {
+                  className: `lyrics-config-button lyrics-marketplace-button${this.state.showMarketplace ? " active" : ""}`,
+                  type: "button",
+                  "aria-label": I18n.t("marketplace.title"),
+                  onClick: () => {
+                    this.clearFloatingMenuCloseTimer();
+                    this.setState((prevState) => ({
+                      showMarketplace: !prevState.showMarketplace,
+                      isFloatingMenuOpen: false,
+                      isFloatingMenuClosing: false,
+                    }));
+                  },
+                },
+                renderFloatingToolbarIcon("marketplace")
+              )
+            ),
+            react.createElement(SettingsMenu),
+            (() => !document.getElementById("fad-ivLyrics-container"))() && react.createElement(
+              Spicetify.ReactComponent.TooltipWrapper,
+              {
+                label: this.state.isFullscreen ? I18n.t("menu.exitFullscreen") || "Exit Fullscreen" : I18n.t("menu.fullscreen"),
+              },
+              react.createElement(
+                "button",
+                {
+                  className: "lyrics-config-button lyrics-fullscreen-toggle-button",
+                  type: "button",
+                  "aria-label": this.state.isFullscreen
+                    ? (I18n.t("menu.exitFullscreen") || "Exit Fullscreen")
+                    : I18n.t("menu.fullscreen"),
+                  onClick: () => {
+                    if (this.state.isFullscreen) {
+                      this.closeFloatingMenu();
+                    }
+                    this.toggleFullscreen();
+                  },
+                },
+                renderFloatingToolbarIcon(
+                  this.state.isFullscreen ? "fullscreenExit" : "fullscreenEnter"
+                )
+              )
+            )
+          ),
+          modeButtons.length > 0 && react.createElement(
+            "div",
+            {
+              className: "lyrics-floating-menu-group lyrics-config-mode-section",
+              "data-group": "modes",
+            },
             react.createElement(
               "div",
               {
@@ -8990,19 +8920,26 @@ class LyricsContainer extends react.Component {
               ...modeButtons
             )
           ),
-          react.createElement(SyncDataCreatorButton, {
-            trackInfo: {
-              uri: this.currentTrackUri,
-              name: Spicetify.Player.data?.item?.name || '',
-              artists: Spicetify.Player.data?.item?.artists || [],
-              album: Spicetify.Player.data?.item?.album || {},
-              metadata: Spicetify.Player.data?.item?.metadata || {},
-              external_ids: Spicetify.Player.data?.item?.external_ids || {},
-              externalIds: Spicetify.Player.data?.item?.externalIds || {},
+          react.createElement(
+            "div",
+            {
+              className: "lyrics-floating-menu-group",
+              "data-group": "creator",
             },
-            showHint: !this.state.isFullscreen || this.state.isFloatingMenuOpen,
-            isFullscreen: this.state.isFullscreen
-          })
+            react.createElement(SyncDataCreatorButton, {
+              trackInfo: {
+                uri: this.currentTrackUri,
+                name: Spicetify.Player.data?.item?.name || '',
+                artists: Spicetify.Player.data?.item?.artists || [],
+                album: Spicetify.Player.data?.item?.album || {},
+                metadata: Spicetify.Player.data?.item?.metadata || {},
+                external_ids: Spicetify.Player.data?.item?.external_ids || {},
+                externalIds: Spicetify.Player.data?.item?.externalIds || {},
+              },
+              showHint: !this.state.isFullscreen || this.state.isFloatingMenuOpen,
+              isFullscreen: this.state.isFullscreen
+            })
+          )
         )
       ),
       cacheEditModal,

@@ -1271,6 +1271,22 @@ window.LANG_KO = {
         "clearAll": "전체 삭제",
         "clearCurrent": "현재 곡 삭제",
         "stats": "가사: {lyrics}개, 번역: {translations}개, 메타데이터: {metadata}개"
+      },
+      "openDb": {
+        "label": "OpenDB 인덱스 캐시",
+        "desc": "sync-data가 있는 가사 제공자를 찾는 base + delta 인덱스입니다",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "ISRC {isrcCount}개 · 제공자 {providerCount}개",
+        "notDownloaded": "아직 내려받은 인덱스가 없습니다",
+        "lastChecked": "마지막 확인",
+        "justNow": "방금",
+        "stale": "오프라인 · 기존 캐시 사용 중",
+        "update": "base + delta 다시 가져오기",
+        "updating": "갱신 중…",
+        "unavailable": "OpenDB 캐시 서비스를 사용할 수 없습니다",
+        "updateSuccess": "OpenDB base와 delta를 다시 가져왔습니다",
+        "updateFailed": "OpenDB를 갱신하지 못했습니다. 기존 캐시는 유지됩니다",
+        "updateFailedNoCache": "OpenDB를 갱신하지 못했고 사용할 기존 캐시가 없습니다"
       }
     },
     "languageDetection": {

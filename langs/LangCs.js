@@ -1271,6 +1271,22 @@ window.LANG_CS = {
         "clearAll": "Smazat vše",
         "clearCurrent": "Smazat aktuální trasu",
         "stats": "Text: {lyrics}, Překlady: {translations}, Metadata: {metadata}"
+      },
+      "openDb": {
+        "label": "Mezipaměť indexu OpenDB",
+        "desc": "Index base + delta používaný k vyhledání poskytovatelů textů se sync-data.",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "{isrcCount} ISRC · poskytovatelé: {providerCount}",
+        "notDownloaded": "Zatím nebyl stažen žádný index.",
+        "lastChecked": "Naposledy zkontrolováno",
+        "justNow": "právě teď",
+        "stale": "Offline · používá se stávající mezipaměť",
+        "update": "Znovu načíst base + delta",
+        "updating": "Aktualizace…",
+        "unavailable": "Služba mezipaměti OpenDB není dostupná.",
+        "updateSuccess": "Soubory base a delta OpenDB byly znovu staženy.",
+        "updateFailed": "OpenDB se nepodařilo aktualizovat. Stávající mezipaměť byla zachována.",
+        "updateFailedNoCache": "OpenDB se nepodařilo aktualizovat a není k dispozici žádná stávající mezipaměť."
       }
     },
     "languageDetection": {

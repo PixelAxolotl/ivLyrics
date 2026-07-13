@@ -1271,6 +1271,22 @@ window.LANG_IT = {
         "clearAll": "Elimina tutto",
         "clearCurrent": "Elimina brano corrente",
         "stats": "Testi: {lyrics}, Traduzioni: {translations}, Metadati: {metadata}"
+      },
+      "openDb": {
+        "label": "Cache dell’indice OpenDB",
+        "desc": "L’indice base + delta usato per trovare i fornitori di testi con sync-data.",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "{isrcCount} ISRC · {providerCount} fornitori",
+        "notDownloaded": "Non è stato ancora scaricato alcun indice.",
+        "lastChecked": "Ultimo controllo",
+        "justNow": "adesso",
+        "stale": "Offline · uso della cache esistente",
+        "update": "Scarica di nuovo base + delta",
+        "updating": "Aggiornamento…",
+        "unavailable": "Il servizio cache di OpenDB non è disponibile.",
+        "updateSuccess": "I file base e delta di OpenDB sono stati scaricati di nuovo.",
+        "updateFailed": "Impossibile aggiornare OpenDB. La cache esistente è stata mantenuta.",
+        "updateFailedNoCache": "Impossibile aggiornare OpenDB e non è disponibile alcuna cache esistente."
       }
     },
     "languageDetection": {

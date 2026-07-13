@@ -1271,6 +1271,22 @@ window.LANG_MS = {
         "clearAll": "Padam Semua",
         "clearCurrent": "Padam Lagu Semasa",
         "stats": "Lirik: {lyrics}, Terjemahan: {translations}, Metadata: {metadata}"
+      },
+      "openDb": {
+        "label": "Cache Indeks OpenDB",
+        "desc": "Indeks base + delta yang digunakan untuk mencari penyedia lirik dengan sync-data.",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "{isrcCount} ISRC · {providerCount} penyedia",
+        "notDownloaded": "Belum ada indeks dimuat turun.",
+        "lastChecked": "Terakhir disemak",
+        "justNow": "sebentar tadi",
+        "stale": "Luar talian · menggunakan cache sedia ada",
+        "update": "Dapatkan semula base + delta",
+        "updating": "Sedang mengemas kini…",
+        "unavailable": "Perkhidmatan cache OpenDB tidak tersedia.",
+        "updateSuccess": "Fail base dan delta OpenDB telah dimuat turun semula.",
+        "updateFailed": "OpenDB tidak dapat dikemas kini. Cache sedia ada dikekalkan.",
+        "updateFailedNoCache": "OpenDB tidak dapat dikemas kini dan tiada cache sedia ada yang boleh digunakan."
       }
     },
     "languageDetection": {

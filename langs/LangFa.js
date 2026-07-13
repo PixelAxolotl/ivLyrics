@@ -1271,6 +1271,22 @@ window.LANG_FA = {
         "clearAll": "حذف همه",
         "clearCurrent": "حذف آهنگ فعلی",
         "stats": "متن: {lyrics} مورد، ترجمه: {translations} مورد، متادیتا: {metadata} مورد"
+      },
+      "openDb": {
+        "label": "کش فهرست OpenDB",
+        "desc": "فهرست base + delta برای یافتن ارائه‌دهندگان متن ترانه دارای sync-data.",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "{isrcCount} ISRC · {providerCount} ارائه‌دهنده",
+        "notDownloaded": "هنوز هیچ فهرستی بارگیری نشده است.",
+        "lastChecked": "آخرین بررسی",
+        "justNow": "همین حالا",
+        "stale": "آفلاین · در حال استفاده از کش موجود",
+        "update": "دریافت دوباره base + delta",
+        "updating": "در حال به‌روزرسانی…",
+        "unavailable": "سرویس کش OpenDB در دسترس نیست.",
+        "updateSuccess": "فایل‌های base و delta در OpenDB دوباره بارگیری شدند.",
+        "updateFailed": "OpenDB به‌روزرسانی نشد. کش موجود حفظ شد.",
+        "updateFailedNoCache": "OpenDB به‌روزرسانی نشد و هیچ کش موجودی برای استفاده وجود ندارد."
       }
     },
     "languageDetection": {
@@ -2175,7 +2191,7 @@ window.LANG_FA = {
     "loading": "در حال بارگذاری...",
     "loadLyrics": "بارگذاری متن",
     "reload": "بارگذاری مجدد",
-    "loadingLyrics": "در حال دریافت متن...",
+    "loadingLyrics": "در حال بارگذاری متن ترانه…",
     "selectProvider": "لطفاً ارائه‌دهندهٔ متن ترانه را از نوار کناری سمت چپ انتخاب کنید",
     "noLyrics": "متن آهنگ یافت نشد",
     "loadError": "خطا در بارگذاری متن",

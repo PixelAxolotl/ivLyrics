@@ -1618,22 +1618,22 @@
         return isOpen;
     };
 
-    const BookIcon = react.createElement("svg", {
-        width: 18,
-        height: 18,
-        viewBox: "0 0 24 24",
-        fill: "none",
-        stroke: "currentColor",
-        strokeWidth: 2,
-        strokeLinecap: "round",
-        strokeLinejoin: "round",
-        "aria-hidden": "true"
-    },
-        react.createElement("path", { d: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20" }),
-        react.createElement("path", { d: "M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z" }),
-        react.createElement("path", { d: "M8 6h8" }),
-        react.createElement("path", { d: "M8 10h6" })
-    );
+    const BookIcon = window.IvLyricsToolbarIcon
+        ? react.createElement(window.IvLyricsToolbarIcon, { name: "study" })
+        : react.createElement("svg", {
+            width: 18,
+            height: 18,
+            viewBox: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            strokeWidth: 1.8,
+            strokeLinecap: "round",
+            strokeLinejoin: "round",
+            "aria-hidden": "true"
+        },
+            react.createElement("path", { d: "M3 5a3 3 0 0 1 3-1h6v16H6a3 3 0 0 0-3 1V5Z" }),
+            react.createElement("path", { d: "M21 5a3 3 0 0 0-3-1h-6v16h6a3 3 0 0 1 3 1V5Z" })
+        );
 
     const StudyButton = react.memo(({ disabled = false }) => {
         const isOpen = useLearningOpenState();
@@ -1643,6 +1643,7 @@
             type: "button",
             disabled,
             "aria-pressed": isOpen,
+            "aria-label": label,
             onClick: (event) => {
                 event.stopPropagation();
                 if (disabled) return;

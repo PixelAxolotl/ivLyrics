@@ -1271,6 +1271,22 @@ window.LANG_ID = {
         "clearAll": "Hapus Semua",
         "clearCurrent": "Hapus Lagu Saat Ini",
         "stats": "Lirik: {lyrics}, Terjemahan: {translations}, Metadata: {metadata}"
+      },
+      "openDb": {
+        "label": "Cache Indeks OpenDB",
+        "desc": "Indeks base + delta yang digunakan untuk menemukan penyedia lirik dengan sync-data.",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "{isrcCount} ISRC · {providerCount} penyedia",
+        "notDownloaded": "Belum ada indeks yang diunduh.",
+        "lastChecked": "Terakhir diperiksa",
+        "justNow": "baru saja",
+        "stale": "Offline · menggunakan cache yang ada",
+        "update": "Ambil ulang base + delta",
+        "updating": "Memperbarui…",
+        "unavailable": "Layanan cache OpenDB tidak tersedia.",
+        "updateSuccess": "File base dan delta OpenDB telah diunduh ulang.",
+        "updateFailed": "OpenDB tidak dapat diperbarui. Cache yang ada tetap dipertahankan.",
+        "updateFailedNoCache": "OpenDB tidak dapat diperbarui dan tidak ada cache yang tersedia."
       }
     },
     "languageDetection": {

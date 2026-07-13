@@ -34,7 +34,11 @@ function createFluentModalHost({
   if (removeExisting && overlayId) {
     const existingOverlay = document.getElementById(overlayId);
     if (existingOverlay) {
-      existingOverlay.remove();
+      if (typeof existingOverlay.__ivLyricsCloseModal === "function") {
+        existingOverlay.__ivLyricsCloseModal(true);
+      } else {
+        existingOverlay.remove();
+      }
     }
   }
 
@@ -63,11 +67,8 @@ function createFluentModalHost({
 
   let isClosed = false;
 
-  const closeModal = () => {
-    if (isClosed) return;
-    isClosed = true;
-
-    document.removeEventListener("keydown", handleEscape);
+  const finalizeClose = () => {
+    document.removeEventListener("keydown", handleKeydown, true);
     onBeforeClose?.();
 
     if (overlay.parentNode) {
@@ -79,10 +80,51 @@ function createFluentModalHost({
     }
   };
 
-  const handleEscape = (event) => {
+  const closeModal = (immediate = false) => {
+    if (isClosed) return;
+    isClosed = true;
+    overlay.classList.remove("is-open");
+    overlay.classList.add("is-closing");
+    overlay.setAttribute("aria-hidden", "true");
+
+    if (immediate === true || window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) {
+      finalizeClose();
+      return;
+    }
+
+    window.setTimeout(finalizeClose, 180);
+  };
+
+  const getFocusableElements = () => Array.from(shell.querySelectorAll(
+    "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex='-1'])"
+  )).filter((element) => !element.hidden && element.getAttribute("aria-hidden") !== "true");
+
+  const handleKeydown = (event) => {
     if (event.key === "Escape") {
       event.preventDefault();
+      event.stopPropagation();
+      event.stopImmediatePropagation?.();
       closeModal();
+      return;
+    }
+
+    if (event.key === "Tab") {
+      const focusable = getFocusableElements();
+      if (!focusable.length) {
+        event.preventDefault();
+        shell.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
   };
 
@@ -91,16 +133,19 @@ function createFluentModalHost({
       closeModal();
     }
   });
-  document.addEventListener("keydown", handleEscape);
+  document.addEventListener("keydown", handleKeydown, true);
 
   overlay.appendChild(shell);
   document.body.appendChild(overlay);
+  overlay.__ivLyricsCloseModal = closeModal;
+  shell.tabIndex = -1;
 
   requestAnimationFrame(() => {
+    overlay.classList.add("is-open");
     const focusTarget = shell.querySelector(
       ".ivlyrics-fluent-close, button, input, select, textarea, [tabindex]:not([tabindex='-1'])"
     );
-    focusTarget?.focus?.();
+    (focusTarget ?? shell).focus?.();
   });
 
   return { overlay, shell, closeModal };
@@ -161,6 +206,12 @@ function ensureFluentModalStyles() {
 }
 
 .ivlyrics-fluent-shell {
+  --iv-popup-bg: rgba(20, 20, 22, 0.78);
+  --iv-popup-bg-strong: rgba(28, 28, 31, 0.9);
+  --iv-popup-fill: rgba(255, 255, 255, 0.055);
+  --iv-popup-fill-hover: rgba(255, 255, 255, 0.095);
+  --iv-popup-border: rgba(255, 255, 255, 0.12);
+  --iv-popup-divider: rgba(255, 255, 255, 0.085);
   width: min(92vw, 720px);
   max-height: min(88vh, 920px);
   display: flex;
@@ -170,6 +221,15 @@ function ensureFluentModalStyles() {
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 32px 80px rgba(0, 0, 0, 0.48);
   border-radius: 0 !important;
+}
+
+.ivlyrics-fluent-shell[data-ui-theme="light"] {
+  --iv-popup-bg: rgba(252, 252, 253, 0.82);
+  --iv-popup-bg-strong: rgba(255, 255, 255, 0.94);
+  --iv-popup-fill: rgba(15, 23, 42, 0.045);
+  --iv-popup-fill-hover: rgba(15, 23, 42, 0.075);
+  --iv-popup-border: rgba(15, 23, 42, 0.12);
+  --iv-popup-divider: rgba(15, 23, 42, 0.085);
 }
 
 .ivlyrics-fluent-shell[data-ui-theme="light"] {
@@ -1232,6 +1292,319 @@ function ensureFluentModalStyles() {
     flex-wrap: wrap;
   }
 }
+
+/* Compact glass surface shared by toolbar popups and editors */
+.ivlyrics-fluent-overlay {
+  --iv-popup-bg: rgba(20, 20, 22, 0.78);
+  --iv-popup-bg-strong: rgba(28, 28, 31, 0.9);
+  --iv-popup-fill: rgba(255, 255, 255, 0.055);
+  --iv-popup-fill-hover: rgba(255, 255, 255, 0.095);
+  --iv-popup-border: rgba(255, 255, 255, 0.12);
+  --iv-popup-divider: rgba(255, 255, 255, 0.085);
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.42);
+  opacity: 0;
+  transition: opacity 180ms var(--iv-motion-ease-standard, ease);
+}
+
+.ivlyrics-fluent-overlay[data-ui-theme="light"] {
+  --iv-popup-bg: rgba(252, 252, 253, 0.82);
+  --iv-popup-bg-strong: rgba(255, 255, 255, 0.94);
+  --iv-popup-fill: rgba(15, 23, 42, 0.045);
+  --iv-popup-fill-hover: rgba(15, 23, 42, 0.075);
+  --iv-popup-border: rgba(15, 23, 42, 0.12);
+  --iv-popup-divider: rgba(15, 23, 42, 0.085);
+  background: rgba(236, 239, 244, 0.55);
+}
+
+.ivlyrics-fluent-overlay.is-open {
+  opacity: 1;
+}
+
+.ivlyrics-fluent-overlay.is-closing {
+  pointer-events: none;
+}
+
+.ivlyrics-fluent-shell {
+  width: min(92vw, 720px);
+  background: var(--iv-popup-bg) !important;
+  border: 1px solid var(--iv-popup-border) !important;
+  border-radius: 24px !important;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.36) !important;
+  backdrop-filter: blur(24px) saturate(142%);
+  -webkit-backdrop-filter: blur(24px) saturate(142%);
+  transform: translateY(12px) scale(0.975);
+  opacity: 0;
+  transition:
+    transform 180ms var(--iv-motion-ease-emphasis, ease),
+    opacity 140ms var(--iv-motion-ease-standard, ease);
+}
+
+.ivlyrics-fluent-overlay.is-open .ivlyrics-fluent-shell {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.ivlyrics-fluent-overlay.is-closing .ivlyrics-fluent-shell {
+  transform: translateY(6px) scale(0.985);
+  opacity: 0;
+}
+
+.ivlyrics-fluent-header {
+  align-items: center;
+  min-height: 64px;
+  padding: 14px 16px 12px 20px;
+  border-bottom-color: var(--iv-popup-divider);
+}
+
+.ivlyrics-fluent-title {
+  font-size: 18px;
+  letter-spacing: -0.025em;
+}
+
+.ivlyrics-fluent-subtitle {
+  margin-top: 5px;
+  line-height: 1.4;
+}
+
+.ivlyrics-fluent-close {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--iv-popup-border);
+  border-radius: 999px !important;
+  background: var(--iv-popup-fill);
+  transition:
+    background 140ms ease,
+    transform 140ms ease;
+}
+
+.ivlyrics-fluent-close:hover {
+  background: var(--iv-popup-fill-hover);
+  transform: scale(1.04);
+}
+
+.ivlyrics-fluent-body {
+  padding: 16px 20px 20px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+
+.ivlyrics-fluent-body::-webkit-scrollbar,
+.share-image-modal-selection-list::-webkit-scrollbar,
+.share-image-modal-config-pane::-webkit-scrollbar {
+  width: 5px;
+}
+
+.ivlyrics-fluent-body::-webkit-scrollbar-thumb,
+.share-image-modal-selection-list::-webkit-scrollbar-thumb,
+.share-image-modal-config-pane::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.ivlyrics-fluent-footer {
+  padding: 12px 16px 16px;
+  border-top-color: var(--iv-popup-divider);
+}
+
+.ivlyrics-fluent-btn,
+.share-image-modal-footer .ivlyrics-fluent-btn,
+.share-image-copyright-actions .ivlyrics-fluent-btn {
+  min-height: 34px;
+  border-radius: 999px !important;
+  border-color: var(--iv-popup-border) !important;
+  background: var(--iv-popup-fill) !important;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.ivlyrics-fluent-btn:hover:not(:disabled) {
+  background: var(--iv-popup-fill-hover) !important;
+  transform: translateY(-1px);
+}
+
+.ivlyrics-fluent-btn.primary,
+.share-image-modal-footer .ivlyrics-fluent-btn.primary,
+.share-image-copyright-confirm {
+  color: var(--spice-text, #fff) !important;
+  border-color: rgba(var(--spice-rgb-accent, 30, 215, 96), 0.34) !important;
+  background: rgba(var(--spice-rgb-accent, 30, 215, 96), 0.16) !important;
+}
+
+.ivlyrics-fluent-close:focus-visible,
+.ivlyrics-fluent-btn:focus-visible,
+.ivlyrics-popup-switch:focus-visible,
+.ivlyrics-options-root .optionsMenu-dropBox:focus-visible,
+.share-image-modal button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(var(--spice-rgb-accent, 30, 215, 96), 0.24) !important;
+}
+
+.ivlyrics-options-modal-shell {
+  width: min(92vw, 700px);
+}
+
+.ivlyrics-options-root {
+  gap: 14px;
+}
+
+.ivlyrics-options-root .ivlyrics-popup-section-title {
+  margin-top: 16px;
+  padding: 0 4px 8px;
+  border: 0;
+}
+
+.ivlyrics-options-root .ivlyrics-popup-section-title h3 {
+  font-size: 13px;
+}
+
+.ivlyrics-options-root .ivlyrics-popup-section-list {
+  overflow: hidden;
+  border: 1px solid var(--iv-popup-divider);
+  border-radius: 16px;
+  background: var(--iv-popup-fill);
+}
+
+.ivlyrics-options-root .ivlyrics-popup-section-list .ivlyrics-popup-setting-row {
+  border-color: var(--iv-popup-divider);
+}
+
+.ivlyrics-options-root .ivlyrics-popup-setting-row-content {
+  min-height: 54px;
+  padding: 10px 14px;
+}
+
+.ivlyrics-options-root .ivlyrics-popup-row-icon {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--iv-popup-fill-hover);
+}
+
+.ivlyrics-popup-switch {
+  border-radius: 999px;
+}
+
+.ivlyrics-popup-switch.active {
+  border-color: rgba(var(--spice-rgb-accent, 30, 215, 96), 0.36);
+  background: rgba(var(--spice-rgb-accent, 30, 215, 96), 0.2);
+}
+
+.ivlyrics-popup-switch-knob {
+  border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.24);
+}
+
+.ivlyrics-options-root .optionsMenu-dropBox {
+  min-height: 34px;
+  border-radius: 11px !important;
+  border-color: var(--iv-popup-border);
+  background: var(--iv-popup-fill);
+}
+
+.optionsMenu-dropdown-list {
+  max-height: min(320px, 48vh);
+  overflow-y: auto;
+  border-radius: 14px !important;
+  background: var(--iv-popup-bg-strong, rgba(20, 20, 22, 0.96));
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+}
+
+.optionsMenu-item:first-child {
+  border-radius: 10px 10px 0 0;
+}
+
+.optionsMenu-item:last-child {
+  border-radius: 0 0 10px 10px;
+}
+
+.lyrics-sync-adjust-floating {
+  right: 70px;
+  bottom: 16px;
+}
+
+.lyrics-sync-adjust-floating .ivlyrics-fluent-shell {
+  opacity: 1;
+  transform: none;
+}
+
+.lyrics-sync-adjust-modal-shell {
+  width: min(92vw, 410px);
+  border-radius: 22px !important;
+  background: rgba(20, 20, 22, 0.8) !important;
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+}
+
+.lyrics-sync-adjust-modal .sync-slider::-webkit-slider-runnable-track,
+.lyrics-sync-adjust-modal .sync-slider::-moz-range-track,
+.lyrics-sync-adjust-modal .sync-slider::-moz-range-progress {
+  border-radius: 999px;
+}
+
+.lyrics-sync-adjust-modal .sync-slider::-webkit-slider-thumb,
+.lyrics-sync-adjust-modal .sync-slider::-moz-range-thumb {
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+}
+
+.share-image-modal-lyric-line,
+.share-image-advanced-panel,
+.share-image-preview-panel,
+.share-image-preview-panel img,
+.share-image-copyright-points {
+  border-radius: 14px !important;
+}
+
+.share-image-chip,
+.share-image-segment-btn,
+.share-image-advanced-toggle,
+.share-image-modal button:not(.ivlyrics-fluent-close):not(.ivlyrics-fluent-btn) {
+  border-radius: 999px !important;
+}
+
+.share-image-copyright-shell {
+  border-radius: 22px !important;
+  background: var(--iv-popup-bg) !important;
+}
+
+.share-image-copyright-icon {
+  border-radius: 999px;
+  background: rgba(var(--spice-rgb-accent, 30, 215, 96), 0.14);
+  color: var(--spice-accent, #1ed760);
+}
+
+@media (max-width: 840px) {
+  .ivlyrics-fluent-overlay {
+    padding: 10px;
+  }
+
+  .ivlyrics-fluent-shell {
+    max-height: calc(100dvh - 20px);
+    border-radius: 20px !important;
+  }
+
+  .ivlyrics-options-root .ivlyrics-popup-setting-row-content {
+    gap: 8px;
+  }
+
+  .lyrics-sync-adjust-floating {
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ivlyrics-fluent-overlay,
+  .ivlyrics-fluent-shell {
+    transition-duration: 1ms !important;
+  }
+}
 `;
   document.head.appendChild(style);
 }
@@ -1473,6 +1846,51 @@ const ICONS = {
   file: `<path d="M3 1.5h6.5L13 5v9.5H3v-13Zm1 1v11h8V5.5H9V2.5H4Zm6 .7V4.5h1.3L10 3.2ZM5 7.5h6v1H5v-1Zm0 2h6v1H5v-1Zm0 2h4v1H5v-1Z"/>`,
 };
 
+// Toolbar icons use one optical grid so every action stays distinct at compact sizes.
+const IVLYRICS_TOOLBAR_ICON_PATHS = Object.freeze({
+  menu: '<path d="M6 7h12M6 12h12M6 17h12"/>',
+  close: '<path d="m7 7 10 10M17 7 7 17"/>',
+  translation: '<path d="m5 8 6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/>',
+  provider: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7"/>',
+  localLyrics: '<path d="M6 3h8l4 4v14H6Z"/><path d="M14 3v5h4"/><path d="M10 12v5m0-5 5-1v5"/><circle cx="8.5" cy="18" r="1.5"/><circle cx="13.5" cy="17" r="1.5"/>',
+  background: '<path d="M3 15V7a3 3 0 0 1 3-3h11"/><rect x="5" y="5" width="16" height="14" rx="3"/><circle cx="16.5" cy="9" r="1.5"/><path d="m7 16 4-4 3 3 2-2 3 3"/>',
+  regenerate: '<path d="M20 7A8 8 0 0 0 6.3 5.3L4 8"/><path d="M4 8V3m0 5h5"/><path d="M4 17a8 8 0 0 0 13.7 1.7L20 16"/><path d="M20 16v5m0-5h-5"/>',
+  study: '<path d="M3 5a3 3 0 0 1 3-1h6v16H6a3 3 0 0 0-3 1V5Z"/><path d="M21 5a3 3 0 0 0-3-1h-6v16h6a3 3 0 0 1 3 1V5Z"/>',
+  globalSync: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+  communityVideo: '<path d="M5 3h16l-2 4H3l2-4Z"/><path d="m10 3-2 4m8-4-2 4"/><path d="M3 7h18v13H3Z"/><path d="m10 11 5 3-5 3Z"/>',
+  shareImage: '<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="m8.2 10.8 7.6-4.5m-7.6 6.9 7.6 4.5"/>',
+  editLyrics: '<path d="M6 3h8l4 4v5"/><path d="M14 3v5h4"/><path d="M12 21H6V3"/><path d="m13.5 18.5 5-5 2 2-5 5-3 1 1-3Z"/>',
+  marketplace: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><path d="M17.5 14.5v6m-3-3h6"/>',
+  settings: '<path d="M4 6h10m4 0h2"/><circle cx="16" cy="6" r="2"/><path d="M4 12h2m4 0h10"/><circle cx="8" cy="12" r="2"/><path d="M4 18h8m4 0h4"/><circle cx="14" cy="18" r="2"/>',
+  fullscreenEnter: '<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>',
+  fullscreenExit: '<path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/>',
+  karaoke: '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11v1a7 7 0 0 0 14 0v-1M12 19v3M8 22h8"/>',
+  synced: '<path d="M4 6h10M4 11h9M4 16h7"/><path d="M18 6v7"/><circle cx="18" cy="15" r="2"/>',
+  unsynced: '<path d="M4 6h14M4 11h16M4 16h12"/>',
+  syncCreator: '<path d="M3 12h2l2-5 3 10 3-8 2 6"/><path d="m16 19 4-4 2 2-4 4-3 1 1-3Z"/>',
+});
+
+const IvLyricsToolbarIcon = ({ name, size = 18, className = "" }) =>
+  react.createElement("svg", {
+    className: `ivlyrics-toolbar-icon${className ? ` ${className}` : ""}`,
+    width: size,
+    height: size,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    focusable: "false",
+    "aria-hidden": "true",
+    "data-icon": name,
+    dangerouslySetInnerHTML: {
+      __html: IVLYRICS_TOOLBAR_ICON_PATHS[name] || IVLYRICS_TOOLBAR_ICON_PATHS.menu,
+    },
+  });
+
+window.IvLyricsToolbarIcon = IvLyricsToolbarIcon;
+
 const getOptionsText = (key, fallback) => {
   const value = I18n?.t?.(key);
   return value && value !== key ? value : fallback;
@@ -1671,7 +2089,7 @@ function openOptionsModal(title, items, onChange, eventType = null) {
 
   let body = null;
   const host = createFluentModalHost({
-    overlayId: "ivLyrics-translation-overlay",
+    overlayId: "ivLyrics-options-overlay",
     shellClassName: "ivlyrics-options-modal-shell",
     onBeforeClose: () => {
       if (body && reactDom.unmountComponentAtNode) {
@@ -1702,7 +2120,7 @@ function openOptionsModal(title, items, onChange, eventType = null) {
   body = document.createElement("div");
   body.className = "ivlyrics-fluent-body ivlyrics-options-modal-body";
 
-  host.shell.id = "ivLyrics-translation-modal";
+  host.shell.id = "ivLyrics-options-modal";
   host.shell.appendChild(header);
   host.shell.appendChild(body);
 
@@ -2383,14 +2801,12 @@ const TranslationMenu = react.memo(({ friendlyLanguage, hasTranslation }) => {
     { label: I18n.t("menu.translation") },
     react.createElement(
       "button",
-      { className: "lyrics-config-button", onClick: open },
-      react.createElement(
-        "svg",
-        { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
-        react.createElement("circle", { cx: 12, cy: 12, r: 10 }),
-        react.createElement("line", { x1: 2, y1: 12, x2: 22, y2: 12 }),
-        react.createElement("path", { d: "M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" })
-      )
+      {
+        className: "lyrics-config-button",
+        onClick: open,
+        "aria-label": I18n.t("menu.translation"),
+      },
+      react.createElement(IvLyricsToolbarIcon, { name: "translation" })
     )
   );
 });
@@ -2545,13 +2961,12 @@ const LyricsProviderSelectButton = react.memo(
           className: "lyrics-config-button",
           onClick: open,
           disabled: isLoading && !isLocalTrack,
+          "aria-label": isLocalTrack
+            ? getOptionsText("menu.localLyricsTools", "로컬 가사")
+            : I18n.t("menu.lyricsProviderSelect"),
         },
-        react.createElement("svg", {
-          width: 20,
-          height: 20,
-          viewBox: "0 0 16 16",
-          fill: "currentColor",
-          dangerouslySetInnerHTML: { __html: isLocalTrack ? ICONS.localLyrics : ICONS.provider },
+        react.createElement(IvLyricsToolbarIcon, {
+          name: isLocalTrack ? "localLyrics" : "provider",
         })
       )
     );
@@ -2616,13 +3031,9 @@ const RegenerateTranslationButton = react.memo(
           className: "lyrics-config-button" + (isLoading ? " loading-spin" : ""),
           onClick: onRegenerate,
           disabled: !isEnabled || isLoading,
+          "aria-label": I18n.t("menu.regenerateTranslation"),
         },
-        react.createElement(
-          "svg",
-          { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
-          react.createElement("path", { d: "M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" }),
-          react.createElement("path", { d: "M21 3v5h-5" })
-        )
+        react.createElement(IvLyricsToolbarIcon, { name: "regenerate" })
       )
     );
   }
@@ -2699,14 +3110,9 @@ const TrackBackgroundButton = react.memo(
           className: "lyrics-config-button lyrics-track-background-button",
           onClick: open,
           "data-active": overrideMode ? "true" : "false",
+          "aria-label": getOptionsText("menu.trackBackground", "개별 배경"),
         },
-        react.createElement("svg", {
-          width: 20,
-          height: 20,
-          viewBox: "0 0 16 16",
-          fill: "currentColor",
-          dangerouslySetInnerHTML: { __html: ICONS.background },
-        })
+        react.createElement(IvLyricsToolbarIcon, { name: "background" })
       )
     );
   }
@@ -2726,11 +3132,14 @@ const formatSyncOffset = (value) => {
 
 const TrackSyncAdjustPill = react.memo(({ trackUri }) => {
   const [offset, setOffset] = useState(0);
+  const [interactionFeedback, setInteractionFeedback] = useState(null);
   const activeTrackUriRef = useRef(trackUri || null);
   const optimisticOffsetRef = useRef(0);
   const loadSeqRef = useRef(0);
   const pendingWriteRef = useRef(null);
   const writeLoopRef = useRef(null);
+  const feedbackSeqRef = useRef(0);
+  const feedbackTimerRef = useRef(null);
 
   const startWriteLoop = () => {
     if (writeLoopRef.current) return;
@@ -2759,6 +3168,11 @@ const TrackSyncAdjustPill = react.memo(({ trackUri }) => {
     activeTrackUriRef.current = trackUri || null;
     optimisticOffsetRef.current = 0;
     setOffset(0);
+    setInteractionFeedback(null);
+    if (feedbackTimerRef.current) {
+      window.clearTimeout(feedbackTimerRef.current);
+      feedbackTimerRef.current = null;
+    }
     const loadSeq = ++loadSeqRef.current;
     if (!trackUri) return undefined;
 
@@ -2781,6 +3195,12 @@ const TrackSyncAdjustPill = react.memo(({ trackUri }) => {
       loadSeqRef.current += 1;
     };
   }, [trackUri]);
+
+  useEffect(() => () => {
+    if (feedbackTimerRef.current) {
+      window.clearTimeout(feedbackTimerRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     const handleOffsetChange = (event) => {
@@ -2810,6 +3230,51 @@ const TrackSyncAdjustPill = react.memo(({ trackUri }) => {
     startWriteLoop();
   };
 
+  const showInteractionFeedback = (kind, event, step = 0) => {
+    const feedbackId = ++feedbackSeqRef.current;
+    const nextFeedback = {
+      id: feedbackId,
+      kind,
+      step,
+      direction: step < 0 ? "left" : "right",
+      fromX: 0,
+      toX: 0,
+      fromWidth: 0,
+      toWidth: 0,
+      targetCenterX: 0,
+    };
+
+    const controls = event?.currentTarget?.closest?.(".lyrics-track-sync-controls");
+    const valueButton = controls?.querySelector?.(".lyrics-track-sync-value");
+    const sourceRect = event?.currentTarget?.getBoundingClientRect?.();
+    const controlsRect = controls?.getBoundingClientRect?.();
+    const targetRect = valueButton?.getBoundingClientRect?.();
+
+    if (controlsRect && targetRect) {
+      nextFeedback.toX = targetRect.left - controlsRect.left;
+      nextFeedback.toWidth = targetRect.width;
+      nextFeedback.targetCenterX = nextFeedback.toX + targetRect.width / 2;
+      if (kind === "step" && sourceRect) {
+        nextFeedback.fromX = sourceRect.left - controlsRect.left;
+        nextFeedback.fromWidth = sourceRect.width;
+      } else {
+        nextFeedback.fromX = nextFeedback.toX;
+        nextFeedback.fromWidth = nextFeedback.toWidth;
+      }
+    }
+
+    setInteractionFeedback(nextFeedback);
+    if (feedbackTimerRef.current) {
+      window.clearTimeout(feedbackTimerRef.current);
+    }
+    feedbackTimerRef.current = window.setTimeout(() => {
+      setInteractionFeedback((current) => current?.id === feedbackId ? null : current);
+      if (feedbackSeqRef.current === feedbackId) {
+        feedbackTimerRef.current = null;
+      }
+    }, kind === "reset" ? 520 : 460);
+  };
+
   const renderStepButton = (step) => {
     const absoluteStep = Math.abs(step);
     const displayValue = `${step > 0 ? "+" : "−"}${absoluteStep}ms`;
@@ -2820,7 +3285,14 @@ const TrackSyncAdjustPill = react.memo(({ trackUri }) => {
         type: "button",
         className: "lyrics-track-sync-step",
         "data-step-size": absoluteStep,
-        onClick: () => handleOffsetChange(optimisticOffsetRef.current + step),
+        "data-feedback-source": interactionFeedback?.kind === "step"
+          && interactionFeedback.step === step
+          ? "true"
+          : undefined,
+        onClick: (event) => {
+          handleOffsetChange(optimisticOffsetRef.current + step);
+          showInteractionFeedback("step", event, step);
+        },
         onPointerUp: (event) => event.currentTarget.blur(),
         "aria-label": `${I18n.t("menu.syncAdjustTitle")} ${displayValue}`,
       },
@@ -2846,8 +3318,10 @@ const TrackSyncAdjustPill = react.memo(({ trackUri }) => {
           type: "button",
           className: "lyrics-track-sync-value",
           "data-active": offset !== 0 ? "true" : "false",
-          onClick: () => {
+          "data-feedback-kind": interactionFeedback?.kind || undefined,
+          onClick: (event) => {
             if (optimisticOffsetRef.current !== 0) handleOffsetChange(0);
+            showInteractionFeedback("reset", event);
           },
           onPointerUp: (event) => event.currentTarget.blur(),
           title: I18n.t("syncAdjust.reset"),
@@ -2855,8 +3329,32 @@ const TrackSyncAdjustPill = react.memo(({ trackUri }) => {
         },
         react.createElement(
           "span",
-          { "aria-live": "polite", "aria-atomic": "true" },
+          {
+            key: `current-${interactionFeedback?.id || 0}-${offset}`,
+            className: "lyrics-track-sync-value-current",
+            "data-change-direction": interactionFeedback?.kind === "step"
+              ? interactionFeedback.direction
+              : undefined,
+            "aria-live": "polite",
+            "aria-atomic": "true",
+          },
           formatSyncOffset(offset)
+        ),
+        react.createElement(
+          "span",
+          {
+            className: "lyrics-track-sync-value-reset",
+            "aria-hidden": "true",
+          },
+          I18n.t("syncAdjust.reset")
+        ),
+        react.createElement(
+          "span",
+          {
+            className: "lyrics-track-sync-value-reset-done",
+            "aria-hidden": "true",
+          },
+          "✓ 0ms"
         )
       ));
       return;
@@ -2864,6 +3362,34 @@ const TrackSyncAdjustPill = react.memo(({ trackUri }) => {
 
     compactControls.push(renderStepButton(control));
   });
+
+  const movementFeedback = interactionFeedback
+    ? react.createElement(
+      "span",
+      {
+        key: `flow-${interactionFeedback.id}`,
+        className: "lyrics-track-sync-movement-feedback",
+        "data-direction": interactionFeedback.direction,
+        "data-kind": interactionFeedback.kind,
+        "aria-hidden": "true",
+        style: {
+          "--sync-feedback-from-x": `${interactionFeedback.fromX}px`,
+          "--sync-feedback-to-x": `${interactionFeedback.toX}px`,
+          "--sync-feedback-from-width": `${interactionFeedback.fromWidth}px`,
+          "--sync-feedback-to-width": `${interactionFeedback.toWidth}px`,
+          "--sync-feedback-target-center-x": `${interactionFeedback.targetCenterX}px`,
+        },
+      },
+      interactionFeedback.kind === "step"
+        ? react.createElement("span", { className: "lyrics-track-sync-hover-transfer" })
+        : null,
+      interactionFeedback.kind === "reset"
+        ? react.createElement("span", {
+          className: "lyrics-track-sync-value-impact is-reset",
+        })
+        : null
+    )
+    : null;
 
   if (!trackUri) return null;
 
@@ -2878,6 +3404,7 @@ const TrackSyncAdjustPill = react.memo(({ trackUri }) => {
     react.createElement(
       "div",
       { className: "lyrics-track-sync-controls" },
+      movementFeedback,
       compactControls
     )
   );
@@ -2886,6 +3413,7 @@ const TrackSyncAdjustPill = react.memo(({ trackUri }) => {
 const SyncAdjustButtonFluent = react.memo(() => {
   const [isOpen, setIsOpen] = useState(false);
   const [globalOffset, setGlobalOffset] = useState(() => Utils.getGlobalSyncOffset?.() || 0);
+  const [panelPosition, setPanelPosition] = useState(null);
   const triggerRef = useRef(null);
   const panelRef = useRef(null);
   const globalSliderRef = useRef(null);
@@ -2914,7 +3442,37 @@ const SyncAdjustButtonFluent = react.memo(() => {
       ? document.activeElement
       : null;
 
+    const updatePanelPosition = () => {
+      if (window.innerWidth <= 840) {
+        setPanelPosition(null);
+        return;
+      }
+
+      const triggerRect = triggerRef.current?.getBoundingClientRect?.();
+      const panelRect = panelRef.current?.getBoundingClientRect?.();
+      if (!triggerRect || !panelRect?.width || !panelRect?.height) return;
+
+      const viewportPadding = 12;
+      const gap = 10;
+      const left = Math.max(
+        viewportPadding,
+        Math.min(
+          triggerRect.left - panelRect.width - gap,
+          window.innerWidth - panelRect.width - viewportPadding
+        )
+      );
+      const top = Math.max(
+        viewportPadding,
+        Math.min(
+          triggerRect.top + (triggerRect.height - panelRect.height) / 2,
+          window.innerHeight - panelRect.height - viewportPadding
+        )
+      );
+      setPanelPosition({ left, top });
+    };
+
     const focusFrame = requestAnimationFrame(() => {
+      updatePanelPosition();
       globalSliderRef.current?.focus();
     });
 
@@ -2954,11 +3512,13 @@ const SyncAdjustButtonFluent = react.memo(() => {
 
     document.addEventListener("mousedown", handlePointerDown, true);
     document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", updatePanelPosition);
 
     return () => {
       cancelAnimationFrame(focusFrame);
       document.removeEventListener("mousedown", handlePointerDown, true);
       document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("resize", updatePanelPosition);
       const previousFocus = previousFocusRef.current;
       requestAnimationFrame(() => {
         if (previousFocus && document.contains(previousFocus)) {
@@ -2982,6 +3542,9 @@ const SyncAdjustButtonFluent = react.memo(() => {
         "div",
         {
           className: "lyrics-sync-adjust-floating",
+          style: panelPosition
+            ? { left: `${panelPosition.left}px`, top: `${panelPosition.top}px`, right: "auto", bottom: "auto" }
+            : (window.innerWidth > 840 ? { visibility: "hidden" } : undefined),
           onMouseDown: (event) => event.stopPropagation(),
           onClick: (event) => event.stopPropagation(),
         },
@@ -3109,22 +3672,7 @@ const SyncAdjustButtonFluent = react.memo(() => {
           "aria-label": globalTitle,
           "aria-expanded": isOpen,
         },
-        react.createElement(
-          "svg",
-          {
-            width: 20,
-            height: 20,
-            viewBox: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            strokeWidth: 1.8,
-            strokeLinecap: "round",
-            strokeLinejoin: "round",
-            "aria-hidden": "true",
-          },
-          react.createElement("circle", { cx: 12, cy: 12, r: 9 }),
-          react.createElement("path", { d: "M12 7v5l3 2" })
-        )
+        react.createElement(IvLyricsToolbarIcon, { name: "globalSync" })
       )
     ),
     modalOverlay && reactDom?.createPortal
@@ -3189,14 +3737,10 @@ const CommunityVideoButton = react.memo(({ trackUri, videoInfo, onVideoSelect, d
       "button",
       {
         className: "lyrics-config-button",
-        onClick: handleClick
+        onClick: handleClick,
+        "aria-label": I18n.t("communityVideo.selectVideo"),
       },
-      react.createElement(
-        "svg",
-        { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
-        react.createElement("rect", { x: 2, y: 4, width: 20, height: 16, rx: 2 }),
-        react.createElement("polygon", { points: "10,8 16,12 10,16", fill: "currentColor", stroke: "none" })
-      )
+      react.createElement(IvLyricsToolbarIcon, { name: "communityVideo" })
     )
   );
 });
@@ -3211,15 +3755,12 @@ const SettingsMenu = react.memo(() => {
     { label: I18n.t("menu.settings") },
     react.createElement(
       "button",
-      { className: "lyrics-config-button", onClick: openSettings },
-      react.createElement(
-        "svg",
-        { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.75, strokeLinecap: "round", strokeLinejoin: "round" },
-        react.createElement("path", {
-          d: "M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"
-        }),
-        react.createElement("circle", { cx: 12, cy: 12, r: 3 })
-      )
+      {
+        className: "lyrics-config-button",
+        onClick: openSettings,
+        "aria-label": I18n.t("menu.settings"),
+      },
+      react.createElement(IvLyricsToolbarIcon, { name: "settings" })
     )
   );
 });
@@ -4338,14 +4879,9 @@ const ShareImageButton = react.memo(({ lyrics, trackInfo }) => {
       {
         className: "lyrics-config-button",
         onClick: handleClick,
+        "aria-label": I18n.t("menu.shareImage"),
       },
-      react.createElement(
-        "svg",
-        { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
-        react.createElement("rect", { x: 3, y: 3, width: 18, height: 18, rx: 2 }),
-        react.createElement("circle", { cx: 8.5, cy: 8.5, r: 1.5, fill: "currentColor", stroke: "none" }),
-        react.createElement("path", { d: "M21 15l-5-5L5 21" })
-      )
+      react.createElement(IvLyricsToolbarIcon, { name: "shareImage" })
     )
   );
 });
@@ -4525,16 +5061,11 @@ const SyncDataCreatorButton = react.memo(({ trackInfo, showHint, isFullscreen = 
         className: `lyrics-config-button${hasTrackId ? "" : " disabled"}`,
           onClick: handleClick,
           disabled: !hasTrackId,
+          "aria-label": hasTrackId
+            ? (I18n.t("syncCreator.buttonTooltip") || "Create Karaoke Sync")
+            : disabledTooltip,
         },
-        react.createElement(
-          "svg",
-          { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" },
-          // 마이크 아이콘
-          react.createElement("path", { d: "M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" }),
-          react.createElement("path", { d: "M19 10v2a7 7 0 0 1-14 0v-2" }),
-          react.createElement("line", { x1: 12, y1: 19, x2: 12, y2: 23 }),
-          react.createElement("line", { x1: 8, y1: 23, x2: 16, y2: 23 })
-        )
+        react.createElement(IvLyricsToolbarIcon, { name: "syncCreator" })
       )
     ),
     ),

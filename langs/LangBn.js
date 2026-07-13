@@ -1271,6 +1271,22 @@ window.LANG_BN = {
         "clearAll": "সব মুছুন",
         "clearCurrent": "বর্তমান গান মুছুন",
         "stats": "লিরিক্স: {lyrics}টি, অনুবাদ: {translations}টি, মেটাডেটা: {metadata}টি"
+      },
+      "openDb": {
+        "label": "OpenDB ইনডেক্স ক্যাশ",
+        "desc": "sync-data-সহ লিরিক্স প্রদানকারী খুঁজে পেতে ব্যবহৃত base + delta ইনডেক্স।",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "{isrcCount} ISRC · প্রদানকারী: {providerCount}",
+        "notDownloaded": "এখনও কোনো ইনডেক্স ডাউনলোড করা হয়নি।",
+        "lastChecked": "সর্বশেষ পরীক্ষা",
+        "justNow": "এইমাত্র",
+        "stale": "অফলাইন · বিদ্যমান ক্যাশ ব্যবহার করা হচ্ছে",
+        "update": "base + delta আবার আনুন",
+        "updating": "আপডেট হচ্ছে…",
+        "unavailable": "OpenDB ক্যাশ পরিষেবা উপলভ্য নয়।",
+        "updateSuccess": "OpenDB-এর base ও delta ফাইল আবার ডাউনলোড করা হয়েছে।",
+        "updateFailed": "OpenDB আপডেট করা যায়নি। বিদ্যমান ক্যাশ অক্ষত রাখা হয়েছে।",
+        "updateFailedNoCache": "OpenDB আপডেট করা যায়নি এবং ব্যবহারযোগ্য কোনো বিদ্যমান ক্যাশ নেই।"
       }
     },
     "languageDetection": {

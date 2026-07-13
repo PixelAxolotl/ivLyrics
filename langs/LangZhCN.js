@@ -1271,6 +1271,22 @@ window.LANG_ZH_CN = {
         "clearAll": "全部删除",
         "clearCurrent": "删除当前歌曲",
         "stats": "歌词: {lyrics}个, 翻译: {translations}个, 元数据: {metadata}个"
+      },
+      "openDb": {
+        "label": "OpenDB 索引缓存",
+        "desc": "用于查找拥有 sync-data 的歌词提供方的 base + delta 索引。",
+        "versionSummary": "base {baseDate} + delta {deltaCount}",
+        "coverageSummary": "ISRC {isrcCount} 个 · 提供方 {providerCount} 个",
+        "notDownloaded": "尚未下载索引。",
+        "lastChecked": "上次检查",
+        "justNow": "刚刚",
+        "stale": "离线 · 正在使用现有缓存",
+        "update": "重新获取 base + delta",
+        "updating": "正在更新…",
+        "unavailable": "OpenDB 缓存服务不可用。",
+        "updateSuccess": "已重新下载 OpenDB 的 base 和 delta 文件。",
+        "updateFailed": "无法更新 OpenDB，已保留现有缓存。",
+        "updateFailedNoCache": "无法更新 OpenDB，且没有可用的现有缓存。"
       }
     },
     "languageDetection": {

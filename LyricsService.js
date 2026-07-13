@@ -1617,6 +1617,7 @@
         let _spotifyProfilePromise = null;
         let _openDbState = null;
         let _openDbLoadPromise = null;
+        let _openDbRefreshPromise = null;
 
         function syncDataConsoleLog(message, details = null, level = 'info') {
             const prefix = '[ivLyrics sync-data]';
@@ -2211,10 +2212,22 @@
             try {
                 const storage = getOpenDbStorage();
                 if (!storage || !state?.providerMap) return;
+                const lastCheckedAt = Number(state.lastCheckedAt ?? state.fetchedAt) || 0;
                 storage.setItem(OPENDB_STORAGE_KEY, JSON.stringify({
-                    fetchedAt: state.fetchedAt || Date.now(),
+                    fetchedAt: lastCheckedAt,
+                    lastCheckedAt,
+                    rebuiltAt: state.rebuiltAt || 0,
                     signature: state.signature || '',
+                    schemaVersion: state.schemaVersion || 0,
+                    format: state.format || '',
+                    generatedAt: state.generatedAt || '',
                     baseDate: state.baseDate || '',
+                    baseCount: state.baseCount || 0,
+                    baseDistinctIsrc: state.baseDistinctIsrc || 0,
+                    latestDeltaDate: state.latestDeltaDate || '',
+                    deltaCount: state.deltaCount || 0,
+                    currentUpdatedAt: state.currentUpdatedAt || '',
+                    dataVersionAt: state.dataVersionAt || '',
                     providerMap: state.providerMap
                 }));
             } catch (e) {
@@ -2234,11 +2247,12 @@
         }
 
         function isOpenDbStateFresh(state) {
-            if (!state || !Number.isFinite(Number(state.fetchedAt))) {
+            const lastCheckedAt = Number(state?.lastCheckedAt ?? state?.fetchedAt);
+            if (!state || !Number.isFinite(lastCheckedAt) || lastCheckedAt <= 0) {
                 return false;
             }
-            const age = Date.now() - Number(state.fetchedAt);
-            return state.unavailable
+            const age = Date.now() - lastCheckedAt;
+            return state.unavailable || state.networkUnavailable
                 ? age < OPENDB_UNAVAILABLE_RETRY_MS
                 : age < OPENDB_FRESH_MS;
         }
@@ -2258,6 +2272,90 @@
                 map[provider] = Array.from(new Set(items)).sort();
             }
             return map;
+        }
+
+        function isOpenDbPlainObject(value) {
+            return !!value && typeof value === 'object' && !Array.isArray(value);
+        }
+
+        function validateOpenDbProviderMap(value, label) {
+            if (!isOpenDbPlainObject(value)) {
+                throw new Error(`OpenDB ${label} provider map is invalid`);
+            }
+
+            for (const [providerValue, entries] of Object.entries(value)) {
+                if (!providerValue.trim() || !Array.isArray(entries)) {
+                    throw new Error(`OpenDB ${label} provider map is invalid`);
+                }
+                for (const entry of entries) {
+                    if (typeof entry !== 'string' || !normalizeSyncDataIsrc(entry)) {
+                        throw new Error(`OpenDB ${label} contains an invalid ISRC`);
+                    }
+                }
+            }
+
+            return normalizeOpenDbProviderMap(value);
+        }
+
+        function getOpenDbProviderMapStats(providerMap) {
+            const entries = Object.values(providerMap).flat();
+            return {
+                entryCount: entries.length,
+                distinctIsrcCount: new Set(entries).size
+            };
+        }
+
+        function validateOpenDbBasePayload(payload, manifestBase) {
+            if (
+                Number(payload?.schema) !== 1
+                || payload?.type !== 'base'
+                || payload?.format !== 'provider-map'
+            ) {
+                throw new Error('OpenDB base payload is not supported');
+            }
+
+            const providerMap = validateOpenDbProviderMap(payload.items, 'base');
+            const stats = getOpenDbProviderMapStats(providerMap);
+            const declaredCount = Number(manifestBase?.count);
+            const declaredDistinctIsrc = Number(manifestBase?.distinctIsrc);
+            if (!Number.isInteger(declaredCount) || declaredCount < 0) {
+                throw new Error('OpenDB manifest base count is invalid');
+            }
+            if (!Number.isInteger(declaredDistinctIsrc) || declaredDistinctIsrc < 0) {
+                throw new Error('OpenDB manifest base ISRC count is invalid');
+            }
+            if (stats.entryCount !== declaredCount) {
+                throw new Error('OpenDB base row count does not match the manifest');
+            }
+            if (stats.distinctIsrcCount !== declaredDistinctIsrc) {
+                throw new Error('OpenDB base ISRC count does not match the manifest');
+            }
+            if (payload.totalRows != null && Number(payload.totalRows) !== declaredCount) {
+                throw new Error('OpenDB base payload row count is invalid');
+            }
+            if (payload.distinctIsrc != null && Number(payload.distinctIsrc) !== declaredDistinctIsrc) {
+                throw new Error('OpenDB base payload ISRC count is invalid');
+            }
+
+            return { items: providerMap };
+        }
+
+        function validateOpenDbDeltaPayload(payload, expectedType, expectedDate = '') {
+            if (
+                Number(payload?.schema) !== 1
+                || payload?.type !== expectedType
+                || payload?.format !== 'provider-map-delta'
+            ) {
+                throw new Error(`OpenDB ${expectedType} payload is not supported`);
+            }
+            if (expectedDate && payload?.date && payload.date !== expectedDate) {
+                throw new Error(`OpenDB ${expectedType} date does not match the manifest`);
+            }
+
+            return {
+                add: validateOpenDbProviderMap(payload.add, `${expectedType} add`),
+                remove: validateOpenDbProviderMap(payload.remove, `${expectedType} remove`)
+            };
         }
 
         function mergeOpenDbProviderMap(target, source, mode = 'add') {
@@ -2285,7 +2383,12 @@
         }
 
         function getOpenDbFileUrl(value) {
-            return new URL(String(value || ''), OPENDB_BASE_URL).toString();
+            const baseUrl = new URL(OPENDB_BASE_URL);
+            const fileUrl = new URL(String(value || ''), baseUrl);
+            if (fileUrl.origin !== baseUrl.origin || !fileUrl.pathname.startsWith(baseUrl.pathname)) {
+                throw new Error('OpenDB manifest contains an invalid file URL');
+            }
+            return fileUrl.toString();
         }
 
         function getOpenDbManifestSignature(manifest) {
@@ -2298,17 +2401,118 @@
             });
         }
 
+        function getOpenDbManifestMetadata(manifest) {
+            const deltas = Array.isArray(manifest?.deltas) ? manifest.deltas : [];
+            const deltaDates = deltas
+                .map(delta => typeof delta?.date === 'string' ? delta.date.trim() : '')
+                .filter(Boolean)
+                .sort();
+            const generatedAt = typeof manifest?.generatedAt === 'string'
+                ? manifest.generatedAt
+                : '';
+            const currentUpdatedAt = typeof manifest?.current?.updatedAt === 'string'
+                ? manifest.current.updatedAt
+                : '';
+            const latestDeltaDate = deltaDates[deltaDates.length - 1] || '';
+            const baseDate = typeof manifest?.base?.date === 'string'
+                ? manifest.base.date
+                : '';
+
+            return {
+                schemaVersion: Number(manifest?.schema) || 0,
+                format: typeof manifest?.format === 'string' ? manifest.format : '',
+                generatedAt,
+                baseDate,
+                baseCount: Number(manifest?.base?.count) || 0,
+                baseDistinctIsrc: Number(manifest?.base?.distinctIsrc) || 0,
+                latestDeltaDate,
+                deltaCount: deltas.length,
+                currentUpdatedAt,
+                dataVersionAt: currentUpdatedAt || generatedAt || latestDeltaDate || baseDate
+            };
+        }
+
+        function getOpenDbCacheInfo(stateValue = null) {
+            const stored = stateValue?.providerMap
+                ? stateValue
+                : (_openDbState?.providerMap ? _openDbState : readOpenDbStorage());
+            if (!stored?.providerMap) {
+                return {
+                    available: false,
+                    unavailable: false,
+                    networkUnavailable: false,
+                    stale: false,
+                    fetchedAt: 0,
+                    lastCheckedAt: 0,
+                    rebuiltAt: 0,
+                    providerCount: 0,
+                    entryCount: 0,
+                    distinctIsrcCount: 0,
+                    schemaVersion: 0,
+                    format: '',
+                    generatedAt: '',
+                    baseDate: '',
+                    baseCount: 0,
+                    baseDistinctIsrc: 0,
+                    latestDeltaDate: '',
+                    deltaCount: 0,
+                    currentUpdatedAt: '',
+                    dataVersionAt: ''
+                };
+            }
+
+            const providerMap = normalizeOpenDbProviderMap(stored.providerMap);
+            const providerEntries = Object.values(providerMap);
+            const distinctEntries = new Set(providerEntries.flat());
+            const entryCount = providerEntries.reduce((total, entries) => total + entries.length, 0);
+            return {
+                available: Boolean(stored.signature) || entryCount > 0,
+                unavailable: stored.unavailable === true,
+                networkUnavailable: stored.networkUnavailable === true,
+                stale: stored.stale === true,
+                fetchedAt: Number(stored.lastCheckedAt ?? stored.fetchedAt) || 0,
+                lastCheckedAt: Number(stored.lastCheckedAt ?? stored.fetchedAt) || 0,
+                rebuiltAt: Number(stored.rebuiltAt) || 0,
+                providerCount: providerEntries.length,
+                entryCount,
+                distinctIsrcCount: distinctEntries.size,
+                schemaVersion: Number(stored.schemaVersion) || 0,
+                format: stored.format || '',
+                generatedAt: stored.generatedAt || '',
+                baseDate: stored.baseDate || '',
+                baseCount: Number(stored.baseCount) || 0,
+                baseDistinctIsrc: Number(stored.baseDistinctIsrc) || 0,
+                latestDeltaDate: stored.latestDeltaDate || '',
+                deltaCount: Number(stored.deltaCount) || 0,
+                currentUpdatedAt: stored.currentUpdatedAt || '',
+                dataVersionAt: stored.dataVersionAt
+                    || stored.currentUpdatedAt
+                    || stored.generatedAt
+                    || stored.latestDeltaDate
+                    || stored.baseDate
+                    || ''
+            };
+        }
+
         async function fetchOpenDbJson(url) {
             const response = await fetch(url, {
-                headers: { Accept: 'application/json' }
+                cache: 'no-store',
+                headers: { Accept: 'application/json' },
+                signal: typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+                    ? AbortSignal.timeout(15 * 1000)
+                    : undefined
             });
             if (!response.ok) {
                 throw new Error(`OpenDB request failed: ${response.status}`);
             }
-            return await response.json();
+            const payload = await response.json();
+            if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+                throw new Error('OpenDB returned an invalid JSON payload');
+            }
+            return payload;
         }
 
-        async function loadOpenDbState(force = false) {
+        async function loadOpenDbState(force = false, rebuild = false) {
             if (!force && isOpenDbStateFresh(_openDbState)) {
                 return _openDbState;
             }
@@ -2320,20 +2524,35 @@
             }
 
             if (_openDbLoadPromise) {
-                return await _openDbLoadPromise;
+                const pendingState = await _openDbLoadPromise;
+                if (!rebuild) return pendingState;
             }
 
             _openDbLoadPromise = (async () => {
                 try {
                     const manifest = await fetchOpenDbJson(OPENDB_MANIFEST_URL);
+                    if (
+                        Number(manifest?.schema) !== 1
+                        || manifest?.format !== 'provider-map'
+                        || !manifest?.base?.url
+                        || !Array.isArray(manifest?.deltas)
+                        || manifest.deltas.some(delta => !delta?.url)
+                        || !manifest?.current?.url
+                    ) {
+                        throw new Error('OpenDB manifest is not supported');
+                    }
                     const signature = getOpenDbManifestSignature(manifest);
+                    const manifestMetadata = getOpenDbManifestMetadata(manifest);
                     const stored = readOpenDbStorage();
-                    if (stored?.signature === signature && stored?.providerMap) {
+                    if (!rebuild && stored?.signature === signature && stored?.providerMap) {
                         _openDbState = {
                             ...stored,
+                            ...manifestMetadata,
                             fetchedAt: Date.now(),
+                            lastCheckedAt: Date.now(),
                             stale: false,
                             unavailable: false,
+                            networkUnavailable: false,
                             providerMap: normalizeOpenDbProviderMap(stored.providerMap)
                         };
                         writeOpenDbStorage(_openDbState);
@@ -2342,23 +2561,38 @@
 
                     const providerMap = {};
                     if (manifest?.base?.url) {
-                        applyOpenDbPayload(providerMap, await fetchOpenDbJson(getOpenDbFileUrl(manifest.base.url)));
+                        const basePayload = await fetchOpenDbJson(getOpenDbFileUrl(manifest.base.url));
+                        applyOpenDbPayload(
+                            providerMap,
+                            validateOpenDbBasePayload(basePayload, manifest.base)
+                        );
                     }
                     for (const delta of Array.isArray(manifest?.deltas) ? manifest.deltas : []) {
                         if (delta?.url) {
-                            applyOpenDbPayload(providerMap, await fetchOpenDbJson(getOpenDbFileUrl(delta.url)));
+                            const deltaPayload = await fetchOpenDbJson(getOpenDbFileUrl(delta.url));
+                            applyOpenDbPayload(
+                                providerMap,
+                                validateOpenDbDeltaPayload(deltaPayload, 'delta', delta.date || '')
+                            );
                         }
                     }
                     if (manifest?.current?.url) {
-                        applyOpenDbPayload(providerMap, await fetchOpenDbJson(getOpenDbFileUrl(manifest.current.url)));
+                        const currentPayload = await fetchOpenDbJson(getOpenDbFileUrl(manifest.current.url));
+                        applyOpenDbPayload(
+                            providerMap,
+                            validateOpenDbDeltaPayload(currentPayload, 'delta-current')
+                        );
                     }
 
                     _openDbState = {
                         fetchedAt: Date.now(),
+                        lastCheckedAt: Date.now(),
+                        rebuiltAt: Date.now(),
                         signature,
-                        baseDate: manifest?.base?.date || '',
+                        ...manifestMetadata,
                         stale: false,
                         unavailable: false,
+                        networkUnavailable: false,
                         providerMap
                     };
                     writeOpenDbStorage(_openDbState);
@@ -2372,16 +2606,20 @@
                         _openDbState = {
                             ...stored,
                             fetchedAt: Date.now(),
+                            lastCheckedAt: Date.now(),
                             stale: true,
-                            unavailable: true,
+                            unavailable: false,
+                            networkUnavailable: true,
                             providerMap: normalizeOpenDbProviderMap(stored.providerMap)
                         };
                         return _openDbState;
                     }
                     _openDbState = {
                         fetchedAt: Date.now(),
+                        lastCheckedAt: Date.now(),
                         stale: true,
                         unavailable: true,
+                        networkUnavailable: true,
                         providerMap: {}
                     };
                     return _openDbState;
@@ -2391,6 +2629,40 @@
             })();
 
             return await _openDbLoadPromise;
+        }
+
+        async function refreshOpenDbCache() {
+            if (_openDbRefreshPromise) {
+                return await _openDbRefreshPromise;
+            }
+
+            const refreshPromise = (async () => {
+                const state = await loadOpenDbState(true, true);
+                const info = getOpenDbCacheInfo(state);
+                if (state?.unavailable || state?.networkUnavailable) {
+                    const error = new Error('OpenDB cache refresh failed');
+                    error.cacheInfo = info;
+                    throw error;
+                }
+
+                // Requests started against the prior index may still resolve after
+                // this rebuild. Advance the generation before clearing references so
+                // those responses cannot repopulate the runtime cache.
+                bumpCacheGeneration();
+                clearInflightRequests();
+                _syncDataCache.clear();
+                _fullyLoadedTracks.clear();
+                return info;
+            })();
+            _openDbRefreshPromise = refreshPromise;
+
+            try {
+                return await refreshPromise;
+            } finally {
+                if (_openDbRefreshPromise === refreshPromise) {
+                    _openDbRefreshPromise = null;
+                }
+            }
         }
 
         function getOpenDbProvidersFromState(state, isrcValue) {
@@ -2412,7 +2684,7 @@
             if (state?.unavailable) return [];
             const providers = getOpenDbProvidersFromState(state, isrcValue);
             if (state?.stale && providers.length === 0) {
-                return [];
+                return null;
             }
             return providers;
         }
@@ -2433,7 +2705,7 @@
             const state = await loadOpenDbState();
             if (state?.unavailable) return false;
             const found = openDbStateHasProvider(state, isrcValue, providerValue);
-            if (state?.stale && !found) return false;
+            if (state?.stale && !found) return null;
             return found;
         }
 
@@ -2449,13 +2721,20 @@
 
             const state = _openDbState?.providerMap
                 ? _openDbState
-                : (readOpenDbStorage() || { fetchedAt: Date.now(), signature: '', providerMap: {} });
+                : (readOpenDbStorage() || {
+                    fetchedAt: 0,
+                    lastCheckedAt: 0,
+                    signature: '',
+                    providerMap: {}
+                });
             const providerMap = normalizeOpenDbProviderMap(state.providerMap);
             mergeOpenDbProviderMap(providerMap, { [provider]: [isrc] }, 'add');
+            const hasDownloadedIndex = Boolean(state.signature);
             _openDbState = {
                 ...state,
-                fetchedAt: Date.now(),
-                stale: false,
+                fetchedAt: Number(state.lastCheckedAt ?? state.fetchedAt) || 0,
+                lastCheckedAt: Number(state.lastCheckedAt ?? state.fetchedAt) || 0,
+                stale: !hasDownloadedIndex || state.stale === true,
                 unavailable: false,
                 providerMap
             };
@@ -2511,6 +2790,7 @@
             }
 
             try {
+                const requestGeneration = getCacheGeneration(identityKey);
                 const url = new URL(`${API_BASE}/lyrics/sync-data`);
                 const reportsMetadata = appendSyncDataQueryParams(url, identity, metadata);
                 let requestUrl = url.toString();
@@ -2545,7 +2825,9 @@
                     _syncTrackMetadataReported.add(identityKey);
                 }
                 const providers = Array.isArray(result.providers) ? result.providers : [];
-                _syncDataCache.set(cacheKey, providers);
+                if (requestGeneration === getCacheGeneration(identityKey)) {
+                    _syncDataCache.set(cacheKey, providers);
+                }
                 return providers;
             } catch (e) {
                 console.warn(`[SyncDataService] Failed to fetch sync providers for ${identityKey}`, e);
@@ -2578,7 +2860,6 @@
 
             const queryProvider = provider === 'legacy' ? 'spotify' : provider;
             const specificKey = `${identityKey}:${queryProvider}`;
-            const requestGeneration = getCacheGeneration(identityKey);
 
             if (_syncDataCache.has(specificKey)) {
                 syncDataConsoleLog('getSyncData:cache-hit', {
@@ -2611,6 +2892,8 @@
                 }
             }
 
+            const requestGeneration = getCacheGeneration(identityKey);
+            let fetchPromise = null;
             try {
                 if (_inflightRequests.has(specificKey)) {
                     syncDataConsoleLog('getSyncData:join-inflight', {
@@ -2621,7 +2904,7 @@
                     return _inflightRequests.get(specificKey);
                 }
 
-                const fetchPromise = (async () => {
+                fetchPromise = (async () => {
                     const url = new URL(`${API_BASE}/lyrics/sync-data`);
                     const reportsMetadata = appendSyncDataQueryParams(url, identity, metadata, queryProvider);
                     let requestUrl = url.toString();
@@ -2715,11 +2998,16 @@
 
                 _inflightRequests.set(specificKey, fetchPromise);
                 const result = await fetchPromise;
-                _inflightRequests.delete(specificKey);
+                if (_inflightRequests.get(specificKey) === fetchPromise) {
+                    _inflightRequests.delete(specificKey);
+                }
                 return result;
             } catch (e) {
                 console.warn(`[SyncDataService] Failed to fetch sync data for ${identityKey}:${provider}`, e);
-                _inflightRequests.delete(specificKey);
+                const inflightRequest = _inflightRequests.get(specificKey);
+                if (!inflightRequest || inflightRequest === fetchPromise) {
+                    _inflightRequests.delete(specificKey);
+                }
                 return null;
             }
         }
@@ -2731,7 +3019,9 @@
 
         function clearCache(identityValue, metadata = {}) {
             const identityKey = normalizeSyncDataCacheIdentityKey(identityValue, metadata) || identityValue;
-            if (metadata?.preserveOpenDb !== true) {
+            // OpenDB is a global, versioned provider index. Clearing one track's
+            // runtime sync cache must never evict the entire downloaded index.
+            if (metadata?.clearOpenDb === true) {
                 clearOpenDbStorage();
             }
             if (identityKey) {
@@ -4156,6 +4446,8 @@
             getSyncDataTrackMetadata,
             normalizeSyncDataIsrc,
             hasOpenDbSyncDataEntry,
+            getOpenDbCacheInfo,
+            refreshOpenDbCache,
             shouldBypassServerCache,
             clearCache
         };

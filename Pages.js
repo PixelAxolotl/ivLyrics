@@ -4579,25 +4579,33 @@ const buildKaraokeVocalRowLine = (line, row) => ({
   kind: row.kind,
 });
 
+const buildKaraokeVocalRowRenderData = (line, row, includeBounds) => {
+	const rowLine = buildKaraokeVocalRowLine(line, row);
+	return {
+		line: rowLine,
+		timedChars: applyKaraokeWhitespaceCompensation(buildKaraokeTimedChars(rowLine)),
+		bounds: includeBounds ? getKaraokeLineBounds(rowLine) : null,
+	};
+};
+
 const getKaraokeVocalAnchorLineKey = (line) => [
   line?.startTime ?? "",
   line?.endTime ?? "",
   getCopyableText(line?.originalText ?? line?.text ?? ""),
 ].join("|");
 
-const getKaraokeVocalAnchorPosition = (vocalRows, line, position) => {
-  if (!Array.isArray(vocalRows) || vocalRows.length === 0 || !Number.isFinite(position)) {
+const getKaraokeVocalAnchorPosition = (vocalRowRenderData, position) => {
+  if (!Array.isArray(vocalRowRenderData) || vocalRowRenderData.length === 0 || !Number.isFinite(position)) {
           return -1;
   }
 
   let firstActiveRowIndex = -1;
   let lastActiveRowIndex = -1;
 
-  for (let rowIndex = 0; rowIndex < vocalRows.length; rowIndex++) {
-          const rowLine = buildKaraokeVocalRowLine(line, vocalRows[rowIndex]);
-          const rowTimedChars = applyKaraokeWhitespaceCompensation(buildKaraokeTimedChars(rowLine));
+  for (let rowIndex = 0; rowIndex < vocalRowRenderData.length; rowIndex++) {
+          const { timedChars: rowTimedChars, bounds } = vocalRowRenderData[rowIndex];
           const activeCharIndex = getActiveKaraokeTimedCharIndex(rowTimedChars, position);
-          const { startTime, endTime } = getKaraokeLineBounds(rowLine);
+          const { startTime, endTime } = bounds;
           const rowActive = (activeCharIndex >= 0 && activeCharIndex < rowTimedChars.length)
                   || (position >= startTime && position <= endTime);
 
@@ -4736,9 +4744,12 @@ const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0
   const shouldUseVocalRowAnchor = isActive
           && Array.isArray(vocalRows)
           && vocalRows.length >= KARAOKE_VOCAL_STACK_CENTER_THRESHOLD;
+  const vocalRowRenderData = Array.isArray(vocalRows)
+	? vocalRows.map((row) => buildKaraokeVocalRowRenderData(line, row, shouldUseVocalRowAnchor))
+	: null;
   const vocalAnchorStateRef = useRef({ lineKey: null, anchorPosition: -1, lastPlaybackPosition: NaN });
   const nextVocalAnchorPosition = shouldUseVocalRowAnchor
-          ? getKaraokeVocalAnchorPosition(vocalRows, line, position)
+          ? getKaraokeVocalAnchorPosition(vocalRowRenderData, position)
           : -1;
   const activeVocalAnchorPosition = shouldUseVocalRowAnchor
           ? getStableKaraokeVocalAnchorPosition(vocalAnchorStateRef, line, position, nextVocalAnchorPosition)
@@ -4756,7 +4767,8 @@ const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0
 		const stackTranslation = !hasRowTranslationSubline && typeof translation === "string" ? translation.trim() : "";
           let rowGlobalCharOffset = globalCharOffset;
           const stackChildren = vocalRows.map((row, rowIndex) => {
-                  const rowLine = buildKaraokeVocalRowLine(line, row);
+                  const rowRenderData = vocalRowRenderData[rowIndex];
+			const rowLine = rowRenderData.line;
                   const classParts = [
                           "lyrics-karaoke-part",
                           row.role === "background" ? "background" : "lead",
@@ -4766,7 +4778,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0
                   ].filter(Boolean);
                   const currentOffset = rowGlobalCharOffset;
                   rowGlobalCharOffset += getKaraokeSyllableCharCount(row.syllables);
-			const rowTimedChars = applyKaraokeWhitespaceCompensation(buildKaraokeTimedChars(rowLine));
+			const rowTimedChars = rowRenderData.timedChars;
 			const rowActiveCharIndex = getActiveKaraokeTimedCharIndex(rowTimedChars, position);
 			const rowActiveGlobalCharIndex = rowActiveCharIndex >= 0 ? currentOffset + rowActiveCharIndex : -1;
 			const rowPhonetic = row.phonetic || rowPhonetics[rowIndex] || "";

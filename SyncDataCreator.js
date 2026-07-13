@@ -1970,6 +1970,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const [characterPronunciationProgress, setCharacterPronunciationProgress] = useState(null);
 	const [showCharacterPronunciationConsent, setShowCharacterPronunciationConsent] = useState(false);
 	const [mode, setMode] = useState('idle');
+	const [position, setPosition] = useState(0);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [recordingCharIndex, setRecordingCharIndex] = useState(-1);
 	const [recordingLockIndex, setRecordingLockIndex] = useState(-1);
@@ -1998,11 +1999,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const containerRef = useRef(null);
 	const lyricsScrollRef = useRef(null);
 	const positionUpdateTimerRef = useRef(null);
-	const positionRef = useRef(0);
-	const playbackCurrentTimeRef = useRef(null);
-	const playbackDurationRef = useRef(null);
-	const playbackBarRef = useRef(null);
-	const playbackFillRef = useRef(null);
 	const charTimesRef = useRef([]);
 	const charElementsRef = useRef([]);
 	const charHitBoxesRef = useRef([]);
@@ -3549,30 +3545,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	// 재생 위치 업데이트 + 미리보기 자동 줄 이동
 	useEffect(() => {
 		let lastCommittedPosition = -1;
-		const updatePlaybackDisplay = (pos) => {
-			positionRef.current = pos;
-			const duration = Number(Spicetify.Player?.data?.item?.duration?.milliseconds || 0);
-			const playbackPercent = (pos / (duration || 1)) * 100;
-			const totalSeconds = Math.floor(pos / 1000);
-			const formattedPosition = `${Math.floor(totalSeconds / 60)}:${(totalSeconds % 60).toString().padStart(2, '0')}`;
-
-			if (playbackCurrentTimeRef.current?.textContent !== formattedPosition) {
-				playbackCurrentTimeRef.current.textContent = formattedPosition;
-			}
-			if (playbackBarRef.current) {
-				playbackBarRef.current.style.setProperty('--iv-progress', `${playbackPercent}%`);
-			}
-			if (playbackFillRef.current) {
-				playbackFillRef.current.style.width = `${playbackPercent}%`;
-			}
-			if (playbackDurationRef.current) {
-				const durationSeconds = Math.floor(duration / 1000);
-				const formattedDuration = `${Math.floor(durationSeconds / 60)}:${(durationSeconds % 60).toString().padStart(2, '0')}`;
-				if (playbackDurationRef.current.textContent !== formattedDuration) {
-					playbackDurationRef.current.textContent = formattedDuration;
-				}
-			}
-		};
 
 		const updatePosition = () => {
 			const pos = Number(Spicetify.Player?.getProgress?.() || 0);
@@ -3587,7 +3559,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				|| pos === 0
 			) {
 				lastCommittedPosition = pos;
-				updatePlaybackDisplay(pos);
+				setPosition(pos);
 			}
 
 			if (mode === 'preview' && syncData && syncData.lines) {
@@ -6490,9 +6462,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	}, [syncLinesByStart, lineCharOffsets, activeParallelPart]);
 
 	const getPreviewProgressIndex = useCallback((lineIndex) => {
-		const progressIndex = getPreviewProgressIndexAtTime(lineIndex, positionRef.current / 1000);
+		const progressIndex = getPreviewProgressIndexAtTime(lineIndex, position / 1000);
 		return Number.isFinite(progressIndex) ? Math.floor(progressIndex) : -1;
-	}, [getPreviewProgressIndexAtTime]);
+	}, [getPreviewProgressIndexAtTime, position]);
 
 	const applyPlaybackProgressVisual = useCallback((nextIndex) => {
 		const numericIndex = Number(nextIndex);
@@ -6562,7 +6534,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		if (mode === 'record') {
 			lastPaintedPlaybackIndexRef.current = -2;
 		}
-	}, [mode, currentLineIndex, activeParallelPartId]);
+	}, [mode, position, currentLineIndex, activeParallelPartId]);
 
 	useEffect(() => {
 		if (!syncLinesByStart || currentLineIndex >= lyricsLines.length) {
@@ -8320,20 +8292,18 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 	const renderPlaybackPanel = () => {
 		if (!lyricsText) return null;
-		const playbackPosition = positionRef.current;
-		const playbackPercent = (playbackPosition / (Spicetify.Player?.data?.item?.duration?.milliseconds || 1)) * 100;
+		const playbackPercent = (position / (Spicetify.Player?.data?.item?.duration?.milliseconds || 1)) * 100;
 		return react.createElement('div', { style: { ...s.panel, ...s.transportPanel } },
 			react.createElement('div', { style: s.transportRow },
 				react.createElement('button', { style: s.seekBtn, onClick: () => handleSeekOffset(-3000) }, '-3s'),
 				react.createElement('button', { style: s.seekBtn, onClick: () => handleSeekOffset(-1000) }, '-1s'),
-				react.createElement('span', { style: s.playbackTime, ref: playbackCurrentTimeRef }, formatTime(playbackPosition)),
+				react.createElement('span', { style: s.playbackTime }, formatTime(position)),
 				react.createElement('div', {
-					ref: playbackBarRef,
 					style: { ...s.playbackBar, '--iv-progress': `${playbackPercent}%` },
 					'data-iv-progress-bar': 'true',
 					onClick: handleSeek
-				}, react.createElement('div', { ref: playbackFillRef, style: { ...s.playbackFill, width: `${playbackPercent}%` } })),
-				react.createElement('span', { style: s.playbackTime, ref: playbackDurationRef }, formatTime(Spicetify.Player?.data?.item?.duration?.milliseconds || 0)),
+				}, react.createElement('div', { style: { ...s.playbackFill, width: `${playbackPercent}%` } })),
+				react.createElement('span', { style: s.playbackTime }, formatTime(Spicetify.Player?.data?.item?.duration?.milliseconds || 0)),
 				react.createElement('button', { style: s.seekBtn, onClick: () => handleSeekOffset(1000) }, '+1s'),
 				react.createElement('button', { style: s.seekBtn, onClick: () => handleSeekOffset(3000) }, '+3s')
 			),
@@ -8883,9 +8853,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		lyricsText && react.createElement('div', { style: s.playbackRow },
 			react.createElement('button', { style: s.seekBtn, onClick: () => handleSeekOffset(-3000) }, '-3s'),
 			react.createElement('button', { style: s.seekBtn, onClick: () => handleSeekOffset(-1000) }, '-1s'),
-			react.createElement('span', { style: s.playbackTime }, formatTime(positionRef.current)),
+			react.createElement('span', { style: s.playbackTime }, formatTime(position)),
 			(() => {
-				const playbackPercent = (positionRef.current / (Spicetify.Player?.data?.item?.duration?.milliseconds || 1)) * 100;
+				const playbackPercent = (position / (Spicetify.Player?.data?.item?.duration?.milliseconds || 1)) * 100;
 				return react.createElement('div', {
 					style: { ...s.playbackBar, '--iv-progress': `${playbackPercent}%` },
 					'data-iv-progress-bar': 'true',

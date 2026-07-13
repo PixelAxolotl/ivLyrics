@@ -2288,9 +2288,21 @@ const getKaraokeSpeakerPresentation = (speaker, speakerColor = "", speakerFallba
 	};
 };
 
-const normalizeKaraokeSpeakerClass = (speaker, speakerColor = "", speakerFallback = "") => (
-	getKaraokeSpeakerPresentation(speaker, speakerColor, speakerFallback).speakerClass
-);
+const PAGES_IV_LYRICS_SPEAKER_CLASS_CONTRACT = Symbol.for("ivLyrics.speakerColors.classNameContract");
+
+const normalizeKaraokeSpeakerClass = (speaker, speakerColor = "", speakerFallback = "") => {
+	const helper = window.ivLyricsSpeakerColors;
+	const contract = helper?.[PAGES_IV_LYRICS_SPEAKER_CLASS_CONTRACT];
+	const hasReferenceInput = (speaker !== null && (typeof speaker === "object" || typeof speaker === "function"))
+		|| (speakerColor !== null && (typeof speakerColor === "object" || typeof speakerColor === "function"))
+		|| (speakerFallback !== null && (typeof speakerFallback === "object" || typeof speakerFallback === "function"));
+	if (!hasReferenceInput
+		&& contract?.getPresentation === helper?.getPresentation
+		&& typeof contract?.getClassName === "function") {
+		return contract.getClassName(speaker, speakerFallback);
+	}
+	return getKaraokeSpeakerPresentation(speaker, speakerColor, speakerFallback).speakerClass;
+};
 
 const getKaraokeSpeakerStyle = (speaker, speakerColor = "", speakerFallback = "") => {
 	const creatorColor = getKaraokeSpeakerPresentation(speaker, speakerColor, speakerFallback).creatorColor;

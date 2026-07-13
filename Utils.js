@@ -105,6 +105,9 @@ const IV_LYRICS_SPEAKER_COLOR_OPTIONS = Object.keys(IV_LYRICS_DEFAULT_SPEAKER_TE
 const IV_LYRICS_SPEAKER_COLOR_KEY_PREFIX = "multi-vocal-speaker-color-";
 const IV_LYRICS_SPEAKER_COLOR_STORAGE_PREFIX = "ivLyrics:visual:";
 const IV_LYRICS_CREATOR_SPEAKER_COLOR_SETTING = "sync-data-custom-speaker-colors-enabled";
+const IV_LYRICS_SPEAKER_CLASS_CACHE_LIMIT = 64;
+const ivLyricsSpeakerClassCache = new Map();
+let ivLyricsSpeakerClassCacheSize = 0;
 
 const normalizeIvLyricsSpeakerLabel = (value) => {
   const normalized = String(value || "")
@@ -137,6 +140,36 @@ const getIvLyricsSpeakerFallback = (speaker, speakerFallback = "") => {
       || IV_LYRICS_DEFAULT_CUSTOM_SPEAKER_FALLBACK;
   }
   return IV_LYRICS_LEGACY_CUSTOM_SPEAKER_FALLBACKS[normalized] || normalized;
+};
+
+const getIvLyricsSpeakerClassName = (speaker, speakerFallback = "") => {
+  const speakerKey = String(speaker || "");
+  const fallbackKey = String(speakerFallback || "");
+  const cachedFallbacks = ivLyricsSpeakerClassCache.get(speakerKey);
+  if (cachedFallbacks?.has(fallbackKey)) {
+    return cachedFallbacks.get(fallbackKey);
+  }
+
+  const normalized = normalizeIvLyricsSpeakerLabel(speakerKey);
+  const effectiveSpeaker = getIvLyricsSpeakerFallback(normalized, fallbackKey);
+  const speakerClass = String(effectiveSpeaker || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s]+/g, "-")
+    .replace(/[^a-z0-9-]/g, "");
+
+  if (ivLyricsSpeakerClassCacheSize >= IV_LYRICS_SPEAKER_CLASS_CACHE_LIMIT) {
+    ivLyricsSpeakerClassCache.clear();
+    ivLyricsSpeakerClassCacheSize = 0;
+  }
+  let fallbackCache = ivLyricsSpeakerClassCache.get(speakerKey);
+  if (!fallbackCache) {
+    fallbackCache = new Map();
+    ivLyricsSpeakerClassCache.set(speakerKey, fallbackCache);
+  }
+  fallbackCache.set(fallbackKey, speakerClass);
+  ivLyricsSpeakerClassCacheSize += 1;
+  return speakerClass;
 };
 
 const isIvLyricsCustomSpeaker = (speaker) => (
@@ -247,6 +280,8 @@ const getIvLyricsSpeakerPresentation = (speaker, speakerColor, speakerFallback =
   };
 };
 
+const UTILS_IV_LYRICS_SPEAKER_CLASS_CONTRACT = Symbol.for("ivLyrics.speakerColors.classNameContract");
+
 const resetIvLyricsSpeakerColorConfig = () => {
   IV_LYRICS_SPEAKER_COLOR_OPTIONS.forEach((speaker) => {
     const settingKey = getIvLyricsSpeakerColorSettingKey(speaker);
@@ -277,7 +312,7 @@ const applyIvLyricsSpeakerColorCssVariables = (target = document.documentElement
   });
 };
 
-window.ivLyricsSpeakerColors = {
+const ivLyricsSpeakerColors = {
   defaultColors: IV_LYRICS_DEFAULT_SPEAKER_TEXT_COLORS,
   customFallbacks: IV_LYRICS_LEGACY_CUSTOM_SPEAKER_FALLBACKS,
   customFallbackOptions: IV_LYRICS_CUSTOM_SPEAKER_FALLBACK_OPTIONS,
@@ -303,6 +338,13 @@ window.ivLyricsSpeakerColors = {
   },
   applyCssVariables: applyIvLyricsSpeakerColorCssVariables,
 };
+Object.defineProperty(ivLyricsSpeakerColors, UTILS_IV_LYRICS_SPEAKER_CLASS_CONTRACT, {
+  value: Object.freeze({
+    getClassName: getIvLyricsSpeakerClassName,
+    getPresentation: getIvLyricsSpeakerPresentation,
+  }),
+});
+window.ivLyricsSpeakerColors = ivLyricsSpeakerColors;
 
 setTimeout(() => window.ivLyricsSpeakerColors?.applyCssVariables?.(), 0);
 

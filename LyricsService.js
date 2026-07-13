@@ -3318,6 +3318,176 @@
                 .filter(line => line.trim().length > 0);
         };
 
+        const getSyncDataFiniteNumber = (value) => {
+            if (value === null || value === undefined) return null;
+            if (typeof value === 'string' && value.trim().length === 0) return null;
+            const numeric = Number(value);
+            return Number.isFinite(numeric) ? numeric : null;
+        };
+
+        const getSyncDataMilliseconds = (value) => {
+            const seconds = getSyncDataFiniteNumber(value);
+            return seconds === null ? null : Math.round(seconds * 1000);
+        };
+
+        const getSyncDataBaseLyricsTimingRows = (lyrics) => (
+            (Array.isArray(lyrics) ? lyrics : [])
+                .filter(line => String(line?.text || '').trim().length > 0)
+                .map(line => ({
+                    startTime: getSyncDataFiniteNumber(line?.startTime),
+                    endTime: getSyncDataFiniteNumber(line?.endTime)
+                }))
+        );
+
+        /**
+         * Repairs only non-increasing timestamp clusters. Positive, intentionally short
+         * intervals are preserved exactly. Severely collapsed lines can use the original
+         * provider line timing as a conservative fallback.
+         */
+        function normalizeSyncDataTimestampSequence(timestampMs, options = {}) {
+            if (!Array.isArray(timestampMs) || timestampMs.length === 0) {
+                return {
+                    times: Array.isArray(timestampMs) ? timestampMs : [],
+                    changed: false,
+                    usedLineFallback: false,
+                    duplicateCount: 0,
+                    unresolvedDuplicateCount: 0,
+                    longestCluster: 0
+                };
+            }
+
+            const fallbackStartOption = getSyncDataFiniteNumber(options.fallbackStartMs);
+            const numericTimestamps = timestampMs.map(getSyncDataFiniteNumber);
+            const hasMissingTimestamp = numericTimestamps.some(value => value === null);
+            const firstFiniteTimestamp = numericTimestamps.find(Number.isFinite);
+            const initialTimestamp = fallbackStartOption
+                ?? firstFiniteTimestamp
+                ?? 0;
+            const original = [];
+            for (let index = 0; index < numericTimestamps.length; index++) {
+                const numeric = numericTimestamps[index];
+                original.push(Number.isFinite(numeric)
+                    ? numeric
+                    : (index > 0 ? original[index - 1] : initialTimestamp));
+            }
+            const epsilon = 0.0001;
+            let duplicateCount = 0;
+            let longestCluster = 1;
+            let currentCluster = 1;
+            let hasDecreasingTimestamp = false;
+
+            for (let index = 1; index < original.length; index++) {
+                if (original[index] < original[index - 1] - epsilon) {
+                    hasDecreasingTimestamp = true;
+                }
+                if (original[index] <= original[index - 1] + epsilon) {
+                    duplicateCount++;
+                }
+                if (Math.abs(original[index] - original[index - 1]) <= epsilon) {
+                    currentCluster++;
+                    longestCluster = Math.max(longestCluster, currentCluster);
+                } else {
+                    currentCluster = 1;
+                }
+            }
+
+            if (duplicateCount === 0) {
+                return {
+                    times: hasMissingTimestamp ? original : timestampMs,
+                    changed: hasMissingTimestamp,
+                    usedLineFallback: false,
+                    duplicateCount: 0,
+                    unresolvedDuplicateCount: 0,
+                    longestCluster: 1
+                };
+            }
+
+            const fallbackStart = fallbackStartOption;
+            const fallbackEnd = getSyncDataFiniteNumber(options.fallbackEndMs);
+            const endBound = getSyncDataFiniteNumber(options.endBoundMs);
+            const hasFallbackBounds = options.fallbackStartMs !== null
+                && options.fallbackStartMs !== undefined
+                && options.fallbackEndMs !== null
+                && options.fallbackEndMs !== undefined
+                && Number.isFinite(fallbackStart)
+                && Number.isFinite(fallbackEnd)
+                && fallbackEnd > fallbackStart;
+            const hasEndBound = options.endBoundMs !== null
+                && options.endBoundMs !== undefined
+                && Number.isFinite(endBound);
+            const shouldUseLineFallback = options.forceLineFallback === true && hasFallbackBounds;
+
+            if (shouldUseLineFallback) {
+                const step = (fallbackEnd - fallbackStart) / original.length;
+                const times = original.map((_, index) => fallbackStart + (step * index));
+                return {
+                    times,
+                    changed: true,
+                    usedLineFallback: true,
+                    duplicateCount,
+                    unresolvedDuplicateCount: 0,
+                    longestCluster
+                };
+            }
+
+            // Preserve the cluster's recorded start and spread only toward the next
+            // distinct anchor. Reversed samples are first clamped forward, so a repair
+            // never pulls a syllable earlier than its source time.
+            const times = [...original];
+            let changed = hasMissingTimestamp;
+            if (hasDecreasingTimestamp) {
+                for (let index = 1; index < times.length; index++) {
+                    if (times[index] < times[index - 1]) {
+                        times[index] = times[index - 1];
+                        changed = true;
+                    }
+                }
+            }
+            let clusterStart = 0;
+
+            while (clusterStart < times.length) {
+                let clusterEnd = clusterStart;
+                while (clusterEnd + 1 < times.length
+                    && Math.abs(times[clusterEnd + 1] - times[clusterStart]) <= epsilon) {
+                    clusterEnd++;
+                }
+
+                if (clusterEnd > clusterStart) {
+                    const clusterLength = clusterEnd - clusterStart + 1;
+                    const rightIndex = clusterEnd + 1;
+                    const rightBoundary = rightIndex < times.length
+                        ? times[rightIndex]
+                        : (hasEndBound && endBound > times[clusterEnd] ? endBound : null);
+
+                    if (Number.isFinite(rightBoundary) && rightBoundary > times[clusterStart] + epsilon) {
+                        const step = (rightBoundary - times[clusterStart]) / clusterLength;
+                        for (let offset = 0; offset < clusterLength; offset++) {
+                            times[clusterStart + offset] = times[clusterStart] + (step * offset);
+                        }
+                        changed = true;
+                    }
+                }
+
+                clusterStart = clusterEnd + 1;
+            }
+
+            let unresolvedDuplicateCount = 0;
+            for (let index = 1; index < times.length; index++) {
+                if (times[index] <= times[index - 1] + epsilon) {
+                    unresolvedDuplicateCount++;
+                }
+            }
+
+            return {
+                times,
+                changed,
+                usedLineFallback: false,
+                duplicateCount,
+                unresolvedDuplicateCount,
+                longestCluster
+            };
+        }
+
         const getSyncDataLineCharCounts = (lines) => (
             (Array.isArray(lines) ? lines : [])
                 .map(line => Array.from(String(line || '').normalize('NFC')).length)
@@ -3514,6 +3684,7 @@
                 Number(syncBody.version ?? syncData.version ?? 1) >= 2
                 || hasNormalizedSourceLineShape;
             const baseLyricsLines = getSyncDataBaseLyricsLines(lyrics, shouldNormalizeParentheticalLines);
+            const baseLyricsTimingRows = getSyncDataBaseLyricsTimingRows(lyrics);
             const baseLyricsText = baseLyricsLines.join('\n');
             let normalizedSyncLines = syncLines;
             let sourceLinePrefix = 0;
@@ -3588,24 +3759,162 @@
             normalizedSyncLines = normalizeSyncDataParallelParentheticalRanges(normalizedSyncLines, fullTextChars);
 
             const result = [];
+            const timingRepairStats = {
+                repairedSequences: 0,
+                lineFallbacks: 0,
+                duplicateCount: 0,
+                unresolvedDuplicateCount: 0,
+                longestCluster: 1
+            };
+            const recordTimingRepair = (repair) => {
+                if (!repair || repair.duplicateCount <= 0) return;
+                timingRepairStats.duplicateCount += repair.duplicateCount;
+                timingRepairStats.unresolvedDuplicateCount += repair.unresolvedDuplicateCount;
+                timingRepairStats.longestCluster = Math.max(
+                    timingRepairStats.longestCluster,
+                    repair.longestCluster || 1
+                );
+                if (repair.changed) timingRepairStats.repairedSequences++;
+                if (repair.usedLineFallback) timingRepairStats.lineFallbacks++;
+            };
+            const rawLineCharTimes = normalizedSyncLines.map(line => (
+                line.chars.map(getSyncDataMilliseconds)
+            ));
+            let baseCharOffset = 0;
+            const baseLineCharSpans = baseLyricsLines.map((line, index) => {
+                const start = baseCharOffset;
+                const charCount = Array.from(line).length;
+                baseCharOffset += charCount;
+                return { index, start, end: baseCharOffset - 1 };
+            });
+            const providerLineBounds = normalizedSyncLines.map((line) => {
+                const rangeStart = Number(line?.start);
+                const rangeEnd = Number(line?.end);
+                const firstSpan = baseLineCharSpans.find(span => (
+                    Number.isFinite(rangeStart) && rangeStart >= span.start && rangeStart <= span.end
+                ));
+                const lastSpan = [...baseLineCharSpans].reverse().find(span => (
+                    Number.isFinite(rangeEnd) && rangeEnd >= span.start && rangeEnd <= span.end
+                )) || firstSpan;
+                const firstTimingRow = firstSpan ? baseLyricsTimingRows[firstSpan.index] : null;
+                const lastTimingRow = lastSpan ? baseLyricsTimingRows[lastSpan.index] : firstTimingRow;
+                const nextTimingRow = lastSpan ? baseLyricsTimingRows[lastSpan.index + 1] : null;
+                const fallbackStartTime = Number.isFinite(firstTimingRow?.startTime)
+                    ? firstTimingRow.startTime
+                    : null;
+                const fallbackEndTime = Number.isFinite(nextTimingRow?.startTime)
+                    && Number.isFinite(fallbackStartTime)
+                    && nextTimingRow.startTime > fallbackStartTime
+                    ? nextTimingRow.startTime
+                    : (Number.isFinite(lastTimingRow?.endTime)
+                        && Number.isFinite(fallbackStartTime)
+                        && lastTimingRow.endTime > fallbackStartTime
+                        ? lastTimingRow.endTime
+                        : null);
+                return { fallbackStartTime, fallbackEndTime };
+            });
+            const fallbackCandidates = rawLineCharTimes.map((times, index) => {
+                const line = normalizedSyncLines[index];
+                const { fallbackStartTime, fallbackEndTime } = providerLineBounds[index];
+                if (!times.length
+                    || !Number.isFinite(fallbackStartTime)
+                    || !Number.isFinite(fallbackEndTime)
+                    || (Array.isArray(line?.parallel?.parts) && line.parallel.parts.length > 1)) {
+                    return null;
+                }
+
+                const finiteTimes = times.filter(Number.isFinite);
+                let prefixClusterLength = 1;
+                while (Number.isFinite(times[0])
+                    && prefixClusterLength < times.length
+                    && times[prefixClusterLength] === times[0]) {
+                    prefixClusterLength++;
+                }
+                const isFullyCollapsed = finiteTimes.length > 0
+                    && finiteTimes.every(time => time === finiteTimes[0]);
+                const hasDisplacedPrefixCluster = prefixClusterLength >= 4
+                    && fallbackStartTime > times[0] + 250;
+                return isFullyCollapsed || hasDisplacedPrefixCluster ? fallbackStartTime : null;
+            });
+            const sourceLineStarts = rawLineCharTimes.map((times, index) => {
+                if (Number.isFinite(times[0])) return times[0];
+                if (Number.isFinite(providerLineBounds[index].fallbackStartTime)) {
+                    return providerLineBounds[index].fallbackStartTime;
+                }
+                return times.find(Number.isFinite) ?? null;
+            });
+            const proposedLineStarts = rawLineCharTimes.map((times, index) => (
+                Number.isFinite(fallbackCandidates[index])
+                    ? fallbackCandidates[index]
+                    : sourceLineStarts[index]
+            ));
+            const effectiveLineStarts = [...proposedLineStarts];
+            const acceptedLineFallbacks = fallbackCandidates.map(Number.isFinite);
+            let fallbackPlanChanged = true;
+            while (fallbackPlanChanged) {
+                fallbackPlanChanged = false;
+                for (let index = 0; index < effectiveLineStarts.length; index++) {
+                    if (!acceptedLineFallbacks[index]) continue;
+                    const previousStart = index > 0 ? effectiveLineStarts[index - 1] : -Infinity;
+                    const nextStart = index + 1 < effectiveLineStarts.length
+                        ? effectiveLineStarts[index + 1]
+                        : providerLineBounds[index].fallbackEndTime;
+                    if (effectiveLineStarts[index] <= previousStart
+                        || !Number.isFinite(nextStart)
+                        || effectiveLineStarts[index] >= nextStart) {
+                        effectiveLineStarts[index] = sourceLineStarts[index];
+                        acceptedLineFallbacks[index] = false;
+                        fallbackPlanChanged = true;
+                    }
+                }
+            }
+            const lineTimingRepairs = rawLineCharTimes.map((times, index) => {
+                const forceLineFallback = acceptedLineFallbacks[index];
+                const nextLineStart = effectiveLineStarts[index + 1];
+                const fallbackEndTime = Number.isFinite(nextLineStart)
+                    ? nextLineStart
+                    : providerLineBounds[index].fallbackEndTime;
+                const lastFiniteTime = [...times].reverse().find(Number.isFinite);
+                const endBound = Number.isFinite(nextLineStart)
+                    ? nextLineStart
+                    : (Number.isFinite(fallbackEndTime)
+                        ? fallbackEndTime
+                        : (Number.isFinite(lastFiniteTime)
+                            ? lastFiniteTime + 2000
+                            : effectiveLineStarts[index] + 2000));
+                return normalizeSyncDataTimestampSequence(times, {
+                    fallbackStartMs: effectiveLineStarts[index],
+                    fallbackEndMs: fallbackEndTime,
+                    endBoundMs: endBound,
+                    forceLineFallback
+                });
+            });
+            lineTimingRepairs.forEach(recordTimingRepair);
 
             for (let i = 0; i < normalizedSyncLines.length; i++) {
                 const lineData = normalizedSyncLines[i];
-                const nextLineData = normalizedSyncLines[i + 1];
 
                 // 해당 범위의 텍스트 추출 (유니코드 문자 배열에서 slice 사용)
                 const lineText = fullTextChars.slice(lineData.start, lineData.end + 1).join('');
 
+                const lineTimingRepair = lineTimingRepairs[i];
+                const lineCharTimes = lineTimingRepair.times;
+
                 // 라인 시작/종료 시간 계산 (일단 다음 줄 시작 전까지로 잡지만, 아래에서 조정함)
-                const lineStartTime = Math.round(lineData.chars[0] * 1000);
-                let lineEndTime = nextLineData
-                    ? Math.round(nextLineData.chars[0] * 1000)
-                    : Math.round(lineData.chars[lineData.chars.length - 1] * 1000) + 2000;
+                let lineStartTime = lineCharTimes[0];
+                let lineEndTime = lineTimingRepairs[i + 1]
+                    ? lineTimingRepairs[i + 1].times[0]
+                    : (lineCharTimes[lineCharTimes.length - 1] ?? lineStartTime) + 2000;
+                if (lineTimingRepair.usedLineFallback) {
+                    const safeFallbackEnd = effectiveLineStarts[i + 1]
+                        ?? providerLineBounds[i].fallbackEndTime;
+                    if (Number.isFinite(safeFallbackEnd) && safeFallbackEnd > lineStartTime) {
+                        lineEndTime = safeFallbackEnd;
+                    }
+                }
 
                 // 평균 글자 지속 시간 계산 (초 단위)
-                const lineDuration = (nextLineData
-                    ? nextLineData.chars[0]
-                    : lineData.chars[lineData.chars.length - 1] + 1) - lineData.chars[0];
+                const lineDuration = Math.max(0, lineEndTime - lineStartTime) / 1000;
                 const avgCharDuration = Math.max(0.2, lineDuration / Math.max(1, lineData.chars.length));
 
                 // 마지막 글자의 자연스러운 최대 지속 시간 (평균의 2.5배 또는 최대 1.5초)
@@ -3617,14 +3926,14 @@
                 const chars = Array.from(lineText); // 유니코드 문자 지원
 
                 for (let j = 0; j < lineData.chars.length && j < chars.length; j++) {
-                    const charStartTime = Math.round(lineData.chars[j] * 1000);
+                    const charStartTime = lineCharTimes[j];
                     let charEndTime;
 
                     if (j < lineData.chars.length - 1) {
-                        charEndTime = Math.round(lineData.chars[j + 1] * 1000);
+                        charEndTime = lineCharTimes[j + 1];
                     } else {
                         // 마지막 글자: 다음 줄 시작 시간과 자연스러운 종료 시간 중 더 빠른 것 선택
-                        const naturalEndTime = Math.round((lineData.chars[j] + lastCharMaxDuration) * 1000);
+                        const naturalEndTime = charStartTime + Math.round(lastCharMaxDuration * 1000);
                         charEndTime = Math.min(lineEndTime, naturalEndTime);
 
                         // 라인 전체 종료 시간도 이에 맞춰 조정 (너무 길게 늘어지는 것 방지)
@@ -3649,11 +3958,17 @@
                             const joinMode = Array.isArray(part.join) ? Number(part.join[rangeIndex - 1]) : 1;
                             if (joinMode === 1 || joinMode === 2) {
                                 text += ' ';
+                                const previousPartTime = getSyncDataMilliseconds(
+                                    part.chars[Math.max(0, partCharIndex - 1)]
+                                );
+                                const firstLineTime = getSyncDataMilliseconds(lineData.chars[0]);
                                 const gapStartTime = partSyllables[partSyllables.length - 1]?.endTime
-                                    ?? Math.round((part.chars[Math.max(0, partCharIndex - 1)] || lineData.chars[0]) * 1000);
-                                const nextRangeTime = Number(part.chars[partCharIndex]);
+                                    ?? previousPartTime
+                                    ?? firstLineTime
+                                    ?? lineStartTime;
+                                const nextRangeTime = getSyncDataMilliseconds(part.chars[partCharIndex]);
                                 const gapEndTime = Number.isFinite(nextRangeTime)
-                                    ? Math.max(gapStartTime, Math.round(nextRangeTime * 1000))
+                                    ? Math.max(gapStartTime, nextRangeTime)
                                     : gapStartTime;
                                 partSyllables.push({
                                     text: ' ',
@@ -3663,20 +3978,47 @@
                             }
                         }
 
+                        const rangeCharCount = Math.max(0, range.end - range.start + 1);
+                        const rangeRawTimes = part.chars
+                            .slice(partCharIndex, partCharIndex + rangeCharCount)
+                            .map(getSyncDataMilliseconds);
+                        const nextRangeTime = getSyncDataMilliseconds(
+                            part.chars[partCharIndex + rangeCharCount]
+                        );
+                        const rangeEndBound = Number.isFinite(nextRangeTime)
+                            ? nextRangeTime
+                            : lineEndTime;
+                        const rangeStartTime = Number.isFinite(rangeRawTimes[0])
+                            ? rangeRawTimes[0]
+                            : (rangeRawTimes.find(Number.isFinite) ?? lineStartTime);
+                        const rangeTimingRepair = normalizeSyncDataTimestampSequence(rangeRawTimes, {
+                            fallbackStartMs: rangeStartTime,
+                            fallbackEndMs: rangeEndBound,
+                            endBoundMs: rangeEndBound,
+                            allowLineFallback: false
+                        });
+                        const rangeCharTimes = rangeTimingRepair.times;
+                        recordTimingRepair(rangeTimingRepair);
+
                         for (let sourceIndex = range.start; sourceIndex <= range.end; sourceIndex++) {
                             const char = fullTextChars[sourceIndex] || '';
-                            const charStart = Math.round((part.chars[partCharIndex] ?? lineData.chars[0]) * 1000);
-                            const nextPartTime = Number(part.chars[partCharIndex + 1]);
+                            const rangeCharIndex = sourceIndex - range.start;
+                            const fallbackCharStart = getSyncDataMilliseconds(part.chars[partCharIndex])
+                                ?? getSyncDataMilliseconds(lineData.chars[0])
+                                ?? lineStartTime;
+                            const charStart = rangeCharTimes[rangeCharIndex]
+                                ?? fallbackCharStart;
+                            const nextPartTime = rangeCharTimes[rangeCharIndex + 1];
                             const naturalEndTime = charStart + Math.round(lastCharMaxDuration * 1000);
                             const isRangeBoundary = sourceIndex === range.end && rangeIndex < part.ranges.length - 1;
                             let charEnd;
                             if (Number.isFinite(nextPartTime)) {
-                                const nextCharStartTime = Math.round(nextPartTime * 1000);
+                                const nextCharStartTime = nextPartTime;
                                 charEnd = isRangeBoundary
                                     ? Math.min(nextCharStartTime, naturalEndTime)
                                     : nextCharStartTime;
                             } else {
-                                charEnd = Math.min(lineEndTime, naturalEndTime);
+                                charEnd = Math.min(rangeEndBound, naturalEndTime);
                             }
                             charEnd = Math.max(charStart, charEnd);
 
@@ -3764,7 +4106,20 @@
 	                    'speaker-fallback': lineData['speaker-fallback'] || '',
 	                    kind: lineData.kind || 'vocal',
 	                    syllables
-	                });
+                });
+            }
+
+            if (timingRepairStats.duplicateCount > 0) {
+                window.__ivLyricsDebugLog?.('[SyncDataService] Normalized duplicate character timestamps', {
+                    provider: syncData.provider,
+                    sourceProvider: syncSource?.provider,
+                    lrclibId: syncSource?.lrclibId,
+                    repairedSequences: timingRepairStats.repairedSequences,
+                    lineFallbacks: timingRepairStats.lineFallbacks,
+                    duplicateCount: timingRepairStats.duplicateCount,
+                    unresolvedDuplicateCount: timingRepairStats.unresolvedDuplicateCount,
+                    longestCluster: timingRepairStats.longestCluster
+                });
             }
 
             return result;

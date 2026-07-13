@@ -877,6 +877,28 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 .ivlyrics-panel-line-karaoke-part.speaker-duet-4 { --ivlyrics-panel-vocal-color: var(--ivlyrics-multi-vocal-speaker-color-duet-4, #bfaeff); }
 .ivlyrics-panel-line-karaoke-part.speaker-duet-5 { --ivlyrics-panel-vocal-color: var(--ivlyrics-multi-vocal-speaker-color-duet-5, #9d8cf2); }
 
+.ivlyrics-panel-line-karaoke-part.speaker-a, .ivlyrics-panel-line.speaker-a { --ivlyrics-panel-karaoke-color: #ffffff; }
+.ivlyrics-panel-line-karaoke-part.speaker-b, .ivlyrics-panel-line.speaker-b { --ivlyrics-panel-karaoke-color: #9fd8ff; }
+.ivlyrics-panel-line-karaoke-part.speaker-c, .ivlyrics-panel-line.speaker-c { --ivlyrics-panel-karaoke-color: #ffd18a; }
+.ivlyrics-panel-line-karaoke-part.speaker-d, .ivlyrics-panel-line.speaker-d { --ivlyrics-panel-karaoke-color: #d7b8ff; }
+.ivlyrics-panel-line-karaoke-part.speaker-sfx, .ivlyrics-panel-line.speaker-sfx,
+.ivlyrics-panel-line-karaoke-part.effect, .ivlyrics-panel-line.effect { --ivlyrics-panel-karaoke-color: #9ff2c5; }
+.ivlyrics-panel-line-karaoke-part.speaker-male-1, .ivlyrics-panel-line.speaker-male-1 { --ivlyrics-panel-karaoke-color: var(--ivlyrics-multi-vocal-speaker-color-male-1, #a8ccff); }
+.ivlyrics-panel-line-karaoke-part.speaker-male-2, .ivlyrics-panel-line.speaker-male-2 { --ivlyrics-panel-karaoke-color: var(--ivlyrics-multi-vocal-speaker-color-male-2, #9ae8d4); }
+.ivlyrics-panel-line-karaoke-part.speaker-male-3, .ivlyrics-panel-line.speaker-male-3 { --ivlyrics-panel-karaoke-color: var(--ivlyrics-multi-vocal-speaker-color-male-3, #bfe8ff); }
+.ivlyrics-panel-line-karaoke-part.speaker-male-4, .ivlyrics-panel-line.speaker-male-4 { --ivlyrics-panel-karaoke-color: var(--ivlyrics-multi-vocal-speaker-color-male-4, #7fb5e6); }
+.ivlyrics-panel-line-karaoke-part.speaker-male-5, .ivlyrics-panel-line.speaker-male-5 { --ivlyrics-panel-karaoke-color: var(--ivlyrics-multi-vocal-speaker-color-male-5, #6cb8b8); }
+.ivlyrics-panel-line-karaoke-part.speaker-female-1, .ivlyrics-panel-line.speaker-female-1 { --ivlyrics-panel-karaoke-color: var(--ivlyrics-multi-vocal-speaker-color-female-1, #ffb8c7); }
+.ivlyrics-panel-line-karaoke-part.speaker-female-2, .ivlyrics-panel-line.speaker-female-2 { --ivlyrics-panel-karaoke-color: var(--ivlyrics-multi-vocal-speaker-color-female-2, #ffd6b3); }
+.ivlyrics-panel-line-karaoke-part.speaker-female-3, .ivlyrics-panel-line.speaker-female-3 { --ivlyrics-panel-karaoke-color: var(--ivlyrics-multi-vocal-speaker-color-female-3, #f6c8ff); }
+.ivlyrics-panel-line-karaoke-part.speaker-female-4, .ivlyrics-panel-line.speaker-female-4 { --ivlyrics-panel-karaoke-color: var(--ivlyrics-multi-vocal-speaker-color-female-4, #e6b4d4); }
+.ivlyrics-panel-line-karaoke-part.speaker-female-5, .ivlyrics-panel-line.speaker-female-5 { --ivlyrics-panel-karaoke-color: var(--ivlyrics-multi-vocal-speaker-color-female-5, #f6e5a5); }
+.ivlyrics-panel-line-karaoke-part.speaker-duet-1, .ivlyrics-panel-line.speaker-duet-1 { --ivlyrics-panel-karaoke-color: var(--ivlyrics-multi-vocal-speaker-color-duet-1, #e4d8ff); }
+.ivlyrics-panel-line-karaoke-part.speaker-duet-2, .ivlyrics-panel-line.speaker-duet-2 { --ivlyrics-panel-karaoke-color: var(--ivlyrics-multi-vocal-speaker-color-duet-2, #d6e4ff); }
+.ivlyrics-panel-line-karaoke-part.speaker-duet-3, .ivlyrics-panel-line.speaker-duet-3 { --ivlyrics-panel-karaoke-color: var(--ivlyrics-multi-vocal-speaker-color-duet-3, #ffddf2); }
+.ivlyrics-panel-line-karaoke-part.speaker-duet-4, .ivlyrics-panel-line.speaker-duet-4 { --ivlyrics-panel-karaoke-color: var(--ivlyrics-multi-vocal-speaker-color-duet-4, #bfaeff); }
+.ivlyrics-panel-line-karaoke-part.speaker-duet-5, .ivlyrics-panel-line.speaker-duet-5 { --ivlyrics-panel-karaoke-color: var(--ivlyrics-multi-vocal-speaker-color-duet-5, #9d8cf2); }
+
 .ivlyrics-panel-line-karaoke-part .ivlyrics-panel-line-phonetic {
   color: var(--ivlyrics-panel-vocal-color, rgba(255, 255, 255, 0.75)) !important;
   opacity: 0.72 !important;
@@ -1235,7 +1257,7 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 /* 노래방 단어 - 활성 (하이라이트 + 미세 바운스) */
 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-karaoke-text-run-segment.sung {
-  color: #ffffff !important;
+  color: var(--ivlyrics-panel-karaoke-color, #ffffff) !important;
   animation: none !important;
   transform: none !important;
 }
@@ -1248,7 +1270,7 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 
 .ivlyrics-panel-line.active .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.active .ivlyrics-panel-karaoke-text-run-segment.sung {
-  color: #ffffff !important;
+  color: var(--ivlyrics-panel-karaoke-color, #ffffff) !important;
   text-shadow: 0 0 10px rgba(255, 255, 255, 0.5) !important;
 }
 
@@ -1298,11 +1320,12 @@ body.${PANEL_ACTIVE_BODY_CLASS} [data-testid="lyrics-npv-section"] {
 .ivlyrics-panel-line.speaker-duet-5 .ivlyrics-panel-karaoke-word.sung,
 .ivlyrics-panel-line.speaker-duet-5.active .ivlyrics-panel-line-text { color: var(--ivlyrics-multi-vocal-speaker-color-duet-5, #9d8cf2) !important; }
 
+.ivlyrics-panel-line.active .ivlyrics-panel-karaoke-word.active,
 .ivlyrics-panel-line.active .ivlyrics-panel-karaoke-text-run-segment.active {
   color: transparent !important;
   background-image: linear-gradient(var(--ivlyrics-panel-karaoke-gradient-direction, to right),
-      #ffffff 0,
-      #ffffff var(--ivlyrics-panel-karaoke-fill-soft-start, var(--ivlyrics-panel-karaoke-fill, 0%)),
+      var(--ivlyrics-panel-karaoke-color, #ffffff) 0,
+      var(--ivlyrics-panel-karaoke-color, #ffffff) var(--ivlyrics-panel-karaoke-fill-soft-start, var(--ivlyrics-panel-karaoke-fill, 0%)),
       rgba(255, 255, 255, 0.6) var(--ivlyrics-panel-karaoke-fill-soft-end, var(--ivlyrics-panel-karaoke-fill, 0%)),
       rgba(255, 255, 255, 0.6) 100%) !important;
   background-repeat: no-repeat !important;
@@ -1958,7 +1981,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             || (presentation.speakerClass ? `--ivlyrics-multi-vocal-speaker-color-${presentation.speakerClass}` : '');
         return {
             ...(cssVariable ? { [cssVariable]: presentation.creatorColor } : {}),
-            '--ivlyrics-panel-vocal-color': presentation.creatorColor
+            '--ivlyrics-panel-vocal-color': presentation.creatorColor,
+            '--ivlyrics-panel-karaoke-color': presentation.creatorColor
         };
     };
 
@@ -2644,46 +2668,75 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     // 노래방 단어 컴포넌트 (개별 syllable)
     // DOM 직접 조작으로 리렌더링 없이 하이라이트
     // ============================================
-    const KaraokeWord = memo(({ syllable, idx, isLinePast }) => {
+    const KaraokeWord = memo(({ syllable, idx, isLinePast, isLineActive }) => {
         const wordRef = useRef(null);
         const text = syllable.text || '';
 
-        // 외부에서 시간 업데이트 시 클래스만 토글 (리렌더링 없음)
+        // 외부에서 시간 업데이트 시 클래스/CSS 변수만 갱신 (리렌더링 없음)
         useEffect(() => {
             if (!wordRef.current) return;
+
+            let lastState = null;
+            let lastFill = null;
 
             const updateSungState = () => {
                 const el = wordRef.current;
                 if (!el) return;
 
-                // isLinePast가 true면 항상 sung
-                if (isLinePast) {
-                    if (!el.classList.contains('sung')) {
-                        el.classList.add('sung');
-                    }
-                    return;
+                const currentTime = window._ivLyricsPanelCurrentTime || 0;
+                const fill = isLinePast
+                    ? 100
+                    : (isLineActive ? getKaraokeTextRunFill(syllable, currentTime) : 0);
+                const isDone = fill >= 100;
+                const isActive = fill > 0 && fill < 100;
+                const state = isDone ? 'done' : (isActive ? 'active' : 'pending');
+                const stateChanged = state !== lastState;
+                if (!stateChanged && (!isActive || fill === lastFill)) return;
+
+                lastState = state;
+                lastFill = fill;
+
+                if (stateChanged) {
+                    el.classList.toggle('sung', isDone);
+                    el.classList.toggle('active', isActive);
                 }
 
-                // 현재 시간과 비교 (ref에서 직접 읽음)
-                const currentTime = window._ivLyricsPanelCurrentTime || 0;
-                const shouldBeSung = currentTime >= syllable.startTime;
-
-                if (shouldBeSung && !el.classList.contains('sung')) {
-                    el.classList.add('sung');
-                } else if (!shouldBeSung && el.classList.contains('sung')) {
-                    el.classList.remove('sung');
+                if (isActive) {
+                    const softEdge = 10;
+                    let percentText;
+                    if (stateChanged) {
+                        el.style.setProperty('--ivlyrics-panel-karaoke-gradient-direction', 'to right');
+                    }
+                    el.style.setProperty('--ivlyrics-panel-karaoke-fill',
+                        typeof (percentText = String(fill)) === 'string'
+                            ? (KARAOKE_PERCENT_STRING_CACHE[percentText] ?? percentText + '%')
+                            : percentText + '%');
+                    el.style.setProperty('--ivlyrics-panel-karaoke-fill-soft-start',
+                        typeof (percentText = String(Math.max(0, fill - softEdge))) === 'string'
+                            ? (KARAOKE_PERCENT_STRING_CACHE[percentText] ?? percentText + '%')
+                            : percentText + '%');
+                    el.style.setProperty('--ivlyrics-panel-karaoke-fill-soft-end',
+                        typeof (percentText = String(Math.min(100, fill + softEdge))) === 'string'
+                            ? (KARAOKE_PERCENT_STRING_CACHE[percentText] ?? percentText + '%')
+                            : percentText + '%');
+                } else if (stateChanged) {
+                    el.style.removeProperty('--ivlyrics-panel-karaoke-gradient-direction');
+                    el.style.removeProperty('--ivlyrics-panel-karaoke-fill');
+                    el.style.removeProperty('--ivlyrics-panel-karaoke-fill-soft-start');
+                    el.style.removeProperty('--ivlyrics-panel-karaoke-fill-soft-end');
                 }
             };
 
             // 초기 상태 설정
             updateSungState();
 
-            // 커스텀 이벤트로 업데이트 수신
+            // 활성 라인만 고빈도 시간 이벤트를 구독해 패널 전체 비용을 제한한다.
+            if (!isLineActive || isLinePast) return undefined;
             window.addEventListener('ivlyrics-panel-time-update', updateSungState);
             return () => {
                 window.removeEventListener('ivlyrics-panel-time-update', updateSungState);
             };
-        }, [syllable.startTime, isLinePast]);
+        }, [syllable, isLinePast, isLineActive]);
 
         // 텍스트가 비어있으면 렌더링하지 않음
         if (!text) return null;
@@ -2714,7 +2767,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         }, text);
     });
 
-    const KaraokeTextRunSegment = memo(({ segment, idx, isLinePast, textDirection }) => {
+    const KaraokeTextRunSegment = memo(({ segment, idx, isLinePast, isLineActive, textDirection }) => {
         const segmentRef = useRef(null);
         const text = segment?.text || "";
         const segmentDirection = getKaraokeTextDirection(text) || textDirection || "ltr";
@@ -2731,7 +2784,9 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 if (!el) return;
 
                 const currentTime = window._ivLyricsPanelCurrentTime || 0;
-                const fill = isLinePast ? 100 : getKaraokeTextRunFill(segment, currentTime);
+                const fill = isLinePast
+                    ? 100
+                    : (isLineActive ? getKaraokeTextRunFill(segment, currentTime) : 0);
                 const isDone = fill >= 100;
                 const isActive = fill > 0 && fill < 100;
                 const state = isDone ? "done" : (isActive ? "active" : "pending");
@@ -2773,11 +2828,12 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             };
 
             updateSegmentState();
+            if (!isLineActive || isLinePast) return undefined;
             window.addEventListener("ivlyrics-panel-time-update", updateSegmentState);
             return () => {
                 window.removeEventListener("ivlyrics-panel-time-update", updateSegmentState);
             };
-        }, [segment, text, isLinePast, gradientDirection]);
+        }, [segment, text, isLinePast, isLineActive, gradientDirection]);
 
         if (!text) return null;
         if (segment?.type === "space") {
@@ -2889,6 +2945,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                             segment,
                             idx,
                             isLinePast: isPast,
+                            isLineActive: isActive,
                             textDirection
                         })
                     )
@@ -2901,7 +2958,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     key: keyPrefix + "-" + idx,
                     syllable,
                     idx,
-                    isLinePast: isPast
+                    isLinePast: isPast,
+                    isLineActive: isActive
                 })
             );
             const renderElements = wrapByWord
@@ -4102,12 +4160,10 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         useEffect(() => {
             let lastIndex = currentIndex;
             let lastTrailingInterludeKey = null;
-            let lastEventTime = 0;
             let intervalId = null;
             let cachedDelay = null;
             let lastTrackUri = null;
             const UPDATE_INTERVAL = 30; // 업데이트 간격 (ms) - RAF보다 CPU 효율적
-            const EVENT_THROTTLE = 80; // 이벤트 발생 간격 (ms) - 노래방 업데이트용
             const resolveTrailingInterludeInfo = createTrailingKaraokeInterludeResolver(lyrics);
 
             // 이진 탐색으로 현재 라인 찾기 (O(log n))
@@ -4182,12 +4238,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     setActiveTrailingInterludeKey(nextTrailingInterludeKey);
                 }
 
-                // 노래방 가사 업데이트 이벤트 발생 (throttled)
-                const now = performance.now();
-                if (now - lastEventTime >= EVENT_THROTTLE) {
-                    lastEventTime = now;
-                    window.dispatchEvent(new Event('ivlyrics-panel-time-update'));
-                }
+                // 활성 라인만 구독하므로 매 tick 연속 fill을 갱신해도 비용이 제한된다.
+                window.dispatchEvent(new Event('ivlyrics-panel-time-update'));
             };
 
             if (isEnabled && lyrics.length > 0) {

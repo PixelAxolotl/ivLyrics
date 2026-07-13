@@ -2560,7 +2560,7 @@ const getPlainLyricsLines = (...sources) => {
   return [];
 };
 
-const SYNC_DATA_RENDERER_VERSION = "2026-05-28-parenthetical-v3-1";
+const SYNC_DATA_RENDERER_VERSION = "2026-07-13-timestamp-cluster-v1";
 const getLyricsProviderSelectionPolicy = () => (
   `${CONFIG.visual["prefer-lyrics-type-over-provider-order"] !== false
     && CONFIG.visual["prefer-lyrics-type-over-provider-order"] !== "false"

@@ -38,7 +38,7 @@ const disableYouTubeCaptions = (player) => {
     } catch (e) { }
 };
 
-const YOUTUBE_IFRAME_UI_CONCEAL_MS = 1200;
+const YOUTUBE_IFRAME_UI_CONCEAL_MS = 600;
 
 const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, coverMode, videoScale, externalVideoInfo }) => {
     const { useState, useEffect, useRef, useCallback } = react;

@@ -79,6 +79,8 @@
     let globalMousetrap = null;
     let currentBoundKey = null;
     let currentToggleTvKey = null;
+    let fullscreenBindingActive = false;
+    let tvModeBindingActive = false;
 
     // 전체화면 진입 전 페이지 저장 (GlobalShortcuts를 통해 진입한 경우만)
     let previousPathBeforeFullscreen = null;
@@ -190,10 +192,13 @@
         if (!globalMousetrap) return;
 
         const newKey = getFullscreenKey();
+        if (newKey === currentBoundKey && fullscreenBindingActive) return;
 
         // 기존 바인딩이 있으면 먼저 해제
         if (currentBoundKey) {
             globalMousetrap.unbind(currentBoundKey);
+            fullscreenBindingActive = false;
+            if (currentToggleTvKey === currentBoundKey) tvModeBindingActive = false;
             currentBoundKey = null;
         }
 
@@ -205,6 +210,8 @@
                 toggleFullscreen();
             });
             currentBoundKey = newKey;
+            fullscreenBindingActive = true;
+            if (currentToggleTvKey === newKey) tvModeBindingActive = false;
         }
     };
 
@@ -213,10 +220,13 @@
         if (!globalMousetrap) return;
 
         const newToggleTvKey = getToggleTvKey();
+        if (newToggleTvKey === currentToggleTvKey && tvModeBindingActive) return;
 
         // 기존 바인딩 해제
         if (currentToggleTvKey) {
             globalMousetrap.unbind(currentToggleTvKey);
+            tvModeBindingActive = false;
+            if (currentBoundKey === currentToggleTvKey) fullscreenBindingActive = false;
             currentToggleTvKey = null;
         }
 
@@ -230,6 +240,8 @@
                 toggleTvMode();
             });
             currentToggleTvKey = newToggleTvKey;
+            tvModeBindingActive = true;
+            if (currentBoundKey === newToggleTvKey) fullscreenBindingActive = false;
         }
     };
 

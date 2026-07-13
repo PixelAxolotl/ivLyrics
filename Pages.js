@@ -2909,13 +2909,10 @@ const countKaraokeCharacters = (value) => {
 	return count;
 };
 
-const buildGlobalCharState = (lyrics, position) => {
+const prepareGlobalCharTimeline = (lyrics) => {
 	const offsets = new Array(lyrics.length);
+	const chars = [];
 	let totalChars = 0;
-	let activeCharIndex = -1;
-	let lastPassedCharIndex = -1;
-	let lastPassedCharEndTime = 0;
-	let lastPassedCharDuration = 100;
 
 	for (let i = 0; i < lyrics.length; i++) {
 		const line = lyrics[i];
@@ -2946,19 +2943,36 @@ const buildGlobalCharState = (lyrics, position) => {
 					const charStart = syllableStart + (charIdx * charDuration);
 					const charEnd = charStart + charDuration;
 
-					if (position >= charStart && position < charEnd) {
-						activeCharIndex = totalChars;
-					}
-
-					if (position >= charEnd && charEnd > lastPassedCharEndTime) {
-						lastPassedCharEndTime = charEnd;
-						lastPassedCharIndex = totalChars;
-						lastPassedCharDuration = charDuration || 100;
-					}
-
+					chars.push(charStart, charEnd, charDuration);
 					totalChars++;
 				}
 			}
+		}
+	}
+
+	return {
+		globalCharOffsets: offsets,
+		chars,
+	};
+};
+
+const queryGlobalCharTimeline = (timeline, position) => {
+	let activeCharIndex = -1;
+	let lastPassedCharIndex = -1;
+	let lastPassedCharEndTime = 0;
+	let lastPassedCharDuration = 100;
+
+	for (let valueIndex = 0, charIndex = 0; valueIndex < timeline.chars.length; valueIndex += 3, charIndex++) {
+		const charStart = timeline.chars[valueIndex];
+		const charEnd = timeline.chars[valueIndex + 1];
+		const charDuration = timeline.chars[valueIndex + 2];
+		if (position >= charStart && position < charEnd) {
+			activeCharIndex = charIndex;
+		}
+		if (position >= charEnd && charEnd > lastPassedCharEndTime) {
+			lastPassedCharEndTime = charEnd;
+			lastPassedCharIndex = charIndex;
+			lastPassedCharDuration = charDuration || 100;
 		}
 	}
 
@@ -2973,7 +2987,7 @@ const buildGlobalCharState = (lyrics, position) => {
 	}
 
 	return {
-		globalCharOffsets: offsets,
+		globalCharOffsets: timeline.globalCharOffsets,
 		activeGlobalCharIndex: activeCharIndex,
 	};
 };
@@ -3792,13 +3806,19 @@ const useSyncedLyricsEngine = ({
 		? leadingEmptyLines
 		: activeLineIndex;
 
-	const { globalCharOffsets, activeGlobalCharIndex } = useMemo(() => {
+	const globalCharTimeline = useMemo(() => {
 		if (!isKara) {
-			return EMPTY_GLOBAL_CHAR_STATE;
+			return null;
 		}
 
-		return buildGlobalCharState(lyrics, position);
-	}, [lyrics, position, isKara]);
+		return prepareGlobalCharTimeline(lyrics);
+	}, [lyrics, isKara]);
+
+	const { globalCharOffsets, activeGlobalCharIndex } = useMemo(() => (
+		globalCharTimeline
+			? queryGlobalCharTimeline(globalCharTimeline, position)
+			: EMPTY_GLOBAL_CHAR_STATE
+	), [globalCharTimeline, position]);
 
 	const activeSourceLineIndex = activeLineIndex - leadingEmptyLines;
 	const activeTrailingInterludeLine = useMemo(() => (

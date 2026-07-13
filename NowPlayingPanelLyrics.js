@@ -45,7 +45,7 @@
     };
 
     const react = Spicetify.React;
-    const { useState, useEffect, useRef, useCallback, useMemo, memo } = react;
+    const { useState, useEffect, useLayoutEffect, useRef, useCallback, useMemo, memo } = react;
 
     // 설정 키
     const STORAGE_KEY = "ivLyrics:visual:panel-lyrics-enabled";
@@ -2676,7 +2676,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         const text = syllable.text || '';
 
         // 외부에서 시간 업데이트 시 기존 단어 단위 하이라이트만 갱신 (리렌더링 없음)
-        useEffect(() => {
+        useLayoutEffect(() => {
             if (!wordRef.current) return;
 
             const updateSungState = () => {
@@ -2745,7 +2745,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         const segmentDirection = getKaraokeTextDirection(text) || textDirection || "ltr";
         const gradientDirection = segmentDirection === "rtl" ? "to left" : "to right";
 
-        useEffect(() => {
+        useLayoutEffect(() => {
             if (!segmentRef.current || !text || segment?.type === "space") return;
 
             let lastState = null;
@@ -4499,8 +4499,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 window.removeEventListener('ivlyrics-panel-anchor-update', scheduleAnchorUpdate);
             };
         }, [visibleLines, currentVisibleIndex, fontScale, panelLineSlotHeight, instrumentalBreakRevision, textEffectRevision]);
-        const renderVisibleLine = (visLine, idx, keyPrefix) => react.createElement(LyricLine, {
-            key: `${keyPrefix}-${visLine.index}-${idx}`,
+        const renderVisibleLine = (visLine, keyPrefix) => react.createElement(LyricLine, {
+            key: `${keyPrefix}-${visLine.index}`,
             line: visLine.line,
             lineIndex: visLine.lineIndex,
             lineCount: visLine.lineCount,
@@ -4550,12 +4550,12 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 ref: scrollRef
             },
                 react.createElement("div", { className: "ivlyrics-panel-lines-stack" },
-                    visibleLines.map((visLine, idx) =>
+                    visibleLines.map((visLine) =>
                         react.createElement("div", {
-                            key: `cell-${visLine.index}-${idx}`,
+                            key: `cell-${visLine.index}`,
                             className: `ivlyrics-panel-line-cell${visLine.isActive ? " current ivlyrics-panel-current-line" : ""}`
                         },
-                            renderVisibleLine(visLine, idx, "stack")
+                            renderVisibleLine(visLine, "stack")
                         )
                     )
                 )

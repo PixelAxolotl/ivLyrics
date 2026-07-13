@@ -3257,21 +3257,20 @@ const buildKaraokeTextRunSegments = (timedChars) => {
 
 	const segments = [];
 	let currentSegment = null;
+	const timedCharCount = timedChars.length;
 
-	const flushSegment = () => {
-		if (!currentSegment || currentSegment.text.length === 0) {
-			currentSegment = null;
-			return;
+	for (let index = 0; index < timedCharCount; index++) {
+		if (!(index in timedChars)) {
+			continue;
 		}
-		segments.push(currentSegment);
-		currentSegment = null;
-	};
 
-	timedChars.forEach((charInfo, index) => {
+		const charInfo = timedChars[index];
 		const char = charInfo?.char || "";
-		const type = /\s/u.test(char) ? "space" : "text";
+		const type = KARAOKE_WHITESPACE_CHAR_REGEX.test(char) ? "space" : "text";
 		if (!currentSegment || currentSegment.type !== type) {
-			flushSegment();
+			if (currentSegment?.text.length > 0) {
+				segments.push(currentSegment);
+			}
 			currentSegment = {
 				type,
 				startIndex: index,
@@ -3285,9 +3284,11 @@ const buildKaraokeTextRunSegments = (timedChars) => {
 		if (Number.isFinite(charInfo?.endTime)) {
 			currentSegment.endTime = Math.max(currentSegment.endTime, charInfo.endTime);
 		}
-	});
+	}
 
-	flushSegment();
+	if (currentSegment?.text.length > 0) {
+		segments.push(currentSegment);
+	}
 	return segments;
 };
 

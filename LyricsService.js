@@ -3649,12 +3649,16 @@
                             const joinMode = Array.isArray(part.join) ? Number(part.join[rangeIndex - 1]) : 1;
                             if (joinMode === 1 || joinMode === 2) {
                                 text += ' ';
-                                const previousTime = partSyllables[partSyllables.length - 1]?.endTime
+                                const gapStartTime = partSyllables[partSyllables.length - 1]?.endTime
                                     ?? Math.round((part.chars[Math.max(0, partCharIndex - 1)] || lineData.chars[0]) * 1000);
+                                const nextRangeTime = Number(part.chars[partCharIndex]);
+                                const gapEndTime = Number.isFinite(nextRangeTime)
+                                    ? Math.max(gapStartTime, Math.round(nextRangeTime * 1000))
+                                    : gapStartTime;
                                 partSyllables.push({
                                     text: ' ',
-                                    startTime: previousTime,
-                                    endTime: previousTime
+                                    startTime: gapStartTime,
+                                    endTime: gapEndTime
                                 });
                             }
                         }
@@ -3662,10 +3666,19 @@
                         for (let sourceIndex = range.start; sourceIndex <= range.end; sourceIndex++) {
                             const char = fullTextChars[sourceIndex] || '';
                             const charStart = Math.round((part.chars[partCharIndex] ?? lineData.chars[0]) * 1000);
-                            const nextPartTime = part.chars[partCharIndex + 1];
-                            const charEnd = nextPartTime !== undefined
-                                ? Math.round(nextPartTime * 1000)
-                                : Math.min(lineEndTime, charStart + Math.round(lastCharMaxDuration * 1000));
+                            const nextPartTime = Number(part.chars[partCharIndex + 1]);
+                            const naturalEndTime = charStart + Math.round(lastCharMaxDuration * 1000);
+                            const isRangeBoundary = sourceIndex === range.end && rangeIndex < part.ranges.length - 1;
+                            let charEnd;
+                            if (Number.isFinite(nextPartTime)) {
+                                const nextCharStartTime = Math.round(nextPartTime * 1000);
+                                charEnd = isRangeBoundary
+                                    ? Math.min(nextCharStartTime, naturalEndTime)
+                                    : nextCharStartTime;
+                            } else {
+                                charEnd = Math.min(lineEndTime, naturalEndTime);
+                            }
+                            charEnd = Math.max(charStart, charEnd);
 
                             text += char;
                             partSyllables.push({

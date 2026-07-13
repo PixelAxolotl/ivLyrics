@@ -1744,6 +1744,9 @@ window.LANG_ZH_CN = {
   "playbarButton": {
     "label": "歌词 Plus"
   },
+  "generationStatus": {
+    "complete": "完成！"
+  },
   "videoBackground": {
     "loading": "正在加载视频信息...",
     "notFound": "找不到视频。",

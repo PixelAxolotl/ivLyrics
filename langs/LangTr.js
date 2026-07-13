@@ -1744,6 +1744,9 @@ window.LANG_TR = {
   "playbarButton": {
     "label": "ivLyrics"
   },
+  "generationStatus": {
+    "complete": "Tamamlandı!"
+  },
   "videoBackground": {
     "loading": "Video bilgileri yükleniyor...",
     "notFound": "Video bulunamadı.",

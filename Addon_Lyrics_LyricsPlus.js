@@ -33,7 +33,7 @@
     const SOLO_LINE_SPLIT_MIN_WIDTH = 6;
     const SOLO_LINE_SPLIT_MIN_DURATION_MS = 500;
     const SOLO_LINE_SPLIT_MAX_SEGMENTS = 4;
-    const CACHE_VERSION = '2026-07-13-lyricsplus-9';
+    const CACHE_VERSION = '2026-07-13-lyricsplus-10';
     const ATTRIBUTION = 'Lyrics from LyricsPlus.';
     let nextApiBaseIndex = 0;
 
@@ -777,9 +777,9 @@
         const singerParts = new Map();
 
         lines.forEach(line => {
-            const singerId = getCanonicalSingerId(line, agents);
+            const singerId = getCanonicalSingerId(line, agents) || '__default__';
             const part = getLineLeadVocalPart(line);
-            if (!singerId || !part) return;
+            if (!part) return;
             const entries = singerParts.get(singerId) || [];
             entries.push({ part, sourceIndex: line.sourceIndex });
             singerParts.set(singerId, entries);
@@ -835,7 +835,7 @@
             .sort((left, right) => left.startTime - right.startTime || left.sourceIndex - right.sourceIndex);
         const lanes = buildSingerVocalLanes(orderedLines, agents);
         const leadLane = chooseLeadVocalLane(lanes, preferredLeadSingerId);
-        if (!leadLane || lanes.length < 2) return orderedLines[0];
+        if (!leadLane) return orderedLines[0];
 
         const leadLine = orderedLines.find(line => getCanonicalSingerId(line, agents) === leadLane.singerId)
             || orderedLines[0];
@@ -1007,8 +1007,14 @@
         return new Set(lines.map(line => line.lyricsPlusLineKey).filter(Boolean)).size;
     }
 
-    function countSegmentSingers(lines, agents) {
-        return new Set(lines.map(line => getCanonicalSingerId(line, agents)).filter(Boolean)).size;
+    function countSegmentVocalRows(lines, agents) {
+        const leadLaneCount = buildSingerVocalLanes(lines, agents).length;
+        const explicitBackgroundCount = lines.reduce((count, line) => (
+            count + (Array.isArray(line?.vocals?.background)
+                ? line.vocals.background.filter(part => cloneVocalPart(part, 'background')).length
+                : 0)
+        ), 0);
+        return leadLaneCount + explicitBackgroundCount;
     }
 
     function partitionParallelComponent(lines, candidateTime, partsCache = null) {
@@ -1058,7 +1064,7 @@
                 || leftKeyCount < 2
                 || leftKeyCount > PARALLEL_VOCAL_MAX_SOURCE_LINES
                 || partition.right.length === 0
-                || countSegmentSingers(partition.left, agents) < 2) {
+                || countSegmentVocalRows(partition.left, agents) < 2) {
                 return null;
             }
 
@@ -1160,7 +1166,20 @@
         // Build the full overlap component first, then fold it into singer lanes.
         const canReuseParsedLeadParts = Array.isArray(parsedLeadParts)
             && parsedLeadParts.length === lines.length;
-        const segmentationPartsCache = canReuseParsedLeadParts ? new WeakMap() : null;
+        const segmentationPartsCache = new WeakMap();
+        const lineParts = lines.map((line, index) => {
+            const lead = canReuseParsedLeadParts
+                ? parsedLeadParts[index]
+                : getLineLeadVocalPart(line);
+            const background = Array.isArray(line?.vocals?.background)
+                ? line.vocals.background
+                    .map(part => cloneVocalPart(part, 'background'))
+                    .filter(Boolean)
+                : [];
+            const parts = { lead, background };
+            segmentationPartsCache.set(line, parts);
+            return [lead, ...background].filter(Boolean);
+        });
         const parents = lines.map((_line, index) => index);
         const findRoot = index => {
             let root = index;
@@ -1178,38 +1197,33 @@
             if (leftRoot !== rightRoot) parents[rightRoot] = leftRoot;
         };
 
-        const parallelSeeds = [];
+        const parallelSeeds = new Set();
         for (let leftIndex = 0; leftIndex < lines.length; leftIndex++) {
             const left = lines[leftIndex];
-            const leftPart = canReuseParsedLeadParts
-                ? parsedLeadParts[leftIndex]
-                : getLineLeadVocalPart(left);
-            if (!left?.hasWordTiming || !leftPart) continue;
+            const leftParts = lineParts[leftIndex];
+            if (!left?.hasWordTiming || leftParts.length === 0) continue;
+            const leftEndTime = Math.max(...leftParts.map(part => part.endTime));
 
             for (let rightIndex = leftIndex + 1; rightIndex < lines.length; rightIndex++) {
                 const right = lines[rightIndex];
-                const rightPart = canReuseParsedLeadParts
-                    ? parsedLeadParts[rightIndex]
-                    : getLineLeadVocalPart(right);
-                if (!right?.hasWordTiming || !rightPart) continue;
-                if (rightPart.startTime >= leftPart.endTime) break;
+                const rightParts = lineParts[rightIndex];
+                if (!right?.hasWordTiming || rightParts.length === 0) continue;
+                const rightStartTime = Math.min(...rightParts.map(part => part.startTime));
+                if (rightStartTime >= leftEndTime) break;
 
-                const overlap = getVocalPartOverlapMs(leftPart, rightPart);
-                if (overlap <= 0) continue;
-
-                const leftSinger = getCanonicalSingerId(left, agents);
-                const rightSinger = getCanonicalSingerId(right, agents);
-                if (!leftSinger || !rightSinger) continue;
+                const hasMeaningfulOverlap = leftParts.some(leftPart => (
+                    rightParts.some(rightPart => (
+                        getVocalPartOverlapMs(leftPart, rightPart) >= PARALLEL_VOCAL_MIN_OVERLAP_MS
+                    ))
+                ));
+                if (!hasMeaningfulOverlap) continue;
 
                 joinRoots(leftIndex, rightIndex);
-                if (leftSinger !== rightSinger
-                    && overlap >= PARALLEL_VOCAL_MIN_OVERLAP_MS) {
-                    parallelSeeds.push(leftIndex);
-                }
+                parallelSeeds.add(leftIndex);
             }
         }
 
-        const parallelRoots = new Set(parallelSeeds.map(findRoot));
+        const parallelRoots = new Set([...parallelSeeds].map(findRoot));
         const components = new Map();
         lines.forEach((line, index) => {
             const root = findRoot(index);

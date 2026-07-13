@@ -1744,6 +1744,9 @@ window.LANG_MS = {
   "playbarButton": {
     "label": "Lyrics Plus"
   },
+  "generationStatus": {
+    "complete": "Selesai!"
+  },
   "videoBackground": {
     "loading": "Memuatkan maklumat video...",
     "notFound": "Video tidak ditemui.",

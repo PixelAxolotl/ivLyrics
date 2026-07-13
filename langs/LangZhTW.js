@@ -1744,6 +1744,9 @@ window.LANG_ZH_TW = {
   "playbarButton": {
     "label": "歌詞 Plus"
   },
+  "generationStatus": {
+    "complete": "完成！"
+  },
   "videoBackground": {
     "loading": "正在載入影片資訊...",
     "notFound": "找不到影片。",

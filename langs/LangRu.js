@@ -1744,6 +1744,9 @@ window.LANG_RU = {
   "playbarButton": {
     "label": "Текст Плюс"
   },
+  "generationStatus": {
+    "complete": "Готово!"
+  },
   "videoBackground": {
     "loading": "Загрузка информации о видео...",
     "notFound": "Видео не найдено.",

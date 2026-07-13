@@ -1744,6 +1744,9 @@ window.LANG_VI = {
   "playbarButton": {
     "label": "Lyrics Plus"
   },
+  "generationStatus": {
+    "complete": "Hoàn tất!"
+  },
   "videoBackground": {
     "loading": "Đang tải thông tin video...",
     "notFound": "Không tìm thấy video.",

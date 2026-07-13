@@ -1744,6 +1744,9 @@ window.LANG_CS = {
   "playbarButton": {
     "label": "Lyrics Plus"
   },
+  "generationStatus": {
+    "complete": "Hotovo!"
+  },
   "videoBackground": {
     "loading": "Načítání informací o videu...",
     "notFound": "Video nenalezeno.",

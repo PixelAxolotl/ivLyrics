@@ -1744,6 +1744,9 @@ window.LANG_BN = {
   "playbarButton": {
     "label": "লিরিক্স প্লাস"
   },
+  "generationStatus": {
+    "complete": "সম্পন্ন!"
+  },
   "videoBackground": {
     "loading": "ভিডিও তথ্য লোড হচ্ছে...",
     "notFound": "ভিডিও পাওয়া যায়নি।",

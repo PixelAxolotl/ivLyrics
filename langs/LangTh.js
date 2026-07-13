@@ -1744,6 +1744,9 @@ window.LANG_TH = {
   "playbarButton": {
     "label": "เนื้อเพลง Plus"
   },
+  "generationStatus": {
+    "complete": "เสร็จแล้ว!"
+  },
   "videoBackground": {
     "loading": "กำลังโหลดข้อมูลวิดีโอ...",
     "notFound": "ไม่พบวิดีโอ",

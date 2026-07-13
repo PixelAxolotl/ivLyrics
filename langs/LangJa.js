@@ -1744,6 +1744,9 @@ window.LANG_JA = {
   "playbarButton": {
     "label": "歌詞プラス"
   },
+  "generationStatus": {
+    "complete": "完了!"
+  },
   "videoBackground": {
     "loading": "動画情報を読み込み中...",
     "notFound": "動画が見つかりません。",

@@ -1744,6 +1744,9 @@ window.LANG_KO = {
   "playbarButton": {
     "label": "가사 플러스"
   },
+  "generationStatus": {
+    "complete": "완료!"
+  },
   "videoBackground": {
     "loading": "동영상 정보를 불러오는 중...",
     "notFound": "동영상을 찾을 수 없습니다.",

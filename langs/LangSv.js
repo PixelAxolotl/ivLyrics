@@ -1744,6 +1744,9 @@ window.LANG_SV = {
   "playbarButton": {
     "label": "Lyrics Plus"
   },
+  "generationStatus": {
+    "complete": "Klart!"
+  },
   "videoBackground": {
     "loading": "Laddar videoinformation...",
     "notFound": "Videon hittades inte.",

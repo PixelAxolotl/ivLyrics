@@ -1744,6 +1744,9 @@ window.LANG_FA = {
   "playbarButton": {
     "label": "متن آهنگ پلاس"
   },
+  "generationStatus": {
+    "complete": "انجام شد!"
+  },
   "videoBackground": {
     "loading": "در حال بارگذاری اطلاعات ویدیو...",
     "notFound": "ویدیو یافت نشد.",

@@ -3801,6 +3801,30 @@ const LyricsCacheEditModal = ({
   );
 };
 
+// Translation, pronunciation, and video background pills share one timing contract.
+const GENERATION_PILL_TIMING = Object.freeze({
+  loadingDelayMs: 1000,
+  completeHoldMs: 520,
+  exitMs: 180,
+});
+
+const GENERATION_REQUEST_PILL_CONFIG = Object.freeze({
+  pronunciation: Object.freeze({
+    tokensKey: "_activePhoneticLoadingTokens",
+    sequenceKey: "_phoneticLoadingSeq",
+    timerKey: "phoneticLoadingTimer",
+    failureKey: "_phoneticLoadingHadFailure",
+    loadingStateKey: "isPhoneticLoading",
+  }),
+  translation: Object.freeze({
+    tokensKey: "_activeTranslationLoadingTokens",
+    sequenceKey: "_translationLoadingSeq",
+    timerKey: "translationLoadingTimer",
+    failureKey: "_translationLoadingHadFailure",
+    loadingStateKey: "isTranslationLoading",
+  }),
+});
+
 class LyricsContainer extends react.Component {
   constructor() {
     super();
@@ -3844,6 +3868,11 @@ class LyricsContainer extends react.Component {
       language: null,
       isPhoneticLoading: false,
       isTranslationLoading: false,
+      generationPills: {
+        translation: { phase: "idle", revision: 0 },
+        pronunciation: { phase: "idle", revision: 0 },
+        "video-background": { phase: "idle", revision: 0 },
+      },
       currentLyricIndex: 0,
       videoInfo: null,
       // 메타데이터 번역
@@ -3890,17 +3919,26 @@ class LyricsContainer extends react.Component {
     this.lastProcessedUri = null;
     this.lastProcessedMode = null;
 
-    // Translation loading timers - separate for phonetic and translation
+    // Requests are tracked per kind; pill timing and visual lifecycle are shared.
     this.phoneticLoadingTimer = null;
     this.translationLoadingTimer = null;
     this._phoneticLoadingSeq = 0;
     this._translationLoadingSeq = 0;
     this._activePhoneticLoadingTokens = new Set();
     this._activeTranslationLoadingTokens = new Set();
+    this._phoneticLoadingHadFailure = false;
+    this._translationLoadingHadFailure = false;
+    this._generationPillTimers = new Map();
+    this._generationPillRevisions = new Map();
+    this._visibleGenerationPills = new Set();
+    this._videoBackgroundLoadingTimer = null;
+    this._pendingVideoBackgroundStatus = null;
+    this._videoBackgroundStatusTrackUri = "";
     this.streamingApplyTimer = null;
     this.pendingStreamingPayload = null;
     this.floatingMenuCloseTimer = null;
     this._sharedPresentationKeys = new Map();
+    this._isComponentMounted = false;
 
     // Portrait viewport detection
     this._isPortraitViewport = typeof window !== "undefined" && typeof window.matchMedia === "function"
@@ -3956,6 +3994,7 @@ class LyricsContainer extends react.Component {
     this.importLocalLyricsFile = this.importLocalLyricsFile.bind(this);
     this.applyLocalLyrics = this.applyLocalLyrics.bind(this);
     this.applyLocalLyricsFromLrclibCandidate = this.applyLocalLyricsFromLrclibCandidate.bind(this);
+    this.handleVideoBackgroundLoadingChange = this.handleVideoBackgroundLoadingChange.bind(this);
   }
 
   shouldReduceMotion() {
@@ -3964,6 +4003,227 @@ class LyricsContainer extends react.Component {
 
   getMotionDurationMs() {
     return this.shouldReduceMotion() ? 24 : 280;
+  }
+
+  clearGenerationPillTimers(kind) {
+    const timers = this._generationPillTimers.get(kind);
+    if (!timers) return;
+
+    if (timers.exitTimer) clearTimeout(timers.exitTimer);
+    if (timers.removeTimer) clearTimeout(timers.removeTimer);
+    this._generationPillTimers.delete(kind);
+  }
+
+  nextGenerationPillRevision(kind) {
+    const nextRevision = (this._generationPillRevisions.get(kind) || 0) + 1;
+    this._generationPillRevisions.set(kind, nextRevision);
+    return nextRevision;
+  }
+
+  showGenerationPillLoading(kind, details = {}) {
+    this.clearGenerationPillTimers(kind);
+    const revision = this.nextGenerationPillRevision(kind);
+    if (!this._isComponentMounted) return;
+    this._visibleGenerationPills.add(kind);
+
+    this.setState((previousState) => ({
+      generationPills: {
+        ...previousState.generationPills,
+        [kind]: {
+          phase: "loading",
+          revision,
+          label: details.label || "",
+          description: details.description || "",
+        },
+      },
+    }));
+  }
+
+  hideGenerationPill(kind) {
+    this.clearGenerationPillTimers(kind);
+    const revision = this.nextGenerationPillRevision(kind);
+    this._visibleGenerationPills.delete(kind);
+    if (!this._isComponentMounted) return;
+
+    this.setState((previousState) => ({
+      generationPills: {
+        ...previousState.generationPills,
+        [kind]: { phase: "idle", revision },
+      },
+    }));
+  }
+
+  completeGenerationPill(kind) {
+    if (!this._visibleGenerationPills.has(kind)) {
+      this.hideGenerationPill(kind);
+      return;
+    }
+
+    this.clearGenerationPillTimers(kind);
+    const revision = this.nextGenerationPillRevision(kind);
+    if (!this._isComponentMounted) return;
+
+    this.setState((previousState) => ({
+      generationPills: {
+        ...previousState.generationPills,
+        [kind]: {
+          ...previousState.generationPills?.[kind],
+          phase: "complete",
+          revision,
+        },
+      },
+    }));
+
+    const exitTimer = setTimeout(() => {
+      if (
+        !this._isComponentMounted ||
+        this._generationPillRevisions.get(kind) !== revision
+      ) {
+        return;
+      }
+
+      this.setState((previousState) => {
+        const current = previousState.generationPills?.[kind];
+        if (!current || current.revision !== revision || current.phase !== "complete") {
+          return null;
+        }
+        return {
+          generationPills: {
+            ...previousState.generationPills,
+            [kind]: { ...current, phase: "exiting" },
+          },
+        };
+      });
+    }, GENERATION_PILL_TIMING.completeHoldMs);
+
+    const removeTimer = setTimeout(() => {
+      if (
+        !this._isComponentMounted ||
+        this._generationPillRevisions.get(kind) !== revision
+      ) {
+        return;
+      }
+
+      this._generationPillTimers.delete(kind);
+      this._visibleGenerationPills.delete(kind);
+      this.setState((previousState) => {
+        const current = previousState.generationPills?.[kind];
+        if (!current || current.revision !== revision) return null;
+        return {
+          generationPills: {
+            ...previousState.generationPills,
+            [kind]: { phase: "idle", revision },
+          },
+        };
+      });
+    }, GENERATION_PILL_TIMING.completeHoldMs + GENERATION_PILL_TIMING.exitMs);
+
+    this._generationPillTimers.set(kind, { revision, exitTimer, removeTimer });
+  }
+
+  clearVideoBackgroundLoadingDelay() {
+    if (this._videoBackgroundLoadingTimer) {
+      clearTimeout(this._videoBackgroundLoadingTimer);
+      this._videoBackgroundLoadingTimer = null;
+    }
+    this._pendingVideoBackgroundStatus = null;
+  }
+
+  handleVideoBackgroundLoadingChange(status) {
+    if (!this._isComponentMounted) return;
+
+    const normalizedStatus = typeof status === "boolean"
+      ? { phase: status ? "loading" : "idle" }
+      : (status || { phase: "idle" });
+    const statusTrackUri = normalizedStatus.trackUri || "";
+    const currentTrackUri = this.currentTrackUri || this.state.uri || "";
+    const isTrackedVideoCleanup = normalizedStatus.phase === "idle" &&
+      !!statusTrackUri &&
+      statusTrackUri === this._videoBackgroundStatusTrackUri;
+    if (
+      statusTrackUri &&
+      currentTrackUri &&
+      statusTrackUri !== currentTrackUri &&
+      !isTrackedVideoCleanup
+    ) {
+      return;
+    }
+
+    if (isTrackedVideoCleanup && statusTrackUri !== currentTrackUri) {
+      this.clearVideoBackgroundLoadingDelay();
+      this._videoBackgroundStatusTrackUri = "";
+      this.hideGenerationPill("video-background");
+      return;
+    }
+
+    const effectiveTrackUri = statusTrackUri || currentTrackUri;
+
+    if (normalizedStatus.phase === "loading") {
+      const isNewTrack = !!effectiveTrackUri &&
+        !!this._videoBackgroundStatusTrackUri &&
+        effectiveTrackUri !== this._videoBackgroundStatusTrackUri;
+      if (isNewTrack) {
+        this.clearVideoBackgroundLoadingDelay();
+        this.hideGenerationPill("video-background");
+      }
+      this._videoBackgroundStatusTrackUri = effectiveTrackUri;
+      this._pendingVideoBackgroundStatus = {
+        ...normalizedStatus,
+        trackUri: effectiveTrackUri,
+      };
+
+      const currentPhase = this.state.generationPills?.["video-background"]?.phase;
+      if (
+        this._visibleGenerationPills.has("video-background") &&
+        currentPhase === "loading"
+      ) {
+        this.showGenerationPillLoading("video-background", {
+          label: normalizedStatus.label,
+          description: normalizedStatus.description,
+        });
+        return;
+      }
+
+      if (this._visibleGenerationPills.has("video-background")) {
+        this.hideGenerationPill("video-background");
+      }
+      if (!this._videoBackgroundLoadingTimer) {
+        this._videoBackgroundLoadingTimer = setTimeout(() => {
+          this._videoBackgroundLoadingTimer = null;
+          const pendingStatus = this._pendingVideoBackgroundStatus;
+          if (!pendingStatus || !this._isComponentMounted) return;
+
+          const latestTrackUri = this.currentTrackUri || this.state.uri || "";
+          if (
+            pendingStatus.trackUri &&
+            latestTrackUri &&
+            pendingStatus.trackUri !== latestTrackUri
+          ) {
+            this._pendingVideoBackgroundStatus = null;
+            return;
+          }
+
+          this.showGenerationPillLoading("video-background", {
+            label: pendingStatus.label,
+            description: pendingStatus.description,
+          });
+        }, GENERATION_PILL_TIMING.loadingDelayMs);
+      }
+      return;
+    }
+
+    this.clearVideoBackgroundLoadingDelay();
+    if (normalizedStatus.phase === "complete") {
+      if (this._visibleGenerationPills.has("video-background")) {
+        this.completeGenerationPill("video-background");
+      } else {
+        this.hideGenerationPill("video-background");
+      }
+      return;
+    }
+
+    this._videoBackgroundStatusTrackUri = effectiveTrackUri;
+    this.hideGenerationPill("video-background");
   }
 
   getFloatingMenuContentTopOffset() {
@@ -4395,6 +4655,9 @@ class LyricsContainer extends react.Component {
 
     try {
       const savedVideo = await Utils.getSelectedVideo(trackUri);
+      if (this.currentTrackUri !== trackUri) {
+        return;
+      }
       if (savedVideo && savedVideo.youtubeVideoId) {
         ivLyricsDebug(`[ivLyrics] Loading saved video for track: ${savedVideo.youtubeVideoId}`);
         this.setState({
@@ -4412,82 +4675,84 @@ class LyricsContainer extends react.Component {
     }
   }
 
-  /**
-   * 발음 로딩 상태를 시작합니다 (1초 후에 로딩 메시지 표시)
-   */
+  startGenerationRequestLoading(kind) {
+    const config = GENERATION_REQUEST_PILL_CONFIG[kind];
+    if (!config) return null;
+
+    const activeTokens = this[config.tokensKey];
+    if (activeTokens.size === 0) {
+      this[config.failureKey] = false;
+      this.hideGenerationPill(kind);
+    }
+
+    this[config.sequenceKey] += 1;
+    const token = this[config.sequenceKey];
+    activeTokens.add(token);
+
+    if (this[config.timerKey]) {
+      clearTimeout(this[config.timerKey]);
+    }
+    this[config.timerKey] = setTimeout(() => {
+      this[config.timerKey] = null;
+      if (activeTokens.size > 0 && this._isComponentMounted) {
+        this.setState({ [config.loadingStateKey]: true });
+        this.showGenerationPillLoading(kind);
+      }
+    }, GENERATION_PILL_TIMING.loadingDelayMs);
+
+    return token;
+  }
+
+  clearGenerationRequestLoading(kind, token = null, { completed = false } = {}) {
+    const config = GENERATION_REQUEST_PILL_CONFIG[kind];
+    if (!config) return;
+
+    const activeTokens = this[config.tokensKey];
+    if (token !== null && !activeTokens.has(token)) return;
+
+    if (token === null) {
+      activeTokens.clear();
+    } else {
+      activeTokens.delete(token);
+    }
+    if (!completed) this[config.failureKey] = true;
+
+    if (activeTokens.size === 0 && this[config.timerKey]) {
+      clearTimeout(this[config.timerKey]);
+      this[config.timerKey] = null;
+    }
+
+    if (activeTokens.size !== 0) return;
+
+    const shouldComplete =
+      completed &&
+      !this[config.failureKey] &&
+      this._visibleGenerationPills.has(kind);
+    this[config.failureKey] = false;
+    if (this._isComponentMounted) {
+      this.setState({ [config.loadingStateKey]: false });
+    }
+    if (shouldComplete) {
+      this.completeGenerationPill(kind);
+    } else {
+      this.hideGenerationPill(kind);
+    }
+  }
+
   startPhoneticLoading() {
-    const token = ++this._phoneticLoadingSeq;
-    this._activePhoneticLoadingTokens.add(token);
-    if (this.phoneticLoadingTimer) {
-      clearTimeout(this.phoneticLoadingTimer);
-      this.phoneticLoadingTimer = null;
-    }
-    this.phoneticLoadingTimer = setTimeout(() => {
-      this.phoneticLoadingTimer = null;
-      if (this._activePhoneticLoadingTokens.size > 0) {
-        this.setState({ isPhoneticLoading: true });
-      }
-    }, 1000);
-    return token;
+    return this.startGenerationRequestLoading("pronunciation");
   }
 
-  /**
-   * 발음 로딩 상태를 종료합니다
-   */
-  clearPhoneticLoading(token = null) {
-    if (token === null) {
-      this._activePhoneticLoadingTokens.clear();
-    } else {
-      this._activePhoneticLoadingTokens.delete(token);
-    }
-
-    if (this._activePhoneticLoadingTokens.size === 0 && this.phoneticLoadingTimer) {
-      clearTimeout(this.phoneticLoadingTimer);
-      this.phoneticLoadingTimer = null;
-    }
-
-    if (this._activePhoneticLoadingTokens.size === 0) {
-      this.setState({ isPhoneticLoading: false });
-    }
+  clearPhoneticLoading(token = null, options = {}) {
+    this.clearGenerationRequestLoading("pronunciation", token, options);
   }
 
-  /**
-   * 번역 로딩 상태를 시작합니다 (1초 후에 로딩 메시지 표시)
-   */
   startTranslationLoading() {
-    const token = ++this._translationLoadingSeq;
-    this._activeTranslationLoadingTokens.add(token);
-    if (this.translationLoadingTimer) {
-      clearTimeout(this.translationLoadingTimer);
-      this.translationLoadingTimer = null;
-    }
-    this.translationLoadingTimer = setTimeout(() => {
-      this.translationLoadingTimer = null;
-      if (this._activeTranslationLoadingTokens.size > 0) {
-        this.setState({ isTranslationLoading: true });
-      }
-    }, 1000);
-    return token;
+    return this.startGenerationRequestLoading("translation");
   }
 
-  /**
-   * 번역 로딩 상태를 종료합니다
-   */
-  clearTranslationLoading(token = null) {
-    if (token === null) {
-      this._activeTranslationLoadingTokens.clear();
-    } else {
-      this._activeTranslationLoadingTokens.delete(token);
-    }
-
-    if (this._activeTranslationLoadingTokens.size === 0 && this.translationLoadingTimer) {
-      clearTimeout(this.translationLoadingTimer);
-      this.translationLoadingTimer = null;
-    }
-
-    if (this._activeTranslationLoadingTokens.size === 0) {
-      this.setState({ isTranslationLoading: false });
-    }
+  clearTranslationLoading(token = null, options = {}) {
+    this.clearGenerationRequestLoading("translation", token, options);
   }
 
   applyStreamingTranslation({
@@ -4664,6 +4929,8 @@ class LyricsContainer extends react.Component {
 
     let phoneticLoadingToken = null;
     let translationLoadingToken = null;
+    let phoneticCompleted = false;
+    let translationCompleted = false;
 
     try {
       if (needPhonetic) {
@@ -4887,6 +5154,12 @@ class LyricsContainer extends react.Component {
 
       const phoneticOutput = extractGeminiOutput(phoneticResponse, true);
       const translationOutput = extractGeminiOutput(translationResponse, false);
+      const mappedPhonetic = phoneticOutput
+        ? processTranslationResult(phoneticOutput, originalLyrics, "phonetic")
+        : null;
+      const mappedTranslation = translationOutput
+        ? processTranslationResult(translationOutput, originalLyrics, "translation")
+        : null;
 
       await Promise.all([
         needPhonetic && phoneticOutput
@@ -4913,17 +5186,17 @@ class LyricsContainer extends react.Component {
 
       // mode1 처리
       // mode1 처리
-      if (mode1 === "gemini_romaji" && phoneticOutput) {
-        translatedLyrics1 = processTranslationResult(phoneticOutput, originalLyrics, "phonetic");
-      } else if (mode1 === "gemini_ko" && translationOutput) {
-        translatedLyrics1 = processTranslationResult(translationOutput, originalLyrics, "translation");
+      if (mode1 === "gemini_romaji" && mappedPhonetic) {
+        translatedLyrics1 = mappedPhonetic;
+      } else if (mode1 === "gemini_ko" && mappedTranslation) {
+        translatedLyrics1 = mappedTranslation;
       }
 
       // mode2 처리 (mode1과 독립적으로)
-      if (mode2 === "gemini_romaji" && phoneticOutput) {
-        translatedLyrics2 = processTranslationResult(phoneticOutput, originalLyrics, "phonetic");
-      } else if (mode2 === "gemini_ko" && translationOutput) {
-        translatedLyrics2 = processTranslationResult(translationOutput, originalLyrics, "translation");
+      if (mode2 === "gemini_romaji" && mappedPhonetic) {
+        translatedLyrics2 = mappedPhonetic;
+      } else if (mode2 === "gemini_ko" && mappedTranslation) {
+        translatedLyrics2 = mappedTranslation;
       }
 
       // _dmResults에 번역 결과 저장
@@ -4945,6 +5218,15 @@ class LyricsContainer extends react.Component {
         CacheManager.set(getDisplayModeCacheKey(lyricsState, mode2), translatedLyrics2);
       }
 
+      phoneticCompleted = needPhonetic && !!mappedPhonetic;
+      translationCompleted = needTranslation && !!mappedTranslation;
+      if (
+        (needPhonetic && !phoneticCompleted) ||
+        (needTranslation && !translationCompleted)
+      ) {
+        throw new Error("Failed to map one or more generated lyric fields.");
+      }
+
       // lyricsSource를 다시 호출하여 기존 로직으로 화면 업데이트
       this.lyricsSource(this.state, currentMode);
       Toast.success(I18n.t("notifications.translationRegenerated"));
@@ -4954,10 +5236,10 @@ class LyricsContainer extends react.Component {
       }
     } finally {
       if (needPhonetic) {
-        this.clearPhoneticLoading(phoneticLoadingToken);
+        this.clearPhoneticLoading(phoneticLoadingToken, { completed: phoneticCompleted });
       }
       if (needTranslation) {
-        this.clearTranslationLoading(translationLoadingToken);
+        this.clearTranslationLoading(translationLoadingToken, { completed: translationCompleted });
       }
     }
   }
@@ -6388,6 +6670,7 @@ class LyricsContainer extends react.Component {
       const loadingToken = wantSmartPhonetic
         ? this.startPhoneticLoading()
         : this.startTranslationLoading();
+      let loadingCompleted = false;
 
       const inflightPromise = (async () => {
         let splitVocalParts = true;
@@ -6473,14 +6756,15 @@ class LyricsContainer extends react.Component {
           throw new Error("Failed to map streamed translation lines.");
         }
         CacheManager.set(cacheKey2, mapped);
+        loadingCompleted = true;
         return mapped;
       })()
         .finally(() => {
           // Clear appropriate loading indicator based on mode type
           if (wantSmartPhonetic) {
-            this.clearPhoneticLoading(loadingToken);
+            this.clearPhoneticLoading(loadingToken, { completed: loadingCompleted });
           } else {
-            this.clearTranslationLoading(loadingToken);
+            this.clearTranslationLoading(loadingToken, { completed: loadingCompleted });
           }
           this._inflightGemini = this._inflightGemini || new Map();
           this._inflightGemini?.delete(inflightKey);
@@ -6510,6 +6794,7 @@ class LyricsContainer extends react.Component {
 
       // Start translation loading indicator (1초 후 표시)
       const loadingToken = this.startTranslationLoading();
+      let loadingCompleted = false;
 
       const inflightPromise = this.translateLyrics(
         language,
@@ -6519,12 +6804,13 @@ class LyricsContainer extends react.Component {
         .then((translated) => {
           if (translated !== undefined && translated !== null) {
             CacheManager.set(cacheKey, translated);
+            loadingCompleted = true;
             return translated;
           }
           throw new Error("Empty result from conversion.");
         })
         .finally(() => {
-          this.clearTranslationLoading(loadingToken);
+          this.clearTranslationLoading(loadingToken, { completed: loadingCompleted });
           this._inflightTrad.delete(inflightKey);
         });
 
@@ -7033,6 +7319,7 @@ class LyricsContainer extends react.Component {
   }
 
   componentDidMount() {
+    this._isComponentMounted = true;
     document.body.classList.add('ivlyrics-page-active');
 
     // Prevent duplicate global registration
@@ -7457,6 +7744,7 @@ class LyricsContainer extends react.Component {
   }
 
   componentWillUnmount() {
+    this._isComponentMounted = false;
     document.body.classList.remove('ivlyrics-page-active');
 
     // Core cleanup
@@ -7514,8 +7802,14 @@ class LyricsContainer extends react.Component {
       this._fullscreenChangeHandler = null;
     }
 
-    // Clean up translation loading timer
+    // Clean up generation loading and completion timers
+    this.clearPhoneticLoading();
     this.clearTranslationLoading();
+    this.clearVideoBackgroundLoadingDelay();
+    ["translation", "pronunciation", "video-background"].forEach((kind) => {
+      this.clearGenerationPillTimers(kind);
+    });
+    this._visibleGenerationPills.clear();
     if (this.streamingApplyTimer) {
       clearTimeout(this.streamingApplyTimer);
       this.streamingApplyTimer = null;
@@ -8258,18 +8552,42 @@ class LyricsContainer extends react.Component {
       }
     }
 
-    const generationStatuses = [
-      this.state.isTranslationLoading && {
+    const generationCompleteLabel = I18n.t("generationStatus.complete") || "완료!";
+    const generationStatusDefinitions = [
+      {
         key: "translation",
         label: I18n.t("menu.translationLabel") || I18n.t("notifications.requestingTranslation"),
         description: I18n.t("notifications.requestingTranslation"),
       },
-      this.state.isPhoneticLoading && {
+      {
         key: "pronunciation",
         label: I18n.t("menu.pronunciation") || I18n.t("notifications.requestingPronunciation"),
         description: I18n.t("notifications.requestingPronunciation"),
       },
-    ].filter(Boolean);
+      {
+        key: "video-background",
+        label: I18n.t("settings.videoBackground.label") || I18n.t("videoBackground.loading"),
+        description: I18n.t("videoBackground.loadingMessage"),
+      },
+    ];
+    const generationStatuses = generationStatusDefinitions
+      .map((definition) => {
+        const pill = this.state.generationPills?.[definition.key];
+        if (!pill || pill.phase === "idle") return null;
+
+        const isComplete = pill.phase === "complete" || pill.phase === "exiting";
+        const label = pill.label || definition.label;
+        return {
+          ...definition,
+          ...pill,
+          label,
+          completeLabel: generationCompleteLabel,
+          description: isComplete
+            ? `${label} ${generationCompleteLabel}`
+            : (pill.description || definition.description),
+        };
+      })
+      .filter(Boolean);
     const generationStatusStack = generationStatuses.length > 0 &&
       !isSyncCreatorActive &&
       !isFullscreenMarketplace
@@ -8285,21 +8603,52 @@ class LyricsContainer extends react.Component {
           "div",
           {
             key: status.key,
-            className: "lyrics-translation-loading-indicator",
+            className: `lyrics-translation-loading-indicator is-${status.phase}`,
             "data-kind": status.key,
+            "data-phase": status.phase,
             dir: "auto",
           },
-          react.createElement("div", {
-            className: "lyrics-translation-loading-spinner",
-            "aria-hidden": "true",
-          }),
+          react.createElement(
+            "span",
+            {
+              className: "lyrics-generation-status-icon",
+              "aria-hidden": "true",
+            },
+            react.createElement("span", {
+              className: "lyrics-translation-loading-spinner",
+            }),
+            react.createElement(
+              "svg",
+              {
+                className: "lyrics-generation-status-check",
+                viewBox: "0 0 16 16",
+                fill: "none",
+              },
+              react.createElement("path", {
+                d: "M3.25 8.25 6.5 11.25 12.75 4.75",
+                stroke: "currentColor",
+                strokeWidth: "2.2",
+                strokeLinecap: "round",
+                strokeLinejoin: "round",
+              })
+            )
+          ),
           react.createElement(
             "span",
             {
               className: "lyrics-translation-loading-label",
               "aria-hidden": "true",
             },
-            status.label
+            react.createElement(
+              "span",
+              { className: "lyrics-generation-status-loading-label" },
+              status.label
+            ),
+            react.createElement(
+              "span",
+              { className: "lyrics-generation-status-complete-label" },
+              status.completeLabel
+            )
           ),
           react.createElement(
             "span",
@@ -8384,7 +8733,8 @@ class LyricsContainer extends react.Component {
         blurAmount: CONFIG.visual["video-blur"],
         coverMode: CONFIG.visual["video-cover"],
         videoScale: CONFIG.visual["video-scale"],
-        externalVideoInfo: this.state.videoInfo
+        externalVideoInfo: this.state.videoInfo,
+        onLoadingChange: this.handleVideoBackgroundLoadingChange
       }),
       shouldRenderStaticBackground && react.createElement("div", {
         className: "lyrics-lyricsContainer-LyricsBackground",

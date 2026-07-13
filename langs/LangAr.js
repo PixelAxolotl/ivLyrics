@@ -1744,6 +1744,9 @@ window.LANG_AR = {
   "playbarButton": {
     "label": "كلمات بلس"
   },
+  "generationStatus": {
+    "complete": "تم!"
+  },
   "videoBackground": {
     "loading": "جارٍ تحميل معلومات الفيديو...",
     "notFound": "لم يتم العثور على الفيديو.",

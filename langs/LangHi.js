@@ -1744,6 +1744,9 @@ window.LANG_HI = {
   "playbarButton": {
     "label": "लिरिक्स प्लस"
   },
+  "generationStatus": {
+    "complete": "पूर्ण!"
+  },
   "videoBackground": {
     "loading": "वीडियो जानकारी लोड हो रही है...",
     "notFound": "वीडियो नहीं मिला।",

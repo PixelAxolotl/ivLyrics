@@ -1744,6 +1744,9 @@ window.LANG_PT = {
   "playbarButton": {
     "label": "Letra Plus"
   },
+  "generationStatus": {
+    "complete": "Concluído!"
+  },
   "videoBackground": {
     "loading": "Carregando informações do vídeo...",
     "notFound": "Vídeo não encontrado.",

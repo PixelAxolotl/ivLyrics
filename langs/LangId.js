@@ -1744,6 +1744,9 @@ window.LANG_ID = {
   "playbarButton": {
     "label": "Lirik Plus"
   },
+  "generationStatus": {
+    "complete": "Selesai!"
+  },
   "videoBackground": {
     "loading": "Memuat info video...",
     "notFound": "Video tidak ditemukan.",

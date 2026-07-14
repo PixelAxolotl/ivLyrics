@@ -5,7 +5,7 @@
  * @addon-type lyrics
  * @id paxsenix
  * @name Lyrically (Paxsenix)
- * @version 1.0.2
+ * @version 1.0.3
  * @supports karaoke: true
  * @supports synced: true
  * @supports unsynced: true
@@ -27,7 +27,7 @@
     const getEndpointLabel = value => String(value || '').split('://').pop().replace(/\/$/, '');
     const CATALOG_SEARCH_HOST = new URL(ENDPOINTS.catalogSearch).hostname;
     const ATTRIBUTION = `Lyrics via Lyrically API (${ENDPOINTS.homepage}).`;
-    const CACHE_VERSION = 'paxsenix-provider-v10';
+    const CACHE_VERSION = 'paxsenix-provider-v11';
     const REQUEST_TIMEOUT_MS = 9000;
     const PROVIDER_TIMEOUT_MS = 12000;
 
@@ -44,7 +44,7 @@
         id: 'paxsenix',
         name: 'Lyrically (Paxsenix)',
         author: 'default',
-        version: '1.0.2',
+        version: '1.0.3',
         cacheVersion: CACHE_VERSION,
         description: {
             en: 'Lyrics through the public Lyrically API',
@@ -510,6 +510,23 @@
             && (expected.includes(actual) || actual.includes(expected));
     }
 
+    function isDashSeparatedHeaderLikeText(text) {
+        const normalized = String(text || '').normalize('NFKC').trim();
+        if (!normalized || normalized.length > 240) return false;
+
+        for (const separator of normalized.matchAll(/[-‐‑‒–—]/gu)) {
+            const title = normalized.slice(0, separator.index).trim();
+            const annotatedArtists = normalized.slice(separator.index + separator[0].length).trim();
+            if (!/[\p{L}\p{N}]/u.test(title) || !/[\p{L}\p{N}]/u.test(annotatedArtists)) continue;
+
+            const artists = annotatedArtists
+                .replace(/\([^)]*\)|（[^）]*）|\[[^\]]*\]|【[^】]*】/gu, ' ')
+                .trim();
+            if (artists && isContributorNameList(artists)) return true;
+        }
+        return false;
+    }
+
     function getEarlyCreditAnchorIndex(allLines, info, referenceLines) {
         const lookahead = Math.min(allLines.length, 4);
         const entries = [];
@@ -534,10 +551,19 @@
         const combinedLeading = normalizeMetadataIdentity(
             leadingEntries.map(entry => entry.text).join(' ')
         );
-        if (!identitiesOverlap(expectedTitle, combinedLeading)) return -1;
+        const titleMatches = identitiesOverlap(expectedTitle, combinedLeading);
+        let consecutiveStrongCreditCount = 0;
+        for (let index = firstCreditIndex; index < entries.length; index += 1) {
+            if (!isStrongCreditMetadataText(entries[index].text)) break;
+            consecutiveStrongCreditCount += 1;
+        }
+        const hasDashHeaderFallback = firstCreditIndex === 1
+            && consecutiveStrongCreditCount >= 2
+            && isDashSeparatedHeaderLikeText(leadingEntries[0]?.text);
+        if (!titleMatches && !hasDashHeaderFallback) return -1;
+        if (hasDashHeaderFallback) return firstCreditIndex;
 
-        const earlyCreditCount = entries.filter(entry => isCreditMetadataText(entry.text)).length;
-        if (earlyCreditCount >= 2) return firstCreditIndex;
+        if (consecutiveStrongCreditCount >= 2) return firstCreditIndex;
 
         return leadingEntries.every(entry => {
             const identity = normalizeMetadataIdentity(entry.text);

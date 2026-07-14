@@ -3942,6 +3942,7 @@ class LyricsContainer extends react.Component {
     this._translationLoadingHadFailure = false;
     this._generationPillTimers = new Map();
     this._generationPillRevisions = new Map();
+    this._generationRequestDetails = new Map();
     this._visibleGenerationPills = new Set();
     this._videoBackgroundLoadingTimer = null;
     this._pendingVideoBackgroundStatus = null;
@@ -4006,6 +4007,7 @@ class LyricsContainer extends react.Component {
     this.importLocalLyricsFile = this.importLocalLyricsFile.bind(this);
     this.applyLocalLyrics = this.applyLocalLyrics.bind(this);
     this.applyLocalLyricsFromLrclibCandidate = this.applyLocalLyricsFromLrclibCandidate.bind(this);
+    this.handleLyricsProviderAttempt = this.handleLyricsProviderAttempt.bind(this);
     this.handleVideoBackgroundLoadingChange = this.handleVideoBackgroundLoadingChange.bind(this);
   }
 
@@ -4688,14 +4690,19 @@ class LyricsContainer extends react.Component {
     }
   }
 
-  startGenerationRequestLoading(kind) {
+  startGenerationRequestLoading(kind, details = {}) {
     const config = GENERATION_REQUEST_PILL_CONFIG[kind];
     if (!config) return null;
 
     const activeTokens = this[config.tokensKey];
     if (activeTokens.size === 0) {
       this[config.failureKey] = false;
+      this._generationRequestDetails.delete(kind);
       this.hideGenerationPill(kind);
+    }
+
+    if (details && Object.keys(details).length > 0) {
+      this._generationRequestDetails.set(kind, { ...details });
     }
 
     this[config.sequenceKey] += 1;
@@ -4711,11 +4718,29 @@ class LyricsContainer extends react.Component {
         if (config.loadingStateKey) {
           this.setState({ [config.loadingStateKey]: true });
         }
-        this.showGenerationPillLoading(kind);
+        this.showGenerationPillLoading(
+          kind,
+          this._generationRequestDetails.get(kind) || {}
+        );
       }
     }, GENERATION_PILL_TIMING.loadingDelayMs);
 
     return token;
+  }
+
+  updateGenerationRequestLoading(kind, details = {}) {
+    const config = GENERATION_REQUEST_PILL_CONFIG[kind];
+    if (!config || this[config.tokensKey].size === 0) return;
+
+    const nextDetails = {
+      ...(this._generationRequestDetails.get(kind) || {}),
+      ...details,
+    };
+    this._generationRequestDetails.set(kind, nextDetails);
+
+    if (this._visibleGenerationPills.has(kind) && this._isComponentMounted) {
+      this.showGenerationPillLoading(kind, nextDetails);
+    }
   }
 
   clearGenerationRequestLoading(kind, token = null, { completed = false } = {}) {
@@ -4744,6 +4769,7 @@ class LyricsContainer extends react.Component {
       !this[config.failureKey] &&
       this._visibleGenerationPills.has(kind);
     this[config.failureKey] = false;
+    this._generationRequestDetails.delete(kind);
     if (this._isComponentMounted && config.loadingStateKey) {
       this.setState({ [config.loadingStateKey]: false });
     }
@@ -4755,7 +4781,40 @@ class LyricsContainer extends react.Component {
   }
 
   startLyricsLoading() {
+    this._generationRequestDetails.delete("lyrics");
+    if (
+      this._activeLyricsLoadingTokens.size > 0 &&
+      this._visibleGenerationPills.has("lyrics")
+    ) {
+      this.showGenerationPillLoading("lyrics");
+    }
     return this.startGenerationRequestLoading("lyrics");
+  }
+
+  handleLyricsProviderAttempt(detail = {}) {
+    if (this._activeLyricsLoadingTokens.size === 0) return;
+
+    const requestUri = String(detail.uri || "");
+    if (requestUri && requestUri !== this.currentTrackUri) return;
+
+    const providerName = String(detail.providerName || detail.providerId || "").trim();
+    if (!providerName) return;
+
+    const loadingDescription = String(
+      I18n.t("syncCreator.loadingLyrics") || "가사를 불러오는 중..."
+    ).replace(/\s*[.…]+$/u, "");
+    const lyricsType = String(detail.lyricsType || "").trim();
+    const lyricsTypeLabel = lyricsType
+      ? String(
+        I18n.t(`settings.lyricsProviders.types.${lyricsType}`) || lyricsType
+      ).trim()
+      : "";
+    this.updateGenerationRequestLoading("lyrics", {
+      label: providerName,
+      description: lyricsTypeLabel
+        ? `${lyricsTypeLabel} · ${loadingDescription}`
+        : `${loadingDescription}: ${providerName}`,
+    });
   }
 
   clearLyricsLoading(token = null, options = {}) {
@@ -7370,6 +7429,11 @@ class LyricsContainer extends react.Component {
     window.lyricContainer = this;
     // Note: reloadLyrics will be exposed after it's defined below
 
+    this._unsubscribeLyricsProviderAttempt = window.LyricsAddonManager?.on?.(
+      "lyrics:search:progress",
+      this.handleLyricsProviderAttempt
+    ) || null;
+
     this.handleSyncCreatorVisibility = (event) => {
       const active = event?.detail?.active ?? !!document.getElementById("ivLyrics-sync-creator-overlay");
       if (this.state.isSyncCreatorActive !== active) {
@@ -7800,6 +7864,8 @@ class LyricsContainer extends react.Component {
     window.removeEventListener("furigana-ready", this.handleFuriganaReady);
     window.removeEventListener("ivLyrics:lyric-index-changed", this.handleLyricIndexChange);
     window.removeEventListener("ivLyrics:sync-creator-visibility", this.handleSyncCreatorVisibility);
+    this._unsubscribeLyricsProviderAttempt?.();
+    this._unsubscribeLyricsProviderAttempt = null;
     Spicetify.Player?.removeEventListener?.("onplaypause", this.updatePlaybackPausedState);
     Spicetify.Player?.removeEventListener?.("songchange", this.updatePlaybackPausedState);
     this.updatePlaybackPausedState = null;
@@ -7855,6 +7921,7 @@ class LyricsContainer extends react.Component {
       this.clearGenerationPillTimers(kind);
     });
     this._visibleGenerationPills.clear();
+    this._generationRequestDetails.clear();
     if (this.streamingApplyTimer) {
       clearTimeout(this.streamingApplyTimer);
       this.streamingApplyTimer = null;

@@ -41,7 +41,13 @@
         PROVIDER_FIRST: 'provider-first-v1',
         TYPE_FIRST: 'type-first-v1'
     };
-    const DEFAULT_PROVIDER_ORDER = ['lrclib', 'spotify', 'lyricsplus', 'unison'];
+    const DEFAULT_PROVIDER_ORDER = [
+        'spotify',
+        'lrclib',
+        'paxsenix',
+        'lyricsplus',
+        'unison'
+    ];
     const PSEUDO_KARAOKE_SOURCES = new Set([
         'audio-analysis-pseudo',
         'spotify-audio-analysis',
@@ -79,6 +85,7 @@
             this._events = new Map();
             this._onceEvents = new Map();
             this._marketplaceAddons = new Set(); // 마켓플레이스에서 설치된 에드온 추적
+            this._activeLyricsSearchProgress = new Map();
         }
 
         // ============================================
@@ -153,6 +160,48 @@
             }
         }
 
+        _getLyricsSearchProgressKey(uri, forcedProviderId = null) {
+            return `${String(uri || '')}::${forcedProviderId || 'auto'}`;
+        }
+
+        _publishLyricsSearchProgress(info, forcedProviderId, detail = {}) {
+            const uri = String(info?.uri || '');
+            if (!uri) return null;
+
+            const progress = {
+                ...detail,
+                uri,
+                forcedProviderId: forcedProviderId || null
+            };
+            this._activeLyricsSearchProgress.set(
+                this._getLyricsSearchProgressKey(uri, forcedProviderId),
+                progress
+            );
+            this.emit('lyrics:search:progress', progress);
+            return progress;
+        }
+
+        getActiveLyricsSearchProgress(uri, forcedProviderId = null) {
+            const progress = this._activeLyricsSearchProgress.get(
+                this._getLyricsSearchProgressKey(uri, forcedProviderId)
+            );
+            return progress ? { ...progress } : null;
+        }
+
+        replayActiveLyricsSearchProgress(uri, forcedProviderId = null) {
+            const progress = this.getActiveLyricsSearchProgress(uri, forcedProviderId);
+            if (!progress) return null;
+            const replayedProgress = { ...progress, replayed: true };
+            this.emit('lyrics:search:progress', replayedProgress);
+            return replayedProgress;
+        }
+
+        clearActiveLyricsSearchProgress(uri, forcedProviderId = null) {
+            this._activeLyricsSearchProgress.delete(
+                this._getLyricsSearchProgressKey(uri, forcedProviderId)
+            );
+        }
+
         /**
          * 초기화
          */
@@ -194,6 +243,7 @@
          * - version: string (버전)
          * - supports: { karaoke: boolean, synced: boolean, unsynced: boolean } (지원 가사 유형)
          * - supportsLocalTracks: boolean (선택, Spotify 트랙 ID 없이 조회 가능 여부)
+         * - defaultEnabled: boolean (선택, 저장값이 없을 때의 기본 활성화 여부)
          *
          * 필수 메서드:
          * - getLyrics(info): Promise<LyricsResult> (가사 가져오기)
@@ -441,8 +491,9 @@
          */
         isProviderEnabled(addonId) {
             const stored = getStoredValue(STORAGE_PREFIX + `enabled:${addonId}`);
-            // 기본값은 true
-            return stored !== 'false';
+            if (stored === 'true') return true;
+            if (stored === 'false') return false;
+            return this._addons.get(addonId)?.defaultEnabled !== false;
         }
 
         /**
@@ -965,6 +1016,7 @@
          * 노래방 → 싱크 → 일반 단계 안에서 사용자 지정 제공자 순서를 유지한다.
          */
         async getLyrics(info, forcedProviderId = null) {
+            this.clearActiveLyricsSearchProgress(info?.uri, forcedProviderId);
             const trackId = window.LyricsService?.extractTrackId?.(info.uri)
                 || window.ivLyricsTrackIdentity?.extractTrackId?.(info.uri)
                 || '';
@@ -978,6 +1030,16 @@
                 : availableProviders;
             const typePriorityEnabled = !forcedProviderId
                 && this.isPreferLyricsTypeOverProviderOrderEnabled();
+            if (enabledProviders.length > 0) {
+                const forcedProvider = forcedProviderId ? enabledProviders[0] : null;
+                this._publishLyricsSearchProgress(info, forcedProviderId, {
+                    stage: forcedProvider ? 'provider' : 'sync-data',
+                    lyricsType: forcedProvider ? null : LYRICS_TYPES.KARAOKE,
+                    providerId: forcedProvider?.id || 'ivlyrics-sync',
+                    providerName: forcedProvider?.name || 'ivLyrics Sync',
+                    attempt: forcedProvider ? 1 : 0
+                });
+            }
             const trackIsrc = (trackId ? await window.SyncDataService?.resolveTrackIsrc?.(trackId, info) : null)
                 || window.SyncDataService?.getTrackIsrc?.(trackId, info)
                 || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);
@@ -1046,6 +1108,7 @@
                     ...error,
                     reason: forcedProviderId ? 'provider_unavailable' : 'no_providers'
                 });
+                this.clearActiveLyricsSearchProgress(info.uri, forcedProviderId);
                 return error;
             }
 
@@ -1054,10 +1117,22 @@
                 enabledProviders.map(provider => [provider.id, this._getProviderTypeSettings(provider)])
             );
             const providerAttempts = new Map();
-            const loadProviderOnce = async (provider) => {
+            const loadProviderOnce = async (provider, lyricsType = null) => {
                 if (providerAttempts.has(provider.id)) {
                     return providerAttempts.get(provider.id);
                 }
+
+                const attemptDetail = {
+                    uri: info.uri || '',
+                    providerId: provider.id,
+                    providerName: provider.name || provider.id,
+                    attempt: providerAttempts.size + 1,
+                    selectionPolicy,
+                    stage: 'provider',
+                    lyricsType
+                };
+                this._publishLyricsSearchProgress(info, forcedProviderId, attemptDetail);
+                this.emit('lyrics:provider:attempt', attemptDetail);
 
                 let candidate = null;
                 try {
@@ -1096,22 +1171,24 @@
                             continue;
                         }
 
-                        const candidate = await loadProviderOnce(provider);
+                        const candidate = await loadProviderOnce(provider, lyricsType);
                         const selectedResult = this._selectProviderCandidateForType(candidate, lyricsType);
                         if (selectedResult) {
-                            return this._finalizeLyricsFetch(
+                            const finalResult = this._finalizeLyricsFetch(
                                 selectedResult,
                                 info,
                                 provider.id,
                                 selectionPolicy,
                                 lyricsType
                             );
+                            this.clearActiveLyricsSearchProgress(info.uri, forcedProviderId);
+                            return finalResult;
                         }
                     }
                 }
             } else {
                 for (const provider of enabledProviders) {
-                    const candidate = await loadProviderOnce(provider);
+                    const candidate = await loadProviderOnce(provider, null);
                     if (!candidate) continue;
 
                     const selectionType = candidate.hasKaraoke
@@ -1122,13 +1199,15 @@
                                 ? LYRICS_TYPES.UNSYNCED
                                 : null;
                     if (selectionType) {
-                        return this._finalizeLyricsFetch(
+                        const finalResult = this._finalizeLyricsFetch(
                             candidate.result,
                             info,
                             provider.id,
                             selectionPolicy,
                             selectionType
                         );
+                        this.clearActiveLyricsSearchProgress(info.uri, forcedProviderId);
+                        return finalResult;
                     }
                 }
             }
@@ -1140,6 +1219,7 @@
 
             const errorResult = { error: 'No lyrics found', uri: info.uri };
             this.emit('lyrics:fetch:error', { ...errorResult, reason: 'not_found', selectionPolicy });
+            this.clearActiveLyricsSearchProgress(info.uri, forcedProviderId);
             return errorResult;
         }
 

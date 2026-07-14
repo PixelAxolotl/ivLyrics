@@ -6450,6 +6450,10 @@
                 const requestGeneration = lyricsProviderRequestGeneration;
                 const requestKey = `${requestGeneration}:${info?.uri || ''}:${forcedProviderId || 'auto'}`;
                 if (lyricsProviderInflightRequests.has(requestKey)) {
+                    window.LyricsAddonManager.replayActiveLyricsSearchProgress?.(
+                        info?.uri || '',
+                        forcedProviderId
+                    );
                     return lyricsProviderInflightRequests.get(requestKey);
                 }
 
@@ -6470,6 +6474,10 @@
                         return result;
                     })
                     .finally(() => {
+                        window.LyricsAddonManager.clearActiveLyricsSearchProgress?.(
+                            info?.uri || '',
+                            forcedProviderId
+                        );
                         lyricsProviderInflightRequests.delete(requestKey);
                     });
 

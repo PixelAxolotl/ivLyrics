@@ -7,6 +7,7 @@
  * @name Unison
  * @version 1.0.2
  * @author default
+ * @default-enabled false
  * @supports karaoke: true
  * @supports synced: true
  * @supports unsynced: true
@@ -49,6 +50,7 @@
             unsynced: true
         },
         supportsLocalTracks: true,
+        defaultEnabled: false,
         useIvLyricsSync: false,
         icon: 'M9 3v10.55A4 4 0 1 0 11 17V7h6V3H9zm-2 16a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm8-6a2 2 0 1 1 0 4 2 2 0 0 1 0-4z'
     };
@@ -1042,7 +1044,7 @@
     };
 
     window.UnisonLyricsAddon = UnisonLyricsAddon;
-    window.__ivLyricsUnisonDebug = Object.freeze({
+    const sharedLyricsParser = Object.freeze({
         parseTimeMs,
         parseTtmlLyrics,
         groupParallelVocalLines,
@@ -1052,6 +1054,8 @@
         buildLyricsUrl,
         fetchLyricsData
     });
+    window.ivLyricsLyricsParser = sharedLyricsParser;
+    window.__ivLyricsUnisonDebug = sharedLyricsParser;
 
     registerAddon();
     window.__ivLyricsDebugLog?.('[Unison Lyrics Addon] Module loaded');

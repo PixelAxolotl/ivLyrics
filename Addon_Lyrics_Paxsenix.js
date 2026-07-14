@@ -5,7 +5,7 @@
  * @addon-type lyrics
  * @id paxsenix
  * @name Lyrically (Paxsenix)
- * @version 1.0.0
+ * @version 1.0.1
  * @supports karaoke: true
  * @supports synced: true
  * @supports unsynced: true
@@ -27,7 +27,7 @@
     const getEndpointLabel = value => String(value || '').split('://').pop().replace(/\/$/, '');
     const CATALOG_SEARCH_HOST = new URL(ENDPOINTS.catalogSearch).hostname;
     const ATTRIBUTION = `Lyrics via Lyrically API (${ENDPOINTS.homepage}).`;
-    const CACHE_VERSION = 'paxsenix-provider-v8';
+    const CACHE_VERSION = 'paxsenix-provider-v9';
     const REQUEST_TIMEOUT_MS = 9000;
     const PROVIDER_TIMEOUT_MS = 12000;
 
@@ -44,7 +44,7 @@
         id: 'paxsenix',
         name: 'Lyrically (Paxsenix)',
         author: 'default',
-        version: '1.0.0',
+        version: '1.0.1',
         cacheVersion: CACHE_VERSION,
         description: {
             en: 'Lyrics through the public Lyrically API',
@@ -447,6 +447,39 @@
         return STRUCTURED_CREDIT_LABELS.has(label);
     }
 
+    const CREDIT_NAME_CONNECTORS = new Set([
+        'and', 'de', 'del', 'der', 'di', 'du', 'la', 'le', 'of', 'the', 'van', 'von', 'y'
+    ]);
+
+    function isCreditMetadataContinuationText(text) {
+        const normalized = String(text || '').normalize('NFKC').trim();
+        if (!normalized || normalized.length > 240 || /[:：]/u.test(normalized)) return false;
+        if (!/[\p{L}\p{N}][/／⁄][\p{L}\p{N}]/u.test(normalized)) return false;
+
+        const names = normalized.split(/[/／⁄]/u).map(value => value.trim());
+        if (names.length < 2 || names.some(name => !name || name.length > 64)) return false;
+
+        return names.every(name => {
+            if (!/[\p{L}\p{N}]/u.test(name)) return false;
+            if (/[^\p{L}\p{M}\p{N}\s.'’‘`´,&+()\-·・]/u.test(name)) return false;
+            if (/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(name)) {
+                return true;
+            }
+
+            const words = name.match(/[\p{L}\p{M}\p{N}]+(?:[.'’‘`´-][\p{L}\p{M}\p{N}]+)*/gu) || [];
+            if (!words.length || words.length > 6) return false;
+
+            return words.some(word => {
+                const comparable = word.toLocaleLowerCase();
+                if (CREDIT_NAME_CONNECTORS.has(comparable)) return false;
+                const firstLetter = word.match(/\p{L}/u)?.[0];
+                if (!firstLetter) return /^\d+$/u.test(word);
+                return firstLetter === firstLetter.toLocaleUpperCase()
+                    && firstLetter !== firstLetter.toLocaleLowerCase();
+            });
+        });
+    }
+
     function isCopyrightMetadataText(text) {
         return /^(?:©|℗|ⓒ|\(c\)|\(p\)|copyright\b)/iu.test(
             String(text || '').normalize('NFKC').trim()
@@ -490,8 +523,9 @@
         const metadataIndexes = new Set();
         if (!isTargetStructuredPayload(payload) || !allLines.length) return metadataIndexes;
 
-        const limit = Math.min(allLines.length, 12);
+        const limit = allLines.length;
         let hasStrongMetadataAnchor = false;
+        let acceptsCreditContinuation = false;
         for (let index = 0; index < limit; index += 1) {
             const line = allLines[index];
             const startTime = toMilliseconds(line?.timestamp)
@@ -502,10 +536,13 @@
             const text = getStructuredLineText(line, referenceLines.get(startTime));
             const isTitleHeader = index === 0 && isTitleArtistMetadataHeader(text, info);
             const isCredit = isCreditMetadataText(text);
+            const isCreditContinuation = acceptsCreditContinuation
+                && isCreditMetadataContinuationText(text);
             const isCopyright = hasStrongMetadataAnchor && isCopyrightMetadataText(text);
-            if (!isTitleHeader && !isCredit && !isCopyright) break;
+            if (!isTitleHeader && !isCredit && !isCreditContinuation && !isCopyright) break;
 
             if (isTitleHeader || isCredit) hasStrongMetadataAnchor = true;
+            acceptsCreditContinuation = isCredit || isCreditContinuation;
             metadataIndexes.add(index);
         }
         return metadataIndexes;
@@ -783,6 +820,7 @@
         getReferenceWhitespaceBoundaries,
         isTitleArtistMetadataHeader,
         isCreditMetadataText,
+        isCreditMetadataContinuationText,
         isCopyrightMetadataText,
         isNoLyricsPlaceholderText,
         getLeadingMetadataLineIndexes,

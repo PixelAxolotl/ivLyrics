@@ -5,7 +5,7 @@
  * @addon-type lyrics
  * @id paxsenix
  * @name Lyrically (Paxsenix)
- * @version 1.0.1
+ * @version 1.0.2
  * @supports karaoke: true
  * @supports synced: true
  * @supports unsynced: true
@@ -27,7 +27,7 @@
     const getEndpointLabel = value => String(value || '').split('://').pop().replace(/\/$/, '');
     const CATALOG_SEARCH_HOST = new URL(ENDPOINTS.catalogSearch).hostname;
     const ATTRIBUTION = `Lyrics via Lyrically API (${ENDPOINTS.homepage}).`;
-    const CACHE_VERSION = 'paxsenix-provider-v9';
+    const CACHE_VERSION = 'paxsenix-provider-v10';
     const REQUEST_TIMEOUT_MS = 9000;
     const PROVIDER_TIMEOUT_MS = 12000;
 
@@ -44,7 +44,7 @@
         id: 'paxsenix',
         name: 'Lyrically (Paxsenix)',
         author: 'default',
-        version: '1.0.1',
+        version: '1.0.2',
         cacheVersion: CACHE_VERSION,
         description: {
             en: 'Lyrics through the public Lyrically API',
@@ -435,49 +435,114 @@
         'mixby', 'mixedby', 'mixingby', 'masteredby', 'masteringby'
     ]);
 
-    function isCreditMetadataText(text) {
+    function getCreditMetadataParts(text) {
         const normalized = String(text || '').normalize('NFKC').trim();
         const separatorIndex = normalized.search(/[:：]/u);
-        if (separatorIndex <= 0 || !normalized.slice(separatorIndex + 1).trim()) return false;
+        if (separatorIndex <= 0 || !normalized.slice(separatorIndex + 1).trim()) return null;
 
         const label = normalized
             .slice(0, separatorIndex)
             .toLocaleLowerCase()
             .replace(/[\s._-]+/gu, '');
-        return STRUCTURED_CREDIT_LABELS.has(label);
+        if (!STRUCTURED_CREDIT_LABELS.has(label)) return null;
+        return { label, value: normalized.slice(separatorIndex + 1).trim() };
+    }
+
+    function isCreditMetadataText(text) {
+        return getCreditMetadataParts(text) !== null;
     }
 
     const CREDIT_NAME_CONNECTORS = new Set([
         'and', 'de', 'del', 'der', 'di', 'du', 'la', 'le', 'of', 'the', 'van', 'von', 'y'
     ]);
 
+    function isContributorNameSegment(name, requireEveryWord = false) {
+        const normalized = String(name || '').normalize('NFKC').trim();
+        if (!normalized || normalized.length > 64 || !/[\p{L}\p{N}]/u.test(normalized)) return false;
+        if (/[^\p{L}\p{M}\p{N}\s.'’‘`´,&+()\-·・]/u.test(normalized)) return false;
+        if (/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(normalized)) {
+            return true;
+        }
+
+        const words = normalized.match(/[\p{L}\p{M}\p{N}]+(?:[.'’‘`´-][\p{L}\p{M}\p{N}]+)*/gu) || [];
+        if (!words.length || words.length > 6) return false;
+
+        const significantWords = words.filter(word => !CREDIT_NAME_CONNECTORS.has(word.toLocaleLowerCase()));
+        if (!significantWords.length) return false;
+        const isNameWord = word => {
+            const firstLetter = word.match(/\p{L}/u)?.[0];
+            if (!firstLetter) return /^\d+$/u.test(word);
+            return firstLetter === firstLetter.toLocaleUpperCase()
+                && firstLetter !== firstLetter.toLocaleLowerCase();
+        };
+        return requireEveryWord
+            ? significantWords.every(isNameWord)
+            : significantWords.some(isNameWord);
+    }
+
+    function isContributorNameList(text, requireEveryWord = false) {
+        const names = String(text || '').normalize('NFKC').split(/[/／⁄,，、]/u).map(value => value.trim());
+        return names.length > 0 && names.every(name => isContributorNameSegment(name, requireEveryWord));
+    }
+
+    function isStrongCreditMetadataText(text) {
+        const parts = getCreditMetadataParts(text);
+        return Boolean(parts && isContributorNameList(parts.value));
+    }
+
     function isCreditMetadataContinuationText(text) {
         const normalized = String(text || '').normalize('NFKC').trim();
         if (!normalized || normalized.length > 240 || /[:：]/u.test(normalized)) return false;
         if (!/[\p{L}\p{N}][/／⁄][\p{L}\p{N}]/u.test(normalized)) return false;
+        return isContributorNameList(normalized);
+    }
 
-        const names = normalized.split(/[/／⁄]/u).map(value => value.trim());
-        if (names.length < 2 || names.some(name => !name || name.length > 64)) return false;
+    function isLikelyLeadingHeaderName(text) {
+        const normalized = String(text || '').normalize('NFKC').trim();
+        if (!normalized || normalized.length > 160 || /[:：]/u.test(normalized)) return false;
+        return isContributorNameList(normalized, true);
+    }
 
-        return names.every(name => {
-            if (!/[\p{L}\p{N}]/u.test(name)) return false;
-            if (/[^\p{L}\p{M}\p{N}\s.'’‘`´,&+()\-·・]/u.test(name)) return false;
-            if (/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(name)) {
-                return true;
-            }
+    function identitiesOverlap(expected, actual) {
+        if (!expected || !actual) return false;
+        if (expected === actual) return true;
+        return Math.min(expected.length, actual.length) >= 4
+            && (expected.includes(actual) || actual.includes(expected));
+    }
 
-            const words = name.match(/[\p{L}\p{M}\p{N}]+(?:[.'’‘`´-][\p{L}\p{M}\p{N}]+)*/gu) || [];
-            if (!words.length || words.length > 6) return false;
-
-            return words.some(word => {
-                const comparable = word.toLocaleLowerCase();
-                if (CREDIT_NAME_CONNECTORS.has(comparable)) return false;
-                const firstLetter = word.match(/\p{L}/u)?.[0];
-                if (!firstLetter) return /^\d+$/u.test(word);
-                return firstLetter === firstLetter.toLocaleUpperCase()
-                    && firstLetter !== firstLetter.toLocaleLowerCase();
+    function getEarlyCreditAnchorIndex(allLines, info, referenceLines) {
+        const lookahead = Math.min(allLines.length, 4);
+        const entries = [];
+        for (let index = 0; index < lookahead; index += 1) {
+            const line = allLines[index];
+            const startTime = toMilliseconds(line?.timestamp)
+                ?? toMilliseconds(line?.text?.[0]?.timestamp)
+                ?? 0;
+            entries.push({
+                index,
+                text: getStructuredLineText(line, referenceLines.get(startTime))
             });
-        });
+        }
+
+        const strongCredits = entries.filter(entry => isStrongCreditMetadataText(entry.text));
+        if (!strongCredits.length) return -1;
+        const firstCreditIndex = strongCredits[0].index;
+        if (firstCreditIndex <= 0) return firstCreditIndex;
+
+        const leadingEntries = entries.slice(0, firstCreditIndex);
+        const expectedTitle = normalizeMetadataIdentity(info?.title);
+        const combinedLeading = normalizeMetadataIdentity(
+            leadingEntries.map(entry => entry.text).join(' ')
+        );
+        if (!identitiesOverlap(expectedTitle, combinedLeading)) return -1;
+
+        const earlyCreditCount = entries.filter(entry => isCreditMetadataText(entry.text)).length;
+        if (earlyCreditCount >= 2) return firstCreditIndex;
+
+        return leadingEntries.every(entry => {
+            const identity = normalizeMetadataIdentity(entry.text);
+            return identitiesOverlap(expectedTitle, identity) || isLikelyLeadingHeaderName(entry.text);
+        }) ? firstCreditIndex : -1;
     }
 
     function isCopyrightMetadataText(text) {
@@ -524,6 +589,7 @@
         if (!isTargetStructuredPayload(payload) || !allLines.length) return metadataIndexes;
 
         const limit = allLines.length;
+        const earlyCreditAnchorIndex = getEarlyCreditAnchorIndex(allLines, info, referenceLines);
         let hasStrongMetadataAnchor = false;
         let acceptsCreditContinuation = false;
         for (let index = 0; index < limit; index += 1) {
@@ -535,13 +601,15 @@
 
             const text = getStructuredLineText(line, referenceLines.get(startTime));
             const isTitleHeader = index === 0 && isTitleArtistMetadataHeader(text, info);
+            const isEarlyHeaderContinuation = earlyCreditAnchorIndex > 0
+                && index < earlyCreditAnchorIndex;
             const isCredit = isCreditMetadataText(text);
             const isCreditContinuation = acceptsCreditContinuation
                 && isCreditMetadataContinuationText(text);
             const isCopyright = hasStrongMetadataAnchor && isCopyrightMetadataText(text);
-            if (!isTitleHeader && !isCredit && !isCreditContinuation && !isCopyright) break;
+            if (!isTitleHeader && !isEarlyHeaderContinuation && !isCredit && !isCreditContinuation && !isCopyright) break;
 
-            if (isTitleHeader || isCredit) hasStrongMetadataAnchor = true;
+            if (isTitleHeader || isEarlyHeaderContinuation || isCredit) hasStrongMetadataAnchor = true;
             acceptsCreditContinuation = isCredit || isCreditContinuation;
             metadataIndexes.add(index);
         }
@@ -820,6 +888,7 @@
         getReferenceWhitespaceBoundaries,
         isTitleArtistMetadataHeader,
         isCreditMetadataText,
+        isStrongCreditMetadataText,
         isCreditMetadataContinuationText,
         isCopyrightMetadataText,
         isNoLyricsPlaceholderText,

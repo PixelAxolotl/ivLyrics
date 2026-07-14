@@ -2329,7 +2329,17 @@ div.lyrics-tabBar-headerItemLink {
   justify-content: center;
   gap: 0.01em;
   transform-origin: center;
+  color: var(--lyrics-color-active, currentColor);
+  overflow: visible;
+  pointer-events: none;
   will-change: transform, opacity, filter, text-shadow;
+}
+
+.ivlyrics-sync-kind-preview .lyrics-karaoke-line {
+  font: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  overflow: visible;
 }
 
 .ivlyrics-sync-effect-card,
@@ -2342,74 +2352,6 @@ div.lyrics-tabBar-headerItemLink {
   display: inline-block;
   transform-origin: center;
   will-change: transform, opacity, filter, text-shadow;
-}
-
-.ivlyrics-sync-kind-preview-char.effect {
-  animation: ivlyrics-kind-effect-tremble 180ms steps(2, end) infinite;
-}
-
-.ivlyrics-sync-kind-preview-char.adlib {
-  animation: ivlyrics-kind-adlib-float 1.05s ease-in-out infinite;
-}
-
-.ivlyrics-sync-kind-preview-char.pulse {
-  animation: ivlyrics-kind-pulse 940ms ease-in-out infinite;
-}
-
-.ivlyrics-sync-kind-preview-char.wave {
-  animation: ivlyrics-kind-wave 920ms ease-in-out infinite;
-}
-
-.ivlyrics-sync-kind-preview-char.sparkle {
-  animation: ivlyrics-kind-sparkle 1.18s ease-in-out infinite;
-}
-
-.ivlyrics-sync-kind-preview-char.echo {
-  animation: ivlyrics-kind-echo 1.28s ease-in-out infinite;
-}
-
-.ivlyrics-sync-kind-preview-char.whisper {
-  animation: ivlyrics-kind-whisper 1.45s ease-in-out infinite;
-}
-
-.ivlyrics-sync-kind-preview-char.bounce {
-  animation: ivlyrics-kind-bounce 780ms cubic-bezier(0.2, 0.85, 0.24, 1) infinite;
-}
-
-.ivlyrics-sync-kind-preview-char.sway {
-  animation: ivlyrics-kind-sway 1.35s ease-in-out infinite;
-}
-
-.ivlyrics-sync-kind-preview-char.glow {
-  animation: ivlyrics-kind-glow 2.8s ease-in-out infinite;
-}
-
-.ivlyrics-sync-kind-preview-char.glitch {
-  animation: ivlyrics-kind-glitch 1.12s steps(1, end) infinite;
-}
-
-.ivlyrics-sync-kind-preview-char.flicker {
-  animation: ivlyrics-kind-flicker 1.22s steps(1, end) infinite;
-}
-
-.ivlyrics-sync-kind-preview-char.float {
-  animation: ivlyrics-kind-float 1.65s ease-in-out infinite;
-}
-
-.ivlyrics-sync-kind-preview-char.blur {
-  animation: ivlyrics-kind-blur 1.5s ease-in-out infinite;
-}
-
-.ivlyrics-sync-kind-preview-char.pop {
-  animation: ivlyrics-kind-pop 1.08s cubic-bezier(0.18, 0.9, 0.36, 1) infinite;
-}
-
-.ivlyrics-sync-kind-preview-char:nth-child(2n) {
-  animation-delay: -110ms;
-}
-
-.ivlyrics-sync-kind-preview-char:nth-child(3n) {
-  animation-delay: -220ms;
 }
 
 .lyrics-karaoke-word {
@@ -8981,7 +8923,7 @@ ruby rt {
   animation: hint-fade-in-out 4s ease-in-out forwards;
   z-index: 2;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
-  border: 1px solid var(--iv-sync-accent, #3182f6);
+  border: 1px solid var(--iv-sync-accent, #1ed760);
 }
 
 .sync-creator-hint--portal {
@@ -9002,8 +8944,15 @@ ruby rt {
   z-index: var(--iv-layer-modal);
 }
 
-/* === Sync Creator: cohesive Toss-style polish === */
+/* === Sync Creator: restrained settings-style workspace === */
 .ivlyrics-sync-creator-shell {
+  --iv-sync-bg: #0f1215;
+  --iv-sync-rail: #11161b;
+  --iv-sync-divider: rgba(255, 255, 255, 0.08);
+  --iv-sync-accent-rgb: var(--spice-rgb-accent, 30, 215, 96);
+  --iv-sync-accent: rgb(var(--iv-sync-accent-rgb));
+  isolation: isolate;
+  background: var(--iv-sync-bg);
   animation: ivlyricsSoftFadeIn var(--iv-motion-duration-medium) var(--iv-motion-ease-standard);
 }
 
@@ -9017,27 +8966,23 @@ ruby rt {
   font-family: inherit;
   outline: none;
   transition:
-    transform var(--iv-motion-duration-fast) var(--iv-motion-ease-emphasis),
     background var(--iv-motion-duration-fast) var(--iv-motion-ease-standard),
     border-color var(--iv-motion-duration-fast) var(--iv-motion-ease-standard),
     color var(--iv-motion-duration-fast) var(--iv-motion-ease-standard),
     box-shadow var(--iv-motion-duration-fast) var(--iv-motion-ease-standard),
     opacity var(--iv-motion-duration-fast) var(--iv-motion-ease-standard);
-  will-change: transform;
 }
 
 .ivlyrics-sync-creator-shell button:hover:not(:disabled) {
-  transform: translateY(-1px);
-  filter: brightness(1.04);
+  filter: brightness(1.08);
 }
 
 .ivlyrics-sync-creator-shell button:active:not(:disabled) {
-  transform: translateY(0) scale(0.97);
-  filter: brightness(0.96);
+  filter: brightness(0.94);
 }
 
 .ivlyrics-sync-creator-shell button:focus-visible {
-  box-shadow: 0 0 0 3px rgba(var(--iv-sync-accent-rgb, 49, 130, 246), 0.34);
+  box-shadow: 0 0 0 3px rgba(var(--iv-sync-accent-rgb, 30, 215, 96), 0.34);
 }
 
 .ivlyrics-sync-creator-shell button:disabled {
@@ -9063,13 +9008,64 @@ ruby rt {
 
 .ivlyrics-sync-creator-shell select:focus-visible,
 .ivlyrics-sync-creator-shell textarea:focus {
-  border-color: rgba(var(--iv-sync-accent-rgb, 49, 130, 246), 0.62) !important;
-  box-shadow: 0 0 0 3px rgba(var(--iv-sync-accent-rgb, 49, 130, 246), 0.18);
+  border-color: rgba(var(--iv-sync-accent-rgb, 30, 215, 96), 0.62) !important;
+  box-shadow: 0 0 0 3px rgba(var(--iv-sync-accent-rgb, 30, 215, 96), 0.18);
 }
 
 .ivlyrics-sync-creator-shell select option {
   background: #1a1c20;
   color: var(--spice-text);
+}
+
+.ivlyrics-sync-creator-shell .sync-creator-section:last-child {
+  border-bottom-color: transparent !important;
+}
+
+.ivlyrics-sync-creator-shell .sync-creator-stage {
+  background: var(--iv-sync-bg) !important;
+}
+
+.ivlyrics-sync-creator-shell .sync-creator-header-back:hover:not(:disabled),
+.ivlyrics-sync-creator-shell .sync-creator-source-rail button:hover:not(:disabled),
+.ivlyrics-sync-creator-shell .sync-creator-inspector-rail button:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+.ivlyrics-sync-creator-shell .sync-creator-header-back {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  color: var(--spice-subtext) !important;
+}
+
+.ivlyrics-sync-creator-shell .sync-creator-header-back:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.07) !important;
+  color: var(--spice-text) !important;
+}
+
+.ivlyrics-sync-creator-shell .sync-creator-submit:hover:not(:disabled) {
+  background-color: rgb(var(--iv-sync-accent-rgb)) !important;
+}
+
+@media (max-width: 1200px) {
+  .ivlyrics-sync-creator-shell .sync-creator-workspace.has-inspector {
+    grid-template-columns: 220px minmax(420px, 1fr) 280px !important;
+  }
+
+  .ivlyrics-sync-creator-shell .sync-creator-source-rail,
+  .ivlyrics-sync-creator-shell .sync-creator-inspector-rail {
+    font-size: 0.95em;
+  }
+}
+
+@media (max-width: 960px) {
+  .ivlyrics-sync-creator-shell .sync-creator-workspace.has-inspector {
+    grid-template-columns: 205px minmax(360px, 1fr) 250px !important;
+  }
+
+  .ivlyrics-sync-creator-shell .sync-creator-header {
+    padding-inline: 12px !important;
+  }
 }
 
 /* Scrollable surfaces */
@@ -9105,8 +9101,8 @@ ruby rt {
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  background: var(--iv-sync-accent, #3182f6);
-  box-shadow: 0 2px 10px rgba(var(--iv-sync-accent-rgb, 49, 130, 246), 0.55);
+  background: var(--iv-sync-accent);
+  box-shadow: 0 2px 10px rgba(var(--iv-sync-accent-rgb), 0.38);
   transform: translate(-50%, -50%) scale(0);
   transition: transform 180ms var(--iv-motion-ease-emphasis);
   pointer-events: none;
@@ -9124,7 +9120,7 @@ ruby rt {
   transform: translateY(-50%);
   border-width: 6px 0 6px 6px;
   border-style: solid;
-  border-color: transparent transparent transparent var(--iv-sync-accent, #3182f6);
+  border-color: transparent transparent transparent var(--iv-sync-accent, #1ed760);
 }
 
 @keyframes hint-fade-in-out {

@@ -51,57 +51,12 @@ const SYNC_CREATOR_RECORD_POSITION_UPDATE_INTERVAL_MS = 50;
 const SYNC_CREATOR_IDLE_POSITION_UPDATE_INTERVAL_MS = 500;
 const SYNC_CREATOR_POSITION_COMMIT_THRESHOLD_MS = 80;
 const SYNC_CREATOR_RECORD_POSITION_COMMIT_THRESHOLD_MS = 35;
-const SYNC_CREATOR_PREVIEW_LAST_CHAR_DURATION_MS = 320;
 const SYNC_CREATOR_HISTORY_HEIGHT_STORAGE_KEY = 'ivLyrics:syncCreator:history-panel-height';
 const SYNC_CREATOR_HISTORY_MIN_HEIGHT = 130;
 const SYNC_CREATOR_PROGRESS_COLOR = 'rgb(var(--spice-rgb-accent, 30, 215, 96))';
 const SYNC_CREATOR_PROGRESS_BACKGROUND = 'rgba(var(--spice-rgb-accent, 30, 215, 96), 0.18)';
 const SYNC_CREATOR_SYNCED_BACKGROUND = 'rgba(255, 255, 255, 0.055)';
 const SYNC_CREATOR_RECORDING_BACKGROUND = 'rgba(255, 152, 0, 0.6)';
-const buildSyncCreatorKaraokePreviewLine = ({
-	text,
-	charTimes,
-	speaker = SYNC_CREATOR_DEFAULT_SPEAKER,
-	speakerColor = '',
-	speakerFallback = '',
-	kind = SYNC_CREATOR_DEFAULT_KIND
-} = {}) => {
-	const chars = Array.from(String(text || ''));
-	if (!chars.length || !Array.isArray(charTimes) || charTimes.length !== chars.length) return null;
-
-	const startTimes = charTimes.map(value => Number(value) * 1000);
-	if (startTimes.some(value => !Number.isFinite(value) || value < 0)) return null;
-
-	const positiveGaps = [];
-	for (let index = 1; index < startTimes.length; index++) {
-		const gap = startTimes[index] - startTimes[index - 1];
-		if (Number.isFinite(gap) && gap > 0) positiveGaps.push(gap);
-	}
-	positiveGaps.sort((a, b) => a - b);
-	const medianGap = positiveGaps.length
-		? positiveGaps[Math.floor(positiveGaps.length / 2)]
-		: SYNC_CREATOR_PREVIEW_LAST_CHAR_DURATION_MS;
-	const lastCharDuration = Math.max(80, Math.min(800, medianGap));
-	const syllables = chars.map((char, index) => ({
-		text: char,
-		startTime: startTimes[index],
-		endTime: index + 1 < startTimes.length
-			? Math.max(startTimes[index] + 1, startTimes[index + 1])
-			: startTimes[index] + lastCharDuration
-	}));
-
-	return {
-		text: chars.join(''),
-		originalText: chars.join(''),
-		startTime: startTimes[0],
-		endTime: syllables[syllables.length - 1].endTime,
-		syllables,
-		speaker,
-		'speaker-color': speakerColor,
-		'speaker-fallback': speakerFallback,
-		kind
-	};
-};
 const countSyncCreatorRangeChars = (ranges) => (Array.isArray(ranges) ? ranges : []).reduce((sum, range) => {
 	const start = Number(range?.start);
 	const end = Number(range?.end);
@@ -8432,14 +8387,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			'--lyrics-color-active': currentSpeakerTextColor,
 			'--lyrics-color-inactive': currentSpeakerMutedColor
 		},
-		karaokeRendererPreview: {
-			fontFamily: window.CONFIG?.visual?.['original-font-family'] || window.CONFIG?.visual?.['font-family'] || 'var(--font-family)',
-			fontSize: `${Math.min(56, Math.max(12, Number(window.CONFIG?.visual?.['original-font-size']) || 44))}px`,
-			fontWeight: Number(window.CONFIG?.visual?.['original-font-weight']) || 600,
-			letterSpacing: `${Number(window.CONFIG?.visual?.['original-letter-spacing']) || 0}px`,
-			lineHeight: 1,
-			'--lyrics-original-letter-spacing': `${Number(window.CONFIG?.visual?.['original-letter-spacing']) || 0}px`
-		},
 		parallelStack: { width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'stretch' },
 		parallelStackLine: {
 			width: '100%',
@@ -8867,20 +8814,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const currentLinePreviewIndex = currentLineText
 		? getPreviewProgressIndex(currentLineIndex)
 		: -1;
-	const sharedKaraokePreviewRenderer = window.ivLyricsKaraokeRenderer?.KaraokeLinePlaybackPreview || null;
-	const currentKaraokePreviewLine = !hasCurrentParallelParts
-		? buildSyncCreatorKaraokePreviewLine({
-			text: currentLineText,
-			charTimes: currentLineData?.chars,
-			speaker: currentSpeakerMeta?.speaker,
-			speakerColor: currentSpeakerMeta?.['speaker-color'],
-			speakerFallback: currentSpeakerMeta?.['speaker-fallback'],
-			kind: currentTextEffectKind
-		})
-		: null;
-	const useSharedKaraokePreview = mode === 'preview'
-		&& Boolean(sharedKaraokePreviewRenderer)
-		&& Boolean(currentKaraokePreviewLine);
 	const currentRecordingCharIndex = recordingCharIndexRef.current;
 	const currentLineProgressIndex = mode === 'record' && currentRecordingCharIndex >= 0
 		? currentRecordingCharIndex
@@ -9819,19 +9752,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					? react.createElement('div', { style: s.parallelStack }, currentParallelParts.map((part, index) => renderParallelPartLine(part, index)))
 					: react.createElement('div', {
 						className: `ivlyrics-sync-stage-effect-preview lyrics-karaoke-part lead ${currentTextEffectKind}${textEffectsDisabled ? ' text-effects-disabled' : ''}`,
-						style: useSharedKaraokePreview
-							? { ...s.stageEffectPreview, ...s.karaokeRendererPreview }
-							: s.stageEffectPreview,
-						'data-shared-karaoke-preview': useSharedKaraokePreview ? '1' : undefined
-					}, useSharedKaraokePreview
-						? react.createElement(sharedKaraokePreviewRenderer, {
-							line: currentKaraokePreviewLine,
-							isActive: true
-						})
-						: react.createElement('div', {
-							className: 'lyrics-karaoke-line is-active',
-							style: useCurrentLineTextRun ? { ...s.rtlLyricsLine, direction: currentLineDirection } : s.lyricsLine
-						}, renderCurrentLineCharacters()))
+						style: s.stageEffectPreview
+					}, react.createElement('div', {
+						className: 'lyrics-karaoke-line is-active',
+						style: useCurrentLineTextRun ? { ...s.rtlLyricsLine, direction: currentLineDirection } : s.lyricsLine
+					}, renderCurrentLineCharacters()))
 			),
 			nextNavigableLineIndex >= 0 && react.createElement('div', { style: s.nextLineBox },
 				react.createElement('div', { style: s.nextLineLabel }, I18n.t('syncCreator.nextLine')),

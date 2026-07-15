@@ -5128,37 +5128,6 @@ const KaraokeLine = react.memo(({ line, position, isActive, settingsRevision = 0
 	);
 });
 
-const KaraokeLinePlaybackPreview = react.memo(({ line, isActive = true, settingsRevision = 0 }) => {
-	const position = useLyricsPlaybackPosition();
-	const timedChars = useMemo(
-		() => applyKaraokeWhitespaceCompensation(buildKaraokeTimedChars(line)),
-		[line]
-	);
-	const activeGlobalCharIndex = isActive
-		? getActiveKaraokeTimedCharIndex(timedChars, position)
-		: -1;
-
-	return react.createElement(KaraokeLine, {
-		line,
-		position,
-		isActive,
-		settingsRevision,
-		globalCharOffset: 0,
-		activeGlobalCharIndex,
-	});
-});
-
-// Sync Creator's playback preview must render the same state machine, word/ruby
-// structure and per-character bounce as the real lyrics page. Keep the editing
-// hit cells local to Sync Creator, but expose this read-only renderer contract.
-if (typeof window !== "undefined") {
-	window.ivLyricsKaraokeRenderer = Object.freeze({
-		version: 1,
-		KaraokeLine,
-		KaraokeLinePlaybackPreview,
-	});
-}
-
 const SyncedLyricsPage = react.memo(({ lyrics = [], provider, contributors, copyright, isKara, karaokeSource = null, reRenderLyricsPage = null }) => {
 	const position = useLyricsPlaybackPosition();
 	const karaokePosition = isKara ? position + getPseudoKaraokeRenderAdvance(karaokeSource) : position;

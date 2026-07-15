@@ -9027,8 +9027,30 @@ ruby rt {
 
 .ivlyrics-sync-creator-shell .sync-creator-header-back:hover:not(:disabled),
 .ivlyrics-sync-creator-shell .sync-creator-source-rail button:hover:not(:disabled),
-.ivlyrics-sync-creator-shell .sync-creator-inspector-rail button:hover:not(:disabled) {
+.ivlyrics-sync-creator-shell .sync-creator-inspector-rail button:not(.sync-creator-history-row):hover:not(:disabled) {
   background-color: rgba(255, 255, 255, 0.07) !important;
+}
+
+.ivlyrics-sync-creator-shell .sync-creator-inspector-rail button.sync-creator-history-row:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.055) !important;
+}
+
+.ivlyrics-sync-creator-shell .sync-creator-inspector-rail button.sync-creator-history-row.is-current:hover:not(:disabled) {
+  background-color: rgba(var(--iv-sync-accent-rgb, 30, 215, 96), 0.16) !important;
+}
+
+.ivlyrics-sync-creator-shell .sync-creator-history-resize-handle:hover > span,
+.ivlyrics-sync-creator-shell .sync-creator-history-resize-handle:focus-visible > span {
+  background: rgba(var(--iv-sync-accent-rgb, 30, 215, 96), 0.72) !important;
+}
+
+.ivlyrics-sync-creator-shell .sync-creator-effect-strip button:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.065) !important;
+}
+
+.ivlyrics-sync-creator-shell .sync-creator-effect-strip button[aria-pressed="true"] {
+  background-color: rgba(var(--iv-sync-accent-rgb, 30, 215, 96), 0.16) !important;
+  border-color: rgba(var(--iv-sync-accent-rgb, 30, 215, 96), 0.48) !important;
 }
 
 .ivlyrics-sync-creator-shell .sync-creator-header-back {
@@ -9065,6 +9087,13 @@ ruby rt {
 
   .ivlyrics-sync-creator-shell .sync-creator-header {
     padding-inline: 12px !important;
+  }
+}
+
+@media (max-height: 720px) {
+  .ivlyrics-sync-creator-shell .sync-creator-history-panel {
+    flex: 0 1 clamp(130px, 28vh, 170px) !important;
+    min-height: 130px !important;
   }
 }
 

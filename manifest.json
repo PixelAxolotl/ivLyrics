@@ -53,6 +53,7 @@
 		"SetupWizard.js",
 		"SongInfoTicker.js",
 		"NoticeSystem.js",
+		"SyncCreatorDraftStore.js",
 		"SyncDataCreator.js",
 		"Marketplace.js",
 		"LearningMode.js"

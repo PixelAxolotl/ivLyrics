@@ -51,12 +51,57 @@ const SYNC_CREATOR_RECORD_POSITION_UPDATE_INTERVAL_MS = 50;
 const SYNC_CREATOR_IDLE_POSITION_UPDATE_INTERVAL_MS = 500;
 const SYNC_CREATOR_POSITION_COMMIT_THRESHOLD_MS = 80;
 const SYNC_CREATOR_RECORD_POSITION_COMMIT_THRESHOLD_MS = 35;
+const SYNC_CREATOR_PREVIEW_LAST_CHAR_DURATION_MS = 320;
 const SYNC_CREATOR_HISTORY_HEIGHT_STORAGE_KEY = 'ivLyrics:syncCreator:history-panel-height';
 const SYNC_CREATOR_HISTORY_MIN_HEIGHT = 130;
 const SYNC_CREATOR_PROGRESS_COLOR = 'rgb(var(--spice-rgb-accent, 30, 215, 96))';
 const SYNC_CREATOR_PROGRESS_BACKGROUND = 'rgba(var(--spice-rgb-accent, 30, 215, 96), 0.18)';
 const SYNC_CREATOR_SYNCED_BACKGROUND = 'rgba(255, 255, 255, 0.055)';
 const SYNC_CREATOR_RECORDING_BACKGROUND = 'rgba(255, 152, 0, 0.6)';
+const buildSyncCreatorKaraokePreviewLine = ({
+	text,
+	charTimes,
+	speaker = SYNC_CREATOR_DEFAULT_SPEAKER,
+	speakerColor = '',
+	speakerFallback = '',
+	kind = SYNC_CREATOR_DEFAULT_KIND
+} = {}) => {
+	const chars = Array.from(String(text || ''));
+	if (!chars.length || !Array.isArray(charTimes) || charTimes.length !== chars.length) return null;
+
+	const startTimes = charTimes.map(value => Number(value) * 1000);
+	if (startTimes.some(value => !Number.isFinite(value) || value < 0)) return null;
+
+	const positiveGaps = [];
+	for (let index = 1; index < startTimes.length; index++) {
+		const gap = startTimes[index] - startTimes[index - 1];
+		if (Number.isFinite(gap) && gap > 0) positiveGaps.push(gap);
+	}
+	positiveGaps.sort((a, b) => a - b);
+	const medianGap = positiveGaps.length
+		? positiveGaps[Math.floor(positiveGaps.length / 2)]
+		: SYNC_CREATOR_PREVIEW_LAST_CHAR_DURATION_MS;
+	const lastCharDuration = Math.max(80, Math.min(800, medianGap));
+	const syllables = chars.map((char, index) => ({
+		text: char,
+		startTime: startTimes[index],
+		endTime: index + 1 < startTimes.length
+			? Math.max(startTimes[index] + 1, startTimes[index + 1])
+			: startTimes[index] + lastCharDuration
+	}));
+
+	return {
+		text: chars.join(''),
+		originalText: chars.join(''),
+		startTime: startTimes[0],
+		endTime: syllables[syllables.length - 1].endTime,
+		syllables,
+		speaker,
+		'speaker-color': speakerColor,
+		'speaker-fallback': speakerFallback,
+		kind
+	};
+};
 const countSyncCreatorRangeChars = (ranges) => (Array.isArray(ranges) ? ranges : []).reduce((sum, range) => {
 	const start = Number(range?.start);
 	const end = Number(range?.end);
@@ -8323,12 +8368,15 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			display: 'grid',
 			gridTemplateColumns: 'auto minmax(0, 1fr)',
 			alignItems: 'center',
-			gap: '10px',
-			padding: '9px 0 0',
-			borderTop: `1px solid ${TOSS_BORDER}`
+			gap: '12px',
+			marginTop: 'auto',
+			padding: '12px 0 0',
+			borderTop: `1px solid ${TOSS_BORDER}`,
+			containerType: 'inline-size',
+			containerName: 'ivlyrics-sync-effects'
 		},
 		effectStripTitle: {
-			fontSize: '10px',
+			fontSize: '12px',
 			fontWeight: '850',
 			color: 'var(--spice-subtext)',
 			whiteSpace: 'nowrap',
@@ -8336,36 +8384,41 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		},
 		effectStrip: {
 			display: 'flex',
+			flexWrap: 'nowrap',
 			alignItems: 'stretch',
-			gap: '4px',
+			gap: '6px',
+			width: '100%',
+			minWidth: 0,
 			overflowX: 'auto',
 			overflowY: 'hidden',
-			padding: '2px 1px 5px',
+			padding: '4px 4px 8px',
 			overscrollBehaviorX: 'contain',
-			scrollbarWidth: 'thin'
+			scrollbarWidth: 'thin',
+			scrollPaddingInline: '4px'
 		},
 		effectPill: {
-			flex: '1 0 70px',
-			minWidth: '70px',
-			height: '36px',
-			borderRadius: '7px',
+			flex: '0 0 auto',
+			minWidth: '105px',
+			height: '54px',
+			borderRadius: '9px',
 			border: `1px solid ${TOSS_BORDER}`,
 			background: 'rgba(255,255,255,0.025)',
 			color: 'var(--spice-text)',
 			display: 'inline-flex',
 			alignItems: 'center',
 			justifyContent: 'center',
-			padding: '0 8px',
+			padding: '0 14px',
 			cursor: 'pointer',
 			overflow: 'visible',
-			outline: 'none'
+			outline: 'none',
+			scrollSnapAlign: 'start'
 		},
 		effectPillLabel: {
 			minWidth: 0,
 			whiteSpace: 'nowrap',
-			fontSize: '11px',
+			fontSize: '16px',
 			fontWeight: '850',
-			lineHeight: 1,
+			lineHeight: 1.1,
 			color: 'inherit',
 			transformOrigin: 'center'
 		},
@@ -8378,6 +8431,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			color: currentSpeakerTextColor,
 			'--lyrics-color-active': currentSpeakerTextColor,
 			'--lyrics-color-inactive': currentSpeakerMutedColor
+		},
+		karaokeRendererPreview: {
+			fontFamily: window.CONFIG?.visual?.['original-font-family'] || window.CONFIG?.visual?.['font-family'] || 'var(--font-family)',
+			fontSize: `${Math.min(56, Math.max(12, Number(window.CONFIG?.visual?.['original-font-size']) || 44))}px`,
+			fontWeight: Number(window.CONFIG?.visual?.['original-font-weight']) || 600,
+			letterSpacing: `${Number(window.CONFIG?.visual?.['original-letter-spacing']) || 0}px`,
+			lineHeight: 1,
+			'--lyrics-original-letter-spacing': `${Number(window.CONFIG?.visual?.['original-letter-spacing']) || 0}px`
 		},
 		parallelStack: { width: '100%', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'stretch' },
 		parallelStackLine: {
@@ -8460,7 +8521,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		lyricsLine: { display: 'inline-flex', flexWrap: 'nowrap', gap: '0px', paddingLeft: '32px', paddingRight: '32px', justifyContent: 'center', alignItems: usePrimaryCharacterPronunciation ? 'flex-start' : 'stretch', color: currentSpeakerTextColor },
 		rtlLyricsLine: { display: 'block', width: '100%', paddingLeft: '32px', paddingRight: '32px', textAlign: 'center', direction: 'rtl', unicodeBidi: 'plaintext', color: currentSpeakerTextColor },
 		rtlTextRun: { display: 'inline-block', maxWidth: '100%', padding: '10px 1px', fontSize: '32px', fontWeight: '600', lineHeight: 1.45, letterSpacing: 0, whiteSpace: 'pre', cursor: mode === 'record' ? 'pointer' : 'default', color: 'transparent', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' },
-		charSpan: { padding: usePrimaryCharacterPronunciation ? '4px 4px 6px' : `${hasCurrentLineFurigana ? 18 : 10}px 1px ${(hasCurrentLineCharacterPronunciation && currentLineRenderedPronunciationUnits.length === 0) ? 26 : 10}px`, borderRadius: 0, cursor: mode === 'record' ? 'pointer' : 'default', position: 'relative', fontSize: usePrimaryCharacterPronunciation ? '15px' : '32px', fontWeight: '600', minWidth: usePrimaryCharacterPronunciation ? '18px' : '6px', minHeight: usePrimaryCharacterPronunciation ? '68px' : undefined, boxSizing: 'border-box', textAlign: 'center', flexShrink: 0, color: currentSpeakerTextColor, letterSpacing: 0, lineHeight: usePrimaryCharacterPronunciation ? 1.05 : 1.15 },
+		charSpan: { padding: usePrimaryCharacterPronunciation ? '4px 4px 6px' : `${hasCurrentLineFurigana ? 18 : 10}px 1px ${(hasCurrentLineCharacterPronunciation && currentLineRenderedPronunciationUnits.length === 0) ? 26 : 10}px`, marginInline: 0, borderRadius: 0, cursor: mode === 'record' ? 'pointer' : 'default', position: 'relative', fontSize: usePrimaryCharacterPronunciation ? '15px' : '32px', fontWeight: '600', minWidth: usePrimaryCharacterPronunciation ? '18px' : '6px', minHeight: usePrimaryCharacterPronunciation ? '68px' : undefined, boxSizing: 'border-box', textAlign: 'center', flexShrink: 0, color: currentSpeakerTextColor, letterSpacing: 0, lineHeight: usePrimaryCharacterPronunciation ? 1.05 : 1.15 },
 		charJoinSeparator: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: usePrimaryCharacterPronunciation ? '12px' : '16px', minWidth: usePrimaryCharacterPronunciation ? '12px' : '16px', padding: 0, flexShrink: 0, color: 'transparent', pointerEvents: 'none' },
 		charSpanPronunciationPrimary: { display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: '2px' },
 		charWordGroup: { display: 'inline-flex', position: 'relative', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', flexShrink: 0, borderRadius: 0, padding: '0 0 3px', boxSizing: 'border-box', color: currentSpeakerTextColor },
@@ -8806,6 +8867,20 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const currentLinePreviewIndex = currentLineText
 		? getPreviewProgressIndex(currentLineIndex)
 		: -1;
+	const sharedKaraokePreviewRenderer = window.ivLyricsKaraokeRenderer?.KaraokeLinePlaybackPreview || null;
+	const currentKaraokePreviewLine = !hasCurrentParallelParts
+		? buildSyncCreatorKaraokePreviewLine({
+			text: currentLineText,
+			charTimes: currentLineData?.chars,
+			speaker: currentSpeakerMeta?.speaker,
+			speakerColor: currentSpeakerMeta?.['speaker-color'],
+			speakerFallback: currentSpeakerMeta?.['speaker-fallback'],
+			kind: currentTextEffectKind
+		})
+		: null;
+	const useSharedKaraokePreview = mode === 'preview'
+		&& Boolean(sharedKaraokePreviewRenderer)
+		&& Boolean(currentKaraokePreviewLine);
 	const currentRecordingCharIndex = recordingCharIndexRef.current;
 	const currentLineProgressIndex = mode === 'record' && currentRecordingCharIndex >= 0
 		? currentRecordingCharIndex
@@ -9744,11 +9819,19 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					? react.createElement('div', { style: s.parallelStack }, currentParallelParts.map((part, index) => renderParallelPartLine(part, index)))
 					: react.createElement('div', {
 						className: `ivlyrics-sync-stage-effect-preview lyrics-karaoke-part lead ${currentTextEffectKind}${textEffectsDisabled ? ' text-effects-disabled' : ''}`,
-						style: s.stageEffectPreview
-					}, react.createElement('div', {
-						className: 'lyrics-karaoke-line is-active',
-						style: useCurrentLineTextRun ? { ...s.rtlLyricsLine, direction: currentLineDirection } : s.lyricsLine
-					}, renderCurrentLineCharacters()))
+						style: useSharedKaraokePreview
+							? { ...s.stageEffectPreview, ...s.karaokeRendererPreview }
+							: s.stageEffectPreview,
+						'data-shared-karaoke-preview': useSharedKaraokePreview ? '1' : undefined
+					}, useSharedKaraokePreview
+						? react.createElement(sharedKaraokePreviewRenderer, {
+							line: currentKaraokePreviewLine,
+							isActive: true
+						})
+						: react.createElement('div', {
+							className: 'lyrics-karaoke-line is-active',
+							style: useCurrentLineTextRun ? { ...s.rtlLyricsLine, direction: currentLineDirection } : s.lyricsLine
+						}, renderCurrentLineCharacters()))
 			),
 			nextNavigableLineIndex >= 0 && react.createElement('div', { style: s.nextLineBox },
 				react.createElement('div', { style: s.nextLineLabel }, I18n.t('syncCreator.nextLine')),
@@ -9760,11 +9843,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					}
 				}, getSyncCreatorFuriganaReact(lyricsLines[nextNavigableLineIndex]))
 			),
+			mode === 'record' && react.createElement('div', { style: s.hint }, I18n.t('syncCreator.dragHint')),
 			react.createElement('div', { style: s.effectStripRow },
 				react.createElement('span', { style: s.effectStripTitle }, I18n.t('syncCreator.typeLabel') || 'Text effect'),
 				renderTextEffectPicker(currentTextEffectKind, updateCurrentTextEffect, { compact: true })
-			),
-			mode === 'record' && react.createElement('div', { style: s.hint }, I18n.t('syncCreator.dragHint'))
+			)
 		)
 	);
 

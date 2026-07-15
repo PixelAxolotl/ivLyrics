@@ -9053,6 +9053,21 @@ ruby rt {
   border-color: rgba(var(--iv-sync-accent-rgb, 30, 215, 96), 0.48) !important;
 }
 
+@container ivlyrics-sync-effects (min-width: 980px) {
+  .ivlyrics-sync-creator-shell .sync-creator-effect-strip {
+    display: grid !important;
+    grid-template-columns: repeat(8, minmax(105px, 1fr));
+    grid-template-rows: repeat(2, 54px);
+    align-items: stretch !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+
+  .ivlyrics-sync-creator-shell .sync-creator-effect-strip .ivlyrics-sync-effect-card {
+    width: 100%;
+  }
+}
+
 .ivlyrics-sync-creator-shell .sync-creator-header-back {
   background: transparent !important;
   border-color: transparent !important;

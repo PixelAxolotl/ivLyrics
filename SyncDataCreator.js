@@ -45,6 +45,7 @@ const SYNC_CREATOR_DEFAULT_SPEAKER = 'NORMAL';
 const SYNC_CREATOR_DEFAULT_KIND = 'vocal';
 const SYNC_CREATOR_MAX_MERGED_LINES = 5;
 const SYNC_CREATOR_SYNC_DATA_VERSION = 3;
+const SYNC_CREATOR_MIN_SEQUENTIAL_STEP_SEC = 0.001;
 const SYNC_CREATOR_PREVIEW_POSITION_UPDATE_INTERVAL_MS = 100;
 const SYNC_CREATOR_RECORD_POSITION_UPDATE_INTERVAL_MS = 50;
 const SYNC_CREATOR_IDLE_POSITION_UPDATE_INTERVAL_MS = 500;
@@ -59,6 +60,159 @@ const countSyncCreatorRangeChars = (ranges) => (Array.isArray(ranges) ? ranges :
 	const end = Number(range?.end);
 	return Number.isInteger(start) && Number.isInteger(end) && end >= start ? sum + end - start + 1 : sum;
 }, 0);
+const isFiniteSyncCreatorTime = (value) => typeof value === 'number' && Number.isFinite(value);
+const roundSyncCreatorTime = (value) => Math.round(value * 1000) / 1000;
+const normalizeSyncCreatorTimeSequence = (rawChars, previousLineEndTime = -1) => {
+	const sourceChars = Array.isArray(rawChars) ? rawChars : [];
+	const normalizedChars = [];
+	let minimumAllowedTime = isFiniteSyncCreatorTime(previousLineEndTime) && previousLineEndTime >= 0
+		? previousLineEndTime
+		: 0;
+
+	for (let index = 0; index < sourceChars.length; index++) {
+		const rawTime = isFiniteSyncCreatorTime(sourceChars[index])
+			? sourceChars[index]
+			: minimumAllowedTime;
+		const minimumForChar = index === 0
+			? minimumAllowedTime
+			: minimumAllowedTime + SYNC_CREATOR_MIN_SEQUENTIAL_STEP_SEC;
+		const normalizedTime = roundSyncCreatorTime(Math.max(minimumForChar, rawTime));
+		normalizedChars.push(normalizedTime);
+		minimumAllowedTime = normalizedTime;
+	}
+
+	return normalizedChars;
+};
+const repairSyncCreatorLineCharsFromParallel = (line) => {
+	const lineStart = Number(line?.start);
+	const lineEnd = Number(line?.end);
+	if (!Number.isInteger(lineStart) || !Number.isInteger(lineEnd) || lineEnd < lineStart) return line;
+
+	const expectedLength = lineEnd - lineStart + 1;
+	if (
+		Array.isArray(line?.chars)
+		&& line.chars.length === expectedLength
+		&& line.chars.every(isFiniteSyncCreatorTime)
+	) {
+		return line;
+	}
+
+	const parts = line?.parallel?.parts;
+	if (!Array.isArray(parts) || parts.length === 0) return line;
+
+	const rebuiltChars = new Array(expectedLength).fill(null);
+	for (const part of parts) {
+		const expectedPartLength = countSyncCreatorRangeChars(part?.ranges);
+		if (
+			expectedPartLength <= 0
+			|| !Array.isArray(part?.chars)
+			|| part.chars.length !== expectedPartLength
+			|| !part.chars.every(isFiniteSyncCreatorTime)
+		) {
+			return line;
+		}
+
+		let partCharIndex = 0;
+		for (const range of part.ranges) {
+			const rangeStart = Number(range?.start);
+			const rangeEnd = Number(range?.end);
+			if (
+				!Number.isInteger(rangeStart)
+				|| !Number.isInteger(rangeEnd)
+				|| rangeStart < lineStart
+				|| rangeEnd > lineEnd
+				|| rangeEnd < rangeStart
+			) {
+				return line;
+			}
+			for (let absoluteIndex = rangeStart; absoluteIndex <= rangeEnd; absoluteIndex++) {
+				rebuiltChars[absoluteIndex - lineStart] = part.chars[partCharIndex++];
+			}
+		}
+	}
+
+	const hiddenIndexes = new Set();
+	const hiddenRanges = [
+		...(Array.isArray(line?.hiddenRanges) ? line.hiddenRanges : []),
+		...(Array.isArray(line?.parallel?.hiddenRanges) ? line.parallel.hiddenRanges : [])
+	];
+	for (const range of hiddenRanges) {
+		const rangeStart = Math.max(lineStart, Number(range?.start));
+		const rangeEnd = Math.min(lineEnd, Number(range?.end));
+		if (!Number.isInteger(rangeStart) || !Number.isInteger(rangeEnd) || rangeEnd < rangeStart) continue;
+		for (let absoluteIndex = rangeStart; absoluteIndex <= rangeEnd; absoluteIndex++) {
+			hiddenIndexes.add(absoluteIndex - lineStart);
+		}
+	}
+
+	for (let index = 0; index < rebuiltChars.length; index++) {
+		if (isFiniteSyncCreatorTime(rebuiltChars[index])) continue;
+		if (!hiddenIndexes.has(index)) return line;
+		const previous = index > 0 && isFiniteSyncCreatorTime(rebuiltChars[index - 1])
+			? rebuiltChars[index - 1]
+			: null;
+		const next = rebuiltChars.slice(index + 1).find(isFiniteSyncCreatorTime);
+		const fallback = previous ?? next;
+		if (!isFiniteSyncCreatorTime(fallback)) return line;
+		rebuiltChars[index] = fallback;
+	}
+
+	return {
+		...line,
+		chars: normalizeSyncCreatorTimeSequence(rebuiltChars)
+	};
+};
+const getSyncCreatorSyncDataValidationError = (data) => {
+	if (!data || !Array.isArray(data.lines)) return 'Invalid sync data format';
+
+	for (let lineIndex = 0; lineIndex < data.lines.length; lineIndex++) {
+		const line = data.lines[lineIndex];
+		const start = Number(line?.start);
+		const end = Number(line?.end);
+		if (!Number.isInteger(start) || !Number.isInteger(end) || end < start) {
+			return `Line ${lineIndex + 1}: invalid character range`;
+		}
+
+		const expectedLength = end - start + 1;
+		if (!Array.isArray(line?.chars) || line.chars.length !== expectedLength) {
+			return `Line ${lineIndex + 1}: expected ${expectedLength} char timings, received ${Array.isArray(line?.chars) ? line.chars.length : 0}`;
+		}
+		const invalidLineCharIndex = line.chars.findIndex(value => !isFiniteSyncCreatorTime(value) || value < 0);
+		if (invalidLineCharIndex >= 0) {
+			return `Line ${lineIndex + 1}, char ${invalidLineCharIndex}: invalid time value`;
+		}
+		const backwardLineCharIndex = line.chars.findIndex((value, index) => index > 0 && value < line.chars[index - 1]);
+		if (backwardLineCharIndex >= 0) {
+			return `Line ${lineIndex + 1}, char ${backwardLineCharIndex}: time goes backwards`;
+		}
+
+		const parts = Array.isArray(line?.parallel?.parts) ? line.parallel.parts : [];
+		for (let partIndex = 0; partIndex < parts.length; partIndex++) {
+			const part = parts[partIndex];
+			if (!Array.isArray(part?.chars)) continue;
+			const expectedPartLength = countSyncCreatorRangeChars(part.ranges);
+			const partLabel = String(part?.id || partIndex + 1);
+			if (part.chars.length !== expectedPartLength) {
+				return `Line ${lineIndex + 1}, parallel part ${partLabel}: expected ${expectedPartLength} char timings, received ${part.chars.length}`;
+			}
+			const invalidPartCharIndex = part.chars.findIndex(value => !isFiniteSyncCreatorTime(value) || value < 0);
+			if (invalidPartCharIndex >= 0) {
+				return `Line ${lineIndex + 1}, parallel part ${partLabel}, char ${invalidPartCharIndex}: invalid time value`;
+			}
+			const backwardPartCharIndex = part.chars.findIndex((value, index) => index > 0 && value < part.chars[index - 1]);
+			if (backwardPartCharIndex >= 0) {
+				return `Line ${lineIndex + 1}, parallel part ${partLabel}, char ${backwardPartCharIndex}: time goes backwards`;
+			}
+		}
+	}
+
+	return null;
+};
+const assertValidSyncCreatorSyncData = (data) => {
+	const validationError = getSyncCreatorSyncDataValidationError(data);
+	if (validationError) throw new Error(`Invalid sync data: ${validationError}`);
+	return data;
+};
 const areSyncCreatorParallelRangesEqual = (leftRanges, rightRanges) => (
 	Array.isArray(leftRanges)
 	&& Array.isArray(rightRanges)
@@ -906,8 +1060,7 @@ const buildSyncCreatorVisualPronunciationUnits = (lineChars, pronunciationMap) =
 const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const { useState, useEffect, useRef, useCallback, useMemo } = react;
 
-	const roundSyncTime = (time) => Math.round(time * 1000) / 1000;
-	const SYNC_CREATOR_MIN_SEQUENTIAL_STEP_SEC = 0.001;
+	const roundSyncTime = roundSyncCreatorTime;
 	const SYNC_CREATOR_DRAG_INITIAL_BURST_STEPS = 3;
 	const SYNC_CREATOR_DRAG_INTERVAL_MS = 27;
 	const EDGE_INTERPOLATION_GAP_SEC = 0.045;
@@ -1104,14 +1257,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const getLastRecordedSyncIndex = (target) => {
 		if (!Array.isArray(target)) return -1;
 		for (let index = target.length - 1; index >= 0; index--) {
-			if (typeof target[index] === 'number') return index;
+			if (isFiniteSyncCreatorTime(target[index])) return index;
 		}
 		return -1;
 	};
 	const getPreviousRecordedSyncTime = (target, beforeIndex) => {
 		if (!Array.isArray(target)) return null;
 		for (let index = Math.min(beforeIndex - 1, target.length - 1); index >= 0; index--) {
-			if (typeof target[index] === 'number') return target[index];
+			if (isFiniteSyncCreatorTime(target[index])) return target[index];
 		}
 		return null;
 	};
@@ -1613,7 +1766,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		if (!data || !Array.isArray(data.lines)) return data;
 		let migratedParallelRanges = false;
 		const lines = data.lines.map((line) => {
-			const nextLine = { ...line };
+			let nextLine = { ...line };
 			const sourceSpeaker = nextLine.speaker;
 			const speaker = normalizeSyncCreatorSpeaker(sourceSpeaker);
 			if (speaker) nextLine.speaker = speaker;
@@ -1644,6 +1797,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			} else {
 				delete nextLine.hiddenRanges;
 			}
+			nextLine = repairSyncCreatorLineCharsFromParallel(nextLine);
 			return nextLine;
 		});
 		const hasParallelLines = lines.some(line => Array.isArray(line?.parallel?.parts) && line.parallel.parts.length > 1);
@@ -4092,7 +4246,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		if (charIndex >= previousRecordingCharIndex) {
 			// 정방향 진행
 			for (let i = previousRecordingCharIndex + 1; i <= charIndex; i++) {
-				if (charTimesRef.current[i] === null) {
+				if (!isFiniteSyncCreatorTime(charTimesRef.current[i])) {
 					charTimesRef.current[i] = currentTime;
 				}
 			}
@@ -4110,20 +4264,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	// Commit-time normalization keeps the client aligned with backend validation:
 	// chars must be non-decreasing and a line must not start before the previous line ends.
 	const normalizeCommittedLineChars = useCallback((rawChars, previousLineEndTime = -1) => {
-		const normalizedChars = [];
-		let minimumAllowedTime = previousLineEndTime >= 0 ? previousLineEndTime : 0;
-
-		for (let i = 0; i < rawChars.length; i++) {
-			const rawTime = typeof rawChars[i] === 'number' ? rawChars[i] : minimumAllowedTime;
-			const minimumForChar = i === 0
-				? minimumAllowedTime
-				: minimumAllowedTime + SYNC_CREATOR_MIN_SEQUENTIAL_STEP_SEC;
-			const normalizedTime = roundSyncTime(Math.max(minimumForChar, rawTime));
-			normalizedChars.push(normalizedTime);
-			minimumAllowedTime = normalizedTime;
-		}
-
-		return normalizedChars;
+		return normalizeSyncCreatorTimeSequence(rawChars, previousLineEndTime);
 	}, []);
 
 	const mergeCurrentLineWithNext = useCallback(() => {
@@ -4321,11 +4462,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				}
 			});
 
-			const firstKnown = fullChars.find(time => typeof time === 'number');
+			const firstKnown = fullChars.find(isFiniteSyncCreatorTime);
 			for (let index = 0; index < fullChars.length; index++) {
-				if (typeof fullChars[index] === 'number') continue;
-				const previous = index > 0 && typeof fullChars[index - 1] === 'number' ? fullChars[index - 1] : null;
-				const next = fullChars.slice(index + 1).find(time => typeof time === 'number');
+				if (isFiniteSyncCreatorTime(fullChars[index])) continue;
+				const previous = index > 0 && isFiniteSyncCreatorTime(fullChars[index - 1]) ? fullChars[index - 1] : null;
+				const next = fullChars.slice(index + 1).find(isFiniteSyncCreatorTime);
 				fullChars[index] = previous ?? next ?? firstKnown ?? 0;
 			}
 
@@ -4333,12 +4474,12 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		};
 
 		const fullLineChars = buildFullLineChars();
-			const lineData = {
-				...(existingLine || {}),
-				start: lineStart,
-				end: lineEnd,
-				chars: fullLineChars.map((time) => roundSyncTime(time))
-			};
+		let lineData = {
+			...(existingLine || {}),
+			start: lineStart,
+			end: lineEnd,
+			chars: fullLineChars.map((time) => roundSyncTime(time))
+		};
 		const leadMetaPart = currentParallelData?.parts?.find(part => part.role === 'lead') || currentParallelData?.parts?.[0] || activeParallelPart;
 		const lineMetaDraft = lineMetaDrafts[lineStart] || {};
 		const hasLineSpeakerDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker');
@@ -4450,6 +4591,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			}
 		}
 
+		lineData = repairSyncCreatorLineCharsFromParallel(lineData);
+
 		if (existingIndex >= 0) {
 			nextLines[existingIndex] = lineData;
 		} else {
@@ -4544,7 +4687,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const chars = [];
 		for (let i = 0; i < charCount; i++) {
 			let time;
-			if (charTimesRef.current[i] !== null) {
+			if (isFiniteSyncCreatorTime(charTimesRef.current[i])) {
 				time = charTimesRef.current[i];
 			} else if (i <= endCharIndex) {
 				// 중간에 빈 곳이 있으면 채움 (보간)
@@ -4666,7 +4809,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 
 		const savedChars = getCurrentSyncTargetSavedChars();
-		const missingSavedIndex = savedChars.findIndex((time, index) => index <= safeIndex && typeof time !== 'number');
+		const missingSavedIndex = savedChars.findIndex((time, index) => index <= safeIndex && !isFiniteSyncCreatorTime(time));
 		if (missingSavedIndex >= 0) {
 			Toast.error(I18n.t('syncCreator.syncLockRequiresTiming') || 'Sync this line once before locking part of it.');
 			return;
@@ -4779,7 +4922,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			const startTime = charTimesRef.current[0] || endTime;
 			for (let i = 0; i < charCount; i++) {
 				let time;
-				if (charTimesRef.current[i] !== null) {
+				if (isFiniteSyncCreatorTime(charTimesRef.current[i])) {
 					time = charTimesRef.current[i];
 				} else if (i <= endCharIndex) {
 					const prevTime = chars[chars.length - 1] || startTime;
@@ -6235,6 +6378,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				return nextLine;
 			})
 		});
+		try {
+			assertValidSyncCreatorSyncData(syncDataToSubmit);
+		} catch (error) {
+			console.error('[SyncDataCreator] Submit validation error:', error);
+			Toast.error(error?.message || I18n.t('syncCreator.submitError'));
+			return;
+		}
 
 		const resolvedTrackIsrc = trackIsrc
 			|| await window.SyncDataService?.resolveTrackIsrc?.(trackId, {
@@ -6326,6 +6476,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 
 		try {
+			const exportData = attachSelectedLrclibSource(syncData);
+			assertValidSyncCreatorSyncData(exportData);
 			const fileName = `sync-${trackId}-${Date.now()}.json`;
 			const saveTarget = await Utils.requestSaveFileTarget(fileName, {
 				description: 'ivLyrics Sync Data',
@@ -6334,7 +6486,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			});
 			if (saveTarget.canceled) return;
 
-			const exportData = attachSelectedLrclibSource(syncData);
 			const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
 			await Utils.saveBlobAs(blob, fileName, saveTarget);
 
@@ -6365,6 +6516,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 				// 싱크 데이터 적용
 				const sanitizedData = sanitizeSyncCreatorSyncData(importedData, lyricsFullTextChars);
+				assertValidSyncCreatorSyncData(sanitizedData);
 				setSyncData(sanitizedData);
 				setSelectedLrclibSourceValue(sanitizedData?.source?.provider === 'lrclib' ? sanitizedData.source : null);
 

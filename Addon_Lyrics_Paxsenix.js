@@ -5,7 +5,7 @@
  * @addon-type lyrics
  * @id paxsenix
  * @name Lyrically (Paxsenix)
- * @version 1.0.3
+ * @version 1.0.5
  * @supports karaoke: true
  * @supports synced: true
  * @supports unsynced: true
@@ -27,7 +27,7 @@
     const getEndpointLabel = value => String(value || '').split('://').pop().replace(/\/$/, '');
     const CATALOG_SEARCH_HOST = new URL(ENDPOINTS.catalogSearch).hostname;
     const ATTRIBUTION = `Lyrics via Lyrically API (${ENDPOINTS.homepage}).`;
-    const CACHE_VERSION = 'paxsenix-provider-v11';
+    const CACHE_VERSION = 'paxsenix-provider-v13';
     const REQUEST_TIMEOUT_MS = 9000;
     const PROVIDER_TIMEOUT_MS = 12000;
 
@@ -44,7 +44,7 @@
         id: 'paxsenix',
         name: 'Lyrically (Paxsenix)',
         author: 'default',
-        version: '1.0.3',
+        version: '1.0.5',
         cacheVersion: CACHE_VERSION,
         description: {
             en: 'Lyrics through the public Lyrically API',
@@ -472,8 +472,10 @@
         const isNameWord = word => {
             const firstLetter = word.match(/\p{L}/u)?.[0];
             if (!firstLetter) return /^\d+$/u.test(word);
-            return firstLetter === firstLetter.toLocaleUpperCase()
+            const startsWithUppercase = firstLetter === firstLetter.toLocaleUpperCase()
                 && firstLetter !== firstLetter.toLocaleLowerCase();
+            const isMixedCaseAlias = /\p{Ll}/u.test(word) && /\p{Lu}/u.test(word);
+            return startsWithUppercase || isMixedCaseAlias;
         };
         return requireEveryWord
             ? significantWords.every(isNameWord)
@@ -527,48 +529,17 @@
         return false;
     }
 
-    function getEarlyCreditAnchorIndex(allLines, info, referenceLines) {
-        const lookahead = Math.min(allLines.length, 4);
-        const entries = [];
+    function getEarlyCreditAnchorIndex(allLines, _info, referenceLines) {
+        const lookahead = Math.min(allLines.length, 10);
         for (let index = 0; index < lookahead; index += 1) {
             const line = allLines[index];
             const startTime = toMilliseconds(line?.timestamp)
                 ?? toMilliseconds(line?.text?.[0]?.timestamp)
                 ?? 0;
-            entries.push({
-                index,
-                text: getStructuredLineText(line, referenceLines.get(startTime))
-            });
+            const text = getStructuredLineText(line, referenceLines.get(startTime));
+            if (isCreditMetadataText(text)) return index;
         }
-
-        const strongCredits = entries.filter(entry => isStrongCreditMetadataText(entry.text));
-        if (!strongCredits.length) return -1;
-        const firstCreditIndex = strongCredits[0].index;
-        if (firstCreditIndex <= 0) return firstCreditIndex;
-
-        const leadingEntries = entries.slice(0, firstCreditIndex);
-        const expectedTitle = normalizeMetadataIdentity(info?.title);
-        const combinedLeading = normalizeMetadataIdentity(
-            leadingEntries.map(entry => entry.text).join(' ')
-        );
-        const titleMatches = identitiesOverlap(expectedTitle, combinedLeading);
-        let consecutiveStrongCreditCount = 0;
-        for (let index = firstCreditIndex; index < entries.length; index += 1) {
-            if (!isStrongCreditMetadataText(entries[index].text)) break;
-            consecutiveStrongCreditCount += 1;
-        }
-        const hasDashHeaderFallback = firstCreditIndex === 1
-            && consecutiveStrongCreditCount >= 2
-            && isDashSeparatedHeaderLikeText(leadingEntries[0]?.text);
-        if (!titleMatches && !hasDashHeaderFallback) return -1;
-        if (hasDashHeaderFallback) return firstCreditIndex;
-
-        if (consecutiveStrongCreditCount >= 2) return firstCreditIndex;
-
-        return leadingEntries.every(entry => {
-            const identity = normalizeMetadataIdentity(entry.text);
-            return identitiesOverlap(expectedTitle, identity) || isLikelyLeadingHeaderName(entry.text);
-        }) ? firstCreditIndex : -1;
+        return -1;
     }
 
     function isCopyrightMetadataText(text) {
@@ -623,8 +594,6 @@
             const startTime = toMilliseconds(line?.timestamp)
                 ?? toMilliseconds(line?.text?.[0]?.timestamp)
                 ?? 0;
-            if (index === 0 && startTime >= 30000) break;
-
             const text = getStructuredLineText(line, referenceLines.get(startTime));
             const isTitleHeader = index === 0 && isTitleArtistMetadataHeader(text, info);
             const isEarlyHeaderContinuation = earlyCreditAnchorIndex > 0

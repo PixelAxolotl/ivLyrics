@@ -1716,6 +1716,22 @@
             }
             return cached;
         }
+
+        function hasRedactedSyncDataContributorIdentity(syncData) {
+            if (!syncData || typeof syncData !== 'object') return false;
+            const contributorGroups = [
+                syncData.contributors,
+                syncData.syncData?.contributors
+            ];
+            return contributorGroups.some((contributors) => (
+                Array.isArray(contributors)
+                && contributors.some((contributor) => (
+                    contributor
+                    && typeof contributor === 'object'
+                    && contributor.identityRedacted === true
+                ))
+            ));
+        }
         let _spotifyProfilePromise = null;
         let _openDbState = null;
         let _openDbLoadPromise = null;
@@ -2938,7 +2954,8 @@
         }
 
         async function getSyncData(trackId, provider = null, metadata = {}) {
-            const forceContributorRefresh = metadata?.forceContributorRefresh === true;
+            let forceContributorRefresh = metadata?.forceContributorRefresh === true;
+            let redactedCachedFallback = null;
             syncDataConsoleLog('getSyncData:called', {
                 trackId: getTrackIdFromInput(trackId, metadata) || trackId || null,
                 provider: provider || null,
@@ -2965,12 +2982,28 @@
             const specificKey = `${identityKey}:${queryProvider}`;
 
             if (!forceContributorRefresh && _syncDataCache.has(specificKey)) {
-                syncDataConsoleLog('getSyncData:cache-hit', {
+                const cachedSyncData = _syncDataCache.get(specificKey);
+                if (!hasRedactedSyncDataContributorIdentity(cachedSyncData)) {
+                    syncDataConsoleLog('getSyncData:cache-hit', {
+                        isrc: identity.isrc || null,
+                        trackId: identity.trackId || null,
+                        provider: queryProvider
+                    });
+                    return cachedSyncData;
+                }
+
+                // Timing data may be cached for the whole session, but contributor
+                // privacy can change at any time. The cache intentionally stores no
+                // identity, so rehydrate the latest public/private state before it is
+                // shown. If the refresh fails, the redacted copy remains the safe
+                // fallback and never exposes stale identity.
+                redactedCachedFallback = cachedSyncData;
+                forceContributorRefresh = true;
+                syncDataConsoleLog('getSyncData:refresh-redacted-contributors', {
                     isrc: identity.isrc || null,
                     trackId: identity.trackId || null,
                     provider: queryProvider
                 });
-                return _syncDataCache.get(specificKey);
             }
 
             const bypassServerCache = shouldBypassServerCache(identity.isrc);
@@ -3115,7 +3148,7 @@
                 if (!inflightRequest || inflightRequest === fetchPromise) {
                     _inflightRequests.delete(inflightKey);
                 }
-                return null;
+                return redactedCachedFallback;
             }
         }
 

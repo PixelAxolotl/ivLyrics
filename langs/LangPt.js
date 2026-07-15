@@ -1590,7 +1590,7 @@ window.LANG_PT = {
         "title": "Vinculação de Conta",
         "subtitle": "Vincule sua conta do Discord",
         "description": "Conta de contribuição do ivLyrics baseada no Discord",
-        "info": "Quando você entrar com o Discord, seu user hash atual será substituído pelo seu ID do Discord e os dados de contribuição existentes serão migrados.",
+        "info": "Entre com o Discord para gerenciar seu perfil de criador. Contribuições anônimas anteriores não são transferidas automaticamente sem verificação de propriedade.",
         "loginButton": "Entrar com Discord",
         "loading": "Carregando informações da conta...",
         "linked": "Vinculado",
@@ -1604,6 +1604,7 @@ window.LANG_PT = {
         "loadFailed": "Falha ao carregar as informações da conta.",
         "discordLoginSuccess": "Conta do Discord vinculada com sucesso.",
         "logout": "Sair",
+        "logoutFailed": "Não foi possível sair do Discord.",
         "logoutSuccess": "Sessão do Discord encerrada e novo user_hash criado.",
         "nickname": {
           "label": "Apelido",
@@ -1616,6 +1617,18 @@ window.LANG_PT = {
           "saving": "Salvando...",
           "save": "Salvar",
           "change": "Alterar"
+        },
+        "creatorPrivacy": {
+          "title": "Perfil privado",
+          "description": "Os perfis privados permanecem nas listas de colaboradores, mas seu nome, foto e links do perfil ficam ocultos.",
+          "public": "Público",
+          "private": "Privado",
+          "loading": "Carregando configuração de privacidade...",
+          "loadFailed": "Não foi possível carregar a privacidade do perfil de criador.",
+          "saveFailed": "Não foi possível atualizar a privacidade do perfil de criador.",
+          "savedPublic": "Seu perfil de criador agora é público.",
+          "savedPrivate": "Seu perfil de criador agora é privado.",
+          "loginRequired": "É necessário entrar no Discord para gerenciar a privacidade do perfil de criador."
         },
         "backup": {
           "title": "Backup e Restauração",

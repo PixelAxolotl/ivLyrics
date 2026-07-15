@@ -1590,7 +1590,7 @@ window.LANG_ID = {
         "title": "Penautan Akun",
         "subtitle": "Tautkan dengan akun Discord Anda",
         "description": "Akun kontribusi ivLyrics berbasis Discord",
-        "info": "Saat Anda masuk dengan Discord, user hash saat ini akan diganti dengan ID Discord Anda dan data kontribusi yang sudah ada juga akan dipindahkan.",
+        "info": "Masuk dengan Discord untuk mengelola profil kreator. Kontribusi anonim lama tidak dipindahkan secara otomatis tanpa verifikasi kepemilikan.",
         "loginButton": "Masuk dengan Discord",
         "loading": "Memuat info akun...",
         "linked": "Tertaut",
@@ -1604,6 +1604,7 @@ window.LANG_ID = {
         "loadFailed": "Gagal memuat info akun.",
         "discordLoginSuccess": "Akun Discord berhasil ditautkan.",
         "logout": "Keluar",
+        "logoutFailed": "Gagal keluar dari Discord.",
         "logoutSuccess": "Keluar dari Discord dan user_hash baru telah dibuat.",
         "nickname": {
           "label": "Nama panggilan",
@@ -1616,6 +1617,18 @@ window.LANG_ID = {
           "saving": "Menyimpan...",
           "save": "Simpan",
           "change": "Ubah"
+        },
+        "creatorPrivacy": {
+          "title": "Profil privat",
+          "description": "Profil privat tetap ada dalam daftar kontributor, tetapi nama, foto, dan tautan profil Anda disembunyikan.",
+          "public": "Publik",
+          "private": "Privat",
+          "loading": "Memuat pengaturan privasi...",
+          "loadFailed": "Gagal memuat privasi profil kreator.",
+          "saveFailed": "Gagal memperbarui privasi profil kreator.",
+          "savedPublic": "Profil kreator Anda sekarang publik.",
+          "savedPrivate": "Profil kreator Anda sekarang privat.",
+          "loginRequired": "Login Discord diperlukan untuk mengelola privasi profil kreator."
         },
         "backup": {
           "title": "Backup & Restore",

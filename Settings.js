@@ -310,7 +310,7 @@ function getDiscordAccountCopy() {
       "Connect your ivLyrics contributions and nickname with Discord.",
     info:
       I18n.t(`${baseKey}.info`) ||
-      "When you log in, the current user hash is replaced with your Discord ID and existing contribution data is migrated.",
+      "Sign in with Discord to manage your creator profile. Existing anonymous contributions are not transferred automatically without ownership verification.",
     loginButton:
       I18n.t(`${baseKey}.loginButton`) || "Sign In With Discord",
     loggingIn:
@@ -335,6 +335,9 @@ function getDiscordAccountCopy() {
       I18n.t(`${baseKey}.loadFailed`) || "Failed to load account information.",
     logout:
       I18n.t(`${baseKey}.logout`) || "Log Out",
+    logoutFailed:
+      I18n.t(`${baseKey}.logoutFailed`) ||
+      "Failed to sign out from Discord.",
     logoutSuccess:
       I18n.t(`${baseKey}.logoutSuccess`) ||
       "Signed out from Discord and created a new user hash.",
@@ -503,10 +506,201 @@ const NicknameSection = ({ userHash }) => {
   );
 };
 
+function getCreatorPrivacyCopy() {
+  const baseKey = "settingsAdvanced.aboutTab.account.creatorPrivacy";
+  return {
+    title: I18n.t(`${baseKey}.title`) || "Private creator profile",
+    description:
+      I18n.t(`${baseKey}.description`) ||
+      "Private profiles remain in contributor lists, but your name, photo, and profile links are hidden.",
+    publicLabel: I18n.t(`${baseKey}.public`) || "Public",
+    privateLabel: I18n.t(`${baseKey}.private`) || "Private",
+    loading: I18n.t(`${baseKey}.loading`) || "Loading privacy setting...",
+    loadFailed:
+      I18n.t(`${baseKey}.loadFailed`) || "Failed to load creator profile privacy.",
+    saveFailed:
+      I18n.t(`${baseKey}.saveFailed`) || "Failed to update creator profile privacy.",
+    savedPublic:
+      I18n.t(`${baseKey}.savedPublic`) || "Your creator profile is now public.",
+    savedPrivate:
+      I18n.t(`${baseKey}.savedPrivate`) || "Your creator profile is now private.",
+  };
+}
+
+const CreatorPrivacySection = ({ userHash }) => {
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const themeTokens = getAboutAccountThemeTokens();
+  const copy = getCreatorPrivacyCopy();
+
+  const loadPrivacy = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await Utils.fetchSyncCreatorPrivacy();
+      setIsPrivate(data?.isPrivate === true || data?.profilePublic === false);
+    } catch (privacyError) {
+      console.error("Failed to load creator profile privacy:", privacyError);
+      setError(privacyError.message || copy.loadFailed);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPrivacy();
+  }, [userHash]);
+
+  const handleToggle = async () => {
+    if (loading || saving) return;
+
+    const nextPrivate = !isPrivate;
+    try {
+      setSaving(true);
+      setError(null);
+      const data = await Utils.setSyncCreatorPrivacy(nextPrivate);
+      const savedPrivate = data?.isPrivate === true || data?.profilePublic === false;
+      setIsPrivate(savedPrivate);
+      window.SyncDataService?.clearCache?.();
+      window.dispatchEvent(
+        new CustomEvent("ivLyrics:creator-privacy-changed", {
+          detail: {
+            isPrivate: savedPrivate,
+            profilePublic: !savedPrivate,
+          },
+        })
+      );
+      Toast.success(savedPrivate ? copy.savedPrivate : copy.savedPublic);
+    } catch (privacyError) {
+      console.error("Failed to update creator profile privacy:", privacyError);
+      const message = privacyError.message || copy.saveFailed;
+      setError(message);
+      Toast.error(message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const disabled = loading || saving;
+  const statusLabel = loading ? copy.loading : (isPrivate ? copy.privateLabel : copy.publicLabel);
+
+  return react.createElement(
+    "div",
+    {
+      style: {
+        marginTop: "4px",
+        padding: "18px 2px 2px",
+        borderTop: `1px solid ${themeTokens.panelBorder}`,
+      },
+    },
+    react.createElement(
+      "div",
+      {
+        style: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "20px",
+        },
+      },
+      react.createElement(
+        "div",
+        { style: { minWidth: 0, flex: 1 } },
+        react.createElement(
+          "div",
+          {
+            style: {
+              color: themeTokens.textPrimary,
+              fontSize: "14px",
+              fontWeight: "700",
+              marginBottom: "5px",
+            },
+          },
+          copy.title
+        ),
+        react.createElement(
+          "p",
+          {
+            style: {
+              margin: 0,
+              color: themeTokens.textSecondary,
+              fontSize: "12px",
+              lineHeight: "1.55",
+              maxWidth: "620px",
+            },
+          },
+          copy.description
+        )
+      ),
+      react.createElement(
+        "div",
+        {
+          style: {
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            flexShrink: 0,
+          },
+        },
+        react.createElement(
+          "span",
+          {
+            style: {
+              color: error ? "#f87171" : themeTokens.textSecondary,
+              fontSize: "12px",
+              fontWeight: "700",
+              whiteSpace: "nowrap",
+            },
+          },
+          error || statusLabel
+        ),
+        react.createElement(
+          "button",
+          {
+            type: "button",
+            role: "switch",
+            "aria-checked": isPrivate,
+            "aria-label": copy.title,
+            disabled,
+            onClick: handleToggle,
+            style: {
+              width: "42px",
+              height: "24px",
+              padding: "2px",
+              borderRadius: "999px",
+              border: `1px solid ${isPrivate ? "rgba(34, 197, 94, 0.55)" : themeTokens.subtleButtonBorder}`,
+              background: isPrivate ? "rgba(34, 197, 94, 0.2)" : themeTokens.subtleButtonBackground,
+              cursor: disabled ? "wait" : "pointer",
+              opacity: disabled ? 0.55 : 1,
+              transition: "background 160ms ease, border-color 160ms ease, opacity 160ms ease",
+              flexShrink: 0,
+            },
+          },
+          react.createElement("span", {
+            "aria-hidden": "true",
+            style: {
+              display: "block",
+              width: "18px",
+              height: "18px",
+              borderRadius: "50%",
+              background: isPrivate ? "#22c55e" : themeTokens.textTertiary,
+              transform: isPrivate ? "translateX(18px)" : "translateX(0)",
+              transition: "transform 180ms cubic-bezier(.2,.8,.2,1), background 160ms ease",
+            },
+          })
+        )
+      )
+    )
+  );
+};
+
 const AccountSection = () => {
   const [accountInfo, setAccountInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loginLoading, setLoginLoading] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const [error, setError] = useState(null);
   const themeTokens = getAboutAccountThemeTokens();
   const copy = getDiscordAccountCopy();
@@ -560,24 +754,32 @@ const AccountSection = () => {
   };
 
   const handleLogout = async () => {
-    await Utils.logoutDiscordSession();
-    const nextUserHash = Utils.resetUserHash();
-    setAccountInfo(null);
-    setError(null);
-    window.SyncDataService?.clearCache?.();
-    window.dispatchEvent(
-      new CustomEvent("ivLyrics:account-changed", {
-        detail: {
-          linked: false,
-          userHash: nextUserHash,
-        },
-      })
-    );
-    Toast.success(copy.logoutSuccess);
-    Utils.restoreAccountSettings({
-      initialTab: "about",
-      initialSettingKey: "about-account",
-    });
+    try {
+      setLogoutLoading(true);
+      await Utils.logoutDiscordSession();
+      const nextUserHash = Utils.resetUserHash();
+      setAccountInfo(null);
+      setError(null);
+      window.SyncDataService?.clearCache?.();
+      window.dispatchEvent(
+        new CustomEvent("ivLyrics:account-changed", {
+          detail: {
+            linked: false,
+            userHash: nextUserHash,
+          },
+        })
+      );
+      Toast.success(copy.logoutSuccess);
+      Utils.restoreAccountSettings({
+        initialTab: "about",
+        initialSettingKey: "about-account",
+      });
+    } catch (err) {
+      console.error("Failed to log out from Discord:", err);
+      Toast.error(err.message || copy.logoutFailed);
+    } finally {
+      setLogoutLoading(false);
+    }
   };
 
   if (loading) {
@@ -714,7 +916,7 @@ const AccountSection = () => {
         "button",
         {
           onClick: openLoginPage,
-          disabled: loginLoading,
+          disabled: loginLoading || logoutLoading,
           style: {
             width: "100%",
             padding: "12px 20px",
@@ -908,7 +1110,7 @@ const AccountSection = () => {
         "button",
         {
           onClick: openLoginPage,
-          disabled: loginLoading,
+          disabled: loginLoading || logoutLoading,
           style: {
             flex: "1 1 220px",
             padding: "10px 16px",
@@ -927,7 +1129,7 @@ const AccountSection = () => {
         "button",
         {
           onClick: handleLogout,
-          disabled: loginLoading,
+          disabled: loginLoading || logoutLoading,
           style: {
             flex: "1 1 160px",
             padding: "10px 16px",
@@ -944,6 +1146,7 @@ const AccountSection = () => {
       )
     ),
     react.createElement(NicknameSection, { userHash: Utils.getUserHash() }),
+    react.createElement(CreatorPrivacySection, { userHash: Utils.getUserHash() }),
     react.createElement(SettingsBackup, { userHash: Utils.getUserHash() })
   );
 };

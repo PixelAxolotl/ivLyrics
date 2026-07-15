@@ -76,6 +76,9 @@ const YOUTUBE_ID_PATTERNS = [
   /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
   /youtube\.com\/v\/([a-zA-Z0-9_-]{11})/,
 ];
+const IV_LYRICS_DISCORD_LOGIN_PENDING_KEY = "ivLyrics:discord-login-pending";
+const IV_LYRICS_DISCORD_LOGIN_PENDING_TTL_MS = 10 * 60 * 1000;
+const IV_LYRICS_DISCORD_CLIENT_NONCE_REGEX = /^[A-Za-z0-9_-]{43,128}$/;
 
 const IV_LYRICS_DEFAULT_SPEAKER_TEXT_COLORS = {
   "MALE 1": "#a8ccff",
@@ -1799,6 +1802,125 @@ const Utils = {
         });
   },
 
+  generateDiscordClientNonce() {
+    const bytes = new Uint8Array(32);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+  },
+
+  isValidDiscordClientNonce(clientNonce) {
+    return (
+      typeof clientNonce === "string" &&
+      IV_LYRICS_DISCORD_CLIENT_NONCE_REGEX.test(clientNonce)
+    );
+  },
+
+  constantTimeStringEqual(left, right) {
+    const leftBytes = new TextEncoder().encode(typeof left === "string" ? left : "");
+    const rightBytes = new TextEncoder().encode(typeof right === "string" ? right : "");
+    const maxLength = Math.max(leftBytes.length, rightBytes.length);
+    let difference = leftBytes.length ^ rightBytes.length;
+
+    for (let index = 0; index < maxLength; index += 1) {
+      difference |= (leftBytes[index] || 0) ^ (rightBytes[index] || 0);
+    }
+
+    return difference === 0;
+  },
+
+  setPendingDiscordLogin(clientNonce) {
+    if (!this.isValidDiscordClientNonce(clientNonce)) {
+      throw new Error("Invalid Discord login client nonce.");
+    }
+
+    const pending = JSON.stringify({
+      clientNonce,
+      expiresAt: Date.now() + IV_LYRICS_DISCORD_LOGIN_PENDING_TTL_MS,
+    });
+
+    try {
+      Spicetify?.LocalStorage?.set?.(IV_LYRICS_DISCORD_LOGIN_PENDING_KEY, pending);
+    } catch (error) {
+      console.error("[ivLyrics] Failed to store pending Discord login:", error);
+    }
+
+    try {
+      window.StorageManager?.setPersisted?.(IV_LYRICS_DISCORD_LOGIN_PENDING_KEY, pending);
+    } catch (error) {
+      console.error("[ivLyrics] Failed to persist pending Discord login:", error);
+    }
+
+    return { clientNonce, expiresAt: JSON.parse(pending).expiresAt };
+  },
+
+  getPendingDiscordLogin() {
+    const candidates = [];
+
+    try {
+      candidates.push(
+        Spicetify?.LocalStorage?.get?.(IV_LYRICS_DISCORD_LOGIN_PENDING_KEY) || null
+      );
+    } catch (error) {
+      console.error("[ivLyrics] Failed to read pending Discord login:", error);
+    }
+
+    try {
+      candidates.push(
+        window.StorageManager?.getPersisted?.(IV_LYRICS_DISCORD_LOGIN_PENDING_KEY) || null
+      );
+    } catch (error) {
+      console.error("[ivLyrics] Failed to read persisted Discord login:", error);
+    }
+
+    for (const rawValue of candidates) {
+      if (!rawValue || typeof rawValue !== "string") continue;
+      try {
+        const pending = JSON.parse(rawValue);
+        if (
+          this.isValidDiscordClientNonce(pending?.clientNonce) &&
+          Number.isFinite(Number(pending?.expiresAt)) &&
+          Number(pending.expiresAt) > Date.now()
+        ) {
+          return {
+            clientNonce: pending.clientNonce,
+            expiresAt: Number(pending.expiresAt),
+          };
+        }
+      } catch (error) {
+        console.error("[ivLyrics] Failed to parse pending Discord login:", error);
+      }
+    }
+
+    this.clearPendingDiscordLogin();
+    return null;
+  },
+
+  clearPendingDiscordLogin(expectedClientNonce = null) {
+    if (expectedClientNonce) {
+      const current = this.getPendingDiscordLogin();
+      if (
+        current &&
+        !this.constantTimeStringEqual(current.clientNonce, expectedClientNonce)
+      ) {
+        return false;
+      }
+    }
+
+    try {
+      Spicetify?.LocalStorage?.remove?.(IV_LYRICS_DISCORD_LOGIN_PENDING_KEY);
+    } catch (error) {
+      console.error("[ivLyrics] Failed to clear pending Discord login:", error);
+    }
+
+    try {
+      window.StorageManager?.setPersisted?.(IV_LYRICS_DISCORD_LOGIN_PENDING_KEY, "");
+    } catch (error) {
+      console.error("[ivLyrics] Failed to clear persisted Discord login:", error);
+    }
+
+    return true;
+  },
+
   isDiscordUserHash(userHash) {
     return typeof userHash === "string" && /^\d{15,22}$/.test(userHash.trim());
   },
@@ -1930,6 +2052,7 @@ const Utils = {
     const nextUserHash = this.generateUserHash();
     this.setUserHash(nextUserHash);
     this.clearAuthToken();
+    this.clearPendingDiscordLogin();
     window.__ivLyricsDiscordLoginToken = null;
     return nextUserHash;
   },
@@ -2069,14 +2192,24 @@ const Utils = {
       );
     }
 
-    const response = await fetch(`${this.getAccountApiBase()}/discord/start`, {
-      method: "POST",
-      headers: this.getApiHeaders({
-        "Content-Type": "application/json",
-      }),
-      body: JSON.stringify({ currentUserHash }),
-    });
-    const data = await response.json();
+    const clientNonce = this.generateDiscordClientNonce();
+    this.setPendingDiscordLogin(clientNonce);
+
+    let response;
+    let data;
+    try {
+      response = await fetch(`${this.getAccountApiBase()}/discord/start`, {
+        method: "POST",
+        headers: this.getApiHeaders({
+          "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({ currentUserHash, clientNonce }),
+      });
+      data = await response.json();
+    } catch (error) {
+      this.clearPendingDiscordLogin(clientNonce);
+      throw error;
+    }
 
     if (!response.ok || !data.success || !data.authorizeUrl) {
       const errorMessage =
@@ -2090,6 +2223,7 @@ const Utils = {
         this.isDiscordUserHash(currentUserHash) &&
         /discord login is required.*discord account id/i.test(errorMessage)
       ) {
+        this.clearPendingDiscordLogin(clientNonce);
         const nextUserHash = this.resetUserHash();
         window.SyncDataService?.clearCache?.();
         window.dispatchEvent(
@@ -2104,6 +2238,7 @@ const Utils = {
         return this.startDiscordLogin({ ...options, retryOnStaleDiscordHash: false });
       }
 
+      this.clearPendingDiscordLogin(clientNonce);
       throw new Error(errorMessage);
     }
 
@@ -2113,6 +2248,15 @@ const Utils = {
 
   async handleDiscordAuthCallback(loginToken) {
     if (!loginToken) return false;
+
+    const pendingLogin = this.getPendingDiscordLogin();
+    if (!pendingLogin) {
+      Toast?.error?.(
+        I18n.t("settingsAdvanced.aboutTab.account.failed") ||
+          "Discord login failed."
+      );
+      return false;
+    }
 
     if (window.__ivLyricsDiscordLoginToken === loginToken) {
       return false;
@@ -2142,7 +2286,15 @@ const Utils = {
 
       const newUserHash = data.data?.userHash || data.data?.discordId;
       const authToken = data.data?.authToken;
-      if (!newUserHash) {
+      const returnedClientNonce = data.data?.clientNonce;
+      if (
+        !newUserHash ||
+        !this.isValidDiscordClientNonce(returnedClientNonce) ||
+        !this.constantTimeStringEqual(
+          pendingLogin.clientNonce,
+          returnedClientNonce
+        )
+      ) {
         throw new Error(
           I18n.t("settingsAdvanced.aboutTab.account.failed") ||
             "Discord login failed."
@@ -2153,6 +2305,7 @@ const Utils = {
       if (authToken) {
         this.setAuthToken(authToken);
       }
+      this.clearPendingDiscordLogin(pendingLogin.clientNonce);
       window.SyncDataService?.clearCache?.();
       window.dispatchEvent(
         new CustomEvent("ivLyrics:account-changed", { detail: data.data })
@@ -2186,8 +2339,9 @@ const Utils = {
       return true;
     }
 
+    let response;
     try {
-      await fetch(`${this.getAccountApiBase()}/logout`, {
+      response = await fetch(`${this.getAccountApiBase()}/logout`, {
         method: "POST",
         headers: this.getApiHeaders({
           "Content-Type": "application/json",
@@ -2195,11 +2349,28 @@ const Utils = {
       });
     } catch (error) {
       console.error("[ivLyrics] Failed to revoke Discord session:", error);
-    } finally {
-      this.clearAuthToken();
+      throw error;
     }
 
-    return true;
+    if (response.ok || response.status === 401 || response.status === 403) {
+      this.clearAuthToken();
+      return true;
+    }
+
+    let data = null;
+    try {
+      data = await response.json();
+    } catch (_) {}
+
+    const error = new Error(
+      data?.error ||
+        data?.message ||
+        I18n.t("settingsAdvanced.aboutTab.account.logoutFailed") ||
+        "Failed to sign out from Discord."
+    );
+    error.status = response.status;
+    error.data = data;
+    throw error;
   },
 
   async fetchSyncCreatorProfile(userHash, options = {}) {
@@ -2242,10 +2413,73 @@ const Utils = {
     const data = await response.json();
 
     if (!response.ok || !data.success || !data.data) {
-      throw new Error(
+      const error = new Error(
         data.error ||
           I18n.t("creatorProfile.loadFailed") ||
           "Failed to load creator profile."
+      );
+      error.status = response.status;
+      throw error;
+    }
+
+    return data.data;
+  },
+
+  async fetchSyncCreatorPrivacy() {
+    if (!this.getAuthToken()) {
+      throw new Error(
+        I18n.t("settingsAdvanced.aboutTab.account.creatorPrivacy.loginRequired") ||
+          "Discord login is required to manage creator profile privacy."
+      );
+    }
+
+    const response = await fetch(`${this.getAccountApiBase()}/creator-profile/privacy`, {
+      cache: "no-store",
+      headers: this.getApiHeaders({
+        Accept: "application/json",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+      }),
+    });
+    const data = await response.json();
+
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(
+        data.error ||
+          I18n.t("settingsAdvanced.aboutTab.account.creatorPrivacy.loadFailed") ||
+          "Failed to load creator profile privacy."
+      );
+    }
+
+    return data.data;
+  },
+
+  async setSyncCreatorPrivacy(isPrivate) {
+    if (!this.getAuthToken()) {
+      throw new Error(
+        I18n.t("settingsAdvanced.aboutTab.account.creatorPrivacy.loginRequired") ||
+          "Discord login is required to manage creator profile privacy."
+      );
+    }
+
+    const response = await fetch(`${this.getAccountApiBase()}/creator-profile/privacy`, {
+      method: "PUT",
+      cache: "no-store",
+      headers: this.getApiHeaders({
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "Cache-Control": "no-cache, no-store, must-revalidate",
+        Pragma: "no-cache",
+      }),
+      body: JSON.stringify({ isPrivate: !!isPrivate }),
+    });
+    const data = await response.json();
+
+    if (!response.ok || !data.success || !data.data) {
+      throw new Error(
+        data.error ||
+          I18n.t("settingsAdvanced.aboutTab.account.creatorPrivacy.saveFailed") ||
+          "Failed to update creator profile privacy."
       );
     }
 

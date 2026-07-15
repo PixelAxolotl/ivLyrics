@@ -1590,7 +1590,7 @@ window.LANG_FR = {
         "title": "Liaison de compte",
         "subtitle": "Liez votre compte Discord",
         "description": "Compte de contribution ivLyrics basé sur Discord",
-        "info": "Lorsque vous vous connectez avec Discord, votre user hash actuel est remplacé par votre identifiant Discord et vos données de contribution existantes sont migrées.",
+        "info": "Connectez-vous avec Discord pour gérer votre profil de créateur. Les contributions anonymes antérieures ne sont pas transférées automatiquement sans vérification de propriété.",
         "loginButton": "Se connecter avec Discord",
         "loading": "Chargement des infos du compte...",
         "linked": "Lié",
@@ -1604,6 +1604,7 @@ window.LANG_FR = {
         "loadFailed": "Impossible de charger les informations du compte.",
         "discordLoginSuccess": "Compte Discord lié avec succès.",
         "logout": "Se déconnecter",
+        "logoutFailed": "Échec de la déconnexion de Discord.",
         "logoutSuccess": "Déconnecté de Discord et nouveau user_hash créé.",
         "nickname": {
           "label": "Pseudo",
@@ -1616,6 +1617,18 @@ window.LANG_FR = {
           "saving": "Enregistrement...",
           "save": "Enregistrer",
           "change": "Modifier"
+        },
+        "creatorPrivacy": {
+          "title": "Profil privé",
+          "description": "Les profils privés restent dans les listes de contributeurs, mais votre nom, votre photo et les liens vers votre profil sont masqués.",
+          "public": "Public",
+          "private": "Privé",
+          "loading": "Chargement du paramètre de confidentialité...",
+          "loadFailed": "Impossible de charger la confidentialité du profil de créateur.",
+          "saveFailed": "Impossible de mettre à jour la confidentialité du profil de créateur.",
+          "savedPublic": "Votre profil de créateur est désormais public.",
+          "savedPrivate": "Votre profil de créateur est désormais privé.",
+          "loginRequired": "Vous devez vous connecter à Discord pour gérer la confidentialité du profil de créateur."
         },
         "backup": {
           "title": "Sauvegarde et Restauration",

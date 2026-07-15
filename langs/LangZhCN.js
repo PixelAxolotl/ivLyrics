@@ -1590,7 +1590,7 @@ window.LANG_ZH_CN = {
         "title": "账户关联",
         "subtitle": "关联你的 Discord 账户",
         "description": "基于 Discord 的 ivLyrics 贡献账户",
-        "info": "使用 Discord 登录后，当前 userhash 会替换为你的 Discord ID，并迁移现有贡献数据。",
+        "info": "使用 Discord 登录以管理创作者资料。未经所有权验证，已有的匿名贡献不会自动转移。",
         "loginButton": "使用 Discord 登录",
         "loading": "正在加载账户信息...",
         "linked": "已关联",
@@ -1604,6 +1604,7 @@ window.LANG_ZH_CN = {
         "loadFailed": "无法加载账户信息。",
         "discordLoginSuccess": "Discord 账户已成功关联。",
         "logout": "退出登录",
+        "logoutFailed": "无法退出 Discord 登录。",
         "logoutSuccess": "已退出 Discord 登录，并生成新的 user_hash。",
         "nickname": {
           "label": "昵称",
@@ -1616,6 +1617,18 @@ window.LANG_ZH_CN = {
           "saving": "保存中...",
           "save": "保存",
           "change": "更改"
+        },
+        "creatorPrivacy": {
+          "title": "隐藏个人资料",
+          "description": "即使设为私密，您的资料仍会保留在贡献者列表中，但姓名、头像和个人资料链接将被隐藏。",
+          "public": "公开",
+          "private": "私密",
+          "loading": "正在加载隐私设置...",
+          "loadFailed": "无法加载创作者资料隐私设置。",
+          "saveFailed": "无法更新创作者资料隐私设置。",
+          "savedPublic": "您的创作者资料现已公开。",
+          "savedPrivate": "您的创作者资料现已设为私密。",
+          "loginRequired": "需要登录 Discord 才能管理创作者资料隐私设置。"
         },
         "backup": {
           "title": "备份与恢复",

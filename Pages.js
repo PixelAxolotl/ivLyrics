@@ -73,20 +73,29 @@ function mergeCreatorProfileContributions(currentItems, nextItems) {
 	return merged;
 }
 
-function normalizeContributorEntry(contributor) {
+function normalizeContributorEntry(contributor, options = {}) {
+	const anonymousLabel = typeof options.anonymousLabel === "string" && options.anonymousLabel.trim()
+		? options.anonymousLabel.trim()
+		: "Anonymous";
+	const sequenceKey = Number.isInteger(options.sequenceKey) ? options.sequenceKey : 0;
+
 	if (!contributor) {
 		return null;
 	}
 
 	if (typeof contributor === "string") {
-		const name = contributor.trim() || "Anonymous";
+		const rawName = contributor.trim() || "Anonymous";
+		const isAnonymous = rawName.toLowerCase() === "anonymous";
+		const name = isAnonymous ? anonymousLabel : rawName;
 		return {
 			key: `name:${name.toLowerCase()}`,
 			userHash: null,
 			name,
 			avatarUrl: null,
 			linked: false,
-			profileAvailable: false
+			profileAvailable: false,
+			anonymous: isAnonymous,
+			isPrivate: false
 		};
 	}
 
@@ -94,22 +103,32 @@ function normalizeContributorEntry(contributor) {
 		return null;
 	}
 
-	const name = String(contributor.name || contributor.nickname || contributor.displayName || "Anonymous").trim() || "Anonymous";
-	const userHash = typeof contributor.userHash === "string" && contributor.userHash.trim()
+	const isPrivate = contributor.isPrivate === true || contributor.profilePublic === false;
+	const identityRedacted = contributor.identityRedacted === true;
+	const identityHidden = isPrivate || identityRedacted || contributor.anonymous === true;
+	const rawName = String(contributor.name || contributor.nickname || contributor.displayName || "Anonymous").trim() || "Anonymous";
+	const isAnonymous = identityHidden || rawName.toLowerCase() === "anonymous";
+	const name = isAnonymous ? anonymousLabel : rawName;
+	const userHash = !identityHidden && typeof contributor.userHash === "string" && contributor.userHash.trim()
 		? contributor.userHash.trim()
 		: null;
 
 	return {
-		key: userHash || `name:${name.toLowerCase()}`,
+		key: isPrivate || identityRedacted
+			? `${isPrivate ? "private" : "redacted"}:${sequenceKey}`
+			: (userHash || `name:${name.toLowerCase()}`),
 		userHash,
 		name,
-		avatarUrl: typeof contributor.avatarUrl === "string" ? contributor.avatarUrl : null,
-		linked: !!contributor.linked,
-		profileAvailable: contributor.profileAvailable ?? !!userHash
+		avatarUrl: !identityHidden && typeof contributor.avatarUrl === "string" ? contributor.avatarUrl : null,
+		linked: !identityHidden && !!contributor.linked,
+		profileAvailable: !identityHidden && (contributor.profileAvailable ?? !!userHash),
+		anonymous: isAnonymous,
+		isPrivate,
+		identityRedacted
 	};
 }
 
-function getDisplayContributors(contributors, limit = 3) {
+function getDisplayContributors(contributors, limit = 3, anonymousLabel = "Anonymous") {
 	if (!Array.isArray(contributors) || contributors.length === 0) {
 		return [];
 	}
@@ -118,14 +137,19 @@ function getDisplayContributors(contributors, limit = 3) {
 	const seen = new Set();
 	let anonymousAdded = false;
 
-	for (const rawContributor of contributors) {
-		const contributor = normalizeContributorEntry(rawContributor);
+	for (let contributorIndex = 0; contributorIndex < contributors.length; contributorIndex += 1) {
+		const rawContributor = contributors[contributorIndex];
+		const contributor = normalizeContributorEntry(rawContributor, {
+			anonymousLabel,
+			sequenceKey: contributorIndex
+		});
 		if (!contributor) {
 			continue;
 		}
 
-		const isAnonymous = contributor.name.toLowerCase() === "anonymous" && !contributor.profileAvailable;
-		if (isAnonymous) {
+		if (contributor.isPrivate || contributor.identityRedacted) {
+			result.push(contributor);
+		} else if (contributor.anonymous && !contributor.profileAvailable) {
 			if (anonymousAdded) {
 				continue;
 			}
@@ -1144,7 +1168,10 @@ const SyncCreatorProfileModal = react.memo(({
 const CreditFooter = react.memo(({ provider, contributors }) => {
 	const copy = getCreatorProfileCopy();
 	const reactDom = window.Spicetify?.ReactDOM ?? window.ReactDOM ?? null;
-	const visibleContributors = useMemo(() => getDisplayContributors(contributors, 3), [contributors]);
+	const visibleContributors = useMemo(
+		() => getDisplayContributors(contributors, 3, copy.anonymous),
+		[contributors, copy.anonymous]
+	);
 	const [activeContributor, setActiveContributor] = useState(null);
 	const [creatorProfile, setCreatorProfile] = useState(null);
 	const [profileLoading, setProfileLoading] = useState(false);
@@ -1328,6 +1355,16 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 			if (requestIdRef.current !== requestId) {
 				return;
 			}
+			if (error?.status === 403 || error?.status === 404) {
+				// The contributor may have become private after the footer data was
+				// loaded. Close the modal instead of retaining any verified-but-stale
+				// identity from an earlier request.
+				setCreatorProfile(null);
+				setActiveContributor(null);
+				setProfileError(null);
+				Toast.error(error.message || copy.loadFailed);
+				return;
+			}
 			if (append) {
 				Toast.error(error.message || copy.loadFailed);
 			} else if (preserveProfile) {
@@ -1359,10 +1396,10 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 		setProfileSort("recent");
 		setProfileArtistFilter(null);
 		setProfileListRefreshing(false);
-		setCreatorProfile(createCreatorProfileShell(contributor, {
-			sort: "recent",
-			artist: null
-		}));
+		// Do not render cached contributor identity before the profile endpoint
+		// confirms it is still public. A remote privacy change may make this
+		// previously visible name/avatar/hash stale.
+		setCreatorProfile(null);
 		void loadCreatorProfile(contributor, {
 			offset: 0,
 			sort: "recent",
@@ -1606,9 +1643,21 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 		)
 	);
 
+	const modalContributor = creatorProfile && !profileLoading && !profileError
+		? activeContributor
+		: {
+			key: "unverified-creator",
+			userHash: null,
+			name: copy.anonymous,
+			avatarUrl: null,
+			linked: false,
+			profileAvailable: false,
+			anonymous: true,
+			isPrivate: true
+		};
 	const modal = activeContributor
 		? react.createElement(SyncCreatorProfileModal, {
-			contributor: activeContributor,
+			contributor: modalContributor,
 			profile: creatorProfile,
 			loading: profileLoading,
 			error: profileError,

@@ -1590,7 +1590,7 @@ window.LANG_CS = {
         "title": "Propojení účtů",
         "subtitle": "Propojte se svým účtem Discord",
         "description": "Příspěvkový účet ivLyrics založený na Discord",
-        "info": "Když se přihlásíte pomocí Discord, váš aktuální uživatelský hash bude nahrazen vaším Discord ID a stávající data příspěvku budou migrována.",
+        "info": "Přihlaste se přes Discord a spravujte svůj profil tvůrce. Starší anonymní příspěvky se bez ověření vlastnictví automaticky nepřenášejí.",
         "loginButton": "Přihlásit se pomocí Discord",
         "loading": "Načítání informací o účtu...",
         "linked": "Propojeno",
@@ -1604,6 +1604,7 @@ window.LANG_CS = {
         "loadFailed": "Nepodařilo se načíst informace o účtu.",
         "discordLoginSuccess": "Účet Discord byl úspěšně propojen.",
         "logout": "Odhlásit se",
+        "logoutFailed": "Odhlášení z Discordu se nezdařilo.",
         "logoutSuccess": "Odhlášen z Discord a vytvořen nový uživatelský hash.",
         "nickname": {
           "label": "přezdívka",
@@ -1616,6 +1617,18 @@ window.LANG_CS = {
           "saving": "Ukládání...",
           "save": "Uložit",
           "change": "Změna"
+        },
+        "creatorPrivacy": {
+          "title": "Soukromý profil",
+          "description": "Soukromé profily zůstanou v seznamech přispěvatelů, ale vaše jméno, fotografie a odkazy na profil budou skryté.",
+          "public": "Veřejný",
+          "private": "Soukromý",
+          "loading": "Načítání nastavení soukromí...",
+          "loadFailed": "Nepodařilo se načíst soukromí profilu autora.",
+          "saveFailed": "Nepodařilo se aktualizovat soukromí profilu autora.",
+          "savedPublic": "Váš profil autora je nyní veřejný.",
+          "savedPrivate": "Váš profil autora je nyní soukromý.",
+          "loginRequired": "Pro správu soukromí profilu autora je vyžadováno přihlášení přes Discord."
         },
         "backup": {
           "title": "Zálohování a obnovení",

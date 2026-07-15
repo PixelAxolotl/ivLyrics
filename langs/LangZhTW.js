@@ -1590,7 +1590,7 @@ window.LANG_ZH_TW = {
         "title": "帳戶連動",
         "subtitle": "與你的 Discord 帳戶連動",
         "description": "基於 Discord 的 ivLyrics 貢獻帳戶",
-        "info": "使用 Discord 登入後，目前的 userhash 會改為你的 Discord ID，既有貢獻資料也會一併移轉。",
+        "info": "使用 Discord 登入以管理創作者資料。未經所有權驗證，既有的匿名貢獻不會自動移轉。",
         "loginButton": "使用 Discord 登入",
         "loading": "正在載入帳戶資訊...",
         "linked": "已連動",
@@ -1604,6 +1604,7 @@ window.LANG_ZH_TW = {
         "loadFailed": "無法載入帳戶資訊。",
         "discordLoginSuccess": "Discord 帳戶已成功連動。",
         "logout": "登出",
+        "logoutFailed": "無法從 Discord 登出。",
         "logoutSuccess": "已登出 Discord，並產生新的 user_hash。",
         "nickname": {
           "label": "暱稱",
@@ -1616,6 +1617,18 @@ window.LANG_ZH_TW = {
           "saving": "儲存中...",
           "save": "儲存",
           "change": "變更"
+        },
+        "creatorPrivacy": {
+          "title": "隱藏個人檔案",
+          "description": "即使設為私人，您的資料仍會保留在貢獻者清單中，但姓名、頭像和個人檔案連結將會隱藏。",
+          "public": "公開",
+          "private": "私人",
+          "loading": "正在載入隱私設定...",
+          "loadFailed": "無法載入創作者個人檔案隱私設定。",
+          "saveFailed": "無法更新創作者個人檔案隱私設定。",
+          "savedPublic": "您的創作者個人檔案現在為公開。",
+          "savedPrivate": "您的創作者個人檔案現在為私人。",
+          "loginRequired": "需要登入 Discord 才能管理創作者個人檔案隱私設定。"
         },
         "backup": {
           "title": "備份與還原",

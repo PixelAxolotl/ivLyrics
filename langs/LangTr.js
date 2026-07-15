@@ -1590,7 +1590,7 @@ window.LANG_TR = {
       "title": "Hesap Bağlama",
       "subtitle": "Discord hesabınızla bağlayın",
       "description": "Discord tabanlı ivLyrics katkı hesabı",
-      "info": "Discord ile giriş yaptığınızda, mevcut kullanıcı özetiniz Discord ID'niz ile değiştirilir ve mevcut katkı verileriniz taşınır.",
+      "info": "Oluşturucu profilinizi yönetmek için Discord ile giriş yapın. Önceki anonim katkılar, sahiplik doğrulaması olmadan otomatik olarak aktarılmaz.",
       "loginButton": "Discord ile Giriş Yap",
       "loading": "Hesap bilgileri yükleniyor...",
       "linked": "Bağlandı",
@@ -1604,6 +1604,7 @@ window.LANG_TR = {
       "loadFailed": "Hesap bilgileri yüklenemedi.",
       "discordLoginSuccess": "Discord hesabı başarıyla bağlandı.",
       "logout": "Çıkış Yap",
+      "logoutFailed": "Discord oturumu kapatılamadı.",
       "logoutSuccess": "Discord'dan çıkış yapıldı ve yeni bir kullanıcı özeti oluşturuldu.",
       "nickname": {
         "label": "Kullanıcı Adı",
@@ -1616,6 +1617,18 @@ window.LANG_TR = {
         "saving": "Kaydediliyor...",
         "save": "Kaydet",
         "change": "Değiştir"
+      },
+      "creatorPrivacy": {
+        "title": "Profili gizli tut",
+        "description": "Gizli profiller katkıda bulunanlar listesinde görünmeye devam eder, ancak adınız, fotoğrafınız ve profil bağlantılarınız gizlenir.",
+        "public": "Herkese açık",
+        "private": "Gizli",
+        "loading": "Gizlilik ayarı yükleniyor...",
+        "loadFailed": "Oluşturucu profilinin gizlilik ayarı yüklenemedi.",
+        "saveFailed": "Oluşturucu profilinin gizlilik ayarı güncellenemedi.",
+        "savedPublic": "Oluşturucu profiliniz artık herkese açık.",
+        "savedPrivate": "Oluşturucu profiliniz artık gizli.",
+        "loginRequired": "Oluşturucu profili gizliliğini yönetmek için Discord ile giriş yapmanız gerekir."
       },
       "backup": {
         "title": "Yedekle & Geri Yükle",

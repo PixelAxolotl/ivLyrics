@@ -1590,7 +1590,7 @@ window.LANG_SV = {
         "title": "Kontolänkning",
         "subtitle": "Länka till ditt Discord-konto",
         "description": "Discord-baserat ivLyrics bidragskonto",
-        "info": "När du loggar in med Discord ersätts din nuvarande användarhash med ditt Discord ID och befintliga bidragsdata migreras.",
+        "info": "Logga in med Discord för att hantera din kreatörsprofil. Tidigare anonyma bidrag överförs inte automatiskt utan verifiering av ägarskap.",
         "loginButton": "Logga in med discord",
         "loading": "Laddar kontoinformation...",
         "linked": "Länkad",
@@ -1604,6 +1604,7 @@ window.LANG_SV = {
         "loadFailed": "Det gick inte att läsa in kontoinformation.",
         "discordLoginSuccess": "Discord-kontot har länkats.",
         "logout": "Logga ut",
+        "logoutFailed": "Det gick inte att logga ut från Discord.",
         "logoutSuccess": "Loggade ut från Discord och skapade en ny användarhash.",
         "nickname": {
           "label": "Smeknamn",
@@ -1616,6 +1617,18 @@ window.LANG_SV = {
           "saving": "Sparar...",
           "save": "Spara",
           "change": "Ändra"
+        },
+        "creatorPrivacy": {
+          "title": "Privat profil",
+          "description": "Privata profiler finns kvar i listor över bidragsgivare, men ditt namn, din bild och dina profillänkar döljs.",
+          "public": "Offentlig",
+          "private": "Privat",
+          "loading": "Läser in sekretessinställning...",
+          "loadFailed": "Det gick inte att läsa in skaparprofilens sekretess.",
+          "saveFailed": "Det gick inte att uppdatera skaparprofilens sekretess.",
+          "savedPublic": "Din skaparprofil är nu offentlig.",
+          "savedPrivate": "Din skaparprofil är nu privat.",
+          "loginRequired": "Du måste logga in med Discord för att hantera skaparprofilens sekretess."
         },
         "backup": {
           "title": "Säkerhetskopiera och återställa",

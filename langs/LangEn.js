@@ -1590,7 +1590,7 @@ window.LANG_EN = {
         "title": "Account Linking",
         "subtitle": "Link with your Discord account",
         "description": "Discord-based ivLyrics contribution account",
-        "info": "When you sign in with Discord, your current user hash is replaced with your Discord ID and existing contribution data is migrated.",
+        "info": "Sign in with Discord to manage your creator profile. Existing anonymous contributions are not transferred automatically without ownership verification.",
         "loginButton": "Sign In With Discord",
         "loading": "Loading account info...",
         "linked": "Linked",
@@ -1604,6 +1604,7 @@ window.LANG_EN = {
         "loadFailed": "Failed to load account information.",
         "discordLoginSuccess": "Discord account linked successfully.",
         "logout": "Log Out",
+        "logoutFailed": "Failed to sign out from Discord.",
         "logoutSuccess": "Signed out from Discord and created a new user hash.",
         "nickname": {
           "label": "Nickname",
@@ -1616,6 +1617,18 @@ window.LANG_EN = {
           "saving": "Saving...",
           "save": "Save",
           "change": "Change"
+        },
+        "creatorPrivacy": {
+          "title": "Private creator profile",
+          "description": "Private profiles remain in contributor lists, but your name, photo, and profile links are hidden.",
+          "public": "Public",
+          "private": "Private",
+          "loading": "Loading privacy setting...",
+          "loadFailed": "Failed to load creator profile privacy.",
+          "saveFailed": "Failed to update creator profile privacy.",
+          "savedPublic": "Your creator profile is now public.",
+          "savedPrivate": "Your creator profile is now private.",
+          "loginRequired": "Discord login is required to manage creator profile privacy."
         },
         "backup": {
           "title": "Backup & Restore",

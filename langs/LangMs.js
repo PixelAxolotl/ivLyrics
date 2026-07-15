@@ -1590,7 +1590,7 @@ window.LANG_MS = {
         "title": "Penyambungan Akaun",
         "subtitle": "Sambungkan akaun anda dengan Discord",
         "description": "Akaun sumbangan ivLyrics berasaskan Discord",
-        "info": "Apabila anda log masuk dengan Discord, userhash semasa anda akan ditukar kepada ID Discord anda, dan data sumbangan sedia ada akan dipindahkan bersama.",
+        "info": "Log masuk dengan Discord untuk mengurus profil pencipta anda. Sumbangan tanpa nama terdahulu tidak dipindahkan secara automatik tanpa pengesahan pemilikan.",
         "loginButton": "Log Masuk dengan Discord",
         "loading": "Memuatkan maklumat akaun...",
         "linked": "Disambungkan",
@@ -1604,6 +1604,7 @@ window.LANG_MS = {
         "loadFailed": "Gagal memuatkan maklumat akaun.",
         "discordLoginSuccess": "Akaun Discord berjaya disambungkan.",
         "logout": "Log Keluar",
+        "logoutFailed": "Gagal log keluar daripada Discord.",
         "logoutSuccess": "Log keluar dari akaun Discord berjaya dan user_hash baharu telah dijana.",
         "nickname": {
           "label": "Nama Samaran",
@@ -1616,6 +1617,18 @@ window.LANG_MS = {
           "saving": "Menyimpan...",
           "save": "Simpan",
           "change": "Ubah"
+        },
+        "creatorPrivacy": {
+          "title": "Profil peribadi",
+          "description": "Profil peribadi kekal dalam senarai penyumbang, tetapi nama, foto dan pautan profil anda disembunyikan.",
+          "public": "Awam",
+          "private": "Peribadi",
+          "loading": "Memuatkan tetapan privasi...",
+          "loadFailed": "Gagal memuatkan privasi profil pencipta.",
+          "saveFailed": "Gagal mengemas kini privasi profil pencipta.",
+          "savedPublic": "Profil pencipta anda kini awam.",
+          "savedPrivate": "Profil pencipta anda kini peribadi.",
+          "loginRequired": "Log masuk Discord diperlukan untuk mengurus privasi profil pencipta."
         },
         "backup": {
           "title": "Sandaran & Pemulihan Tetapan",

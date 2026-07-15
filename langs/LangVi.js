@@ -1590,7 +1590,7 @@ window.LANG_VI = {
         "title": "Liên kết tài khoản",
         "subtitle": "Liên kết với tài khoản Discord của bạn",
         "description": "Tài khoản đóng góp ivLyrics dựa trên Discord",
-        "info": "Khi bạn đăng nhập bằng Discord, user hash hiện tại sẽ được thay bằng ID Discord của bạn và dữ liệu đóng góp hiện có cũng sẽ được di chuyển.",
+        "info": "Đăng nhập bằng Discord để quản lý hồ sơ người đóng góp. Các đóng góp ẩn danh trước đây sẽ không tự động được chuyển nếu chưa xác minh quyền sở hữu.",
         "loginButton": "Đăng nhập bằng Discord",
         "loading": "Đang tải thông tin tài khoản...",
         "linked": "Đã liên kết",
@@ -1604,6 +1604,7 @@ window.LANG_VI = {
         "loadFailed": "Không thể tải thông tin tài khoản.",
         "discordLoginSuccess": "Đã liên kết tài khoản Discord thành công.",
         "logout": "Đăng xuất",
+        "logoutFailed": "Không thể đăng xuất khỏi Discord.",
         "logoutSuccess": "Đã đăng xuất khỏi Discord và tạo user_hash mới.",
         "nickname": {
           "label": "Biệt danh",
@@ -1616,6 +1617,18 @@ window.LANG_VI = {
           "saving": "Đang lưu...",
           "save": "Lưu",
           "change": "Thay đổi"
+        },
+        "creatorPrivacy": {
+          "title": "Hồ sơ riêng tư",
+          "description": "Hồ sơ riêng tư vẫn xuất hiện trong danh sách cộng tác viên, nhưng tên, ảnh và liên kết hồ sơ của bạn sẽ bị ẩn.",
+          "public": "Công khai",
+          "private": "Riêng tư",
+          "loading": "Đang tải cài đặt quyền riêng tư...",
+          "loadFailed": "Không thể tải quyền riêng tư của hồ sơ người tạo.",
+          "saveFailed": "Không thể cập nhật quyền riêng tư của hồ sơ người tạo.",
+          "savedPublic": "Hồ sơ người tạo của bạn hiện ở chế độ công khai.",
+          "savedPrivate": "Hồ sơ người tạo của bạn hiện ở chế độ riêng tư.",
+          "loginRequired": "Cần đăng nhập Discord để quản lý quyền riêng tư của hồ sơ người tạo."
         },
         "backup": {
           "title": "Backup & Restore",

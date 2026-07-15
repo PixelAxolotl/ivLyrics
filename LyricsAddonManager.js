@@ -857,6 +857,36 @@
                 return null;
             }
 
+            // Cached timing data intentionally contains anonymous contributor
+            // placeholders. Rehydrate only the current identity metadata from
+            // the server; an offline failure safely keeps those placeholders.
+            const hasRedactedContributorIdentity = cacheHit
+                && result.syncDataApplied
+                && Array.isArray(result.contributors)
+                && result.contributors.some((contributor) => (
+                    contributor
+                    && typeof contributor === 'object'
+                    && contributor.identityRedacted === true
+                ));
+            if (hasRedactedContributorIdentity && (trackId || trackIsrc) && window.SyncDataService?.getSyncData) {
+                try {
+                    const syncProvider = result.syncDataProvider || result.provider || provider.id;
+                    const refreshedSyncData = await window.SyncDataService.getSyncData(trackId, syncProvider, {
+                        ...info,
+                        isrc: trackIsrc,
+                        forceContributorRefresh: true
+                    });
+                    if (Array.isArray(refreshedSyncData?.contributors)) {
+                        result = {
+                            ...result,
+                            contributors: refreshedSyncData.contributors
+                        };
+                    }
+                } catch (error) {
+                    console.warn('[LyricsAddonManager] Failed to refresh contributor privacy metadata:', error);
+                }
+            }
+
             const resultHasKaraoke = hasLyricsContent(result.karaoke);
             const resultHasSynced = hasLyricsContent(result.synced);
             const resultHasUnsynced = hasLyricsContent(result.unsynced);

@@ -1590,7 +1590,7 @@ window.LANG_KO = {
         "title": "계정 연동",
         "subtitle": "Discord 계정으로 연동하세요",
         "description": "Discord 기반 ivLyrics 기여 계정",
-        "info": "Discord로 로그인하면 현재 userhash가 Discord ID로 바뀌고, 기존 기여 데이터도 함께 이동됩니다.",
+        "info": "작성자 프로필을 관리하려면 Discord로 로그인하세요. 기존 익명 기여 기록은 소유권 확인 없이 자동으로 이전되지 않습니다.",
         "loginButton": "Discord로 로그인",
         "loading": "계정 정보를 불러오는 중...",
         "linked": "연동됨",
@@ -1604,6 +1604,7 @@ window.LANG_KO = {
         "loadFailed": "계정 정보를 불러오지 못했습니다.",
         "discordLoginSuccess": "Discord 계정이 성공적으로 연동되었습니다.",
         "logout": "로그아웃",
+        "logoutFailed": "Discord에서 로그아웃하지 못했습니다.",
         "logoutSuccess": "Discord 계정에서 로그아웃하고 새 user_hash가 생성되었습니다.",
         "nickname": {
           "label": "닉네임",
@@ -1616,6 +1617,18 @@ window.LANG_KO = {
           "saving": "저장 중...",
           "save": "저장",
           "change": "변경"
+        },
+        "creatorPrivacy": {
+          "title": "프로필 비공개",
+          "description": "비공개로 전환해도 기여자 목록에는 남지만 이름, 프로필 사진과 프로필 링크는 익명으로 표시됩니다.",
+          "public": "공개",
+          "private": "비공개",
+          "loading": "프로필 공개 설정을 불러오는 중...",
+          "loadFailed": "작성자 프로필 공개 설정을 불러오지 못했습니다.",
+          "saveFailed": "작성자 프로필 공개 설정을 변경하지 못했습니다.",
+          "savedPublic": "작성자 프로필을 공개로 전환했습니다.",
+          "savedPrivate": "작성자 프로필을 비공개로 전환했습니다.",
+          "loginRequired": "작성자 프로필 공개 설정을 관리하려면 Discord 로그인이 필요합니다."
         },
         "backup": {
           "title": "설정 백업 및 복원",

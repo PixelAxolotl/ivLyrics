@@ -913,11 +913,76 @@
     window.ApiTracker = ApiTracker;
 
     // ============================================
+    // Contributor profiles can become private while a seven-day lyrics cache is
+    // still valid. Keep the live response intact for the current screen, but do
+    // not persist identity fields that could outlive a later privacy change.
+    const redactContributorForPersistentCache = (contributor) => ({
+        name: 'Anonymous',
+        displayName: 'Anonymous',
+        userHash: null,
+        avatarUrl: null,
+        linked: false,
+        profileAvailable: false,
+        spotifyUserId: null,
+        spotifyDisplayName: null,
+        spotifyProfileUrl: null,
+        profileUrl: null,
+        identifier: null,
+        anonymous: true,
+        isPrivate: !!(
+            contributor
+            && typeof contributor === 'object'
+            && (contributor.isPrivate === true || contributor.profilePublic === false)
+        ),
+        identityRedacted: true
+    });
+
+    const redactContributorContainerForPersistentCache = (value) => {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) {
+            return value;
+        }
+
+        const sanitized = { ...value };
+        ['contributors', 'creators', 'authors'].forEach((key) => {
+            if (Array.isArray(value[key])) {
+                sanitized[key] = value[key].map(redactContributorForPersistentCache);
+            }
+        });
+        if (value.creator !== undefined && value.creator !== null) {
+            sanitized.creator = redactContributorForPersistentCache(value.creator);
+        }
+        return sanitized;
+    };
+
+    const redactLyricsCacheDataForPersistence = (data) => {
+        if (!data || typeof data !== 'object' || Array.isArray(data)) {
+            return data;
+        }
+
+        const sanitized = redactContributorContainerForPersistentCache(data);
+        if (data.syncData && typeof data.syncData === 'object' && !Array.isArray(data.syncData)) {
+            sanitized.syncData = redactContributorContainerForPersistentCache(data.syncData);
+        }
+
+        [
+            'creatorUserHash',
+            'creatorHash',
+            'creatorName',
+            'creatorAvatarUrl',
+            'creatorProfileUrl'
+        ].forEach((key) => {
+            if (Object.prototype.hasOwnProperty.call(sanitized, key)) {
+                delete sanitized[key];
+            }
+        });
+        return sanitized;
+    };
+
     // IndexedDB 기반 로컬 캐시 시스템
     // ============================================
     const LyricsCache = {
         DB_NAME: 'ivLyricsCache',
-        DB_VERSION: 6,
+        DB_VERSION: 7,
 
         EXPIRY: {
             lyrics: 7,
@@ -954,7 +1019,9 @@
                     const db = event.target.result;
                     const oldVersion = event.oldVersion;
 
-                    if (oldVersion < 4 && db.objectStoreNames.contains('lyrics')) {
+                    // v7 removes entries that may still contain contributor
+                    // names, avatars, hashes, or profile URLs from older builds.
+                    if (oldVersion < 7 && db.objectStoreNames.contains('lyrics')) {
                         db.deleteObjectStore('lyrics');
                     }
                     if (!db.objectStoreNames.contains('lyrics')) {
@@ -1019,7 +1086,7 @@
                 });
 
                 if (result && !this._isExpired(result.cachedAt, 'lyrics')) {
-                    return result.data;
+                    return redactLyricsCacheDataForPersistence(result.data);
                 }
 
                 return null;
@@ -1040,7 +1107,7 @@
                     cacheKey,
                     trackId,
                     provider,
-                    data,
+                    data: redactLyricsCacheDataForPersistence(data),
                     cachedAt: Date.now()
                 });
 
@@ -1614,6 +1681,41 @@
         const OPENDB_UNAVAILABLE_RETRY_MS = 5 * 60 * 1000;
         let _serverCacheBypassAllUntil = 0;
         let _syncDataCacheGeneration = 0;
+
+        function redactSyncDataForRuntimeCache(syncData) {
+            if (!syncData || typeof syncData !== 'object') return syncData;
+            const redactContributor = (contributor) => ({
+                name: 'Anonymous',
+                displayName: 'Anonymous',
+                userHash: null,
+                avatarUrl: null,
+                linked: false,
+                profileAvailable: false,
+                spotifyUserId: null,
+                spotifyDisplayName: null,
+                spotifyProfileUrl: null,
+                profileUrl: null,
+                identifier: null,
+                anonymous: true,
+                isPrivate: !!(
+                    contributor
+                    && typeof contributor === 'object'
+                    && (contributor.isPrivate === true || contributor.profilePublic === false)
+                ),
+                identityRedacted: true
+            });
+            const cached = { ...syncData };
+            if (Array.isArray(syncData.contributors)) {
+                cached.contributors = syncData.contributors.map(redactContributor);
+            }
+            if (syncData.syncData && typeof syncData.syncData === 'object' && !Array.isArray(syncData.syncData)) {
+                cached.syncData = { ...syncData.syncData };
+                if (Array.isArray(syncData.syncData.contributors)) {
+                    cached.syncData.contributors = syncData.syncData.contributors.map(redactContributor);
+                }
+            }
+            return cached;
+        }
         let _spotifyProfilePromise = null;
         let _openDbState = null;
         let _openDbLoadPromise = null;
@@ -2836,6 +2938,7 @@
         }
 
         async function getSyncData(trackId, provider = null, metadata = {}) {
+            const forceContributorRefresh = metadata?.forceContributorRefresh === true;
             syncDataConsoleLog('getSyncData:called', {
                 trackId: getTrackIdFromInput(trackId, metadata) || trackId || null,
                 provider: provider || null,
@@ -2861,7 +2964,7 @@
             const queryProvider = provider === 'legacy' ? 'spotify' : provider;
             const specificKey = `${identityKey}:${queryProvider}`;
 
-            if (_syncDataCache.has(specificKey)) {
+            if (!forceContributorRefresh && _syncDataCache.has(specificKey)) {
                 syncDataConsoleLog('getSyncData:cache-hit', {
                     isrc: identity.isrc || null,
                     trackId: identity.trackId || null,
@@ -2871,7 +2974,7 @@
             }
 
             const bypassServerCache = shouldBypassServerCache(identity.isrc);
-            if (bypassServerCache && await isOpenDbUnavailable()) {
+            if (!forceContributorRefresh && bypassServerCache && await isOpenDbUnavailable()) {
                 syncDataConsoleLog('getSyncData:opendb-unavailable-skip', {
                     isrc: identity.isrc || null,
                     trackId: identity.trackId || null,
@@ -2880,7 +2983,7 @@
                 return null;
             }
 
-            if (!bypassServerCache) {
+            if (!forceContributorRefresh && !bypassServerCache) {
                 const openDbHasEntry = await hasOpenDbSyncDataEntry(identity.isrc, queryProvider);
                 if (openDbHasEntry === false) {
                     syncDataConsoleLog('getSyncData:opendb-skip', {
@@ -2893,15 +2996,18 @@
             }
 
             const requestGeneration = getCacheGeneration(identityKey);
+            const inflightKey = forceContributorRefresh
+                ? `${specificKey}:contributor-refresh`
+                : specificKey;
             let fetchPromise = null;
             try {
-                if (_inflightRequests.has(specificKey)) {
+                if (_inflightRequests.has(inflightKey)) {
                     syncDataConsoleLog('getSyncData:join-inflight', {
                         isrc: identity.isrc || null,
                         trackId: identity.trackId || null,
                         provider: queryProvider
                     });
-                    return _inflightRequests.get(specificKey);
+                    return _inflightRequests.get(inflightKey);
                 }
 
                 fetchPromise = (async () => {
@@ -2984,29 +3090,30 @@
                         if (requestGeneration !== getCacheGeneration(identityKey)) {
                             return null;
                         }
-                        _syncDataCache.set(specificKey, syncData);
+                        const cachedSyncData = redactSyncDataForRuntimeCache(syncData);
+                        _syncDataCache.set(specificKey, cachedSyncData);
                         if (resolvedIsrc) {
-                            _syncDataCache.set(`${resolvedIsrc}:${queryProvider}`, syncData);
+                            _syncDataCache.set(`${resolvedIsrc}:${queryProvider}`, cachedSyncData);
                         }
                         if (resolvedTrackId) {
-                            _syncDataCache.set(`track:${resolvedTrackId}:${queryProvider}`, syncData);
+                            _syncDataCache.set(`track:${resolvedTrackId}:${queryProvider}`, cachedSyncData);
                         }
                         return syncData;
                     }
                     return null;
                 })();
 
-                _inflightRequests.set(specificKey, fetchPromise);
+                _inflightRequests.set(inflightKey, fetchPromise);
                 const result = await fetchPromise;
-                if (_inflightRequests.get(specificKey) === fetchPromise) {
-                    _inflightRequests.delete(specificKey);
+                if (_inflightRequests.get(inflightKey) === fetchPromise) {
+                    _inflightRequests.delete(inflightKey);
                 }
                 return result;
             } catch (e) {
                 console.warn(`[SyncDataService] Failed to fetch sync data for ${identityKey}:${provider}`, e);
-                const inflightRequest = _inflightRequests.get(specificKey);
+                const inflightRequest = _inflightRequests.get(inflightKey);
                 if (!inflightRequest || inflightRequest === fetchPromise) {
-                    _inflightRequests.delete(specificKey);
+                    _inflightRequests.delete(inflightKey);
                 }
                 return null;
             }

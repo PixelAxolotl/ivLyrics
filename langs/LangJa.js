@@ -1590,7 +1590,7 @@ window.LANG_JA = {
         "title": "アカウント連携",
         "subtitle": "Discordアカウントと連携",
         "description": "DiscordベースのivLyrics貢献アカウント",
-        "info": "Discordでログインすると、現在のuserhashがDiscord IDに置き換わり、既存の貢献データも移行されます。",
+        "info": "クリエイタープロフィールを管理するにはDiscordでログインしてください。過去の匿名投稿は、所有権を確認しない限り自動では引き継がれません。",
         "loginButton": "Discordでログイン",
         "loading": "アカウント情報を読み込み中...",
         "linked": "連携済み",
@@ -1604,6 +1604,7 @@ window.LANG_JA = {
         "loadFailed": "アカウント情報を読み込めませんでした。",
         "discordLoginSuccess": "Discordアカウントの連携が完了しました。",
         "logout": "ログアウト",
+        "logoutFailed": "Discordからログアウトできませんでした。",
         "logoutSuccess": "Discordアカウントからログアウトし、新しいuser_hashを作成しました。",
         "nickname": {
           "label": "ニックネーム",
@@ -1616,6 +1617,18 @@ window.LANG_JA = {
           "saving": "保存中...",
           "save": "保存",
           "change": "変更"
+        },
+        "creatorPrivacy": {
+          "title": "プロフィールを非公開",
+          "description": "非公開にしてもコントリビューター一覧には表示されますが、名前、プロフィール画像、プロフィールリンクは非表示になります。",
+          "public": "公開",
+          "private": "非公開",
+          "loading": "プライバシー設定を読み込み中...",
+          "loadFailed": "作成者プロフィールの公開設定を読み込めませんでした。",
+          "saveFailed": "作成者プロフィールの公開設定を更新できませんでした。",
+          "savedPublic": "作成者プロフィールを公開にしました。",
+          "savedPrivate": "作成者プロフィールを非公開にしました。",
+          "loginRequired": "作成者プロフィールの公開設定を管理するにはDiscordへのログインが必要です。"
         },
         "backup": {
           "title": "設定のバックアップと復元",

@@ -1590,7 +1590,7 @@ window.LANG_AR = {
         "title": "ربط الحساب",
         "subtitle": "اربط حسابك على Discord",
         "description": "حساب مساهمة ivLyrics المعتمد على Discord",
-        "info": "عند تسجيل الدخول باستخدام Discord، سيتم استبدال user hash الحالي بمعرّف Discord الخاص بك ونقل بيانات المساهمة الحالية.",
+        "info": "سجّل الدخول باستخدام Discord لإدارة ملف منشئ المحتوى. لا تُنقل المساهمات المجهولة السابقة تلقائيًا دون التحقق من الملكية.",
         "loginButton": "تسجيل الدخول عبر Discord",
         "loading": "جارٍ تحميل معلومات الحساب...",
         "linked": "مرتبط",
@@ -1604,6 +1604,7 @@ window.LANG_AR = {
         "loadFailed": "تعذر تحميل معلومات الحساب.",
         "discordLoginSuccess": "تم ربط حساب Discord بنجاح.",
         "logout": "تسجيل الخروج",
+        "logoutFailed": "تعذّر تسجيل الخروج من Discord.",
         "logoutSuccess": "تم تسجيل الخروج من Discord وإنشاء user_hash جديد.",
         "nickname": {
           "label": "الاسم المستعار",
@@ -1616,6 +1617,18 @@ window.LANG_AR = {
           "saving": "جارٍ الحفظ...",
           "save": "حفظ",
           "change": "تغيير"
+        },
+        "creatorPrivacy": {
+          "title": "جعل الملف خاصًا",
+          "description": "تظل الملفات الشخصية الخاصة في قوائم المساهمين، لكن اسمك وصورتك وروابط ملفك الشخصي تكون مخفية.",
+          "public": "عام",
+          "private": "خاص",
+          "loading": "جارٍ تحميل إعداد الخصوصية...",
+          "loadFailed": "تعذر تحميل خصوصية ملف المنشئ الشخصي.",
+          "saveFailed": "تعذر تحديث خصوصية ملف المنشئ الشخصي.",
+          "savedPublic": "أصبح ملف المنشئ الشخصي عامًا الآن.",
+          "savedPrivate": "أصبح ملف المنشئ الشخصي خاصًا الآن.",
+          "loginRequired": "يلزم تسجيل الدخول إلى Discord لإدارة خصوصية ملف المنشئ الشخصي."
         },
         "backup": {
           "title": "Backup & Restore",

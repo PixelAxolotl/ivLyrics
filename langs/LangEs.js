@@ -1590,7 +1590,7 @@ window.LANG_ES = {
         "title": "Vinculación de cuenta",
         "subtitle": "Vincula tu cuenta de Discord",
         "description": "Cuenta de contribución de ivLyrics basada en Discord",
-        "info": "Cuando inicies sesión con Discord, tu user hash actual se reemplazará por tu ID de Discord y se migrarán tus datos de contribución existentes.",
+        "info": "Inicia sesión con Discord para gestionar tu perfil de creador. Las contribuciones anónimas anteriores no se transfieren automáticamente sin verificar su propiedad.",
         "loginButton": "Iniciar sesión con Discord",
         "loading": "Cargando información de cuenta...",
         "linked": "Vinculado",
@@ -1604,6 +1604,7 @@ window.LANG_ES = {
         "loadFailed": "No se pudo cargar la información de la cuenta.",
         "discordLoginSuccess": "La cuenta de Discord se vinculó correctamente.",
         "logout": "Cerrar sesión",
+        "logoutFailed": "No se pudo cerrar la sesión de Discord.",
         "logoutSuccess": "Se cerró la sesión de Discord y se creó un nuevo user_hash.",
         "nickname": {
           "label": "Apodo",
@@ -1616,6 +1617,18 @@ window.LANG_ES = {
           "saving": "Guardando...",
           "save": "Guardar",
           "change": "Cambiar"
+        },
+        "creatorPrivacy": {
+          "title": "Perfil privado",
+          "description": "Los perfiles privados permanecen en las listas de colaboradores, pero tu nombre, foto y enlaces de perfil se ocultan.",
+          "public": "Público",
+          "private": "Privado",
+          "loading": "Cargando configuración de privacidad...",
+          "loadFailed": "No se pudo cargar la privacidad del perfil de creador.",
+          "saveFailed": "No se pudo actualizar la privacidad del perfil de creador.",
+          "savedPublic": "Tu perfil de creador ahora es público.",
+          "savedPrivate": "Tu perfil de creador ahora es privado.",
+          "loginRequired": "Debes iniciar sesión en Discord para administrar la privacidad del perfil de creador."
         },
         "backup": {
           "title": "Copia de Seguridad y Restauración",

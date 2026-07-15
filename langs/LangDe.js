@@ -1590,7 +1590,7 @@ window.LANG_DE = {
         "title": "Kontoverknüpfung",
         "subtitle": "Mit deinem Discord-Konto verknüpfen",
         "description": "Discord-basiertes ivLyrics-Beitragskonto",
-        "info": "Wenn du dich mit Discord anmeldest, wird dein aktueller User Hash durch deine Discord-ID ersetzt und bestehende Beitragsdaten werden migriert.",
+        "info": "Melde dich mit Discord an, um dein Erstellerprofil zu verwalten. Frühere anonyme Beiträge werden ohne Eigentumsnachweis nicht automatisch übertragen.",
         "loginButton": "Mit Discord anmelden",
         "loading": "Kontoinformationen werden geladen...",
         "linked": "Verknüpft",
@@ -1604,6 +1604,7 @@ window.LANG_DE = {
         "loadFailed": "Kontoinformationen konnten nicht geladen werden.",
         "discordLoginSuccess": "Discord-Konto erfolgreich verknüpft.",
         "logout": "Abmelden",
+        "logoutFailed": "Die Abmeldung von Discord ist fehlgeschlagen.",
         "logoutSuccess": "Von Discord abgemeldet und neuer user_hash erstellt.",
         "nickname": {
           "label": "Spitzname",
@@ -1616,6 +1617,18 @@ window.LANG_DE = {
           "saving": "Speichere...",
           "save": "Speichern",
           "change": "Ändern"
+        },
+        "creatorPrivacy": {
+          "title": "Profil privat",
+          "description": "Private Profile bleiben in Mitwirkendenlisten sichtbar, aber Ihr Name, Foto und Ihre Profillinks werden ausgeblendet.",
+          "public": "Öffentlich",
+          "private": "Privat",
+          "loading": "Datenschutzeinstellung wird geladen...",
+          "loadFailed": "Der Datenschutz des Erstellerprofils konnte nicht geladen werden.",
+          "saveFailed": "Der Datenschutz des Erstellerprofils konnte nicht aktualisiert werden.",
+          "savedPublic": "Ihr Erstellerprofil ist jetzt öffentlich.",
+          "savedPrivate": "Ihr Erstellerprofil ist jetzt privat.",
+          "loginRequired": "Zum Verwalten des Datenschutzes Ihres Erstellerprofils ist eine Discord-Anmeldung erforderlich."
         },
         "backup": {
           "title": "Sichern & Wiederherstellen",

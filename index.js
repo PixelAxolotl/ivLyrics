@@ -9145,8 +9145,8 @@ class LyricsContainer extends react.Component {
       moduleState.lastRouteKey = routeKey;
       const searchParams = new URLSearchParams(currentSearch);
 
-      // spotify://ivLyrics/ 경로인지 확인
-      if (currentPath.includes('/ivLyrics')) {
+      // spotify://ivLyrics/ 콜백의 정확한 앱 경로만 처리한다.
+      if (/^\/ivLyrics\/?$/i.test(currentPath)) {
         // alert 파라미터가 있으면 알림 표시
         const alertMessage = searchParams.get('alert');
         if (alertMessage) {

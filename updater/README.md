@@ -15,7 +15,7 @@ The handler ignores external command text and only allows the fixed actions abov
 ## Platform handlers
 
 - Windows: registers `ivlyrics-updater` under `HKCU:\Software\Classes`.
-  If the installer directory differs from `spicetify config-dir`, registration creates a directory junction from Spicetify's `CustomApps\ivLyrics` path to the installed app. This keeps installs and updates working with custom or legacy Spicetify config locations.
+  It derives the active config directory from the config file reported by `spicetify -c`. If the installer directory differs, registration creates a directory junction from Spicetify's configured `CustomApps\ivLyrics` path to the installed app. An existing real ivLyrics directory is synchronized without deleting destination-only files, and the uninstaller records enough state to clean either mode safely.
 - macOS: creates `~/.config/spicetify/CustomApps/ivLyrics/updater/macos/ivLyrics Updater.app` and registers `CFBundleURLTypes`. The app runs the updater in the background instead of automating Terminal.
 - Linux: creates `~/.local/share/applications/ivlyrics-updater.desktop` and points it to `~/.config/spicetify/CustomApps/ivLyrics/updater/unix/ivlyrics-updater.sh` through `xdg-mime`.
 

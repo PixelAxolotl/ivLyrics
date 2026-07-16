@@ -10,3 +10,4 @@ __pycache__/
 **/test/
 **/tests/*
 !tests/paxsenix-entity-decoding.test.js
+!tests/windows-updater-paths.test.ps1

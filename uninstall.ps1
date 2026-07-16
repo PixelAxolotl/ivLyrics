@@ -170,11 +170,11 @@ function Get-SpicetifyConfiguredIvLyricsPath {
 
 function Test-IvLyricsDirectoryIdentity {
     param([string]$Path)
-    $manifestPath = Join-Path $Path "manifest.json"
-    if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
-        return $false
-    }
     try {
+        $manifestPath = Join-Path $Path "manifest.json"
+        if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
+            return $false
+        }
         $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
         return ([string]$manifest.name) -eq "ivLyrics"
     }
@@ -185,16 +185,21 @@ function Test-IvLyricsDirectoryIdentity {
 
 function Get-IvLyricsUninstallerPathEntry {
     param([string]$Path)
-    $fullPath = [IO.Path]::GetFullPath($Path).TrimEnd('\', '/')
-    $parentPath = Split-Path -Parent $fullPath
-    $leafName = Split-Path -Leaf $fullPath
-    if (-not (Test-Path -LiteralPath $parentPath -PathType Container)) {
+    try {
+        $fullPath = [IO.Path]::GetFullPath($Path).TrimEnd('\', '/')
+        $parentPath = Split-Path -Parent $fullPath
+        $leafName = Split-Path -Leaf $fullPath
+        if (-not (Test-Path -LiteralPath $parentPath -PathType Container)) {
+            return $null
+        }
+        return @(
+            Get-ChildItem -LiteralPath $parentPath -Force -ErrorAction Stop |
+                Where-Object { $_.Name -ieq $leafName }
+        ) | Select-Object -First 1
+    }
+    catch {
         return $null
     }
-    return @(
-        Get-ChildItem -LiteralPath $parentPath -Force -ErrorAction Stop |
-            Where-Object { $_.Name -ieq $leafName }
-    ) | Select-Object -First 1
 }
 
 function Initialize-IvLyricsUninstallerNativeMethods {
@@ -255,9 +260,14 @@ function Get-IvLyricsInstallDirectories {
 
 function Get-CurrentVersion {
     foreach ($dir in $script:InstallDirectories) {
-        $versionFile = Join-Path $dir "version.txt"
-        if (Test-Path $versionFile) {
-            return (Get-Content $versionFile -Raw).Trim()
+        try {
+            $versionFile = Join-Path $dir "version.txt"
+            if (Test-Path -LiteralPath $versionFile -PathType Leaf) {
+                return (Get-Content -LiteralPath $versionFile -Raw).Trim()
+            }
+        }
+        catch {
+            continue
         }
     }
     return $null

@@ -303,9 +303,14 @@
         };
     }
 
-    function getSpeakerPresentation(singer, singerOrder, agents = {}) {
+    function getSpeakerPresentation(singer, singerOrder, agents = {}, cache = null) {
         const rawSingerId = String(singer || '').trim();
-        if (!rawSingerId) return { speaker: 'NORMAL', lyricsPlusSinger: '' };
+        if (cache?.has(rawSingerId)) return cache.get(rawSingerId);
+        if (!rawSingerId) {
+            const presentation = { speaker: 'NORMAL', lyricsPlusSinger: '' };
+            cache?.set(rawSingerId, presentation);
+            return presentation;
+        }
 
         const agent = getAgentMetadata(rawSingerId, agents);
         const singerId = agent?.id || rawSingerId;
@@ -318,7 +323,9 @@
             lyricsPlusAgentAlias: agent?.alias || ''
         };
         if (index === 0) {
-            return { speaker: 'NORMAL', ...agentFields };
+            const presentation = { speaker: 'NORMAL', ...agentFields };
+            cache?.set(rawSingerId, presentation);
+            return presentation;
         }
 
         let palette = SPEAKER_PALETTE[(index - 1) % SPEAKER_PALETTE.length];
@@ -331,12 +338,14 @@
             palette = GROUP_SPEAKER_PALETTE[priorGroupCount % GROUP_SPEAKER_PALETTE.length];
         }
 
-        return {
+        const presentation = {
             speaker: 'CUSTOM',
             'speaker-color': palette.color,
             'speaker-fallback': palette.fallback,
             ...agentFields
         };
+        cache?.set(rawSingerId, presentation);
+        return presentation;
     }
 
     function parseSyllable(item) {
@@ -1285,6 +1294,7 @@
         }
 
         const singerOrder = new Map();
+        const speakerPresentations = new Map();
         const agents = payload?.metadata?.agents || {};
         const songParts = Array.isArray(payload?.metadata?.songParts) ? payload.metadata.songParts : [];
 
@@ -1329,7 +1339,12 @@
                 ? Number(rawSongPartIndex)
                 : null;
             const songPart = Number.isInteger(songPartIndex) ? songParts[songPartIndex] : null;
-            const presentation = getSpeakerPresentation(singer, singerOrder, agents);
+            const presentation = getSpeakerPresentation(
+                singer,
+                singerOrder,
+                agents,
+                speakerPresentations
+            );
 
             let leadPart = createVocalPart(`${lineKey}-lead`, 'lead', leadSyllables, presentation);
             let backgroundParts = [];

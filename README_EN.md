@@ -66,12 +66,12 @@ If you have just installed Spicetify, restart PowerShell or your terminal before
 
 ##### Windows
 ```powershell
-iwr -useb https://ivlis.kr/ivLyrics/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/install.ps1 | iex
 ```
 
 ##### macOS / Linux
 ```bash
-curl -fsSL https://ivlis.kr/ivLyrics/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/install.sh | bash
 ```
 
 You can use the same command to update the app.
@@ -81,12 +81,12 @@ Automatic installation also registers the `ivlyrics-updater://` helper on Window
 
 ##### Windows
 ```powershell
-iwr -useb https://ivlis.kr/ivLyrics/uninstall.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/uninstall.ps1 | iex
 ```
 
 ##### macOS / Linux
 ```bash
-curl -fsSL https://ivlis.kr/ivLyrics/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/uninstall.sh | bash
 ```
 
 #### Manual Installation

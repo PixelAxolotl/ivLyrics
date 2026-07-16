@@ -2,7 +2,7 @@
 set -euo pipefail
 
 URI="${1:-ivlyrics-updater://update}"
-INSTALLER_URL="https://ivlis.kr/ivLyrics/install.sh"
+INSTALLER_URL="https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/install.sh"
 export PATH="${HOME}/.spicetify:${HOME}/.local/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${PATH:-}"
 
 if [[ "$(uname -s)" == "Darwin" ]]; then

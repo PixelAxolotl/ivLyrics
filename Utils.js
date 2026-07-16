@@ -1643,9 +1643,9 @@ const Utils = {
    */
   getInstallCommand() {
     const commands = {
-      windows: "iwr -useb https://ivlis.kr/ivLyrics/install.ps1 | iex",
-      mac: "curl -fsSL https://ivlis.kr/ivLyrics/install.sh | bash",
-      linux: "curl -fsSL https://ivlis.kr/ivLyrics/install.sh | bash",
+      windows: "iwr -useb https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/install.ps1 | iex",
+      mac: "curl -fsSL https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/install.sh | bash",
+      linux: "curl -fsSL https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/install.sh | bash",
     };
     return commands[this.detectPlatform()];
   },

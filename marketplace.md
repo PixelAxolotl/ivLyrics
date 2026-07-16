@@ -9,13 +9,13 @@
 ##### Windows
 Run the following command in PowerShell.
 ```powershell
-iwr -useb https://ivlis.kr/ivLyrics/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/install.ps1 | iex
 ```
 
 ##### macOS / Linux
 Run the following command in Terminal.
 ```bash
-curl -fsSL https://ivlis.kr/ivLyrics/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/install.sh | bash
 ```
 
 # How to uninstall?
@@ -23,13 +23,13 @@ curl -fsSL https://ivlis.kr/ivLyrics/install.sh | bash
 ##### Windows
 Run the following command in PowerShell.
 ```powershell
-iwr -useb https://ivlis.kr/ivLyrics/uninstall.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/uninstall.ps1 | iex
 ```
 
 ##### macOS / Linux
 Run the following command in Terminal.
 ```bash
-curl -fsSL https://ivlis.kr/ivLyrics/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/uninstall.sh | bash
 ```
 
 ---

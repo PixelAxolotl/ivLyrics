@@ -9,8 +9,19 @@ ivlyrics-updater://open-log
 
 The handler ignores external command text and only allows the fixed actions above. The `update` action downloads and runs the official installer:
 
-- Windows: `https://ivlis.kr/ivLyrics/install.ps1`
-- macOS/Linux: `https://ivlis.kr/ivLyrics/install.sh`
+- Windows: `https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/install.ps1`
+- macOS/Linux: `https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/install.sh`
+
+The install and uninstall bootstrap scripts are maintained in this directory:
+
+```text
+updater/install.ps1
+updater/install.sh
+updater/uninstall.ps1
+updater/uninstall.sh
+```
+
+Public install, update, and uninstall commands intentionally download these scripts from GitHub Raw instead of executing the copies inside the installed app. This keeps first-time installation available before the app directory exists and lets the uninstaller remove the installed `ivLyrics` directory without depending on a script running from inside that directory.
 
 ## Platform handlers
 

@@ -3,7 +3,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-$InstallerUrl = "https://ivlis.kr/ivLyrics/install.ps1"
+$InstallerUrl = "https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/install.ps1"
 $UpdaterRoot = Join-Path $env:LOCALAPPDATA "ivLyrics\Updater"
 $LogPath = Join-Path $UpdaterRoot "updater.log"
 
@@ -90,7 +90,7 @@ catch {
     Write-UpdaterLog ("Update failed: " + $_.Exception.Message)
     Write-Host ""
     Write-Host "ivLyrics update failed. You can run the manual command instead:"
-    Write-Host "iwr -useb https://ivlis.kr/ivLyrics/install.ps1 | iex"
+    Write-Host "iwr -useb https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/install.ps1 | iex"
     Write-Host ""
     Read-Host "Press Enter to close"
     exit 1

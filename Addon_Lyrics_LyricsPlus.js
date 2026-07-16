@@ -40,6 +40,7 @@
     const DISPLAY_LOWERCASE_PATTERN = /[a-z]/u;
     const DISPLAY_NUMBER_PATTERN = /\p{Number}/u;
     const DISPLAY_PUNCTUATION_PATTERN = /[.,'’!?;:()\-]/u;
+    const OBJECT_PROPERTY_IS_ENUMERABLE = Object.prototype.propertyIsEnumerable;
     const CACHE_VERSION = '2026-07-13-lyricsplus-10';
     const ATTRIBUTION = 'Lyrics from LyricsPlus.';
     let nextApiBaseIndex = 0;
@@ -274,10 +275,20 @@
         const singerId = String(singer || '').trim();
         if (!singerId) return null;
 
-        const entries = Object.entries(agents || {});
+        const agentSource = agents || {};
+        if (OBJECT_PROPERTY_IS_ENUMERABLE.call(agentSource, singerId)) {
+            const agent = agentSource[singerId];
+            return {
+                id: singerId,
+                type: normalizeDisplayText(agent?.type).toLowerCase(),
+                name: normalizeDisplayText(agent?.name),
+                alias: normalizeDisplayText(agent?.alias)
+            };
+        }
+
+        const entries = Object.entries(agentSource);
         const normalizedSingerId = normalizeDisplayText(singerId).toLocaleLowerCase();
-        const match = entries.find(([id]) => id === singerId)
-            || entries.find(([id]) => normalizeDisplayText(id).toLocaleLowerCase() === normalizedSingerId)
+        const match = entries.find(([id]) => normalizeDisplayText(id).toLocaleLowerCase() === normalizedSingerId)
             || entries.find(([_id, agent]) => (
                 normalizeDisplayText(agent?.alias).toLocaleLowerCase() === normalizedSingerId
             ));
@@ -288,8 +299,7 @@
             id,
             type: normalizeDisplayText(agent?.type).toLowerCase(),
             name: normalizeDisplayText(agent?.name),
-            alias: normalizeDisplayText(agent?.alias),
-            orderIndex: entries.findIndex(([candidateId]) => candidateId === id)
+            alias: normalizeDisplayText(agent?.alias)
         };
     }
 

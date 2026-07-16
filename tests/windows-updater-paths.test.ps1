@@ -78,9 +78,9 @@ try {
     @'
 @echo off
 if not "%~1"=="-c" exit /b 8
-if "%SPICETIFY_TEST_OUTPUT%"=="" exit /b 9
-echo %SPICETIFY_TEST_OUTPUT% 1>&2
-if not "%SPICETIFY_TEST_DIAGNOSTIC%"=="" echo %SPICETIFY_TEST_DIAGNOSTIC% 1>&2
+if "%SPICETIFY_TEST_CONFIG%"=="" exit /b 9
+echo(%SPICETIFY_TEST_OUTPUT% 1>&2
+if not "%SPICETIFY_TEST_DIAGNOSTIC%"=="" echo(%SPICETIFY_TEST_DIAGNOSTIC% 1>&2
 exit /b %SPICETIFY_TEST_EXIT%
 '@ | Set-Content -LiteralPath (Join-Path $fakeBin "spicetify.cmd") -Encoding ASCII
     $env:PATH = "$fakeBin;$originalPath"

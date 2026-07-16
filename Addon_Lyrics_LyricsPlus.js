@@ -33,6 +33,13 @@
     const SOLO_LINE_SPLIT_MIN_WIDTH = 6;
     const SOLO_LINE_SPLIT_MIN_DURATION_MS = 500;
     const SOLO_LINE_SPLIT_MAX_SEGMENTS = 4;
+    const DISPLAY_MARK_PATTERN = /\p{Mark}/u;
+    const DISPLAY_WHITESPACE_PATTERN = /\s/u;
+    const DISPLAY_FULL_WIDTH_PATTERN = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Extended_Pictographic}]/u;
+    const DISPLAY_UPPERCASE_PATTERN = /[A-Z]/u;
+    const DISPLAY_LOWERCASE_PATTERN = /[a-z]/u;
+    const DISPLAY_NUMBER_PATTERN = /\p{Number}/u;
+    const DISPLAY_PUNCTUATION_PATTERN = /[.,'’!?;:()\-]/u;
     const CACHE_VERSION = '2026-07-13-lyricsplus-10';
     const ATTRIBUTION = 'Lyrics from LyricsPlus.';
     let nextApiBaseIndex = 0;
@@ -348,18 +355,26 @@
     }
 
     function measureLyricsDisplayWidth(value) {
-        return Array.from(String(value || '')).reduce((width, character) => {
-            if (/\p{Mark}/u.test(character)) return width;
-            if (/\s/u.test(character)) return width + 0.33;
-            if (/[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Extended_Pictographic}]/u.test(character)) {
-                return width + 1;
+        let width = 0;
+        for (const character of String(value || '')) {
+            if (DISPLAY_MARK_PATTERN.test(character)) continue;
+            if (DISPLAY_WHITESPACE_PATTERN.test(character)) {
+                width += 0.33;
+            } else if (DISPLAY_FULL_WIDTH_PATTERN.test(character)) {
+                width += 1;
+            } else if (DISPLAY_UPPERCASE_PATTERN.test(character)) {
+                width += 0.72;
+            } else if (DISPLAY_LOWERCASE_PATTERN.test(character)) {
+                width += 0.58;
+            } else if (DISPLAY_NUMBER_PATTERN.test(character)) {
+                width += 0.62;
+            } else if (DISPLAY_PUNCTUATION_PATTERN.test(character)) {
+                width += 0.38;
+            } else {
+                width += 0.8;
             }
-            if (/[A-Z]/u.test(character)) return width + 0.72;
-            if (/[a-z]/u.test(character)) return width + 0.58;
-            if (/\p{Number}/u.test(character)) return width + 0.62;
-            if (/[.,'’!?;:()\-]/u.test(character)) return width + 0.38;
-            return width + 0.8;
-        }, 0);
+        }
+        return width;
     }
 
     function getBoundaryCharacter(value, fromEnd = false) {

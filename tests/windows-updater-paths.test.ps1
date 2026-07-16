@@ -7,6 +7,8 @@ if ($PSVersionTable.PSVersion.Major -ne 5) {
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $pathUtilsScript = Join-Path $repoRoot "updater\windows\updater-path-utils.ps1"
 . $pathUtilsScript
+$installerScript = Join-Path $repoRoot "updater\install.ps1"
+. $installerScript -FunctionsOnly
 
 $script:assertionCount = 0
 
@@ -55,6 +57,8 @@ function Set-TestConfig {
     $configPath = Join-Path $configDir "config-xpui.ini"
     Set-Content -LiteralPath $configPath -Value "[Setting]" -Encoding UTF8
     $env:SPICETIFY_TEST_CONFIG = $configPath
+    $env:SPICETIFY_TEST_OUTPUT = $configPath
+    $env:SPICETIFY_TEST_DIAGNOSTIC = ""
     return $configPath
 }
 
@@ -74,8 +78,9 @@ try {
     @'
 @echo off
 if not "%~1"=="-c" exit /b 8
-if "%SPICETIFY_TEST_CONFIG%"=="" exit /b 9
-echo "%SPICETIFY_TEST_CONFIG%" 1>&2
+if "%SPICETIFY_TEST_OUTPUT%"=="" exit /b 9
+echo %SPICETIFY_TEST_OUTPUT% 1>&2
+if not "%SPICETIFY_TEST_DIAGNOSTIC%"=="" echo %SPICETIFY_TEST_DIAGNOSTIC% 1>&2
 exit /b %SPICETIFY_TEST_EXIT%
 '@ | Set-Content -LiteralPath (Join-Path $fakeBin "spicetify.cmd") -Encoding ASCII
     $env:PATH = "$fakeBin;$originalPath"
@@ -84,6 +89,15 @@ exit /b %SPICETIFY_TEST_EXIT%
     $caseRoot = Join-Path $tempRoot "config path"
     $configPath = Set-TestConfig -CaseRoot $caseRoot
     Assert-Equal (Get-TestConfiguredAppPath -ConfigPath $configPath) (Get-SpicetifyAppDir) "-c should resolve the config file parent, including spaces"
+    Assert-Equal (Get-TestConfiguredAppPath -ConfigPath $configPath) (Get-SpicetifyInstallerAppDir) "the standalone installer should resolve the active config path"
+
+    $escape = [char]27
+    $env:SPICETIFY_TEST_OUTPUT = "${escape}[36m`"$configPath`"${escape}[0m"
+    $env:SPICETIFY_TEST_DIAGNOSTIC = "warning? invalid path"
+    Assert-Equal (Get-TestConfiguredAppPath -ConfigPath $configPath) (Get-SpicetifyAppDir) "ANSI output and trailing diagnostics should not corrupt the updater config path"
+    Assert-Equal (Get-TestConfiguredAppPath -ConfigPath $configPath) (Get-SpicetifyInstallerAppDir) "ANSI output and trailing diagnostics should not corrupt the installer config path"
+    $env:SPICETIFY_TEST_OUTPUT = $configPath
+    $env:SPICETIFY_TEST_DIAGNOSTIC = ""
 
     $env:SPICETIFY_TEST_EXIT = "7"
     Assert-Throws { Get-SpicetifyAppDir | Out-Null } "exit 7" "a failing spicetify command should be reported"
@@ -239,6 +253,7 @@ exit /b %SPICETIFY_TEST_EXIT%
     Assert-True (Remove-IvLyricsRecordedAppDirectory -StatePath $statePath -IncludeSynchronizedDirectory) "the staged state should support uninstall cleanup"
 
     foreach ($relativePath in @(
+        "updater\install.ps1",
         "updater\windows\register-updater-protocol.ps1",
         "updater\windows\unregister-updater-protocol.ps1",
         "updater\windows\updater-path-utils.ps1"
@@ -255,6 +270,8 @@ finally {
     $env:PATH = $originalPath
     $env:LOCALAPPDATA = $originalLocalAppData
     Remove-Item Env:SPICETIFY_TEST_CONFIG -ErrorAction SilentlyContinue
+    Remove-Item Env:SPICETIFY_TEST_OUTPUT -ErrorAction SilentlyContinue
+    Remove-Item Env:SPICETIFY_TEST_DIAGNOSTIC -ErrorAction SilentlyContinue
     Remove-Item Env:SPICETIFY_TEST_EXIT -ErrorAction SilentlyContinue
     if (Test-Path -LiteralPath $tempRoot) {
         Remove-Item -LiteralPath $tempRoot -Recurse -Force -ErrorAction SilentlyContinue

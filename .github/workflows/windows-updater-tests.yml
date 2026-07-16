@@ -3,6 +3,7 @@ name: Windows updater tests
 on:
   pull_request:
     paths:
+      - "updater/install.ps1"
       - "updater/windows/**"
       - "tests/windows-updater-paths.test.ps1"
       - ".github/workflows/windows-updater-tests.yml"
@@ -10,6 +11,7 @@ on:
     branches:
       - main
     paths:
+      - "updater/install.ps1"
       - "updater/windows/**"
       - "tests/windows-updater-paths.test.ps1"
       - ".github/workflows/windows-updater-tests.yml"

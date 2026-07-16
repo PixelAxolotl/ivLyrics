@@ -5,7 +5,8 @@ param(
     [switch]$Force,
     [switch]$Help,
     [Alias("v")]
-    [switch]$Version
+    [switch]$Version,
+    [switch]$FunctionsOnly
 )
 
 # --- Configuration ---
@@ -210,6 +211,54 @@ function Test-Installation {
     return $true
 }
 
+function ConvertFrom-IvLyricsInstallerTerminalText {
+    param($Value)
+
+    $text = ([string]$Value).Trim()
+    if ([string]::IsNullOrWhiteSpace($text)) {
+        return ""
+    }
+
+    $escape = [regex]::Escape([string][char]27)
+    $text = [regex]::Replace($text, "${escape}\[[0-?]*[ -/]*[@-~]", "")
+    $text = [regex]::Replace($text, "[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "")
+    return $text.Trim()
+}
+
+function Resolve-SpicetifyInstallerConfigPath {
+    param([object[]]$Output)
+
+    $fallbackPath = $null
+    foreach ($rawLine in @($Output)) {
+        $plainText = ConvertFrom-IvLyricsInstallerTerminalText -Value $rawLine
+        if ([string]::IsNullOrWhiteSpace($plainText)) {
+            continue
+        }
+        $candidate = $plainText.Trim().Trim('"')
+
+        try {
+            $fullPath = [IO.Path]::GetFullPath($candidate)
+            if ([IO.Path]::GetExtension($fullPath) -ine ".ini") {
+                continue
+            }
+            if (Test-Path -LiteralPath $fullPath -PathType Leaf) {
+                return $fullPath
+            }
+            if ($null -eq $fallbackPath) {
+                $fallbackPath = $fullPath
+            }
+        }
+        catch {
+            continue
+        }
+    }
+
+    if ($null -ne $fallbackPath) {
+        return $fallbackPath
+    }
+    throw "Spicetify returned no usable config file path."
+}
+
 function Get-SpicetifyInstallerAppDir {
     $previousErrorActionPreference = $ErrorActionPreference
     try {
@@ -224,15 +273,7 @@ function Get-SpicetifyInstallerAppDir {
         throw "Could not resolve the active Spicetify config file (exit $exitCode)."
     }
 
-    $configPath = @(
-        $configOutput |
-            ForEach-Object { ([string]$_).Trim() } |
-            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-    ) | Select-Object -Last 1
-    if ([string]::IsNullOrWhiteSpace($configPath)) {
-        throw "Spicetify returned an empty config file path."
-    }
-    $configPath = [IO.Path]::GetFullPath($configPath.Trim().Trim('"'))
+    $configPath = Resolve-SpicetifyInstallerConfigPath -Output $configOutput
     return Join-Path (Join-Path (Split-Path -Parent $configPath) "CustomApps") $FINAL_APP_NAME
 }
 
@@ -336,6 +377,10 @@ function Invoke-WithRetry {
 }
 
 # --- Handle Command Line Arguments ---
+if ($FunctionsOnly) {
+    return
+}
+
 if ($Help) {
     Write-HelpMessage
 }

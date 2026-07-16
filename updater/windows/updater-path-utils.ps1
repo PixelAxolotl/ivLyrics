@@ -36,6 +36,54 @@ function ConvertTo-IvLyricsNormalizedPath {
     return $fullPath
 }
 
+function ConvertFrom-IvLyricsTerminalText {
+    param($Value)
+
+    $text = ([string]$Value).Trim()
+    if ([string]::IsNullOrWhiteSpace($text)) {
+        return ""
+    }
+
+    $escape = [regex]::Escape([string][char]27)
+    $text = [regex]::Replace($text, "${escape}\[[0-?]*[ -/]*[@-~]", "")
+    $text = [regex]::Replace($text, "[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]", "")
+    return $text.Trim()
+}
+
+function Resolve-IvLyricsSpicetifyConfigPath {
+    param([object[]]$Output)
+
+    $fallbackPath = $null
+    foreach ($rawLine in @($Output)) {
+        $plainText = ConvertFrom-IvLyricsTerminalText -Value $rawLine
+        if ([string]::IsNullOrWhiteSpace($plainText)) {
+            continue
+        }
+        $candidate = $plainText.Trim().Trim('"')
+
+        try {
+            $fullPath = ConvertTo-IvLyricsNormalizedPath -Path $candidate
+            if ([IO.Path]::GetExtension($fullPath) -ine ".ini") {
+                continue
+            }
+            if (Test-Path -LiteralPath $fullPath -PathType Leaf) {
+                return $fullPath
+            }
+            if ($null -eq $fallbackPath) {
+                $fallbackPath = $fullPath
+            }
+        }
+        catch {
+            continue
+        }
+    }
+
+    if ($null -ne $fallbackPath) {
+        return $fallbackPath
+    }
+    throw "Spicetify returned no usable config file path."
+}
+
 function Get-SpicetifyAppDir {
     $previousErrorActionPreference = $ErrorActionPreference
     try {
@@ -52,20 +100,10 @@ function Get-SpicetifyAppDir {
         throw "Could not resolve the Spicetify config file (exit $exitCode): $($configPathOutput -join [Environment]::NewLine)"
     }
 
-    $configPath = @(
-        $configPathOutput |
-            ForEach-Object { ([string]$_).Trim() } |
-            Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
-    ) | Select-Object -Last 1
-
-    if ([string]::IsNullOrWhiteSpace($configPath)) {
-        throw "Spicetify returned an empty config file path."
-    }
-
-    $normalizedConfigPath = ConvertTo-IvLyricsNormalizedPath -Path $configPath
+    $normalizedConfigPath = Resolve-IvLyricsSpicetifyConfigPath -Output $configPathOutput
     $configDir = Split-Path -Parent $normalizedConfigPath
     if ([string]::IsNullOrWhiteSpace($configDir)) {
-        throw "Could not determine the Spicetify config directory from: $configPath"
+        throw "Could not determine the Spicetify config directory from: $normalizedConfigPath"
     }
 
     return Join-Path (Join-Path $configDir "CustomApps") "ivLyrics"

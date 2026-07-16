@@ -92,6 +92,7 @@
         /s0\.2mdn\.net/i,
         /gstaticadssl\.googleapis\.com/i
     ];
+    const blockedUrlPattern = new RegExp(blockedPatterns.map((pattern) => pattern.source).join("|"), "i");
 
     const normalizeUrlString = (candidate) => {
         if (!candidate) return "";
@@ -106,6 +107,7 @@
         try {
             const ref = normalizeUrlString(candidate);
             if (!ref) return false;
+            if (typeof ref === "string") return blockedUrlPattern.test(ref);
             return blockedPatterns.some((pattern) => pattern.test(ref));
         } catch (err) {
             return false;

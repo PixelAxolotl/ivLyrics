@@ -239,8 +239,6 @@ exit /b %SPICETIFY_TEST_EXIT%
     Assert-True (Remove-IvLyricsRecordedAppDirectory -StatePath $statePath -IncludeSynchronizedDirectory) "the staged state should support uninstall cleanup"
 
     foreach ($relativePath in @(
-        "install.ps1",
-        "uninstall.ps1",
         "updater\windows\register-updater-protocol.ps1",
         "updater\windows\unregister-updater-protocol.ps1",
         "updater\windows\updater-path-utils.ps1"

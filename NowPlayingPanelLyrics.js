@@ -2679,6 +2679,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         useLayoutEffect(() => {
             if (!wordRef.current) return;
 
+            let lastShouldBeSung = null;
+
             const updateSungState = () => {
                 const el = wordRef.current;
                 if (!el) return;
@@ -2692,11 +2694,14 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
 
                 const currentTime = window._ivLyricsPanelCurrentTime || 0;
                 const shouldBeSung = currentTime >= syllable.startTime;
+                if (shouldBeSung === lastShouldBeSung) return;
+
                 if (shouldBeSung && !el.classList.contains('sung')) {
                     el.classList.add('sung');
                 } else if (!shouldBeSung && el.classList.contains('sung')) {
                     el.classList.remove('sung');
                 }
+                lastShouldBeSung = shouldBeSung;
             };
 
             // 초기 상태 설정

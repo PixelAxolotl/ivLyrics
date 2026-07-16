@@ -4610,6 +4610,8 @@
         const JAPANESE_SMALL_KANA_REGEX = /[ゃゅょぁぃぅぇぉゎャュョァィゥェォヮヵヶ]/;
         const JAPANESE_PARTICLES = new Set(['は', 'が', 'を', 'に', 'へ', 'と', 'も', 'で', 'の', 'ね', 'よ', 'か', 'な', 'さ']);
         const HAN_PARTICLES = new Set(['的', '了', '吗', '呢', '啊', '呀', '吧', '啦', '嘛', '着', '过']);
+        const LATIN_CONNECTOR_WORDS = new Set(['a', 'an', 'the', 'to', 'of', 'in', 'on', 'at', 'for', 'and', 'or', 'but']);
+        const UNIT_PUNCTUATION_REGEX = /[.,!?;:'"()[\]{}\-]/;
         const _analysisCache = new Map();
         const _inflightAnalysis = new Map();
         const _analysisHintsCache = new WeakMap();
@@ -4847,16 +4849,32 @@
             if (!trimmed) return Math.max(0.2, unitText.length * 0.15);
 
             const chars = Array.from(trimmed);
-            const alphaNumericCount = chars.filter((char) => /[A-Za-z0-9]/.test(char)).length;
-            const aggressiveCount = chars.filter(isAggressiveChar).length;
-            const hangulCount = chars.filter(isHangulSyllable).length;
-            const japaneseCount = chars.filter(isJapaneseChar).length;
-            const hanCount = chars.filter(isHanChar).length;
-            const punctuationCount = chars.filter((char) => /[.,!?;:'"()[\]{}\-]/.test(char)).length;
-            const repeatedCount = chars.reduce((count, char, index) => {
-                if (index === 0) return count;
-                return count + (char === chars[index - 1] ? 1 : 0);
-            }, 0);
+            let alphaNumericCount = 0;
+            let aggressiveCount = 0;
+            let hangulCount = 0;
+            let japaneseCount = 0;
+            let hanCount = 0;
+            let punctuationCount = 0;
+            let repeatedCount = 0;
+            let letterCount = 0;
+            let digitCount = 0;
+
+            for (let index = 0; index < chars.length; index++) {
+                const char = chars[index];
+                const code = char.charCodeAt(0);
+                const isLetter = (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+                const isDigit = code >= 48 && code <= 57;
+
+                if (isLetter) letterCount += 1;
+                if (isDigit) digitCount += 1;
+                if (isLetter || isDigit) alphaNumericCount += 1;
+                if (isAggressiveChar(char)) aggressiveCount += 1;
+                if (isHangulSyllable(char)) hangulCount += 1;
+                if (isJapaneseChar(char)) japaneseCount += 1;
+                if (isHanChar(char)) hanCount += 1;
+                if (UNIT_PUNCTUATION_REGEX.test(char)) punctuationCount += 1;
+                if (index > 0 && char === chars[index - 1]) repeatedCount += 1;
+            }
 
             if (punctuationCount === chars.length) {
                 return Math.max(0.22, chars.length * 0.18);
@@ -4881,15 +4899,12 @@
             if (alphaNumericCount > 0) {
                 const normalized = trimmed.toLowerCase();
                 const vowelGroups = normalized.match(/[aeiouy]+/g)?.length || 0;
-                const letterCount = chars.filter((char) => /[A-Za-z]/.test(char)).length;
-                const digitCount = chars.filter((char) => /[0-9]/.test(char)).length;
                 const pronunciationUnits = Math.max(
                     vowelGroups,
                     Math.ceil(letterCount / 3.4),
                     digitCount > 0 ? digitCount : 0
                 );
-                const connectorWords = new Set(['a', 'an', 'the', 'to', 'of', 'in', 'on', 'at', 'for', 'and', 'or', 'but']);
-                const connectorPenalty = connectorWords.has(normalized) ? 0.72 : 1;
+                const connectorPenalty = LATIN_CONNECTOR_WORDS.has(normalized) ? 0.72 : 1;
                 const longEndingBoost = /(ing|ed|er|est|oo|ee|ah|oh)$/i.test(trimmed) ? 0.42 : 0;
                 return clamp(
                     ((pronunciationUnits * 0.95) + longEndingBoost + (repeatedCount * 0.15)) * connectorPenalty,

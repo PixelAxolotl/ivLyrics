@@ -97,7 +97,7 @@ curl -fsSL https://ivlis.kr/ivLyrics/uninstall.sh | bash
 1. [GitHub Releases](https://github.com/ivLis-Studio/ivLyrics/releases)에서 최신 버전을 다운로드합니다.
 2. 압축을 해제하고 폴더 이름을 `ivLyrics`로 변경합니다.
 3. 해당 폴더를 Spicetify CustomApps 디렉토리에 복사합니다:
-   - Windows: `%LocalAppData%\spicetify\CustomApps`
+   - Windows: `spicetify -c`로 출력되는 `config-xpui.ini` 파일과 같은 폴더의 `CustomApps` 디렉토리
    - macOS/Linux: `~/.config/spicetify/CustomApps`
 4. 터미널에서 다음 명령어를 실행합니다:
    ```

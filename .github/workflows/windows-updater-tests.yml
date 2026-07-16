@@ -1,0 +1,29 @@
+name: Windows updater tests
+
+on:
+  pull_request:
+    paths:
+      - "updater/windows/**"
+      - "tests/windows-updater-paths.test.ps1"
+      - ".github/workflows/windows-updater-tests.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "updater/windows/**"
+      - "tests/windows-updater-paths.test.ps1"
+      - ".github/workflows/windows-updater-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  windows-powershell-5-1:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run updater path regression tests
+        shell: powershell
+        run: .\tests\windows-updater-paths.test.ps1

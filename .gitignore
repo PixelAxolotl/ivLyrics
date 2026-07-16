@@ -8,4 +8,5 @@ __pycache__/
 
 # Local test harnesses
 **/test/
-**/tests/
+**/tests/*
+!tests/paxsenix-entity-decoding.test.js

@@ -5,7 +5,7 @@
  * @addon-type lyrics
  * @id paxsenix
  * @name Lyrically (Paxsenix)
- * @version 1.0.5
+ * @version 1.0.6
  * @supports karaoke: true
  * @supports synced: true
  * @supports unsynced: true
@@ -27,7 +27,7 @@
     const getEndpointLabel = value => String(value || '').split('://').pop().replace(/\/$/, '');
     const CATALOG_SEARCH_HOST = new URL(ENDPOINTS.catalogSearch).hostname;
     const ATTRIBUTION = `Lyrics via Lyrically API (${ENDPOINTS.homepage}).`;
-    const CACHE_VERSION = 'paxsenix-provider-v13';
+    const CACHE_VERSION = 'paxsenix-provider-v14';
     const REQUEST_TIMEOUT_MS = 9000;
     const PROVIDER_TIMEOUT_MS = 12000;
 
@@ -44,7 +44,7 @@
         id: 'paxsenix',
         name: 'Lyrically (Paxsenix)',
         author: 'default',
-        version: '1.0.5',
+        version: '1.0.6',
         cacheVersion: CACHE_VERSION,
         description: {
             en: 'Lyrics through the public Lyrically API',
@@ -267,10 +267,47 @@
         return Number.isFinite(number) ? Math.max(0, Math.round(number)) : null;
     }
 
+    const XML_TEXT_ENTITIES = Object.freeze({
+        amp: '&',
+        apos: "'",
+        gt: '>',
+        lt: '<',
+        quot: '"'
+    });
+
+    /**
+     * Decode one layer of XML character references in provider lyric text.
+     * This intentionally does not use a DOM/HTML parser: unknown or malformed
+     * references and literal ampersands remain untouched, and encoded entity
+     * text such as `&amp;apos;` is not decoded twice.
+     */
+    function decodeLyricTextEntities(value) {
+        const text = String(value ?? '');
+        if (!text.includes('&')) return text;
+
+        return text.replace(
+            /&(?:#([0-9]+)|#[xX]([0-9a-fA-F]+)|([a-z]+));/g,
+            (match, decimal, hexadecimal, named) => {
+                if (named) {
+                    return Object.prototype.hasOwnProperty.call(XML_TEXT_ENTITIES, named)
+                        ? XML_TEXT_ENTITIES[named]
+                        : match;
+                }
+
+                const codePoint = Number.parseInt(decimal ?? hexadecimal, decimal ? 10 : 16);
+                const isUnicodeScalar = Number.isInteger(codePoint)
+                    && codePoint > 0
+                    && codePoint <= 0x10FFFF
+                    && !(codePoint >= 0xD800 && codePoint <= 0xDFFF);
+                return isUnicodeScalar ? String.fromCodePoint(codePoint) : match;
+            }
+        );
+    }
+
     function shouldAppendBoundary(item, nextItem, text) {
         if (!nextItem || item?.part !== false || /\s$/.test(text)) return false;
-        const nextText = String(nextItem?.text || '');
-        if (!nextText || /^\s|^[,.;:!?%)\]}]/.test(nextText)) return false;
+        const nextText = decodeLyricTextEntities(nextItem?.text);
+        if (!nextText || /^\s|^['’,.;:!?%)\]}]/u.test(nextText)) return false;
         if (/[-‐‑‒–—'’]$/.test(text)) return false;
         return true;
     }
@@ -290,7 +327,7 @@
         return references;
     }
 
-    function normalizeReferenceSpacingCharacters(value) {
+    function normalizeDecodedReferenceSpacingCharacters(value) {
         return String(value ?? '')
             .normalize('NFKC')
             .replace(/[“”„‟]/g, '"')
@@ -298,21 +335,26 @@
             .replace(/\s/gu, '');
     }
 
+    function normalizeReferenceSpacingCharacters(value) {
+        return normalizeDecodedReferenceSpacingCharacters(decodeLyricTextEntities(value));
+    }
+
     function getReferenceWhitespaceBoundaries(items, referenceText) {
         if (!Array.isArray(items) || !items.length || typeof referenceText !== 'string') return null;
         const compactTokens = items.map(item => normalizeReferenceSpacingCharacters(item?.text));
         if (compactTokens.some(text => !text)) return null;
 
-        const compactReference = normalizeReferenceSpacingCharacters(referenceText);
+        const decodedReference = decodeLyricTextEntities(referenceText);
+        const compactReference = normalizeDecodedReferenceSpacingCharacters(decodedReference);
         if (compactTokens.join('') !== compactReference) return null;
 
         const boundaries = new Set();
         let characterCount = 0;
-        String(referenceText).split(/(\s+)/u).forEach(segment => {
+        decodedReference.split(/(\s+)/u).forEach(segment => {
             if (/^\s+$/u.test(segment)) {
                 if (characterCount > 0) boundaries.add(characterCount);
             } else {
-                characterCount += Array.from(normalizeReferenceSpacingCharacters(segment)).length;
+                characterCount += Array.from(normalizeDecodedReferenceSpacingCharacters(segment)).length;
             }
         });
         return boundaries;
@@ -323,11 +365,11 @@
         const referenceBoundaries = getReferenceWhitespaceBoundaries(items, referenceText);
         let consumedCharacters = 0;
         return items.map((item, index) => {
-            let text = String(item?.text ?? '');
+            let text = decodeLyricTextEntities(item?.text);
             if (!text) return null;
             if (referenceBoundaries) {
                 text = text.trim();
-                consumedCharacters += Array.from(normalizeReferenceSpacingCharacters(text)).length;
+                consumedCharacters += Array.from(normalizeDecodedReferenceSpacingCharacters(text)).length;
                 if (items[index + 1] && referenceBoundaries.has(consumedCharacters)) text += ' ';
             } else if (shouldAppendBoundary(item, items[index + 1], text)) {
                 text += ' ';
@@ -380,7 +422,7 @@
         const unsynced = String(value || '')
             .replace(/^\uFEFF/, '')
             .split(/\r?\n/)
-            .map(line => line.trim())
+            .map(line => decodeLyricTextEntities(line).trim())
             .filter(Boolean)
             .map(text => ({ text }));
         return { karaoke: null, synced: null, unsynced };
@@ -388,12 +430,12 @@
 
     function getStructuredLineText(line, referenceText = null) {
         if (typeof referenceText === 'string' && referenceText.trim()) {
-            return referenceText.trim();
+            return decodeLyricTextEntities(referenceText).trim();
         }
         if (Array.isArray(line?.text)) {
-            return line.text.map(item => String(item?.text || '')).join('').trim();
+            return line.text.map(item => decodeLyricTextEntities(item?.text)).join('').trim();
         }
-        return String(line?.text || '').trim();
+        return decodeLyricTextEntities(line?.text).trim();
     }
 
     function normalizeMetadataIdentity(value) {
@@ -624,8 +666,8 @@
         if (!rawLines.length) return null;
         if (rawLines.length <= 3 && rawLines.every(line => {
             const backgroundText = Array.isArray(line?.backgroundText)
-                ? line.backgroundText.map(item => String(item?.text || '')).join('').trim()
-                : String(line?.backgroundText || '').trim();
+                ? line.backgroundText.map(item => decodeLyricTextEntities(item?.text)).join('').trim()
+                : decodeLyricTextEntities(line?.backgroundText).trim();
             if (backgroundText) return false;
             const startTime = toMilliseconds(line?.timestamp)
                 ?? toMilliseconds(line?.text?.[0]?.timestamp)
@@ -677,7 +719,7 @@
                 endTime: Math.min(syllable.endTime, endTime)
             }));
             const leadText = leadSyllables.map(item => item.text).join('').trim()
-                || String(Array.isArray(line?.text) ? '' : line?.text || '').trim();
+                || decodeLyricTextEntities(Array.isArray(line?.text) ? '' : line?.text).trim();
             const backgroundText = backgroundSyllables.map(item => item.text).join('').trim();
             if (!leadText && !backgroundText) return null;
 
@@ -742,7 +784,7 @@
             return sharedParser.parseTtmlLyrics(payload.ttmlContent, durationMs);
         }
         if (typeof payload?.lrc === 'string' && typeof sharedParser?.parseLrcLyrics === 'function') {
-            return sharedParser.parseLrcLyrics(payload.lrc, durationMs);
+            return sharedParser.parseLrcLyrics(decodeLyricTextEntities(payload.lrc), durationMs);
         }
         if (isTargetStructuredPayload(payload) && Array.isArray(payload?.lyrics)) return null;
         return parsePlainLyrics(payload?.plain || payload?.lyrics || '');
@@ -877,6 +919,7 @@
         scoreCandidate,
         selectBestCandidate,
         parseJinaReaderBody,
+        decodeLyricTextEntities,
         parseTimedTokens,
         parseStructuredReferenceLines,
         normalizeReferenceSpacingCharacters,

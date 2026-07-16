@@ -4136,12 +4136,10 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         useEffect(() => {
             let lastIndex = currentIndex;
             let lastTrailingInterludeKey = null;
-            let lastEventTime = 0;
             let intervalId = null;
             let cachedDelay = null;
             let lastTrackUri = null;
             const UPDATE_INTERVAL = 30; // 업데이트 간격 (ms) - RAF보다 CPU 효율적
-            const EVENT_THROTTLE = 80; // DOM 페인트 과부하 없이 노래방 fill을 부드럽게 유지
             const resolveTrailingInterludeInfo = createTrailingKaraokeInterludeResolver(lyrics);
 
             // 이진 탐색으로 현재 라인 찾기 (O(log n))
@@ -4227,12 +4225,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     setActiveTrailingInterludeKey(nextTrailingInterludeKey);
                 }
 
-                // 활성 라인의 노래방 fill은 안정적인 페인트 주기로만 갱신한다.
-                const now = performance.now();
-                if (now - lastEventTime >= EVENT_THROTTLE) {
-                    lastEventTime = now;
-                    window.dispatchEvent(new Event('ivlyrics-panel-time-update'));
-                }
+                // 활성 라인만 구독하므로 매 tick 연속 fill을 갱신해도 비용이 제한된다.
+                window.dispatchEvent(new Event('ivlyrics-panel-time-update'));
             };
 
             if (isEnabled && lyrics.length > 0) {

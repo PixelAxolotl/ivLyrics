@@ -103,7 +103,8 @@
         const direct = element.getAttribute?.(localName);
         if (direct !== null && direct !== undefined && direct !== '') return direct;
 
-        for (const attribute of Array.from(element.attributes)) {
+        for (let index = 0; index < element.attributes.length; index++) {
+            const attribute = element.attributes[index];
             if (attribute.localName === localName || attribute.name === localName) {
                 return attribute.value || '';
             }

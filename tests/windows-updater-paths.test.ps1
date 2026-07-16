@@ -60,7 +60,8 @@ function Set-TestConfig {
 
 function Get-TestConfiguredAppPath {
     param([string]$ConfigPath)
-    return Join-Path (Join-Path (Split-Path -Parent $ConfigPath) "CustomApps") "ivLyrics"
+    $configDirectory = (Get-Item -LiteralPath $ConfigPath -Force).Directory.FullName
+    return Join-Path (Join-Path $configDirectory "CustomApps") "ivLyrics"
 }
 
 $tempRoot = Join-Path $env:TEMP ("ivLyrics-windows-updater-tests-" + [Guid]::NewGuid().ToString("N"))

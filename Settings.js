@@ -3672,29 +3672,40 @@ const VideoHelperToggle = ({ name, settingKey, defaultValue, disabled, onChange 
   // 초기 연결 상태 확인 및 설정창 열려있는 동안 주기적 체크
   useEffect(() => {
     let isMounted = true;
+    let checkInProgress = false;
 
-    const checkConnection = async () => {
-      if (!isMounted) return;
+    const checkConnection = async ({ showChecking = false } = {}) => {
+      if (!isMounted || checkInProgress) return;
       if (typeof VideoHelperService === "undefined") return;
 
       // 설정 탭이 보이는지 확인 (visibility check)
       const settingsTab = document.querySelector('#ivLyrics-config-container') || document.querySelector('#ivLyrics-settings-overlay');
       if (!settingsTab) return;
 
-      setChecking(true);
-      const connected = await VideoHelperService.checkHealth();
-      if (isMounted) {
-        setIsConnected(connected);
-        setChecking(false);
+      checkInProgress = true;
+      if (showChecking) setChecking(true);
+      try {
+        const connected = await VideoHelperService.checkHealth();
+        if (isMounted) {
+          setIsConnected(connected);
+        }
+      } finally {
+        checkInProgress = false;
+        if (isMounted && showChecking) {
+          setChecking(false);
+        }
       }
     };
 
     // 활성화 시 즉시 체크
     if (enabled) {
-      checkConnection();
+      checkConnection({ showChecking: true });
+    } else {
+      setIsConnected(false);
+      setChecking(false);
     }
 
-    // 설정창 열려있는 동안 주기적 연결 확인 (5초마다, 활성화 시만)
+    // 주기 확인은 상태 배지를 "확인 중"으로 되돌리지 않는다.
     const interval = setInterval(() => {
       if (enabled) checkConnection();
     }, 5000);
@@ -3709,9 +3720,7 @@ const VideoHelperToggle = ({ name, settingKey, defaultValue, disabled, onChange 
     if (disabled) return;
     const newValue = !enabled;
     setEnabled(newValue);
-    onChange(name, newValue);
-    CONFIG.visual[name] = newValue;
-    StorageManager.saveConfig(name, newValue);
+    onChange(settingKey || name, newValue);
 
     // 즉시 적용을 위해 이벤트 발생
     window.dispatchEvent(new CustomEvent("ivLyrics:videoHelperChanged", { detail: { enabled: newValue } }));
@@ -7776,7 +7785,9 @@ const ConfigModal = ({
     shouldRestoreSidebarScrollRef.current = false;
   }, [activeTab, expandedGroupIds]);
 
-  const BackgroundExperienceSection = () => {
+  // This component owns stateful helper controls. Keep its type stable across
+  // ConfigModal renders so their mount effects cannot trigger a remount loop.
+  const BackgroundExperienceSection = react.useMemo(() => function BackgroundExperienceSectionContent() {
     const [selectedMode, setSelectedMode] = react.useState(
       getCurrentSettingsBackgroundMode()
     );
@@ -8017,7 +8028,7 @@ const ConfigModal = ({
           })
         )
     );
-  };
+  }, [isFadActive]);
 
   const performanceBackgroundKeys = new Set(
     SETTINGS_BACKGROUND_PRESETS.map((preset) => preset.id).filter((id) => id !== "none")

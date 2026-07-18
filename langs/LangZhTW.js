@@ -383,6 +383,19 @@ window.LANG_ZH_TW = {
     },
     "solidBackgroundInUse": "ℹ️ 正在使用純色背景",
     "fontPlaceholder": "輸入字型名稱 (例: Arial, 微軟正黑體)",
+    "fontSelector": {
+      "mode": "字型輸入方式",
+      "preset": "字型清單",
+      "custom": "手動輸入"
+    },
+    "hotkey": {
+      "recording": "請按下組合鍵",
+      "unassigned": "未指定",
+      "hint": "點擊後按下想要的組合鍵",
+      "change": "變更",
+      "clear": "清除快捷鍵",
+      "saved": "已儲存"
+    },
     "syncLockTooltip": "右鍵可鎖定到這個字的時間",
     "syncLockSet": "已鎖定到所選字的時間。",
     "syncLockCleared": "已清除同步鎖定。",

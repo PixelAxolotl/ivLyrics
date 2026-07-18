@@ -383,6 +383,19 @@ window.LANG_FR = {
     },
     "solidBackgroundInUse": "ℹ️ Fond uni en cours d'utilisation",
     "fontPlaceholder": "Nom de la police (ex: Arial, Roboto)",
+    "fontSelector": {
+      "mode": "Mode de saisie de la police",
+      "preset": "Liste des polices",
+      "custom": "Saisie manuelle"
+    },
+    "hotkey": {
+      "recording": "Appuyez sur une combinaison de touches",
+      "unassigned": "Non attribué",
+      "hint": "Cliquez puis appuyez sur la combinaison souhaitée",
+      "change": "Modifier",
+      "clear": "Effacer le raccourci",
+      "saved": "Enregistré"
+    },
     "syncLockTooltip": "Clic droit pour verrouiller le timing jusqu’à ce caractère",
     "syncLockSet": "Timing verrouillé jusqu’au caractère sélectionné.",
     "syncLockCleared": "Verrou de synchro supprimé.",

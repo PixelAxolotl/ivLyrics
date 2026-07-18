@@ -383,6 +383,19 @@ window.LANG_DE = {
     },
     "solidBackgroundInUse": "ℹ️ Einfarbiger Hintergrund aktiv",
     "fontPlaceholder": "Schriftartname (z.B. Arial, Roboto)",
+    "fontSelector": {
+      "mode": "Eingabemethode für Schriftarten",
+      "preset": "Schriftartenliste",
+      "custom": "Manuelle Eingabe"
+    },
+    "hotkey": {
+      "recording": "Tastenkombination drücken",
+      "unassigned": "Nicht zugewiesen",
+      "hint": "Klicken und gewünschte Tastenkombination drücken",
+      "change": "Ändern",
+      "clear": "Tastenkürzel löschen",
+      "saved": "Gespeichert"
+    },
     "syncLockTooltip": "Rechtsklick sperrt das Timing bis zu diesem Zeichen",
     "syncLockSet": "Timing bis zum ausgewählten Zeichen gesperrt.",
     "syncLockCleared": "Sync-Sperre aufgehoben.",

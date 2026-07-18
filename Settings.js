@@ -4401,7 +4401,7 @@ const ConfigFontSelector = ({
       {
         className: "config-font-mode",
         role: "group",
-        "aria-label": getSettingsText("settings.fontSelector.mode", "폰트 입력 방식"),
+        "aria-label": getSettingsText("settings.fontSelector.mode", "Font input mode"),
       },
       react.createElement(
         "button",
@@ -4412,7 +4412,7 @@ const ConfigFontSelector = ({
           disabled,
           "aria-pressed": !useCustomFont,
         },
-        getSettingsText("settings.fontSelector.preset", "폰트 목록")
+        getSettingsText("settings.fontSelector.preset", "Font list")
       ),
       react.createElement(
         "button",
@@ -4423,7 +4423,7 @@ const ConfigFontSelector = ({
           disabled,
           "aria-pressed": useCustomFont,
         },
-        getSettingsText("settings.fontSelector.custom", "직접 입력")
+        getSettingsText("settings.fontSelector.custom", "Manual input")
       )
     ),
     react.createElement(
@@ -4436,8 +4436,8 @@ const ConfigFontSelector = ({
           value: customFont,
           onChange: handleCustomFontChange,
           disabled,
-          placeholder: I18n.t("settings.fontPlaceholder") || "폰트명 입력 (예: Arial, 맑은 고딕)",
-          "aria-label": `${name || "Font"} ${getSettingsText("settings.fontSelector.custom", "직접 입력")}`,
+          placeholder: I18n.t("settings.fontPlaceholder") || "Enter font name (e.g., Arial, Roboto)",
+          "aria-label": `${name || "Font"} ${getSettingsText("settings.fontSelector.custom", "Manual input")}`,
           spellCheck: false,
         })
         : react.createElement(
@@ -4447,7 +4447,7 @@ const ConfigFontSelector = ({
             value: selectedFont,
             onChange: handleFontChange,
             disabled,
-            "aria-label": `${name || "Font"} ${getSettingsText("settings.fontSelector.preset", "폰트 목록")}`,
+            "aria-label": `${name || "Font"} ${getSettingsText("settings.fontSelector.preset", "Font list")}`,
           },
           GOOGLE_FONTS.map((font) =>
             react.createElement("option", { key: font, value: font }, font)
@@ -5262,17 +5262,17 @@ const ConfigHotkey = ({ name, settingKey, defaultValue, onChange = () => { } }) 
               onClick: startRecording,
               onBlur: () => setIsRecording(false),
               "aria-label": isRecording
-                ? `${name}: ${getSettingsText("settings.hotkey.recording", "키 조합을 누르세요")}`
-                : `${name}: ${value || getSettingsText("settings.hotkey.unassigned", "지정 안 됨")}`,
+                ? `${name}: ${getSettingsText("settings.hotkey.recording", "Press a key combination")}`
+                : `${name}: ${value || getSettingsText("settings.hotkey.unassigned", "Not assigned")}`,
               "aria-pressed": isRecording,
-              title: getSettingsText("settings.hotkey.hint", "클릭한 뒤 원하는 키 조합을 누르세요"),
+              title: getSettingsText("settings.hotkey.hint", "Click, then press the desired key combination"),
             },
             isRecording
               ? react.createElement(
                 "span",
                 { className: "config-hotkey-recording-state" },
                 react.createElement("span", { className: "config-hotkey-recording-dot", "aria-hidden": "true" }),
-                getSettingsText("settings.hotkey.recording", "키 조합을 누르세요")
+                getSettingsText("settings.hotkey.recording", "Press a key combination")
               )
               : tokens.length > 0
                 ? react.createElement(
@@ -5289,12 +5289,12 @@ const ConfigHotkey = ({ name, settingKey, defaultValue, onChange = () => { } }) 
                 : react.createElement(
                   "span",
                   { className: "config-hotkey-empty" },
-                  getSettingsText("settings.hotkey.unassigned", "지정 안 됨")
+                  getSettingsText("settings.hotkey.unassigned", "Not assigned")
                 ),
             react.createElement(
               "span",
               { className: "config-hotkey-edit-label", "aria-hidden": "true" },
-              isRecording ? "Esc" : getSettingsText("settings.hotkey.change", "변경")
+              isRecording ? "Esc" : getSettingsText("settings.hotkey.change", "Change")
             )
           ),
           value && !isRecording && react.createElement(
@@ -5303,8 +5303,8 @@ const ConfigHotkey = ({ name, settingKey, defaultValue, onChange = () => { } }) 
               type: "button",
               className: "config-hotkey-clear",
               onClick: () => commitHotkey(""),
-              "aria-label": `${name} ${getSettingsText("settings.hotkey.clear", "단축키 지우기")}`,
-              title: getSettingsText("settings.hotkey.clear", "단축키 지우기"),
+              "aria-label": `${name} ${getSettingsText("settings.hotkey.clear", "Clear shortcut")}`,
+              title: getSettingsText("settings.hotkey.clear", "Clear shortcut"),
             },
             "×"
           ),
@@ -5312,10 +5312,10 @@ const ConfigHotkey = ({ name, settingKey, defaultValue, onChange = () => { } }) 
             "span",
             { className: "settings-visually-hidden", "aria-live": "polite" },
             isRecording
-              ? getSettingsText("settings.hotkey.recording", "키 조합을 누르세요")
+              ? getSettingsText("settings.hotkey.recording", "Press a key combination")
               : value
-                ? `${getSettingsText("settings.hotkey.saved", "저장됨")}: ${value}`
-                : getSettingsText("settings.hotkey.unassigned", "지정 안 됨")
+                ? `${getSettingsText("settings.hotkey.saved", "Saved")}: ${value}`
+                : getSettingsText("settings.hotkey.unassigned", "Not assigned")
           )
         )
       )

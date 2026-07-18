@@ -383,6 +383,19 @@ window.LANG_BN = {
     },
     "solidBackgroundInUse": "ℹ️ সলিড কালার ব্যাকগ্রাউন্ড ব্যবহৃত হচ্ছে",
     "fontPlaceholder": "ফন্টের নাম লিখুন (যেমন: Arial, Kalpurush)",
+    "fontSelector": {
+      "mode": "ফন্ট ইনপুট পদ্ধতি",
+      "preset": "ফন্ট তালিকা",
+      "custom": "নিজে লিখুন"
+    },
+    "hotkey": {
+      "recording": "কী সমন্বয় চাপুন",
+      "unassigned": "নির্ধারিত নয়",
+      "hint": "ক্লিক করে পছন্দের কী সমন্বয় চাপুন",
+      "change": "পরিবর্তন",
+      "clear": "শর্টকাট মুছুন",
+      "saved": "সংরক্ষিত"
+    },
     "syncLockTooltip": "এই অক্ষর পর্যন্ত টাইমিং লক করতে রাইট ক্লিক করুন",
     "syncLockSet": "নির্বাচিত অক্ষর পর্যন্ত টাইমিং লক করা হয়েছে।",
     "syncLockCleared": "সিঙ্ক লক সরানো হয়েছে।",

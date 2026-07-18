@@ -383,6 +383,19 @@ window.LANG_HI = {
     },
     "solidBackgroundInUse": "ℹ️ ठोस बैकग्राउंड उपयोग में है",
     "fontPlaceholder": "फ़ॉन्ट का नाम दर्ज करें (उदा: Arial, Mangal)",
+    "fontSelector": {
+      "mode": "फ़ॉन्ट इनपुट विधि",
+      "preset": "फ़ॉन्ट सूची",
+      "custom": "मैन्युअल इनपुट"
+    },
+    "hotkey": {
+      "recording": "कुंजी संयोजन दबाएँ",
+      "unassigned": "निर्धारित नहीं",
+      "hint": "क्लिक करें और इच्छित कुंजी संयोजन दबाएँ",
+      "change": "बदलें",
+      "clear": "शॉर्टकट हटाएँ",
+      "saved": "सहेजा गया"
+    },
     "syncLockTooltip": "इस अक्षर तक टाइमिंग लॉक करने के लिए राइट क्लिक करें",
     "syncLockSet": "चुने गए अक्षर तक टाइमिंग लॉक हो गई।",
     "syncLockCleared": "सिंक लॉक हटाया गया।",

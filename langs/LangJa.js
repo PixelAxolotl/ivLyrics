@@ -383,6 +383,19 @@ window.LANG_JA = {
     },
     "solidBackgroundInUse": "ℹ️ 単色背景を使用中",
     "fontPlaceholder": "フォント名を入力 (例: Arial, Meiryo)",
+    "fontSelector": {
+      "mode": "フォント入力方法",
+      "preset": "フォント一覧",
+      "custom": "直接入力"
+    },
+    "hotkey": {
+      "recording": "キーの組み合わせを押してください",
+      "unassigned": "未設定",
+      "hint": "クリックしてから希望のキーの組み合わせを押してください",
+      "change": "変更",
+      "clear": "ショートカットをクリア",
+      "saved": "保存済み"
+    },
     "syncLockTooltip": "右クリックでこの文字までのタイミングをロック",
     "syncLockSet": "選択した文字までのタイミングをロックしました。",
     "syncLockCleared": "同期ロックを解除しました。",

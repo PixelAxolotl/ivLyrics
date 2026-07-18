@@ -383,6 +383,19 @@ window.LANG_VI = {
     },
     "solidBackgroundInUse": "ℹ️ Đang sử dụng nền màu đơn sắc",
     "fontPlaceholder": "Nhập tên phông chữ (VD: Arial, Roboto)",
+    "fontSelector": {
+      "mode": "Phương thức nhập phông chữ",
+      "preset": "Danh sách phông chữ",
+      "custom": "Nhập thủ công"
+    },
+    "hotkey": {
+      "recording": "Nhấn tổ hợp phím",
+      "unassigned": "Chưa gán",
+      "hint": "Nhấp rồi nhấn tổ hợp phím mong muốn",
+      "change": "Thay đổi",
+      "clear": "Xóa phím tắt",
+      "saved": "Đã lưu"
+    },
     "syncLockTooltip": "Nhấp phải để khóa thời điểm đến ký tự này",
     "syncLockSet": "Đã khóa thời điểm đến ký tự đã chọn.",
     "syncLockCleared": "Đã bỏ khóa đồng bộ.",

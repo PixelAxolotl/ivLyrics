@@ -383,6 +383,19 @@ window.LANG_ZH_CN = {
     },
     "solidBackgroundInUse": "ℹ️ 正在使用纯色背景",
     "fontPlaceholder": "输入字体名称 (例如: Arial, Microsoft YaHei)",
+    "fontSelector": {
+      "mode": "字体输入方式",
+      "preset": "字体列表",
+      "custom": "手动输入"
+    },
+    "hotkey": {
+      "recording": "请按下组合键",
+      "unassigned": "未分配",
+      "hint": "点击后按下所需的组合键",
+      "change": "更改",
+      "clear": "清除快捷键",
+      "saved": "已保存"
+    },
     "syncLockTooltip": "右键可锁定到这个字的时间",
     "syncLockSet": "已锁定到所选字的时间。",
     "syncLockCleared": "已清除同步锁定。",

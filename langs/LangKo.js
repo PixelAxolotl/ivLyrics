@@ -383,6 +383,19 @@ window.LANG_KO = {
     },
     "solidBackgroundInUse": "ℹ️ 단색 배경 사용 중",
     "fontPlaceholder": "폰트명 입력 (예: Arial, 맑은 고딕)",
+    "fontSelector": {
+      "mode": "폰트 입력 방식",
+      "preset": "폰트 목록",
+      "custom": "직접 입력"
+    },
+    "hotkey": {
+      "recording": "키 조합을 누르세요",
+      "unassigned": "지정 안 됨",
+      "hint": "클릭한 뒤 원하는 키 조합을 누르세요",
+      "change": "변경",
+      "clear": "단축키 지우기",
+      "saved": "저장됨"
+    },
     "syncLockTooltip": "우클릭하면 이 글자까지의 타이밍을 잠급니다",
     "syncLockSet": "선택한 글자까지의 타이밍을 잠갔습니다.",
     "syncLockCleared": "싱크 잠금을 해제했습니다.",

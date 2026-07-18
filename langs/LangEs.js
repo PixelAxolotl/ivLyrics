@@ -383,6 +383,19 @@ window.LANG_ES = {
     },
     "solidBackgroundInUse": "ℹ️ Fondo de color sólido en uso",
     "fontPlaceholder": "Nombre de fuente (ej: Arial, Roboto)",
+    "fontSelector": {
+      "mode": "Método de entrada de fuente",
+      "preset": "Lista de fuentes",
+      "custom": "Entrada manual"
+    },
+    "hotkey": {
+      "recording": "Pulsa una combinación de teclas",
+      "unassigned": "Sin asignar",
+      "hint": "Haz clic y pulsa la combinación de teclas deseada",
+      "change": "Cambiar",
+      "clear": "Borrar atajo",
+      "saved": "Guardado"
+    },
     "syncLockTooltip": "Clic derecho para bloquear el tiempo hasta este carácter",
     "syncLockSet": "Tiempo bloqueado hasta el carácter seleccionado.",
     "syncLockCleared": "Bloqueo de sincronía quitado.",

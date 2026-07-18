@@ -383,6 +383,19 @@ window.LANG_SV = {
     },
     "solidBackgroundInUse": "ℹ️ Solid bakgrund används",
     "fontPlaceholder": "Ange teckensnittsnamn (t.ex. Arial, Roboto)",
+    "fontSelector": {
+      "mode": "Metod för typsnittsinmatning",
+      "preset": "Typsnittslista",
+      "custom": "Manuell inmatning"
+    },
+    "hotkey": {
+      "recording": "Tryck på en tangentkombination",
+      "unassigned": "Inte tilldelad",
+      "hint": "Klicka och tryck sedan på önskad tangentkombination",
+      "change": "Ändra",
+      "clear": "Rensa kortkommando",
+      "saved": "Sparad"
+    },
     "syncLockTooltip": "Högerklicka för att låsa timing fram till detta tecken",
     "syncLockSet": "Timing låst fram till valt tecken.",
     "syncLockCleared": "Synklås rensat.",

@@ -383,6 +383,19 @@ window.LANG_ID = {
     },
     "solidBackgroundInUse": "ℹ️ Latar belakang warna solid sedang digunakan",
     "fontPlaceholder": "Nama font (contoh: Arial, Roboto)",
+    "fontSelector": {
+      "mode": "Metode input font",
+      "preset": "Daftar font",
+      "custom": "Input manual"
+    },
+    "hotkey": {
+      "recording": "Tekan kombinasi tombol",
+      "unassigned": "Belum ditetapkan",
+      "hint": "Klik lalu tekan kombinasi tombol yang diinginkan",
+      "change": "Ubah",
+      "clear": "Hapus pintasan",
+      "saved": "Tersimpan"
+    },
     "syncLockTooltip": "Klik kanan untuk mengunci timing sampai karakter ini",
     "syncLockSet": "Timing dikunci sampai karakter yang dipilih.",
     "syncLockCleared": "Kunci sinkronisasi dihapus.",

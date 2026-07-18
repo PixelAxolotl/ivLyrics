@@ -383,6 +383,19 @@ window.LANG_MS = {
     },
     "solidBackgroundInUse": "ℹ️ Latar belakang warna pepejal sedang digunakan",
     "fontPlaceholder": "Masukkan nama fon (cth: Arial, Malgun Gothic)",
+    "fontSelector": {
+      "mode": "Kaedah input fon",
+      "preset": "Senarai fon",
+      "custom": "Input manual"
+    },
+    "hotkey": {
+      "recording": "Tekan gabungan kekunci",
+      "unassigned": "Belum ditetapkan",
+      "hint": "Klik kemudian tekan gabungan kekunci yang dikehendaki",
+      "change": "Ubah",
+      "clear": "Kosongkan pintasan",
+      "saved": "Disimpan"
+    },
     "syncLockTooltip": "Klik kanan untuk mengunci masa hingga huruf ini",
     "syncLockSet": "Masa dikunci hingga huruf yang dipilih.",
     "syncLockCleared": "Kunci segerak dikosongkan.",

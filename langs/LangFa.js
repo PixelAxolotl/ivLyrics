@@ -383,6 +383,19 @@ window.LANG_FA = {
     },
     "solidBackgroundInUse": "ℹ️ پس‌زمینه تک‌رنگ فعال است",
     "fontPlaceholder": "نام فونت (مثال: Vazir, Arial)",
+    "fontSelector": {
+      "mode": "روش ورود فونت",
+      "preset": "فهرست فونت‌ها",
+      "custom": "ورود دستی"
+    },
+    "hotkey": {
+      "recording": "ترکیب کلیدها را فشار دهید",
+      "unassigned": "تعیین نشده",
+      "hint": "کلیک کنید و ترکیب کلید دلخواه را فشار دهید",
+      "change": "تغییر",
+      "clear": "پاک کردن میان‌بر",
+      "saved": "ذخیره شد"
+    },
     "syncLockTooltip": "برای قفل کردن زمان‌بندی تا این حرف کلیک راست کنید",
     "syncLockSet": "زمان‌بندی تا حرف انتخاب‌شده قفل شد.",
     "syncLockCleared": "قفل همگام‌سازی پاک شد.",

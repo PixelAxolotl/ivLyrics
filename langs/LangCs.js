@@ -383,6 +383,19 @@ window.LANG_CS = {
     },
     "solidBackgroundInUse": "ℹ️ Používá se pevné pozadí",
     "fontPlaceholder": "Zadejte název písma (např. Arial, Roboto)",
+    "fontSelector": {
+      "mode": "Způsob zadání písma",
+      "preset": "Seznam písem",
+      "custom": "Vlastní zadání"
+    },
+    "hotkey": {
+      "recording": "Stiskněte klávesovou zkratku",
+      "unassigned": "Nenastaveno",
+      "hint": "Klikněte a stiskněte požadovanou klávesovou zkratku",
+      "change": "Změnit",
+      "clear": "Vymazat zkratku",
+      "saved": "Uloženo"
+    },
     "syncLockTooltip": "Kliknutím pravým tlačítkem myši uzamknete časování tohoto znaku",
     "syncLockSet": "Zamknuté časování až do vybraného znaku.",
     "syncLockCleared": "Zámek synchronizace byl vymazán.",

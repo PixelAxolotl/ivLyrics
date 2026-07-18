@@ -383,6 +383,19 @@ window.LANG_EN = {
     },
     "solidBackgroundInUse": "ℹ️ Solid Background in use",
     "fontPlaceholder": "Enter font name (e.g., Arial, Roboto)",
+    "fontSelector": {
+      "mode": "Font input mode",
+      "preset": "Font list",
+      "custom": "Manual input"
+    },
+    "hotkey": {
+      "recording": "Press a key combination",
+      "unassigned": "Not assigned",
+      "hint": "Click, then press the desired key combination",
+      "change": "Change",
+      "clear": "Clear shortcut",
+      "saved": "Saved"
+    },
     "syncLockTooltip": "Right-click to lock timing up to this character",
     "syncLockSet": "Locked timing up to the selected character.",
     "syncLockCleared": "Sync lock cleared.",

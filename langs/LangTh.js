@@ -383,6 +383,19 @@ window.LANG_TH = {
     },
     "solidBackgroundInUse": "ℹ️ กำลังใช้งานพื้นหลังสีทึบ",
     "fontPlaceholder": "ชื่อฟอนต์ (เช่น Arial, Cordia New)",
+    "fontSelector": {
+      "mode": "วิธีป้อนชื่อแบบอักษร",
+      "preset": "รายการแบบอักษร",
+      "custom": "ป้อนด้วยตนเอง"
+    },
+    "hotkey": {
+      "recording": "กดชุดปุ่มลัด",
+      "unassigned": "ยังไม่ได้กำหนด",
+      "hint": "คลิกแล้วกดชุดปุ่มที่ต้องการ",
+      "change": "เปลี่ยน",
+      "clear": "ล้างปุ่มลัด",
+      "saved": "บันทึกแล้ว"
+    },
     "syncLockTooltip": "คลิกขวาเพื่อล็อกเวลาถึงอักขระนี้",
     "syncLockSet": "ล็อกเวลาถึงอักขระที่เลือกแล้ว",
     "syncLockCleared": "ล้างการล็อกซิงก์แล้ว",

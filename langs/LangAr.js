@@ -383,6 +383,19 @@ window.LANG_AR = {
     },
     "solidBackgroundInUse": "ℹ️ خلفية اللون الواحد قيد الاستخدام",
     "fontPlaceholder": "أدخل اسم الخط (مثل: Arial, Cairo)",
+    "fontSelector": {
+      "mode": "طريقة إدخال الخط",
+      "preset": "قائمة الخطوط",
+      "custom": "إدخال مخصص"
+    },
+    "hotkey": {
+      "recording": "اضغط مجموعة مفاتيح",
+      "unassigned": "غير معيّن",
+      "hint": "انقر ثم اضغط مجموعة المفاتيح المطلوبة",
+      "change": "تغيير",
+      "clear": "مسح الاختصار",
+      "saved": "تم الحفظ"
+    },
     "syncLockTooltip": "انقر باليمين لتثبيت التوقيت حتى هذا الحرف",
     "syncLockSet": "تم تثبيت التوقيت حتى الحرف المحدد.",
     "syncLockCleared": "تم إلغاء تثبيت التوقيت.",

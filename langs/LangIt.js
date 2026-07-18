@@ -383,6 +383,19 @@ window.LANG_IT = {
     },
     "solidBackgroundInUse": "ℹ️ Sfondo a tinta unita in uso",
     "fontPlaceholder": "Nome font (es: Arial, Roboto)",
+    "fontSelector": {
+      "mode": "Metodo di inserimento del font",
+      "preset": "Elenco font",
+      "custom": "Inserimento manuale"
+    },
+    "hotkey": {
+      "recording": "Premi una combinazione di tasti",
+      "unassigned": "Non assegnato",
+      "hint": "Fai clic e premi la combinazione desiderata",
+      "change": "Modifica",
+      "clear": "Cancella scorciatoia",
+      "saved": "Salvato"
+    },
     "syncLockTooltip": "Clic destro per bloccare il timing fino a questo carattere",
     "syncLockSet": "Timing bloccato fino al carattere selezionato.",
     "syncLockCleared": "Blocco sincronizzazione rimosso.",

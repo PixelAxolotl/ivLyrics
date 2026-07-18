@@ -383,6 +383,19 @@ window.LANG_TR = {
     },
     "solidBackgroundInUse": "ℹ️ Düz Arka Plan kullanılıyor",
     "fontPlaceholder": "Yazı tipi adı girin (örn. Arial, Roboto)",
+    "fontSelector": {
+      "mode": "Yazı tipi giriş yöntemi",
+      "preset": "Yazı tipi listesi",
+      "custom": "Elle giriş"
+    },
+    "hotkey": {
+      "recording": "Bir tuş kombinasyonuna basın",
+      "unassigned": "Atanmamış",
+      "hint": "Tıklayın ve istediğiniz tuş kombinasyonuna basın",
+      "change": "Değiştir",
+      "clear": "Kısayolu temizle",
+      "saved": "Kaydedildi"
+    },
     "syncLockTooltip": "Bu karaktere kadar zamanlamayı kilitlemek için sağ tıklayın",
     "syncLockSet": "Seçili karaktere kadar zamanlama kilitlendi.",
     "syncLockCleared": "Senkron kilidi temizlendi.",

@@ -252,7 +252,6 @@
         const lineCount = text.split('\n').length;
 
         return `You are a lyrics translator. Translate these ${lineCount} lines of song lyrics into ${langInfo.name} (${langInfo.native}).
-
 CRITICAL RULES:
 - This is a TRANSLATION task - translate the MEANING of each line
 - Output must be written in ${langInfo.name} (${langInfo.native}) only
@@ -269,7 +268,6 @@ CRITICAL RULES:
 - Do NOT add line numbers, prefixes, or explanations
 - Do NOT use JSON or code blocks
 - Just output the translated lines, nothing else
-
 INPUT:
 ${text}
 
@@ -277,11 +275,9 @@ Alignment example (format only; use the target language above for the real outpu
 Input:
 生きていることとは
 変わり続けることだ
-
 Correct output:
 To live is
 to keep changing
-
 Wrong output:
 To live is to keep changing
 
@@ -298,7 +294,6 @@ OUTPUT (${lineCount} lines in ${langInfo.native}):`;
 
         return `You are a pronunciation converter. Convert these ${lineCount} lines of lyrics into how they SOUND (pronunciation) for ${langInfo.name} speakers.
 ${scriptInstruction}
-
 CRITICAL RULES:
 - This is a PRONUNCIATION task, NOT a translation task
 - Output how each line SOUNDS when spoken aloud, written in ${isEnglish ? 'Latin alphabet' : langInfo.native + ' script'}
@@ -311,7 +306,6 @@ CRITICAL RULES:
 - Do NOT add line numbers, prefixes, or explanations
 - Do NOT use JSON or code blocks
 - Just output the pronunciations, nothing else
-
 INPUT:
 ${text}
 

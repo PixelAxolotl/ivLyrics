@@ -23,7 +23,7 @@
             ja: 'Google Gemini AIを使用した翻訳、発音、TMI生成',
             'zh-CN': '使用 Google Gemini AI 进行翻译、发音和 TMI 生成',
         },
-        version: '1.0.0',
+        version: '1.0.1',
         apiKeyUrl: 'https://aistudio.google.com/apikey',
         // 지원 기능
         supports: {
@@ -781,33 +781,18 @@ ${JSON.stringify(payload)}`;
      * Parse plain text lines from API response
      */
     function parseTextLines(text, expectedLineCount) {
+        if (text === null || text === undefined) {
+            throw new Error(`[Gemini] Invalid response line count: expected ${expectedLineCount}, got 0`);
+        }
+
         // Remove markdown code blocks if present
-        let cleaned = text.replace(/```[a-z]*\s*/gi, '').replace(/```\s*/g, '').trim();
+        let cleaned = String(text).replace(/```[a-z]*\s*/gi, '').replace(/```\s*/g, '').trim();
 
         // Split by newlines
-        const lines = cleaned.split('\n');
+        const lines = cleaned.split(/\r?\n/);
 
-        // If line count matches, return as-is
-        if (lines.length === expectedLineCount) {
-            return lines;
-        }
-
-        // If we have more lines, try to find the correct block
-        // (AI might add extra text before/after the actual translation)
-        if (lines.length > expectedLineCount) {
-            // Try to find a contiguous block of expectedLineCount lines
-            // that looks most like translated content
-            window.__ivLyricsDebugLog?.(`[Gemini Addon] Got ${lines.length} lines, expected ${expectedLineCount}. Trimming...`);
-
-            // Simple heuristic: take the last expectedLineCount lines
-            // (AI often adds explanation at the beginning)
-            return lines.slice(-expectedLineCount);
-        }
-
-        // If we have fewer lines, pad with empty strings
-        window.__ivLyricsDebugLog?.(`[Gemini Addon] Got ${lines.length} lines, expected ${expectedLineCount}. Padding...`);
-        while (lines.length < expectedLineCount) {
-            lines.push('');
+        if (lines.length !== expectedLineCount) {
+            throw new Error(`[Gemini] Invalid response line count: expected ${expectedLineCount}, got ${lines.length}`);
         }
 
         return lines;

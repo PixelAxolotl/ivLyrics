@@ -1138,10 +1138,11 @@ Return exactly ${lineCount} pronunciation lines in ${scriptRule.name}, and nothi
 - Omit whitespace and punctuation-only tokens from u to save tokens.
 - p must be one natural spoken pronunciation for the whole word/token, written in ${scriptRule.name}.`
             : `- Output compact JSON only: top key l; each line has i and p.
-- p must be an array of exactly n strings, one per input character a[index].
+- p must be an array of exactly n strings, one per input character a[index]. Count every entry of a, including spaces and punctuation; each gets its own p slot (use "" where it has no sound).
 - If n is 12, p must contain exactly 12 strings. An array with 11 or 13 strings is invalid even if the pronunciation sounds correct.
-- Use an empty string for characters with no separate pronunciation. Do not omit array slots.
-- Each p[index] must be short and written in ${scriptRule.name}.`;
+- Use an empty string for characters with no separate pronunciation. Never omit array slots to shorten the array.
+- Each p[index] must be short and written in ${scriptRule.name}.
+- Self-check before responding: for every line, verify p.length === n. If not, recount a positions and fix the array before responding.`;
         const alignmentRules = isWordMode
             ? `- For alphabetic and whitespace-separated languages, convert each whole word to spoken pronunciation once. Do not assign syllables to individual letters.
 - Example: English "hello" should be one unit like {"s":0,"e":4,"p":"??"}, not h=?/e=?/l=?.
@@ -1182,7 +1183,7 @@ ${alignmentRules}
   - For okurigana, put its spoken sound on that kana's own slot.
   - Do not compress several source characters into one p slot.
   - small っ should be a geminated consonant or brief stop, not full-size つ.
-  - small ゃ/ゅ/ょ should combine with the previous kana; leave the small kana itself empty/omitted unless the target writing system truly needs a separate mark.
+  - small ゃ/ゅ/ょ should combine with the previous kana; keep the small kana slot as an empty string "" (never omit the slot) unless the target writing system truly needs a separate mark.
   - ん should use the context-sensitive nasal sound at the ん character itself. Do not put the next character's pronunciation on ん.
   - long vowels and vowel sequences such as ー, おう, えい, ああ should preserve length naturally.
   - particles は, へ, を should use the particle pronunciation when clearly used as particles.
@@ -2276,9 +2277,7 @@ ${normalizedText}
                     return true;
                 }
 
-                 const isEnabled = addon.perEndpointCapabilities === true
-                    ? true
-                    : this.isCapabilityEnabled(addon.id, storedCapability);
+                const isEnabled = this.isCapabilityEnabled(addon.id, storedCapability);
                 if (!isEnabled) {
                     // console.log(`[AIAddonManager] Filtered out ${addon.id}: capability ${capability} disabled by user setting`);
                     return false;
@@ -2599,6 +2598,67 @@ ${normalizedText}
             return units;
         }
 
+        _coerceCharacterPronunciationSlot(value) {
+            return typeof value === 'string' ? value.trim() : '';
+        }
+
+        _characterPronunciationSlotError(lineIndex, got, expected, text) {
+            const preview = String(text ?? '').slice(0, 24);
+            const error = new Error(`Character pronunciation response line ${lineIndex} ("${preview}") returned ${got} slots, expected ${expected}.`);
+            error.code = 'character-pronunciation-slot-mismatch';
+            error.details = { lineIndex, got, expected, preview };
+            return error;
+        }
+
+        _repairCharacterPronunciationSlots(text, rawArray) {
+            const sourceChars = Array.from(String(text ?? ''));
+            const expected = sourceChars.length;
+            const coerced = (Array.isArray(rawArray) ? rawArray : [])
+                .map(value => (typeof value === 'string' ? value.trim() : ''));
+            const got = coerced.length;
+            if (got === expected) {
+                return { slots: coerced, repaired: false, strategy: 'exact' };
+            }
+
+            // Common model mistake: whitespace slots omitted entirely.
+            // Reinsert "" at whitespace positions when the counts line up exactly.
+            const whitespaceCount = sourceChars.filter(character => /\s/u.test(character)).length;
+            if (whitespaceCount > 0 && got + whitespaceCount === expected) {
+                const slots = [];
+                let cursor = 0;
+                sourceChars.forEach(character => {
+                    if (/\s/u.test(character)) {
+                        slots.push('');
+                    } else {
+                        slots.push(coerced[cursor++] ?? '');
+                    }
+                });
+                return { slots, repaired: true, strategy: 'reinsert-whitespace' };
+            }
+
+            // Only auto-repair small drifts. Gross mismatches still retry
+            // (targeted repair prompt, then smaller chunks) to avoid misaligned karaoke.
+            const tolerance = Math.max(2, Math.ceil(expected * 0.25));
+            if (Math.abs(got - expected) > tolerance) {
+                return { slots: coerced, repaired: false, strategy: 'unrepairable', needsRetry: true };
+            }
+
+            if (got > expected) {
+                const slots = [...coerced];
+                while (slots.length > expected) {
+                    const emptyIndex = slots.lastIndexOf('');
+                    if (emptyIndex < 0) break;
+                    slots.splice(emptyIndex, 1);
+                }
+                while (slots.length > expected) slots.pop();
+                return { slots, repaired: true, strategy: 'drop-extra' };
+            }
+
+            const slots = [...coerced];
+            while (slots.length < expected) slots.push('');
+            return { slots, repaired: true, strategy: 'pad-missing' };
+        }
+
         _normalizeCharacterPronunciationResult(result, lines, options = {}) {
             const sourceLines = (Array.isArray(lines) ? lines : [])
                 .map(line => String(line ?? ''));
@@ -2614,8 +2674,8 @@ ${normalizedText}
                 }
             });
 
-            return {
-                lines: sourceLines.map((text, lineIndex) => {
+            const warnings = [];
+            const normalizedLines = sourceLines.map((text, lineIndex) => {
                     const sourceChars = Array.from(text);
                     const resultLine = resultLinesByIndex.get(lineIndex) || resultLines[lineIndex] || {};
                     const resultChars = Array.isArray(resultLine?.c)
@@ -2631,20 +2691,28 @@ ${normalizedText}
                     const byIndex = new Map();
 
                     if (unitMode === 'char' && hasResultPronunciationArray) {
-                        if (resultPronunciations.length !== sourceChars.length) {
-                            throw new Error(`Character pronunciation response line ${lineIndex} returned ${resultPronunciations.length} slots, expected ${sourceChars.length}.`);
+                        const repair = this._repairCharacterPronunciationSlots(text, resultPronunciations);
+                        if (repair.needsRetry) {
+                            throw this._characterPronunciationSlotError(lineIndex, resultPronunciations.length, sourceChars.length, text);
+                        }
+                        if (repair.repaired) {
+                            warnings.push({
+                                lineIndex,
+                                got: resultPronunciations.length,
+                                expected: sourceChars.length,
+                                strategy: repair.strategy
+                            });
                         }
 
-                        resultPronunciations.forEach((value, index) => {
-                            const pronunciation = typeof value === 'string' ? value.trim() : '';
+                        repair.slots.forEach((pronunciation, index) => {
                             if (pronunciation) {
                                 byIndex.set(index, { p: pronunciation });
                             }
                         });
                     } else {
-                        if (unitMode === 'char') {
-                            throw new Error(`Character pronunciation response line ${lineIndex} missing p array.`);
-                        }
+                        if (unitMode === 'char' && !resultChars.length && !resultUnits.length) {
+                            warnings.push({ lineIndex, reason: 'missing-p' });
+                        } else {
                         resultChars.forEach((item, fallbackIndex) => {
                             const index = Number.isInteger(Number(item?.i)) ? Number(item.i) : fallbackIndex;
                             const rawPronunciation = item?.p ?? item?.pronunciation;
@@ -2665,6 +2733,7 @@ ${normalizedText}
                             }
                             byIndex.set(index, item);
                         });
+                        }
                     }
 
                     const sourceUnits = unitMode === 'word'
@@ -2734,7 +2803,22 @@ ${normalizedText}
                             };
                         })
                     };
-                })
+                });
+
+            if (unitMode === 'char' && normalizedLines.length > 0) {
+                const hasAnyInput = resultLines.length > 0;
+                const hasAnyPronunciation = normalizedLines.some(line => (
+                    (Array.isArray(line?.chars) && line.chars.some(item => item?.pronunciation))
+                    || (Array.isArray(line?.units) && line.units.some(item => item?.pronunciation))
+                ));
+                if (!hasAnyInput || (!hasAnyPronunciation && warnings.length >= normalizedLines.length)) {
+                    throw new Error(`Character pronunciation response line 0 missing p array.`);
+                }
+            }
+
+            return {
+                lines: normalizedLines,
+                warnings
             };
         }
 
@@ -2773,6 +2857,7 @@ ${normalizedText}
         }
 
         _isCharacterPronunciationFormatError(error) {
+            if (error?.code === 'character-pronunciation-slot-mismatch') return true;
             return /Character pronunciation response .*returned \d+ slots, expected|Character pronunciation response .*outside line|Character pronunciation response duplicated index|Character pronunciation response .*missing p array|Character pronunciation response used the wrong writing system/i.test(error?.message || '');
         }
 
@@ -2838,32 +2923,48 @@ ${normalizedText}
             return chunks;
         }
 
+        _buildCharacterPronunciationRepairNote(error) {
+            const details = error?.details;
+            if (details && Number.isInteger(details.lineIndex)
+                && Number.isInteger(details.got) && Number.isInteger(details.expected)) {
+                return `Repair instruction: your previous response for chunk line ${details.lineIndex} returned ${details.got} p slots but n=${details.expected}. Recount the a array for that line (including spaces and punctuation, each with its own slot using "" where it has no sound) and return exactly ${details.expected} strings for it. Keep all other lines unchanged.`;
+            }
+            return `Repair instruction: your previous response had a slot-count mismatch. Recount each line's a array (including spaces and punctuation, each with its own slot using "" where it has no sound) and return exactly n strings per line.`;
+        }
+
         async _generateCharacterPronunciationChunk(addon, params, chunk) {
             try {
                 const chunkLines = chunk.segments.map(segment => segment.text);
                 const {
                     onProgress,
                     _characterPronunciationProgress,
+                    _characterPronunciationRepairNote,
                     chunking,
                     characterPronunciationChunking,
                     characterPronunciationUnitMode,
                     unitMode,
                     ...providerParams
                 } = params || {};
+                const basePrompt = this.buildCharacterPronunciationPrompt({
+                    ...providerParams,
+                    lines: chunkLines,
+                    unitMode: unitMode || characterPronunciationUnitMode || 'char',
+                    providerId: addon.id
+                });
                 const result = await this._callProvider(addon, 'generateCharacterPronunciation', {
                     ...providerParams,
                     unitMode: unitMode || characterPronunciationUnitMode || 'char',
                     lines: chunkLines,
-                    characterPronunciationPrompt: this.buildCharacterPronunciationPrompt({
-                        ...providerParams,
-                        lines: chunkLines,
-                        unitMode: unitMode || characterPronunciationUnitMode || 'char',
-                        providerId: addon.id
-                    })
+                    characterPronunciationPrompt: _characterPronunciationRepairNote
+                        ? `${basePrompt}\n\n${_characterPronunciationRepairNote}`
+                        : basePrompt
                 });
                 const normalized = this._normalizeCharacterPronunciationResult(result, chunkLines, {
                     unitMode: unitMode || characterPronunciationUnitMode || 'char'
                 });
+                if (Array.isArray(normalized?.warnings) && normalized.warnings.length > 0) {
+                    window.__ivLyricsDebugLog?.(`[AIAddonManager] Character pronunciation auto-repaired ${normalized.warnings.length} line(s): ${normalized.warnings.map(warning => `line ${warning.lineIndex} (${warning.strategy || warning.reason})`).join(', ')}`);
+                }
                 this._validateCharacterPronunciationWritingSystem(normalized, {
                     lang: providerParams.lang
                 });
@@ -2876,15 +2977,30 @@ ${normalizedText}
                     throw error;
                 }
 
+                const isFormatError = this._isCharacterPronunciationFormatError(error);
+                const details = error?.details && Number.isInteger(error.details.lineIndex)
+                    ? error.details
+                    : null;
                 this._notifyCharacterPronunciationProgress(params, {
                     ...(params?._characterPronunciationProgress || {}),
                     phase: 'retry-split',
                     retry: true,
-                    reason: this._isCharacterPronunciationFormatError(error) ? 'format' : 'truncation',
+                    reason: isFormatError ? 'format' : 'truncation',
                     error: error?.message || String(error),
+                    lineIndex: details?.lineIndex ?? null,
+                    got: details?.got ?? null,
+                    expected: details?.expected ?? null,
+                    preview: details?.preview ?? null,
                     percent: Math.max(1, Number(params?._characterPronunciationProgress?.percent) || 0)
                 });
 
+                if (isFormatError && !chunk._repairTried && chunk.segments.length <= 4) {
+                    chunk._repairTried = true;
+                    return await this._generateCharacterPronunciationChunk(addon, {
+                        ...params,
+                        _characterPronunciationRepairNote: this._buildCharacterPronunciationRepairNote(error)
+                    }, chunk);
+                }
                 if (chunk.segments.length > 1) {
                     const mid = Math.ceil(chunk.segments.length / 2);
                     const left = {

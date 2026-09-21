@@ -1557,12 +1557,15 @@ const getSyncCreatorCharacterPronunciationProgressInfo = (progress) => {
 		: 0;
 
 	if (progress.phase === 'retry-split') {
+		const detail = Number.isInteger(progress.lineIndex) && Number.isInteger(progress.got) && Number.isInteger(progress.expected)
+			? ` (line ${progress.lineIndex}: got ${progress.got}, need ${progress.expected})`
+			: '';
 		return {
 			percent,
 			buttonLabel: total > 0 ? `${current}/${total} (${percent}%)` : (I18n.t('syncCreator.characterPronunciationGenerating') || 'Generating AI pronunciation...'),
 			label: progress.reason === 'format'
-				? (I18n.t('syncCreator.characterPronunciationProgressRetryFormat') || 'Invalid AI alignment. Retrying with smaller chunks...')
-				: (I18n.t('syncCreator.characterPronunciationProgressRetry') || 'Response was truncated. Splitting this chunk smaller...')
+				? (I18n.t('syncCreator.characterPronunciationProgressRetryFormat') || 'Invalid AI alignment. Retrying with smaller chunks...') + detail
+				: (I18n.t('syncCreator.characterPronunciationProgressRetry') || 'Response was truncated. Splitting this chunk smaller...') + detail
 		};
 	}
 
@@ -12286,9 +12289,19 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			}
 			const lastStartMs = [...charTimesMs].reverse().find(value => Number.isFinite(value)) ?? firstMs;
 			const nextStartMs = findNextStartMs(index, firstMs);
-			const lineEndMs = Number.isFinite(nextStartMs) && nextStartMs > lastStartMs
+			const tentativeEndMs = Number.isFinite(nextStartMs) && nextStartMs > lastStartMs
 				? nextStartMs
-				: lastStartMs + 1500;
+				: lastStartMs + 2000;
+			// Same natural line ending as the outside converter: the last glyph
+			// holds for a bounded duration instead of stretching into the next
+			// line, so real gaps stay visible to the interlude system.
+			const avgCharDurationMs = Math.max(200, Math.max(0, tentativeEndMs - firstMs) / Math.max(1, charTimesMs.length));
+			const lastCharMaxDurationMs = Math.max(500, Math.min(1500, avgCharDurationMs * 2.5));
+			const stretchesFullLine = typeof normalizeSyncCreatorGranularity === 'function'
+				&& normalizeSyncCreatorGranularity(syncLine?.granularity) === 'line';
+			const lineEndMs = stretchesFullLine
+				? tentativeEndMs
+				: Math.min(tentativeEndMs, lastStartMs + Math.round(lastCharMaxDurationMs));
 			const normalizedRanges = normalizeSyncCreatorStyleRanges(
 				syncLine?.styleRanges,
 				Number.isInteger(absoluteStart) ? absoluteStart : 0,
@@ -12353,9 +12366,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 								return;
 							}
 							const nextStart = partTimesMs.slice(partCharPointer + 1).find(value => Number.isFinite(value));
+							const partStretchesFullLine = typeof normalizeSyncCreatorGranularity === 'function'
+								&& normalizeSyncCreatorGranularity(part.granularity || syncLine?.granularity) === 'line';
+							const naturalPartEnd = partStretchesFullLine
+								? lineEndMs
+								: Math.min(lineEndMs, charStart + Math.round(lastCharMaxDurationMs));
 							const charEnd = Number.isFinite(nextStart) && nextStart >= charStart
 								? nextStart
-								: Math.max(charStart, lineEndMs);
+								: Math.max(charStart, naturalPartEnd);
 							partText += char;
 							partSyllables.push(applyInlineStyleToSyllable({
 								text: char,

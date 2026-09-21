@@ -924,6 +924,12 @@
     });
     const CHARACTER_PRONUNCIATION_CJK_LANG_RE = /^(ja|jp|ko|kr|zh|zh-cn|zh-tw|cn|tw|yue|cmn)$/i;
     const CHARACTER_PRONUNCIATION_CJK_SCRIPT_RE = /[\u3040-\u30ff\uff66-\uff9f\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af\u1100-\u11ff\u3130-\u318f]/u;
+    // Script families used only by the fallback detector, so a CJK line can still be
+    // resolved to a concrete language when the shared detector is unavailable. Hangul
+    // is Korean-only, kana is Japanese-only, and Han without kana leans Chinese.
+    const CHARACTER_PRONUNCIATION_HANGUL_SCRIPT_RE = /[\uac00-\ud7af\u1100-\u11ff\u3130-\u318f]/u;
+    const CHARACTER_PRONUNCIATION_KANA_SCRIPT_RE = /[\u3040-\u30ff\uff66-\uff9f]/u;
+    const CHARACTER_PRONUNCIATION_HAN_SCRIPT_RE = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/u;
     const CHARACTER_PRONUNCIATION_WORD_TEXT_RE = /[\p{L}\p{N}]/u;
     const CHARACTER_PRONUNCIATION_LETTER_RE = /\p{L}/u;
     const CHARACTER_PRONUNCIATION_LATIN_LETTER_RE = /\p{Script=Latin}/u;
@@ -1121,17 +1127,129 @@ Return exactly ${lineCount} pronunciation lines in ${scriptRule.name}, and nothi
         return { systemPrompt, userPrompt, lineCount };
     }
 
-    function buildCharacterPronunciationPrompt({ lines, lang = 'ko', sourceLang = 'auto', unitMode = 'char' } = {}) {
+    // Normalizes a language code so app/config values (e.g. pt-BR, zh-cn) and the
+    // detector's family codes (zh-hans, zh-hant) can be compared for the skip rule.
+    const normalizePronunciationLanguageCode = (value) => {
+        const normalized = String(value || '').trim().replace(/_/g, '-').toLowerCase();
+        if (!normalized || normalized === 'auto') return '';
+        const shortLang = normalized.split('-')[0];
+        if (shortLang === 'zh') return 'zh';
+        if (shortLang === 'he') return 'he';
+        return shortLang;
+    };
+
+    // The translation target language the AI pronunciation feature should respect.
+    // Mirrors SyncDataCreator.getSyncCreatorTranslationTargetLanguage().
+    const resolvePronunciationTranslationLanguage = () => {
+        try {
+            const configured = window.CONFIG?.visual?.['translate:target-language']
+                || (window.localStorage?.getItem?.('ivLyrics:visual:translate:target-language') ?? '');
+            if (configured && configured !== 'auto') return configured;
+            return window.CONFIG?.visual?.['language']
+                || window.localStorage?.getItem?.('ivLyrics:visual:language')
+                || '';
+        } catch (_e) {
+            return '';
+        }
+    };
+
+    // Resolves a line's language from its own script evidence alone. This is the ground
+    // truth for a single line, because the app-wide detector is tuned for whole lyrics and
+    // can misclassify a short/mixed line (e.g. a mostly-Latin chunk that still contains a
+    // couple of kanji). Hangul is Korean-only, kana is Japanese-only, and Han without
+    // either leans Chinese; genuinely ambiguous mixed-script lines fall back to 'cjk'.
+    const resolvePronunciationLineScript = (line) => {
+        const letters = Array.from(line).filter(ch => CHARACTER_PRONUNCIATION_LETTER_RE.test(ch));
+        if (!letters.length) return '';
+        const hasCjk = letters.some(ch => CHARACTER_PRONUNCIATION_CJK_SCRIPT_RE.test(ch));
+        if (hasCjk) {
+            const hasHangul = letters.some(ch => CHARACTER_PRONUNCIATION_HANGUL_SCRIPT_RE.test(ch));
+            const hasKana = letters.some(ch => CHARACTER_PRONUNCIATION_KANA_SCRIPT_RE.test(ch));
+            const hasHan = letters.some(ch => CHARACTER_PRONUNCIATION_HAN_SCRIPT_RE.test(ch));
+            if (hasHangul && !hasKana) return 'ko';
+            if (hasKana) return 'ja';
+            if (hasHan) return 'zh';
+            return 'cjk';
+        }
+        return letters.every(ch => CHARACTER_PRONUNCIATION_LATIN_LETTER_RE.test(ch)) ? 'latin' : '';
+    };
+
+    // Detects a single line's language. The app-wide detector is tuned for whole lyrics, so
+    // on a per-line basis its verdict is only trusted when it does not contradict the line's
+    // own script. A line that actually contains CJK characters is never plain Latin, so the
+    // script wins there -- this keeps a Japanese/Korean line inside an otherwise Latin chunk
+    // from being misread (and wrongly sent to the AI) as English.
+    const detectPronunciationLineLanguage = (text) => {
+        const line = String(text ?? '');
+        if (!line.trim()) return '';
+        const scriptLanguage = resolvePronunciationLineScript(line);
+        const detect = window.LyricsService?.detectLanguage;
+        if (typeof detect === 'function') {
+            try {
+                const detected = detect([line]);
+                if (detected) {
+                    const normalized = normalizePronunciationLanguageCode(detected);
+                    // If the line carries CJK script, trust that over any non-CJK verdict.
+                    if (scriptLanguage && scriptLanguage !== 'latin' && normalized !== scriptLanguage) {
+                        return scriptLanguage;
+                    }
+                    return normalized;
+                }
+            } catch (_e) {
+                // fall through to the script heuristic below
+            }
+        }
+        return scriptLanguage;
+    };
+
+    // Returns the indexes of lines that are already written in the translation language, so
+    // they can be skipped (no pronunciation needed). Shared by the prompt builder and the
+    // result normalizer so both agree on exactly which line indexes were omitted.
+    const buildPronunciationLanguageLineFilter = (lang, translationLang) => {
+        const scriptRule = getPronunciationScriptRule(lang);
+        const translationLanguageCode = normalizePronunciationLanguageCode(
+            translationLang || resolvePronunciationTranslationLanguage()
+        );
+        const pronunciationLatinTarget = scriptRule.id === 'latin';
+        return (text) => {
+            const detected = detectPronunciationLineLanguage(text);
+            if (!detected) return false;
+            // Script fallbacks only resolve to a family, so match them against the target
+            // family (cjk covers ja/ko/zh; latin covers en and other Latin languages).
+            if (detected === 'latin') return pronunciationLatinTarget || translationLanguageCode === 'en';
+            if (detected === 'cjk') {
+                return translationLanguageCode === 'ja'
+                    || translationLanguageCode === 'ko'
+                    || translationLanguageCode === 'zh';
+            }
+            return detected === translationLanguageCode;
+        };
+    };
+
+    function buildCharacterPronunciationPrompt({ lines, lang = 'ko', sourceLang = 'auto', unitMode = 'char', translationLang } = {}) {
         const safeLines = (Array.isArray(lines) ? lines : []).map(line => String(line ?? ''));
         const langInfo = getProviderPromptLanguageInfo(lang);
         const scriptRule = getPronunciationScriptRule(lang);
         const isWordMode = unitMode === 'word';
-        const payload = safeLines.map((text, index) => {
+        // Lines already written in the translation language need no pronunciation, so their
+        // lyric text is excluded from the payload entirely to avoid wasting tokens. Each kept
+        // line keeps its ORIGINAL index in i. The skipped indexes are still declared to the
+        // model so it can emit an empty placeholder for them, which keeps the result array
+        // covering every original index (the render/merge layer aligns by index).
+        const isTranslationLanguageLine = buildPronunciationLanguageLineFilter(lang, translationLang);
+        const targetLanguageLineIndexes = [];
+        const payload = [];
+        safeLines.forEach((text, index) => {
             const chars = Array.from(text);
-            return isWordMode
+            if (isTranslationLanguageLine(text)) {
+                targetLanguageLineIndexes.push(index);
+                return;
+            }
+            payload.push(isWordMode
                 ? { i: index, t: text, n: chars.length }
-                : { i: index, a: chars, n: chars.length };
+                : { i: index, a: chars, n: chars.length });
         });
+        const skippedIndexList = targetLanguageLineIndexes.join(', ');
         const outputRules = isWordMode
             ? `- Output compact JSON only: top key l; each line has i and u; each pronunciation item has s=start character index, e=end character index, and p=whole word pronunciation.
 - Split each line by whitespace into word/token ranges. Do not split alphabetic words into letters.
@@ -1154,6 +1272,12 @@ Return exactly ${lineCount} pronunciation lines in ${scriptRule.name}, and nothi
             ? '{"l":[{"i":0,"u":[{"s":0,"e":4,"p":"??"}]}]}'
             : '{"l":[{"i":0,"p":["?"]}]}';
         const targetExamples = buildCharacterPronunciationTargetExamples(scriptRule, lang, isWordMode);
+        const skipRuleTargetName = translationLang
+            ? getProviderPromptLanguageInfo(translationLang).name
+            : langInfo.name;
+        const skipRule = targetLanguageLineIndexes.length
+            ? `\n- Lines already written entirely in the translation language (${skipRuleTargetName}) were REMOVED from the input on purpose to save tokens. Their line indexes are: ${skippedIndexList}. For each of these indexes you MUST still return an entry in l, but leave it empty: use ${isWordMode ? '"u":[]' : '"p":[]'} and DO NOT include the line text. Never drop these indexes from the output -- the output must cover every original line index from 0 to ${safeLines.length - 1}.`
+            : '';
 
         return `You are a multilingual lyrics pronunciation aligner for karaoke sync editing.
 
@@ -1186,7 +1310,7 @@ ${alignmentRules}
   - ん should use the context-sensitive nasal sound at the ん character itself. Do not put the next character's pronunciation on ん.
   - long vowels and vowel sequences such as ー, おう, えい, ああ should preserve length naturally.
   - particles は, へ, を should use the particle pronunciation when clearly used as particles.
-${targetExamples}
+${targetExamples}${skipRule}
 
 Return this compact JSON shape:
 ${outputShape}
@@ -2271,12 +2395,16 @@ ${normalizedText}
                     return false;
                 }
                 // 2. 사용자가 해당 기능을 활성화했는지 확인 (기본값 true)
-                // 메서드가 존재하지 않는 경우(구버전 캐시 등) 안전하게 true 처리
+                // perEndpointCapabilities Addon은 엔드포인트별 선택이 유일한
+                // 기준이므로 저장된 제공자 수준 검사를 건너뛴다.
+                // 메서드(method)가 존재하지 않는 경우(구버전 캐시 등) 안전하게 true 처리
                 if (typeof this.isCapabilityEnabled !== 'function') {
                     return true;
                 }
 
-                const isEnabled = this.isCapabilityEnabled(addon.id, storedCapability);
+                const isEnabled = addon.perEndpointCapabilities === true
+                    ? true
+                    : this.isCapabilityEnabled(addon.id, storedCapability);
                 if (!isEnabled) {
                     // console.log(`[AIAddonManager] Filtered out ${addon.id}: capability ${capability} disabled by user setting`);
                     return false;
@@ -2611,11 +2739,24 @@ ${normalizedText}
                     resultLinesByIndex.set(lineIndex, line);
                 }
             });
+            // Line indexes deliberately omitted from the AI payload (already in the
+            // translation language). Any response for them is a placeholder and must be
+            // accepted as intentionally empty rather than treated as a format error.
+            const skippedIndexes = options.skippedIndexes instanceof Set
+                ? options.skippedIndexes
+                : new Set(Array.isArray(options.skippedIndexes) ? options.skippedIndexes.map(Number) : []);
 
             return {
                 lines: sourceLines.map((text, lineIndex) => {
                     const sourceChars = Array.from(text);
-                    const resultLine = resultLinesByIndex.get(lineIndex) || resultLines[lineIndex] || {};
+                    // Prefer the index the model echoed back (i); only fall back to the
+                    // positional result when the response carried no usable index at all.
+                    // Lines omitted from the payload (translation-language lines) have no
+                    // entry here, so they simply stay unpronounced instead of borrowing a
+                    // neighbouring line's result.
+                    const resultLine = resultLinesByIndex.has(lineIndex)
+                        ? resultLinesByIndex.get(lineIndex)
+                        : (resultLinesByIndex.size === 0 ? (resultLines[lineIndex] || {}) : {});
                     const resultChars = Array.isArray(resultLine?.c)
                         ? resultLine.c
                         : (Array.isArray(resultLine?.chars) ? resultLine.chars : []);
@@ -2627,8 +2768,14 @@ ${normalizedText}
                         ? resultLine.u
                         : (Array.isArray(resultLine?.units) ? resultLine.units : []);
                     const byIndex = new Map();
+                    // A line omitted from the AI payload (already in the translation language)
+                    // has no result entry and is intentionally left unpronounced — that is not
+                    // a malformed response, so it must not trigger the char-mode errors below.
+                    const hasResultLine = resultLine !== null
+                        && typeof resultLine === 'object'
+                        && Object.keys(resultLine).length > 0;
 
-                    if (unitMode === 'char' && hasResultPronunciationArray) {
+                    if (unitMode === 'char' && hasResultPronunciationArray && !skippedIndexes.has(lineIndex)) {
                         if (resultPronunciations.length !== sourceChars.length) {
                             throw new Error(`Character pronunciation response line ${lineIndex} returned ${resultPronunciations.length} slots, expected ${sourceChars.length}.`);
                         }
@@ -2640,7 +2787,7 @@ ${normalizedText}
                             }
                         });
                     } else {
-                        if (unitMode === 'char') {
+                        if (unitMode === 'char' && hasResultLine && !skippedIndexes.has(lineIndex)) {
                             throw new Error(`Character pronunciation response line ${lineIndex} missing p array.`);
                         }
                         resultChars.forEach((item, fallbackIndex) => {
@@ -2734,6 +2881,19 @@ ${normalizedText}
                     };
                 })
             };
+        }
+
+        // Line indexes in this chunk that are already in the translation language and were
+        // therefore excluded from the AI payload. Computed with the same filter the prompt
+        // builder uses so the two never disagree.
+        _getCharacterPronunciationSkippedIndexes(lines, params = {}) {
+            const safeLines = (Array.isArray(lines) ? lines : []).map(line => String(line ?? ''));
+            const isTranslationLanguageLine = buildPronunciationLanguageLineFilter(params?.lang, params?.translationLang);
+            const skipped = new Set();
+            safeLines.forEach((text, index) => {
+                if (isTranslationLanguageLine(text)) skipped.add(index);
+            });
+            return skipped;
         }
 
         _validateCharacterPronunciationWritingSystem(result, options = {}) {
@@ -2860,7 +3020,8 @@ ${normalizedText}
                     })
                 });
                 const normalized = this._normalizeCharacterPronunciationResult(result, chunkLines, {
-                    unitMode: unitMode || characterPronunciationUnitMode || 'char'
+                    unitMode: unitMode || characterPronunciationUnitMode || 'char',
+                    skippedIndexes: this._getCharacterPronunciationSkippedIndexes(chunkLines, providerParams)
                 });
                 this._validateCharacterPronunciationWritingSystem(normalized, {
                     lang: providerParams.lang

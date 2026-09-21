@@ -3,7 +3,7 @@
  * OpenAI ChatGPT를 사용한 번역, 발음, Research 생성
  * 
  * @author default
- * @version 1.0.1
+ * @version 1.0.2
  */
 
 (() => {
@@ -234,6 +234,80 @@
 
     function getSelectedModel() {
         return getSetting('model', null);
+    }
+
+    function createEndpointId() {
+        return `ep-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    /**
+     * Additional OpenAI-compatible endpoints configured via "Add another".
+     * Each entry: { id, label, baseUrl, apiKey, model, customModel }.
+     * Stored under the 'extra-endpoints' setting; empty entries are ignored.
+     */
+    function getExtraEndpoints() {
+        const raw = getSetting('extra-endpoints', []);
+        let list = raw;
+        if (typeof list === 'string') {
+            const trimmed = list.trim();
+            if (!trimmed) return [];
+            try {
+                list = JSON.parse(trimmed);
+            } catch {
+                return [];
+            }
+        }
+        if (!Array.isArray(list)) return [];
+        return list
+            .filter(ep => ep && typeof ep === 'object')
+            .map((ep, index) => ({
+                id: String(ep.id || createEndpointId()),
+                label: String(ep.label || `Endpoint ${index + 2}`).trim() || `Endpoint ${index + 2}`,
+                baseUrl: normalizeBaseUrl(ep.baseUrl) || DEFAULT_OPENAI_BASE_URL,
+                apiKey: String(ep.apiKey || ep.api_key || '').trim(),
+                model: String(ep.model || '').trim(),
+                customModel: String(ep.customModel || ep.custom_model || '').trim()
+            }))
+            .filter(ep => ep.apiKey || ep.model || (ep.baseUrl && ep.baseUrl !== DEFAULT_OPENAI_BASE_URL));
+    }
+
+    function setExtraEndpoints(endpoints) {
+        setSetting('extra-endpoints', Array.isArray(endpoints) ? endpoints : []);
+    }
+
+    /**
+     * Flatten primary keys + extra endpoints into an ordered failover list.
+     * Each target: { label, baseUrl, apiKey, model }.
+     */
+    function getRequestTargets() {
+        const primaryBaseUrl = getBaseUrl();
+        const primaryModel = getSelectedModel();
+        const targets = getApiKeys().map((apiKey, index) => ({
+            label: index === 0 ? 'Primary' : `Primary key ${index + 1}`,
+            baseUrl: primaryBaseUrl,
+            apiKey,
+            model: primaryModel
+        }));
+        for (const ep of getExtraEndpoints()) {
+            if (!ep.apiKey) continue;
+            targets.push({
+                label: ep.label,
+                baseUrl: ep.baseUrl || primaryBaseUrl,
+                apiKey: ep.apiKey,
+                model: ep.model || primaryModel
+            });
+        }
+        return targets;
+    }
+
+    function ensureRequestTargets(targets) {
+        if (!targets.length) {
+            throw new Error('[ChatGPT] API key is required. Please configure your API key in settings.');
+        }
+        if (targets.every(target => !target.model)) {
+            throw new Error('[ChatGPT] Model is not selected. Please select a model in settings.');
+        }
+        return targets;
     }
 
 
@@ -472,20 +546,18 @@
         transformResult = null,
         requestTimeoutMs = window.ivLyricsFetch?.DEFAULT_TIMEOUT_MS || 90_000
     ) {
-        const apiKeys = getApiKeys();
-        if (apiKeys.length === 0) {
-            throw new Error('[ChatGPT] API key is required. Please configure your API key in settings.');
-        }
-
-        const baseUrl = getBaseUrl();
-        const model = getSelectedModel();
-        if (!model) {
-            throw new Error('[ChatGPT] Model is not selected. Please select a model in settings.');
-        }
+        const targets = ensureRequestTargets(getRequestTargets());
         let lastError = null;
 
-        for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
-            const apiKey = apiKeys[keyIndex];
+        for (let targetIndex = 0; targetIndex < targets.length; targetIndex++) {
+            const target = targets[targetIndex];
+            const apiKey = target.apiKey;
+            const baseUrl = target.baseUrl;
+            const model = target.model;
+            if (!model) {
+                window.__ivLyricsDebugLog?.(`[ChatGPT Addon] Skipping ${target.label}: no model configured.`);
+                continue;
+            }
 
             for (let attempt = 0; attempt < maxRetries; attempt++) {
                 try {
@@ -501,8 +573,8 @@
                     }, requestTimeoutMs);
 
                     if (response.status === 429 || response.status === 403) {
-                        window.__ivLyricsDebugLog?.(`[ChatGPT Addon] API key ${keyIndex + 1} failed (${response.status}), trying next...`);
-                        break; // Try next key
+                        window.__ivLyricsDebugLog?.(`[ChatGPT Addon] Target ${target.label} failed (${response.status}), trying next...`);
+                        break; // Try next target
                     }
 
                     if (response.status === 401) {
@@ -614,20 +686,18 @@
         requestTimeoutMs = window.ivLyricsFetch?.DEFAULT_TIMEOUT_MS || 90_000,
         onRawChunk = null
     ) {
-        const apiKeys = getApiKeys();
-        if (apiKeys.length === 0) {
-            throw new Error('[ChatGPT] API key is required. Please configure your API key in settings.');
-        }
-
-        const baseUrl = getBaseUrl();
-        const model = getSelectedModel();
-        if (!model) {
-            throw new Error('[ChatGPT] Model is not selected. Please select a model in settings.');
-        }
+        const targets = ensureRequestTargets(getRequestTargets());
         let lastError = null;
 
-        for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
-            const apiKey = apiKeys[keyIndex];
+        for (let targetIndex = 0; targetIndex < targets.length; targetIndex++) {
+            const target = targets[targetIndex];
+            const apiKey = target.apiKey;
+            const baseUrl = target.baseUrl;
+            const model = target.model;
+            if (!model) {
+                window.__ivLyricsDebugLog?.(`[ChatGPT Addon] Skipping ${target.label}: no model configured.`);
+                continue;
+            }
 
             for (let attempt = 0; attempt < maxRetries; attempt++) {
                 let emittedLineCount = 0;
@@ -788,20 +858,18 @@
         requestTimeoutMs = window.ivLyricsFetch?.DEFAULT_TIMEOUT_MS || 90_000,
         onRawChunk = null
     ) {
-        const apiKeys = getApiKeys();
-        if (apiKeys.length === 0) {
-            throw new Error('[ChatGPT] API key is required. Please configure your API key in settings.');
-        }
-
-        const baseUrl = getBaseUrl();
-        const model = getSelectedModel();
-        if (!model) {
-            throw new Error('[ChatGPT] Model is not selected. Please select a model in settings.');
-        }
+        const targets = ensureRequestTargets(getRequestTargets());
         let lastError = null;
 
-        for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
-            const apiKey = apiKeys[keyIndex];
+        for (let targetIndex = 0; targetIndex < targets.length; targetIndex++) {
+            const target = targets[targetIndex];
+            const apiKey = target.apiKey;
+            const baseUrl = target.baseUrl;
+            const model = target.model;
+            if (!model) {
+                window.__ivLyricsDebugLog?.(`[ChatGPT Addon] Skipping ${target.label}: no model configured.`);
+                continue;
+            }
 
             for (let attempt = 0; attempt < maxRetries; attempt++) {
                 let emittedLineCount = 0;
@@ -840,7 +908,7 @@
                     }, requestTimeoutMs);
 
                     if (response.status === 429 || response.status === 403) {
-                        window.__ivLyricsDebugLog?.(`[ChatGPT Addon] Stream: API key ${keyIndex + 1} failed (${response.status}), trying next...`);
+                        window.__ivLyricsDebugLog?.(`[ChatGPT Addon] Stream: target ${target.label} failed (${response.status}), trying next...`);
                         break;
                     }
 
@@ -985,6 +1053,41 @@
     }
 
     /**
+     * Test one endpoint target directly (used by per-endpoint Test buttons).
+     */
+    async function testSingleTarget(target) {
+        const baseUrl = normalizeBaseUrl(target.baseUrl) || DEFAULT_OPENAI_BASE_URL;
+        const apiKey = String(target.apiKey || '').trim();
+        const model = String(target.model || '').trim();
+        if (!apiKey) throw new Error('[ChatGPT] API key is required.');
+        if (!model) throw new Error('[ChatGPT] Model is required.');
+        const endpoint = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
+        const response = await window.ivLyricsFetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model,
+                messages: [{ role: 'user', content: 'Reply with just "OK" if you receive this.' }]
+            })
+        });
+        if (!response.ok) {
+            let errorMessage = `HTTP ${response.status}`;
+            try {
+                const errorData = await response.json();
+                if (errorData.error?.message) errorMessage = errorData.error.message;
+            } catch { }
+            throw new Error(`[ChatGPT] ${errorMessage}`);
+        }
+        const data = await response.json();
+        const rawText = readChatGPTResponseText(data);
+        if (!rawText.trim()) throw new Error('[ChatGPT] Empty response from API');
+        return rawText;
+    }
+
+    /**
      * Parse plain text lines from API response
      */
     function parseTextLines(text, expectedSourceLines) {
@@ -1074,10 +1177,18 @@
         },
 
         /**
-         * 연결 테스트
+         * 연결 테스트 (기본 + 추가 엔드포인트 전체)
          */
         async testConnection() {
-            await callChatGPTAPIRaw('Reply with just "OK" if you receive this.');
+            const targets = ensureRequestTargets(getRequestTargets());
+            for (const target of targets) {
+                if (!target.model) continue;
+                try {
+                    await testSingleTarget(target);
+                } catch (e) {
+                    throw new Error(`[${target.label}] ${e.message}`);
+                }
+            }
         },
 
         getSettingsUI() {
@@ -1095,6 +1206,10 @@
                 const [testStatus, setTestStatus] = useState('');
                 const [availableModels, setAvailableModels] = useState([]);
                 const [modelsLoading, setModelsLoading] = useState(false);
+                const [extraEndpoints, setExtraEndpointsState] = useState(() => getExtraEndpoints());
+                const [endpointTestStatus, setEndpointTestStatus] = useState({});
+                const [endpointModels, setEndpointModels] = useState({});
+                const [endpointModelsLoading, setEndpointModelsLoading] = useState({});
 
                 // 모델 목록 로드
                 const loadModels = useCallback(async () => {
@@ -1166,6 +1281,109 @@
                     }
                 }, []);
 
+                const handleAddEndpoint = useCallback(() => {
+                    setExtraEndpointsState((prev) => {
+                        const next = [...prev, {
+                            id: createEndpointId(),
+                            label: `Endpoint ${(prev.length || 0) + 2}`,
+                            baseUrl: 'https://api.openai.com/v1',
+                            apiKey: '',
+                            model: '',
+                            customModel: ''
+                        }];
+                        setExtraEndpoints(next);
+                        return next;
+                    });
+                    setTestStatus('');
+                }, []);
+
+                const handleEndpointChange = useCallback((id, field, value) => {
+                    setExtraEndpointsState((prev) => {
+                        const next = prev.map(ep => ep.id === id ? { ...ep, [field]: value } : ep);
+                        setExtraEndpoints(next);
+                        return next;
+                    });
+                }, []);
+
+                const handleRemoveEndpoint = useCallback((id) => {
+                    setExtraEndpointsState((prev) => {
+                        const next = prev.filter(ep => ep.id !== id);
+                        setExtraEndpoints(next);
+                        return next;
+                    });
+                    setEndpointTestStatus((prev) => {
+                        const next = { ...prev };
+                        delete next[id];
+                        return next;
+                    });
+                }, []);
+
+                const handleTestEndpoint = useCallback(async (endpoint) => {
+                    setEndpointTestStatus((prev) => ({ ...prev, [endpoint.id]: 'Testing...' }));
+                    try {
+                        await testSingleTarget({
+                            baseUrl: endpoint.baseUrl,
+                            apiKey: endpoint.apiKey,
+                            model: endpoint.model || getSelectedModel()
+                        });
+                        setEndpointTestStatus((prev) => ({ ...prev, [endpoint.id]: '✓ Connection successful!' }));
+                    } catch (e) {
+                        setEndpointTestStatus((prev) => ({ ...prev, [endpoint.id]: `✗ Error: ${e.message}` }));
+                    }
+                }, []);
+
+                const loadEndpointModels = useCallback(async (endpoint) => {
+                    const key = String(endpoint.apiKey || '').trim();
+                    if (!key) {
+                        setEndpointModels((prev) => ({ ...prev, [endpoint.id]: [] }));
+                        return;
+                    }
+                    setEndpointModelsLoading((prev) => ({ ...prev, [endpoint.id]: true }));
+                    try {
+                        const models = await fetchAvailableModels(key, endpoint.baseUrl || DEFAULT_OPENAI_BASE_URL);
+                        setEndpointModels((prev) => ({ ...prev, [endpoint.id]: models }));
+                    } catch (e) {
+                        window.__ivLyricsDebugLog?.('[ChatGPT Addon] Failed to load endpoint models:', e);
+                        setEndpointModels((prev) => ({ ...prev, [endpoint.id]: [] }));
+                    } finally {
+                        setEndpointModelsLoading((prev) => ({ ...prev, [endpoint.id]: false }));
+                    }
+                }, []);
+
+                // Load model lists for saved endpoints on mount (same as primary).
+                useEffect(() => {
+                    getExtraEndpoints().forEach((endpoint) => {
+                        if (String(endpoint.apiKey || '').trim()) {
+                            loadEndpointModels(endpoint);
+                        }
+                    });
+                }, [loadEndpointModels]);
+
+                const handleEndpointModelChange = useCallback((id, value) => {
+                    setExtraEndpointsState((prev) => {
+                        const next = prev.map(ep => ep.id === id ? { ...ep, model: value } : ep);
+                        setExtraEndpoints(next);
+                        return next;
+                    });
+                }, []);
+
+                const handleEndpointCustomModelChange = useCallback((id, value) => {
+                    setExtraEndpointsState((prev) => {
+                        const next = prev.map(ep => {
+                            if (ep.id !== id) return ep;
+                            const updated = { ...ep, customModel: value };
+                            if (value) updated.model = value;
+                            return updated;
+                        });
+                        setExtraEndpoints(next);
+                        return next;
+                    });
+                }, []);
+
+                const handleRefreshEndpointModels = useCallback((endpoint) => {
+                    loadEndpointModels(endpoint);
+                }, [loadEndpointModels]);
+
 
 
                 // ... (existing code for models)
@@ -1174,6 +1392,104 @@
 
                 const isModelInList = availableModels.find(m => m.id === model);
                 const hasApiKey = getApiKeys().length > 0;
+
+                // Extra endpoint card mirrors the primary (first) endpoint layout:
+                // API Key(s) + Get API Key, Base URL, Model dropdown + refresh,
+                // Custom Model ID, and its own Test Connection button.
+                const renderEndpointCard = (endpoint, index) => {
+                    const status = endpointTestStatus[endpoint.id] || '';
+                    const models = endpointModels[endpoint.id] || [];
+                    const modelsLoadingForEndpoint = !!endpointModelsLoading[endpoint.id];
+                    const endpointModel = endpoint.model || '';
+                    const endpointCustomModel = endpoint.customModel || '';
+                    const isEndpointModelInList = models.find(m => m.id === endpointModel);
+                    const hasEndpointApiKey = String(endpoint.apiKey || '').trim().length > 0;
+                    return React.createElement('div', {
+                        key: endpoint.id,
+                        style: { display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', marginTop: '6px' }
+                    },
+                        React.createElement('div', { className: 'ai-addon-input-group' },
+                            React.createElement('input', {
+                                type: 'text',
+                                value: endpoint.label,
+                                onChange: (e) => handleEndpointChange(endpoint.id, 'label', e.target.value),
+                                placeholder: `Endpoint ${index + 2} (e.g., Local Ollama)`
+                            }),
+                            React.createElement('button', {
+                                onClick: () => handleRemoveEndpoint(endpoint.id),
+                                className: 'ai-addon-btn-secondary'
+                            }, 'Remove')
+                        ),
+                        React.createElement('div', { className: 'ai-addon-setting' },
+                            React.createElement('label', null, 'API Key(s)'),
+                            React.createElement('div', { className: 'ai-addon-input-group' },
+                                React.createElement('input', {
+                                    type: 'text',
+                                    value: endpoint.apiKey,
+                                    onChange: (e) => handleEndpointChange(endpoint.id, 'apiKey', e.target.value),
+                                    placeholder: 'sk-...'
+                                }),
+                                React.createElement('button', { onClick: () => window.open(ADDON_INFO.apiKeyUrl, '_blank'), className: 'ai-addon-btn-secondary' }, 'Get API Key')
+                            )
+                        ),
+                        React.createElement('div', { className: 'ai-addon-setting' },
+                            React.createElement('label', null, 'Base URL'),
+                            React.createElement('input', {
+                                type: 'text',
+                                value: endpoint.baseUrl,
+                                onChange: (e) => handleEndpointChange(endpoint.id, 'baseUrl', e.target.value),
+                                placeholder: 'https://api.openai.com/v1'
+                            }),
+                            React.createElement('small', null, 'Change this to use OpenAI-compatible APIs')
+                        ),
+                        React.createElement('div', { className: 'ai-addon-setting' },
+                            React.createElement('label', null, 'Model'),
+                            React.createElement('div', { className: 'ai-addon-input-group' },
+                                React.createElement('select', {
+                                    value: isEndpointModelInList ? endpointModel : '',
+                                    onChange: (e) => handleEndpointModelChange(endpoint.id, e.target.value),
+                                    disabled: modelsLoadingForEndpoint
+                                },
+                                    modelsLoadingForEndpoint
+                                        ? React.createElement('option', { value: '' }, 'Loading models...')
+                                        : models.length > 0
+                                            ? [
+                                                !endpointModel && React.createElement('option', { key: '__placeholder__', value: '' }, '-- Select a model --'),
+                                                ...models.map(m => React.createElement('option', { key: m.id, value: m.id }, m.name)),
+                                                React.createElement('option', { key: 'custom', value: '' }, 'Custom...')
+                                            ].filter(Boolean)
+                                            : [
+                                                React.createElement('option', { key: 'empty', value: '' }, hasEndpointApiKey ? 'No models found' : 'Enter API key first'),
+                                                React.createElement('option', { key: 'custom', value: '' }, 'Custom...')
+                                            ]
+                                ),
+                                React.createElement('button', {
+                                    onClick: () => handleRefreshEndpointModels(endpoint),
+                                    className: 'ai-addon-btn-secondary',
+                                    disabled: modelsLoadingForEndpoint || !hasEndpointApiKey,
+                                    title: 'Refresh model list'
+                                }, modelsLoadingForEndpoint ? '...' : '↻')
+                            ),
+                            models.length > 0 && React.createElement('small', null, `${models.length} models available`)
+                        ),
+                        (!isEndpointModelInList || endpointCustomModel) &&
+                        React.createElement('div', { className: 'ai-addon-setting' },
+                            React.createElement('label', null, 'Custom Model ID'),
+                            React.createElement('input', {
+                                type: 'text',
+                                value: endpointCustomModel,
+                                onChange: (e) => handleEndpointCustomModelChange(endpoint.id, e.target.value),
+                                placeholder: 'e.g., gpt-4-turbo'
+                            })
+                        ),
+                        React.createElement('div', { className: 'ai-addon-setting' },
+                            React.createElement('button', { onClick: () => handleTestEndpoint(endpoint), className: 'ai-addon-btn-primary' }, 'Test Connection'),
+                            status && React.createElement('span', {
+                                className: `ai-addon-test-status ${status.startsWith('✓') ? 'success' : status.startsWith('✗') ? 'error' : ''}`
+                            }, status)
+                        )
+                    );
+                };
 
                 return React.createElement('div', { className: 'ai-addon-settings chatgpt-settings' },
                     React.createElement('div', { className: 'ai-addon-setting' },
@@ -1224,11 +1540,19 @@
                         React.createElement('label', null, 'Custom Model ID'),
                         React.createElement('input', { type: 'text', value: customModel, onChange: handleCustomModelChange, placeholder: 'e.g., gpt-4-turbo' })
                     ),
+                    React.createElement('div', { className: 'ai-addon-setting' },
+                        React.createElement('label', null, `Additional OpenAI-compatible endpoints${extraEndpoints.length ? ` (${extraEndpoints.length})` : ''}`),
+                        React.createElement('small', null, 'Each endpoint needs its own Base URL, API key and model. Requests fall back through them in order when the primary fails.'),
+                        ...extraEndpoints.map((endpoint, index) => renderEndpointCard(endpoint, index))
+                    ),
                     // Advanced API Parameters
                     React.createElement(AdvancedParamsSection)
                     ,
                     React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('button', { onClick: handleTest, className: 'ai-addon-btn-primary' }, 'Test Connection'),
+                        React.createElement('div', { className: 'ai-addon-input-group' },
+                            React.createElement('button', { onClick: handleTest, className: 'ai-addon-btn-primary' }, 'Test Connection'),
+                            React.createElement('button', { onClick: handleAddEndpoint, className: 'ai-addon-btn-secondary', title: 'Add another OpenAI-compatible endpoint' }, 'Add another')
+                        ),
                         testStatus && React.createElement('span', {
                             className: `ai-addon-test-status ${testStatus.startsWith('✓') ? 'success' : testStatus.startsWith('✗') ? 'error' : ''}`
                         }, testStatus)

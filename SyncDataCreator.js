@@ -11255,6 +11255,22 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		)
 	);
 
+	// Minimize the LRCLIB selector once sync data exists. Collapses a single
+	// time per empty -> synced transition so a manual re-expand is respected
+	// until the sync is cleared (reset, source change) and rebuilt.
+	const lrclibAutoCollapseRef = useRef(false);
+	useEffect(() => {
+		const syncedLineCount = Array.isArray(syncData?.lines) ? syncData.lines.length : 0;
+		if (syncedLineCount === 0) {
+			lrclibAutoCollapseRef.current = false;
+			return;
+		}
+		if (!lrclibAutoCollapseRef.current) {
+			lrclibAutoCollapseRef.current = true;
+			setShowLrclibCandidates(false);
+		}
+	}, [syncData]);
+
 	const renderLrclibCandidatesPanel = () => addonId === SYNC_CREATOR_SOURCE_ADDON_ID && react.createElement('div', {
 		className: 'sync-creator-candidate-section',
 		style: { ...s.candidatePanel, padding: '14px 18px', borderRadius: 0 }
@@ -11664,6 +11680,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				),
 				react.createElement('button', { style: { ...s.navBtn, opacity: nextNavigableLineIndex < 0 ? 0.3 : 1 }, onClick: goToNextLine, disabled: nextNavigableLineIndex < 0 }, '›')
 			),
+			showLivePreview && renderLivePreviewOverlay(),
 			multiVocalMode && react.createElement('div', { style: s.multiVocalBanner },
 				hasCurrentParallelParts
 					? (I18n.t('syncCreator.multiVocalBannerParts') || 'Multiple vocal mode: sync each vocal part separately.')
@@ -12167,6 +12184,561 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				)
 			)
 		),
+		);
+	};
+
+	// Karaoke preview below the line counter. Linked to the existing preview
+	// transport mode: visible exactly while mode === 'preview'.
+	const showLivePreview = mode === 'preview';
+	const livePreviewSyncBody = useMemo(() => {
+		if (!showLivePreview) return null;
+		try {
+			const source = syncData && Array.isArray(syncData.lines) ? syncData : null;
+			if (!source) return null;
+			return typeof materializeSyncCreatorParallelDrafts === 'function'
+				? materializeSyncCreatorParallelDrafts(source)
+				: source;
+		} catch (error) {
+			return syncData;
+		}
+	}, [showLivePreview, syncData, materializeSyncCreatorParallelDrafts]);
+	const livePreviewKaraokeLines = useMemo(() => {
+		if (!showLivePreview || !Array.isArray(lyricsLines) || lyricsLines.length === 0) return [];
+		const linesByStart = new Map();
+		try {
+			for (const line of Array.isArray(livePreviewSyncBody?.lines) ? livePreviewSyncBody.lines : []) {
+				const start = Number(line?.start);
+				if (Number.isInteger(start)) linesByStart.set(start, line);
+			}
+		} catch (error) {
+			return [];
+		}
+		const toMs = (value) => {
+			if (value === null || value === undefined) return null;
+			if (typeof value === 'string' && value.trim() === '') return null;
+			const numeric = Number(value);
+			return Number.isFinite(numeric) && numeric >= 0 ? Math.round(numeric * 1000) : null;
+		};
+		const lineStartMsList = lyricsLines.map((_, index) => {
+			const start = lineCharOffsets[index];
+			const syncLine = Number.isInteger(start) ? linesByStart.get(start) : null;
+			const firstMs = Array.isArray(syncLine?.chars) ? toMs(syncLine.chars[0]) : null;
+			return firstMs;
+		});
+		const findNextStartMs = (index, fallback) => {
+			for (let next = index + 1; next < lineStartMsList.length; next++) {
+				const candidate = lineStartMsList[next];
+				if (Number.isFinite(candidate) && candidate > fallback) return candidate;
+			}
+			return null;
+		};
+		const applyInlineStyleToSyllable = (syllable, absoluteIndex, normalizedRanges) => {
+			if (!Array.isArray(normalizedRanges) || normalizedRanges.length === 0) return syllable;
+			const covering = normalizedRanges.find(range => range.start <= absoluteIndex && range.end >= absoluteIndex);
+			if (!covering) return syllable;
+			const next = { ...syllable, inlineStyle: true };
+			if (covering.kind) next.styleKind = covering.kind;
+			if (covering.speaker) next.styleSpeaker = covering.speaker;
+			if (covering['speaker-color']) next.styleSpeakerColor = covering['speaker-color'];
+			if (covering['speaker-fallback']) next.styleSpeakerFallback = covering['speaker-fallback'];
+			return next;
+		};
+		return lyricsLines.map((lineText, index) => {
+			const absoluteStart = lineCharOffsets[index];
+			let text = String(lineText || '');
+			// Merged lines ("merge with next") are one sync unit outside too:
+			// preview the full merged text so every vocal row shows.
+			try {
+				const mergedIndexes = typeof getMergedLineIndexesForStart === 'function'
+					? getMergedLineIndexesForStart(index, linesByStart)
+					: [index];
+				if (Array.isArray(mergedIndexes) && mergedIndexes.length > 1) {
+					text = mergedIndexes.map(mergedIndex => String(lyricsLines[mergedIndex] || '')).join('');
+				}
+			} catch (error) {
+				text = String(lineText || '');
+			}
+			const syncLine = Number.isInteger(absoluteStart) ? linesByStart.get(absoluteStart) : null;
+			const chars = Array.from(text);
+			const speaker = normalizeSyncCreatorSpeaker(syncLine?.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
+			const kind = normalizeSyncCreatorKind(syncLine?.kind) || SYNC_CREATOR_DEFAULT_KIND;
+			if (!syncLine || !Array.isArray(syncLine.chars) || syncLine.chars.length === 0) {
+				return {
+					text,
+					startTime: Infinity,
+					endTime: Infinity,
+					speaker,
+					kind,
+					syllables: []
+				};
+			}
+			const charTimesMs = syncLine.chars.map(toMs);
+			const firstMs = charTimesMs.find(value => Number.isFinite(value));
+			if (!Number.isFinite(firstMs)) {
+				return {
+					text,
+					startTime: Infinity,
+					endTime: Infinity,
+					speaker,
+					kind,
+					syllables: []
+				};
+			}
+			const lastStartMs = [...charTimesMs].reverse().find(value => Number.isFinite(value)) ?? firstMs;
+			const nextStartMs = findNextStartMs(index, firstMs);
+			const lineEndMs = Number.isFinite(nextStartMs) && nextStartMs > lastStartMs
+				? nextStartMs
+				: lastStartMs + 1500;
+			const normalizedRanges = normalizeSyncCreatorStyleRanges(
+				syncLine?.styleRanges,
+				Number.isInteger(absoluteStart) ? absoluteStart : 0,
+				(Number.isInteger(absoluteStart) ? absoluteStart : 0) + Math.max(0, chars.length - 1)
+			);
+			const buildCharSyllables = (targetChars, targetTimesMs, targetAbsoluteStart) => {
+				const syllables = [];
+				for (let charIndex = 0; charIndex < targetChars.length; charIndex++) {
+					const charStart = targetTimesMs[charIndex];
+					if (!Number.isFinite(charStart)) continue;
+					const nextStart = targetTimesMs.slice(charIndex + 1).find(value => Number.isFinite(value));
+					const charEnd = Number.isFinite(nextStart) && nextStart >= charStart
+						? nextStart
+						: Math.max(charStart, lineEndMs);
+					syllables.push(applyInlineStyleToSyllable({
+						text: targetChars[charIndex],
+						startTime: charStart,
+						endTime: charEnd
+					}, targetAbsoluteStart + charIndex, normalizedRanges));
+				}
+				return syllables;
+			};
+			const parallelParts = Array.isArray(syncLine?.parallel?.parts) ? syncLine.parallel.parts : [];
+			if (parallelParts.length > 1) {
+				const builtParts = [];
+				for (const part of parallelParts) {
+					if (!part || !Array.isArray(part.ranges) || !Array.isArray(part.chars)) continue;
+					const expectedLength = countSyncCreatorRangeChars(part.ranges);
+					if (expectedLength <= 0 || part.chars.length !== expectedLength) continue;
+					const partTimesMs = part.chars.map(toMs);
+					const partSyllables = [];
+					let partCharPointer = 0;
+					let partText = '';
+					let validPart = true;
+					part.ranges.forEach((range, rangeIndex) => {
+						if (!validPart) return;
+						if (rangeIndex > 0) {
+							const joinMode = Array.isArray(part.join) ? Number(part.join[rangeIndex - 1]) : 1;
+							if (joinMode === 1 || joinMode === 2) {
+								const gapStart = partSyllables.length > 0
+									? partSyllables[partSyllables.length - 1].endTime
+									: firstMs;
+								const gapEnd = Number.isFinite(partTimesMs[partCharPointer])
+									? Math.max(gapStart, partTimesMs[partCharPointer])
+									: gapStart;
+								partSyllables.push({ text: ' ', startTime: gapStart, endTime: gapEnd });
+								partText += ' ';
+							}
+						}
+						const rangeStart = Number(range?.start);
+						const rangeEnd = Number(range?.end);
+						if (!Number.isInteger(rangeStart) || !Number.isInteger(rangeEnd) || rangeEnd < rangeStart) {
+							validPart = false;
+							return;
+						}
+						for (let absoluteIndex = rangeStart; absoluteIndex <= rangeEnd; absoluteIndex++) {
+							const localIndex = absoluteIndex - absoluteStart;
+							const char = chars[localIndex] || '';
+							const charStart = partTimesMs[partCharPointer];
+							if (!Number.isFinite(charStart)) {
+								validPart = false;
+								return;
+							}
+							const nextStart = partTimesMs.slice(partCharPointer + 1).find(value => Number.isFinite(value));
+							const charEnd = Number.isFinite(nextStart) && nextStart >= charStart
+								? nextStart
+								: Math.max(charStart, lineEndMs);
+							partText += char;
+							partSyllables.push(applyInlineStyleToSyllable({
+								text: char,
+								startTime: charStart,
+								endTime: charEnd
+							}, absoluteIndex, normalizedRanges));
+							partCharPointer++;
+						}
+					});
+					if (!validPart || partSyllables.length === 0) continue;
+					builtParts.push({
+						id: part.id || '',
+						role: part.role || '',
+						speaker: normalizeSyncCreatorSpeaker(part.speaker) || speaker,
+						'speaker-color': part['speaker-color'] || '',
+						'speaker-fallback': part['speaker-fallback'] || '',
+						kind: normalizeSyncCreatorKind(part.kind) || kind,
+						text: partText,
+						syllables: partSyllables,
+						startTime: partSyllables[0].startTime,
+						endTime: partSyllables[partSyllables.length - 1].endTime
+					});
+				}
+				if (builtParts.length > 1) {
+					const leadPart = builtParts.find(part => part.role === 'lead') || builtParts[0];
+					const backgroundParts = builtParts.filter(part => part !== leadPart);
+					const allTimes = builtParts.flatMap(part => [part.startTime, part.endTime]).filter(Number.isFinite);
+					return {
+						text,
+						startTime: Math.min(...allTimes, firstMs),
+						endTime: Math.max(...allTimes, lineEndMs),
+						speaker: syncLine.speaker || leadPart.speaker || speaker,
+						'speaker-color': syncLine['speaker-color'] || leadPart['speaker-color'] || '',
+						'speaker-fallback': syncLine['speaker-fallback'] || leadPart['speaker-fallback'] || '',
+						kind: syncLine.kind || leadPart.kind || kind,
+						vocals: {
+							lead: {
+								id: leadPart.id,
+								role: leadPart.role,
+								speaker: leadPart.speaker,
+								'speaker-color': leadPart['speaker-color'] || '',
+								'speaker-fallback': leadPart['speaker-fallback'] || '',
+								kind: leadPart.kind,
+								text: leadPart.text,
+								syllables: leadPart.syllables
+							},
+							background: backgroundParts.map(part => ({
+								id: part.id,
+								role: part.role,
+								speaker: part.speaker,
+								'speaker-color': part['speaker-color'] || '',
+								'speaker-fallback': part['speaker-fallback'] || '',
+								kind: part.kind,
+								text: part.text,
+								syllables: part.syllables
+							}))
+						}
+					};
+				}
+			}
+			const syllables = buildCharSyllables(chars, charTimesMs, absoluteStart);
+			if (syllables.length === 0) {
+				return {
+					text,
+					startTime: Infinity,
+					endTime: Infinity,
+					speaker,
+					kind,
+					syllables: []
+				};
+			}
+			return {
+				text,
+				startTime: firstMs,
+				endTime: lineEndMs,
+				speaker,
+				'speaker-color': syncLine['speaker-color'] || '',
+				'speaker-fallback': syncLine['speaker-fallback'] || '',
+				kind,
+				syllables
+			};
+		});
+	}, [showLivePreview, lyricsLines, lineCharOffsets, livePreviewSyncBody, getMergedLineIndexesForStart]);
+	useEffect(() => {
+		if (!showLivePreview) return undefined;
+		const handlePreviewEscape = (event) => {
+			if (event?.key === 'Escape' || event?.key === 'Esc') setMode('idle');
+		};
+		document.addEventListener('keydown', handlePreviewEscape, true);
+		return () => document.removeEventListener('keydown', handlePreviewEscape, true);
+	}, [showLivePreview]);
+	const livePreviewLyricVars = useMemo(() => {
+		const visualConfig = window.CONFIG?.visual || {};
+		const editorGlyphSize = Number.parseInt(s.charSpan?.fontSize, 10) || 32;
+		const vars = {
+			'--lyrics-color-active': visualConfig['active-color'] || 'var(--spice-text, #ffffff)',
+			'--lyrics-color-inactive': visualConfig['inactive-color'] || 'var(--spice-subtext, rgba(255, 255, 255, 0.58))',
+			'--lyrics-font-family': visualConfig['font-family'] || 'var(--font-family)',
+			'--lyrics-original-font-family': visualConfig['original-font-family'] || visualConfig['font-family'] || 'var(--font-family)'
+		};
+		try {
+			const container = document.querySelector('.lyrics-lyricsContainer-LyricsContainer');
+			if (container) {
+				const computed = window.getComputedStyle(container);
+				for (const key of Object.keys(vars)) {
+					const liveValue = computed.getPropertyValue(key)?.trim();
+					if (liveValue) vars[key] = liveValue;
+				}
+			}
+		} catch (error) {
+			void error;
+		}
+		// Rendered size matches the sync editor's own glyphs.
+		vars['--lyrics-font-size'] = `${editorGlyphSize}px`;
+		vars['--lyrics-original-font-size'] = `${editorGlyphSize}px`;
+		return vars;
+	}, [showLivePreview]);
+	// Error boundary so a failing karaoke preview can never crash the editor.
+	// Remounted via key whenever the previewed line or its timing changes.
+	const SyncCreatorPreviewBoundary = useMemo(() => (
+		class extends react.Component {
+			constructor(props) {
+				super(props);
+				this.state = { error: null };
+			}
+			static getDerivedStateFromError(error) {
+				return { error };
+			}
+			componentDidCatch(error) {
+				try {
+					console.warn('[SyncDataCreator] Karaoke preview render failed:', error);
+				} catch (loggingError) {
+					void loggingError;
+				}
+			}
+			render() {
+				if (this.state.error) {
+					return react.createElement('div', {
+						style: { fontSize: '12px', color: 'var(--spice-subtext)', padding: '8px 4px' }
+					}, I18n.t('syncCreator.previewUnavailable') || 'Karaoke preview unavailable for this line.');
+				}
+				return this.props.children;
+			}
+		}
+	), []);
+	const renderLivePreviewOverlay = () => {
+		if (!showLivePreview) return null;
+		const PageRenderer = null;
+		const ActiveRenderer = null;
+		const primitives = window.ivLyricsLyricRendererPrimitives || null;
+		let previewBody = null;
+		const renderPreviewLine = (rowLine, isRowActive, rowKey) => {
+			if (!rowLine || !primitives?.LyricsLineBlock) return null;
+			try {
+				let mainText = rowLine?.text || '';
+				let subText = null;
+				let subText2 = null;
+				let originalText = null;
+				try {
+					const aux = primitives.getEmbeddedAuxiliaryDisplayValues
+						? primitives.getEmbeddedAuxiliaryDisplayValues(rowLine)
+						: { text: rowLine?.text };
+					const display = primitives.buildLyricDisplayState
+						? primitives.buildLyricDisplayState(true, rowLine, aux?.text, aux?.originalText, aux?.text2)
+						: null;
+					if (display) {
+						mainText = display.mainText ?? mainText;
+						subText = display.subText ?? null;
+						subText2 = display.subText2 ?? null;
+						originalText = display.originalText ?? null;
+					}
+				} catch (error) {
+					mainText = rowLine?.text || '';
+				}
+				let lineClassName = `lyrics-lyricsContainer-LyricsLine${isRowActive ? ' lyrics-lyricsContainer-LyricsLine-active' : ''}`;
+				try {
+					const metaClass = primitives.getKaraokeLineMetaClass
+						? primitives.getKaraokeLineMetaClass(rowLine)
+						: '';
+					if (metaClass) lineClassName += ` ${metaClass}`;
+				} catch (error) {
+					void error;
+				}
+				let speakerStyle = null;
+				try {
+					speakerStyle = primitives.getKaraokeSpeakerStyle
+						? primitives.getKaraokeSpeakerStyle(rowLine?.speaker, rowLine?.['speaker-color'], rowLine?.['speaker-fallback'])
+						: null;
+				} catch (error) {
+					speakerStyle = null;
+				}
+				const rowStartTime = Number(rowLine?.startTime);
+				return react.createElement(primitives.LyricsLineBlock, {
+					key: rowKey,
+					className: lineClassName,
+					style: speakerStyle || undefined,
+					dir: 'auto',
+					seekTime: Number.isFinite(rowStartTime) && !rowLine?.isVirtualTrailingInterlude ? rowStartTime : null,
+					mainText,
+					subText,
+					subText2,
+					originalText,
+					isKara: true,
+					line: rowLine,
+					position,
+					isActive: isRowActive,
+					isCurrentLine: isRowActive,
+					isEffectFocused: isRowActive,
+					isEffectLive: isRowActive,
+					settingsRevision: 0,
+					globalCharOffset: 0,
+					activeGlobalCharIndex: -1,
+					singleLineScroll: false
+				});
+			} catch (error) {
+				return null;
+			}
+		};
+		// Current line only (never the whole song): fully rendered with all of
+		// its vocal rows via the exact outside KaraokeLine vocal stack.
+		// Marker rows become break indicators, long trailing gaps become
+		// virtual break rows, playback before the first line shows the
+		// leading prelude (interlude system, same source as outside).
+		const previewLineIndex = Math.max(0, Math.min(currentLineIndex, livePreviewKaraokeLines.length - 1));
+		const previewLine = livePreviewKaraokeLines[previewLineIndex] || null;
+		let interludeDisplayLine = null;
+		let isLeadingPrelude = false;
+		let leadingPreludeDurationMs = 0;
+		try {
+			if (previewLine && primitives?.getInterludeInfo) {
+				const nextPreviewLine = livePreviewKaraokeLines[previewLineIndex + 1] || null;
+				const sourceInterludeInfo = primitives.getInterludeInfo(
+					previewLine,
+					nextPreviewLine,
+					previewLineIndex,
+					livePreviewKaraokeLines.length
+				);
+				if (sourceInterludeInfo?.isInterlude) {
+					interludeDisplayLine = { ...previewLine, interludeInfo: sourceInterludeInfo };
+				} else if (primitives.createActiveTrailingKaraokeInterludeLine) {
+					interludeDisplayLine = primitives.createActiveTrailingKaraokeInterludeLine({
+						line: previewLine,
+						nextLine: nextPreviewLine,
+						lineIndex: previewLineIndex,
+						lineCount: livePreviewKaraokeLines.length,
+						position,
+						isActiveLine: true,
+						isKara: true
+					});
+				}
+			}
+		} catch (error) {
+			interludeDisplayLine = null;
+		}
+		try {
+			if (!interludeDisplayLine && primitives?.IdlingIndicator) {
+				let firstStartMs = null;
+				for (const candidateLine of livePreviewKaraokeLines) {
+					const candidateStart = Number(candidateLine?.startTime);
+					if (Number.isFinite(candidateStart)) {
+						firstStartMs = candidateStart;
+						break;
+					}
+				}
+				if (firstStartMs !== null && Number(position) < firstStartMs) {
+					isLeadingPrelude = true;
+					leadingPreludeDurationMs = firstStartMs;
+				}
+			}
+		} catch (error) {
+			isLeadingPrelude = false;
+		}
+		const displaySourceLine = interludeDisplayLine || previewLine;
+		// Multi-vocal lines: render one exact row per vocal part (lead +
+		// backgrounds) so every synced voice is visible, using the same
+		// single-row renderer as above.
+		const vocalLeadPart = displaySourceLine?.vocals?.lead;
+		const vocalBackgroundParts = Array.isArray(displaySourceLine?.vocals?.background)
+			? displaySourceLine.vocals.background
+			: [];
+		const hasVocalStack = vocalLeadPart?.syllables?.length > 0
+			&& vocalBackgroundParts.some((part) => Array.isArray(part?.syllables) && part.syllables.length > 0);
+		const previewVocalRowCount = hasVocalStack
+			? 1 + vocalBackgroundParts.filter((part) => Array.isArray(part?.syllables) && part.syllables.length > 0 && String(part.text || '').trim()).length
+			: 0;
+		if (!previewBody && hasVocalStack && !displaySourceLine?.interludeInfo?.isInterlude) {
+			try {
+				const buildVocalRowLine = (part) => ({
+					...displaySourceLine,
+					interludeInfo: undefined,
+					text: part.text,
+					originalText: part.text,
+					syllables: part.syllables,
+					vocals: undefined,
+					speaker: part.speaker,
+					'speaker-color': part['speaker-color'] || '',
+					'speaker-fallback': part['speaker-fallback'] || '',
+					kind: part.kind || displaySourceLine.kind
+				});
+				const stackRows = [];
+				const pushPartRow = (part, suffix) => {
+					if (!part || !Array.isArray(part.syllables) || part.syllables.length === 0) return;
+					if (!String(part.text || '').trim()) return;
+					const rowElement = renderPreviewLine(buildVocalRowLine(part), true, `vocal-${suffix}`);
+					if (rowElement) stackRows.push(rowElement);
+				};
+				pushPartRow(vocalLeadPart, 'lead');
+				vocalBackgroundParts.forEach((part, partIndex) => pushPartRow(part, `bg-${partIndex}`));
+				if (stackRows.length > 0) {
+					previewBody = react.createElement('div', { className: 'lyrics-karaoke-stack sync-creator-live-preview-stack' }, stackRows);
+				}
+			} catch (error) {
+				previewBody = null;
+			}
+		}
+		if (isLeadingPrelude && primitives?.IdlingIndicator) {
+			try {
+				previewBody = react.createElement(primitives.IdlingIndicator, {
+					isActive: true,
+					delay: leadingPreludeDurationMs / 3,
+					durationMs: leadingPreludeDurationMs,
+					settingsRevision: 0
+				});
+			} catch (error) {
+				previewBody = null;
+			}
+		}
+		if (!previewBody && displaySourceLine) {
+			const lineElement = renderPreviewLine(displaySourceLine, true, 'main');
+			if (lineElement) {
+				previewBody = react.createElement('div', { className: 'sync-creator-live-preview-line' }, lineElement);
+			}
+		}
+		if (!previewBody && previewLine) {
+			previewBody = react.createElement('div', {
+				className: 'lyrics-lyricsContainer-LyricsLine lyrics-lyricsContainer-LyricsLine-active',
+				dir: 'auto',
+				style: { fontSize: '24px', fontWeight: '700', color: 'var(--spice-text)', textAlign: 'center', lineHeight: 1.5 }
+			}, String(previewLine?.text || ''));
+		}
+		if (!previewBody) {
+			previewBody = react.createElement('div', { style: { fontSize: '13px', color: 'var(--spice-subtext)' } },
+				I18n.t('syncCreator.noSyncData') || 'No sync data to preview yet.'
+			);
+		}
+		const vocalPartSignature = (part) => `${part?.startTime ?? 'u'}:${Array.isArray(part?.syllables) ? part.syllables.length : 0}`;
+		const previewContentKey = `${previewLineIndex}:${(displaySourceLine?.text || '').length}:${interludeDisplayLine ? 'interlude' : (displaySourceLine?.vocals ? `v:${vocalPartSignature(displaySourceLine.vocals.lead)}:${(displaySourceLine.vocals.background || []).map(vocalPartSignature).join('+')}` : (Array.isArray(displaySourceLine?.syllables) ? displaySourceLine.syllables.length : 0))}`;
+		const safePreviewBody = react.createElement(SyncCreatorPreviewBoundary, { key: previewContentKey }, previewBody);
+		return react.createElement('div', {
+			className: 'sync-creator-live-preview-overlay',
+			style: {
+				position: 'static',
+				margin: '0 0 12px',
+				minHeight: '150px',
+				display: 'flex', flexDirection: 'column', overflow: 'hidden',
+				background: '#0a0e12',
+				border: `1px solid ${TOSS_BORDER}`,
+				borderRadius: '12px'
+			},
+			onMouseDown: (event) => event.stopPropagation(),
+			onTouchStart: (event) => event.stopPropagation()
+		},
+			react.createElement('div', {
+				style: {
+					display: 'flex', alignItems: 'center', gap: '8px',
+					padding: '8px 12px',
+					borderBottom: `1px solid ${TOSS_BORDER}`,
+					flexShrink: 0
+				}
+			},
+				react.createElement('div', {
+					style: { fontSize: '11px', fontWeight: '800', color: 'var(--spice-text)', letterSpacing: '0.04em', textTransform: 'uppercase' }
+				}, I18n.t('syncCreator.preview') || 'Preview'),
+				react.createElement('div', {
+					style: { fontSize: '11px', color: 'var(--spice-subtext)', fontVariantNumeric: 'tabular-nums' }
+				}, livePreviewKaraokeLines.length > 0 ? `${previewLineIndex + 1} / ${livePreviewKaraokeLines.length}${previewVocalRowCount > 1 ? ` · ${previewVocalRowCount} vocals` : ''}` : '')
+			),
+			react.createElement('div', {
+				className: 'sync-creator-live-preview-exact',
+				style: { position: 'relative', zIndex: 1, display: 'block', width: '100%', boxSizing: 'border-box', minHeight: '110px', maxHeight: '320px', overflowY: 'auto', overflowX: 'hidden', textAlign: 'center', padding: '24px 20px', flex: '1 0 auto' }
+			},
+				react.createElement('div', { style: { position: 'relative', zIndex: 1, width: '100%', ...livePreviewLyricVars } }, safePreviewBody)
+			)
 		);
 	};
 

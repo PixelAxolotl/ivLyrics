@@ -241,9 +241,43 @@
     }
 
     /**
+     * Capabilities that can be toggled per endpoint. These mirror the
+     * AIAddonManager capabilities for this addon plus its researchWebSearch
+     * support flag: endpoints without web search serve Research through
+     * plain chat completions instead of the Responses API.
+     */
+    const ENDPOINT_CAPABILITIES = ['translate', 'metadata', 'tmi', 'researchWebSearch', 'lyricsStudy', 'characterPronunciation', 'culturalAnnotations'];
+    const ENDPOINT_CAPABILITY_FALLBACKS = {
+        translate: 'Translation',
+        metadata: 'Metadata',
+        tmi: 'TMI',
+        researchWebSearch: 'Research web search',
+        lyricsStudy: 'Learning',
+        characterPronunciation: 'Character pronunciation',
+        culturalAnnotations: 'Cultural context'
+    };
+
+    function isEndpointCapabilityEnabled(capabilities, capability) {
+        if (!capabilities || typeof capabilities !== 'object' || Array.isArray(capabilities)) return true;
+        const value = capabilities[capability];
+        return value === undefined || value === null ? true : value === true || value === 'true';
+    }
+
+    function getPrimaryCapabilities() {
+        const raw = getSetting('primary-capabilities', null);
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+        return raw;
+    }
+
+    function setPrimaryCapabilities(capabilities) {
+        setSetting('primary-capabilities', capabilities && typeof capabilities === 'object' ? capabilities : {});
+    }
+
+    /**
      * Additional OpenAI-compatible endpoints configured via "Add another".
-     * Each entry: { id, label, baseUrl, apiKey, model, customModel }.
+     * Each entry: { id, label, baseUrl, apiKey, model, customModel, capabilities }.
      * Stored under the 'extra-endpoints' setting; empty entries are ignored.
+     * A missing capabilities entry means all capabilities are enabled.
      */
     function getExtraEndpoints() {
         const raw = getSetting('extra-endpoints', []);
@@ -266,7 +300,10 @@
                 baseUrl: normalizeBaseUrl(ep.baseUrl) || DEFAULT_OPENAI_BASE_URL,
                 apiKey: String(ep.apiKey || ep.api_key || '').trim(),
                 model: String(ep.model || '').trim(),
-                customModel: String(ep.customModel || ep.custom_model || '').trim()
+                customModel: String(ep.customModel || ep.custom_model || '').trim(),
+                capabilities: (ep.capabilities && typeof ep.capabilities === 'object' && !Array.isArray(ep.capabilities))
+                    ? ep.capabilities
+                    : {}
             }))
             .filter(ep => ep.apiKey || ep.model || (ep.baseUrl && ep.baseUrl !== DEFAULT_OPENAI_BASE_URL));
     }
@@ -277,31 +314,45 @@
 
     /**
      * Flatten primary keys + extra endpoints into an ordered failover list.
-     * Each target: { label, baseUrl, apiKey, model }.
+     * Each target: { label, baseUrl, apiKey, model, researchWebSearch }.
+     * When a capability is given, only endpoints with that capability enabled
+     * are included (missing capabilities entry means all enabled).
      */
-    function getRequestTargets() {
+    function getRequestTargets(capability = null) {
         const primaryBaseUrl = getBaseUrl();
         const primaryModel = getSelectedModel();
-        const targets = getApiKeys().map((apiKey, index) => ({
-            label: index === 0 ? 'Primary' : `Primary key ${index + 1}`,
-            baseUrl: primaryBaseUrl,
-            apiKey,
-            model: primaryModel
-        }));
+        const primaryCaps = getPrimaryCapabilities();
+        const targets = [];
+        if (!capability || isEndpointCapabilityEnabled(primaryCaps, capability)) {
+            for (const [index, apiKey] of getApiKeys().entries()) {
+                targets.push({
+                    label: index === 0 ? 'Primary' : `Primary key ${index + 1}`,
+                    baseUrl: primaryBaseUrl,
+                    apiKey,
+                    model: primaryModel,
+                    researchWebSearch: isEndpointCapabilityEnabled(primaryCaps, 'researchWebSearch')
+                });
+            }
+        }
         for (const ep of getExtraEndpoints()) {
             if (!ep.apiKey) continue;
+            if (capability && !isEndpointCapabilityEnabled(ep.capabilities, capability)) continue;
             targets.push({
                 label: ep.label,
                 baseUrl: ep.baseUrl || primaryBaseUrl,
                 apiKey: ep.apiKey,
-                model: ep.model || primaryModel
+                model: ep.model || primaryModel,
+                researchWebSearch: isEndpointCapabilityEnabled(ep.capabilities, 'researchWebSearch')
             });
         }
         return targets;
     }
 
-    function ensureRequestTargets(targets) {
+    function ensureRequestTargets(targets, capability = null) {
         if (!targets.length) {
+            if (capability) {
+                throw new Error(`[ChatGPT] No endpoint has the '${capability}' capability enabled. Enable it for at least one endpoint in settings.`);
+            }
             throw new Error('[ChatGPT] API key is required. Please configure your API key in settings.');
         }
         if (targets.every(target => !target.model)) {
@@ -544,9 +595,10 @@
         prompt,
         maxRetries = window.AIAddonManager?.getProviderRequestAttempts?.() ?? 3,
         transformResult = null,
-        requestTimeoutMs = window.ivLyricsFetch?.DEFAULT_TIMEOUT_MS || 90_000
+        requestTimeoutMs = window.ivLyricsFetch?.DEFAULT_TIMEOUT_MS || 90_000,
+        capability = null
     ) {
-        const targets = ensureRequestTargets(getRequestTargets());
+        const targets = ensureRequestTargets(getRequestTargets(capability), capability);
         let lastError = null;
 
         for (let targetIndex = 0; targetIndex < targets.length; targetIndex++) {
@@ -684,9 +736,11 @@
         maxRetries = window.AIAddonManager?.getProviderRequestAttempts?.() ?? 3,
         transformResult = null,
         requestTimeoutMs = window.ivLyricsFetch?.DEFAULT_TIMEOUT_MS || 90_000,
-        onRawChunk = null
+        onRawChunk = null,
+        capability = null,
+        targetsOverride = null
     ) {
-        const targets = ensureRequestTargets(getRequestTargets());
+        const targets = ensureRequestTargets(targetsOverride || getRequestTargets(capability), capability);
         let lastError = null;
 
         for (let targetIndex = 0; targetIndex < targets.length; targetIndex++) {
@@ -856,9 +910,11 @@
         maxRetries = window.AIAddonManager?.getProviderRequestAttempts?.() ?? 3,
         transformResult = null,
         requestTimeoutMs = window.ivLyricsFetch?.DEFAULT_TIMEOUT_MS || 90_000,
-        onRawChunk = null
+        onRawChunk = null,
+        capability = null,
+        targetsOverride = null
     ) {
-        const targets = ensureRequestTargets(getRequestTargets());
+        const targets = ensureRequestTargets(targetsOverride || getRequestTargets(capability), capability);
         let lastError = null;
 
         for (let targetIndex = 0; targetIndex < targets.length; targetIndex++) {
@@ -1047,9 +1103,10 @@
     async function callChatGPTAPI(
         prompt,
         maxRetries = window.AIAddonManager?.getProviderRequestAttempts?.() ?? 3,
-        requestTimeoutMs = window.ivLyricsFetch?.DEFAULT_TIMEOUT_MS || 90_000
+        requestTimeoutMs = window.ivLyricsFetch?.DEFAULT_TIMEOUT_MS || 90_000,
+        capability = null
     ) {
-        return await callChatGPTAPIRaw(prompt, maxRetries, extractJSON, requestTimeoutMs);
+        return await callChatGPTAPIRaw(prompt, maxRetries, extractJSON, requestTimeoutMs, capability);
     }
 
     /**
@@ -1384,6 +1441,53 @@
                     loadEndpointModels(endpoint);
                 }, [loadEndpointModels]);
 
+                const [primaryCapabilities, setPrimaryCapabilitiesState] = useState(() => getPrimaryCapabilities());
+
+                const togglePrimaryCapability = useCallback((cap) => {
+                    setPrimaryCapabilitiesState((prev) => {
+                        const next = { ...(prev || {}) };
+                        next[cap] = !isEndpointCapabilityEnabled(next, cap);
+                        setPrimaryCapabilities(next);
+                        return next;
+                    });
+                }, []);
+
+                const handleEndpointCapabilityToggle = useCallback((id, cap) => {
+                    setExtraEndpointsState((prev) => {
+                        const next = prev.map(ep => {
+                            if (ep.id !== id) return ep;
+                            const capabilities = { ...(ep.capabilities || {}) };
+                            capabilities[cap] = !isEndpointCapabilityEnabled(capabilities, cap);
+                            return { ...ep, capabilities };
+                        });
+                        setExtraEndpoints(next);
+                        return next;
+                    });
+                }, []);
+
+                // Capability chips shared by the primary endpoint and extra
+                // endpoint cards. Same look as the provider-level
+                // "Enabled Capabilities" chips in Settings.
+                const renderCapabilityChips = (capabilities, onToggle, description) => {
+                    return React.createElement('div', { className: 'ai-addon-setting' },
+                        React.createElement('label', null, t('settings.aiProviders.enabledCapabilities', 'Enabled Capabilities')),
+                        React.createElement('div', { className: 'ai-addon-caps-container' },
+                            ENDPOINT_CAPABILITIES.map(cap => {
+                                const enabled = isEndpointCapabilityEnabled(capabilities, cap);
+                                return React.createElement('div', {
+                                    key: cap,
+                                    className: `ai-addon-cap-chip ${enabled ? 'active' : ''} cap-${cap}`,
+                                    onClick: () => onToggle(cap)
+                                },
+                                    enabled && React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('polyline', { points: '20 6 9 17 4 12' })),
+                                    t(`settings.aiProviders.supports.${cap}`, ENDPOINT_CAPABILITY_FALLBACKS[cap] || cap)
+                                );
+                            })
+                        ),
+                        description && React.createElement('small', null, description)
+                    );
+                };
+
 
 
                 // ... (existing code for models)
@@ -1482,6 +1586,11 @@
                                 placeholder: 'e.g., gpt-4-turbo'
                             })
                         ),
+                        renderCapabilityChips(
+                            endpoint.capabilities,
+                            (cap) => handleEndpointCapabilityToggle(endpoint.id, cap),
+                            'Which request types this endpoint serves. Disabled types skip it and fall through to the next endpoint.'
+                        ),
                         React.createElement('div', { className: 'ai-addon-setting' },
                             React.createElement('button', { onClick: () => handleTestEndpoint(endpoint), className: 'ai-addon-btn-primary' }, 'Test Connection'),
                             status && React.createElement('span', {
@@ -1539,6 +1648,11 @@
                     React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, 'Custom Model ID'),
                         React.createElement('input', { type: 'text', value: customModel, onChange: handleCustomModelChange, placeholder: 'e.g., gpt-4-turbo' })
+                    ),
+                    renderCapabilityChips(
+                        primaryCapabilities,
+                        togglePrimaryCapability,
+                        'Which request types the primary endpoint serves. Disabled types fall through to the additional endpoints below.'
                     ),
                     React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, `Additional OpenAI-compatible endpoints${extraEndpoints.length ? ` (${extraEndpoints.length})` : ''}`),
@@ -1626,8 +1740,8 @@
 
             // Validate inside the provider retry loop so partial/blocked output can retry safely.
             const lines = onLine
-                ? await callChatGPTAPIStream(prompt, onLine, onStreamReset, undefined, parseLines)
-                : await callChatGPTAPIRaw(prompt, undefined, parseLines);
+                ? await callChatGPTAPIStream(prompt, onLine, onStreamReset, undefined, parseLines, undefined, undefined, 'translate')
+                : await callChatGPTAPIRaw(prompt, undefined, parseLines, undefined, 'translate');
 
             // Return in the format expected by LyricsService
             if (wantSmartPhonetic) {
@@ -1646,7 +1760,7 @@
             if (!prompt) {
                 throw new Error('[OpenAI ChatGPT] Central character pronunciation prompt is unavailable.');
             }
-            const result = await callChatGPTAPI(prompt);
+            const result = await callChatGPTAPI(prompt, undefined, undefined, 'characterPronunciation');
             if (!result || !(Array.isArray(result.l) || Array.isArray(result.lines))) {
                 throw new Error('Invalid character pronunciation response');
             }
@@ -1662,7 +1776,7 @@
             if (!prompt) {
                 throw new Error('[OpenAI ChatGPT] Central metadata translation prompt is unavailable.');
             }
-            const result = await callChatGPTAPI(prompt);
+            const result = await callChatGPTAPI(prompt, undefined, undefined, 'metadata');
 
             // Normalize result to match expected format in FullscreenOverlay.js
             return {
@@ -1700,14 +1814,67 @@
             const request = webSearch !== false
                 ? callResponsesAPIStream
                 : callChatGPTAPIStream;
-            return await request(
+            const onRawChunk = progressParser ? chunk => progressParser.push(chunk) : null;
+            if (webSearch === false) {
+                return await request(
+                    prompt,
+                    null,
+                    resetProgress,
+                    1,
+                    extractJSON,
+                    requestTimeoutMs,
+                    onRawChunk,
+                    'tmi'
+                );
+            }
+            // Split TMI targets by web search support: Responses API targets
+            // first, then plain chat completion targets. Endpoints without
+            // researchWebSearch (e.g. local OpenAI-compatible servers) cannot
+            // serve /responses, so they are served without live search instead
+            // of failing the whole request.
+            const tmiTargets = ensureRequestTargets(getRequestTargets('tmi'), 'tmi');
+            const searchTargets = tmiTargets.filter(target => target.researchWebSearch !== false);
+            const plainTargets = tmiTargets.filter(target => target.researchWebSearch === false);
+            if (searchTargets.length > 0 && plainTargets.length === 0) {
+                return await callResponsesAPIStream(
+                    prompt,
+                    null,
+                    resetProgress,
+                    1,
+                    extractJSON,
+                    requestTimeoutMs,
+                    onRawChunk,
+                    'tmi',
+                    searchTargets
+                );
+            }
+            if (searchTargets.length > 0) {
+                try {
+                    return await callResponsesAPIStream(
+                        prompt,
+                        null,
+                        resetProgress,
+                        1,
+                        extractJSON,
+                        requestTimeoutMs,
+                        onRawChunk,
+                        'tmi',
+                        searchTargets
+                    );
+                } catch (searchError) {
+                    window.__ivLyricsDebugLog?.('[ChatGPT Addon] Web search targets failed, falling back to plain targets:', searchError?.message);
+                }
+            }
+            return await callChatGPTAPIStream(
                 prompt,
                 null,
                 resetProgress,
                 1,
                 extractJSON,
                 requestTimeoutMs,
-                progressParser ? chunk => progressParser.push(chunk) : null
+                onRawChunk,
+                'tmi',
+                plainTargets.length > 0 ? plainTargets : tmiTargets
             );
         },
 
@@ -1720,7 +1887,7 @@
             if (!prompt) {
                 throw new Error('[OpenAI ChatGPT] Central lyrics study prompt is unavailable.');
             }
-            return await callChatGPTAPI(prompt);
+            return await callChatGPTAPI(prompt, undefined, undefined, 'lyricsStudy');
         },
 
         async generateCulturalAnnotations(params) {
@@ -1731,7 +1898,7 @@
             if (!prompt) {
                 throw new Error('[OpenAI ChatGPT] Central cultural annotations prompt is unavailable.');
             }
-            return await callChatGPTAPI(prompt);
+            return await callChatGPTAPI(prompt, undefined, undefined, 'culturalAnnotations');
         }
     };
 

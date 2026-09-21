@@ -7575,6 +7575,8 @@ const getKaraokeGlyphUpdates = (state, position, isComplete) => {
 // source languages. Units are the existing karaoke word units so the sung
 // highlight and the annotations share the same grouping. Returns null when
 // the line should keep the legacy line-level rendering.
+const WORD_SUPPLEMENT_RETRY_MAX = 1;
+const WORD_SUPPLEMENT_RETRY_DELAY_MS = 8000;
 const useKaraokeWordStackSupplements = ({ line, timedChars, timedText, wordTimed, settingsRevision }) => {
 	const supplementsApi = window.ivLyricsWordSupplements || null;
 	const sourceLang = useMemo(() => {
@@ -7627,6 +7629,7 @@ const useKaraokeWordStackSupplements = ({ line, timedChars, timedText, wordTimed
 	const [readings, setReadings] = useState([]);
 	const [glosses, setGlosses] = useState([]);
 	const [wordRevision, setWordRevision] = useState(0);
+	const [wordRetry, setWordRetry] = useState(0);
 	useEffect(() => {
 		if (typeof window.addEventListener !== "function") return undefined;
 		const handleInvalidate = () => {
@@ -7667,7 +7670,26 @@ const useKaraokeWordStackSupplements = ({ line, timedChars, timedText, wordTimed
 		return () => {
 			cancelled = true;
 		};
-	}, [lineKey, readingMode, glossActive, timedText, settingsRevision, wordRevision]);
+	}, [lineKey, readingMode, glossActive, timedText, settingsRevision, wordRevision, wordRetry]);
+	// Self-heal: a transient fetch failure (flaky gateway, poisoned batch)
+	// leaves rows empty with nothing retrying until a remount (scroll). One
+	// delayed retry recovers without user input. Fully-passthrough lines hit
+	// memory cache instantly, so the retry is a no-op for them.
+	useEffect(() => {
+		if (!lineKey || (!readingMode && !glossActive) || wordRetry >= WORD_SUPPLEMENT_RETRY_MAX) {
+			return undefined;
+		}
+		if (!supplementsApi) return undefined;
+		if (readings.some((value) => String(value || "").trim())
+			|| glosses.some((value) => String(value || "").trim())) {
+			return undefined;
+		}
+		try {
+			if (supplementsApi.isAiCoolingDown?.()) return undefined;
+		} catch { /* ignore */ }
+		const timer = setTimeout(() => setWordRetry((retry) => retry + 1), WORD_SUPPLEMENT_RETRY_DELAY_MS);
+		return () => clearTimeout(timer);
+	}, [supplementsApi, lineKey, readingMode, glossActive, readings, glosses, wordRetry]);
 	return useMemo(() => {
 		const debug = {
 			sourceLang,

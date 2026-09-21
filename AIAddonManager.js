@@ -2004,7 +2004,7 @@ ${normalizedText}
          * - author: string (제작자)
          * - description: string | { en: string, ko: string, ... } (설명)
          * - version: string (버전)
-         * - supports: { translate: boolean, metadata: boolean, research|tmi: boolean, lyricsStudy: boolean, characterPronunciation: boolean, culturalAnnotations: boolean } (지원 기능)
+         * - supports: { translate: boolean, metadata: boolean, research|tmi: boolean, lyricsStudy: boolean, characterPronunciation: boolean, culturalAnnotations: boolean, wordSupplements: boolean } (지원 기능)
          * 
          * 필수 메서드:
          * - getSettingsUI(): React.Component (설정 UI)
@@ -2043,6 +2043,12 @@ ${normalizedText}
                     culturalAnnotations: typeof addon.generateCulturalAnnotations === 'function'
                 };
             }
+            // Word-level gloss/pronunciation reuse translateLyrics, so any
+            // translate-capable provider supports them unless opted out.
+            if (addon.supports.wordSupplements === undefined) {
+                addon.supports.wordSupplements = addon.supports.translate === true
+                    && typeof addon.translateLyrics === 'function';
+            }
 
             // 필수 메서드 검증
             const requiredMethods = ['getSettingsUI'];
@@ -2055,7 +2061,7 @@ ${normalizedText}
 
             this._addons.set(addon.id, addon);
             window.__ivLyricsDebugLog?.(`[AIAddonManager] Registered addon: ${addon.id} (${addon.name})`);
-            window.__ivLyricsDebugLog?.(`[AIAddonManager] Supports: translate=${addon.supports.translate}, metadata=${addon.supports.metadata}, tmi=${addon.supports.tmi}, lyricsStudy=${addon.supports.lyricsStudy}, characterPronunciation=${addon.supports.characterPronunciation}, culturalAnnotations=${addon.supports.culturalAnnotations}`);
+            window.__ivLyricsDebugLog?.(`[AIAddonManager] Supports: translate=${addon.supports.translate}, metadata=${addon.supports.metadata}, tmi=${addon.supports.tmi}, lyricsStudy=${addon.supports.lyricsStudy}, characterPronunciation=${addon.supports.characterPronunciation}, culturalAnnotations=${addon.supports.culturalAnnotations}, wordSupplements=${addon.supports.wordSupplements}`);
 
             // 이미 초기화 완료된 경우, 새 Addon도 초기화
             if (this._initialized && typeof addon.init === 'function') {
@@ -2254,7 +2260,7 @@ ${normalizedText}
 
         /**
          * 특정 기능을 지원하는 활성화된 Provider 목록 (순서대로)
-         * @param {'translate'|'metadata'|'research'|'tmi'|'lyricsStudy'|'characterPronunciation'|'culturalAnnotations'} capability - 기능 유형
+         * @param {'translate'|'metadata'|'research'|'tmi'|'lyricsStudy'|'characterPronunciation'|'culturalAnnotations'|'wordSupplements'} capability - 기능 유형
          * @returns {Object[]}
          */
         getEnabledProvidersFor(capability) {
@@ -3328,6 +3334,140 @@ ${normalizedText}
                     window.AddonDebug.error('ai', 'generateLyricsStudy all providers failed');
                 }
             });
+        }
+
+        buildWordGlossPrompt({ words = [], lineText = '', targetLang = 'en', sourceLang = 'auto' } = {}) {
+            const safeWords = Array.isArray(words) ? words.map((word) => String(word ?? '')) : [];
+            const wordCount = safeWords.length;
+            const langInfo = getTranslationLanguageInfo(targetLang);
+            // Line-based transport (provider line parsers require one output
+            // line per input line), kept terse: bare words, short keys style.
+            const systemPrompt = `Gloss lyric words for learners in ${langInfo.name} (${langInfo.native}). One gloss per line, same order, exactly ${wordCount} lines. Short (1-4 words), contextual sense, plain words with normal spacing. For particles and function words, give the grammatical role in square brackets like [topic], [subject], [object]. Never merge, split, reorder, or explain. Empty in, empty out.`;
+
+            const userPrompt = `Sense context (do not gloss these lines):
+${String(lineText ?? '')}
+Gloss these ${wordCount} words, one per line, nothing else:
+${safeWords.join('\n')}`;
+
+            return { systemPrompt, userPrompt, wordCount };
+        }
+
+        async generateWordGloss({ words = [], lineText = '', targetLang = 'en', sourceLang = 'auto' } = {}) {
+            const safeWords = Array.isArray(words) ? words.map((word) => String(word ?? '')) : [];
+            if (safeWords.length === 0) return [];
+            const providers = this.getEnabledProvidersFor('wordSupplements');
+            if (providers.length === 0) {
+                throw new Error(this._t('aiProviders.noEnabledProviders', 'No AI providers enabled. Please enable at least one provider in settings.'));
+            }
+
+            const text = safeWords.join('\n');
+            const glossPrompt = this.buildWordGlossPrompt({ words: safeWords, lineText, targetLang, sourceLang });
+
+            this.emit('ai:request:start', {
+                type: 'wordGloss',
+                providers: providers.map((provider) => provider.id),
+                params: { targetLang, sourceLang, wordCount: safeWords.length }
+            });
+
+            let lastError = null;
+            for (const addon of providers) {
+                if (typeof addon.translateLyrics !== 'function') continue;
+                try {
+                    const raw = await this._callProvider(addon, 'translateLyrics', {
+                        text,
+                        lang: targetLang,
+                        wantSmartPhonetic: false,
+                        translationPrompt: glossPrompt,
+                        phoneticPrompt: null,
+                        sourceLang,
+                        onLine: null,
+                        onStreamReset: null,
+                        endpointCapability: 'wordSupplements',
+                    });
+                    const value = raw?.translation ?? raw?.vi;
+                    const lines = Array.isArray(value)
+                        ? value.map((line) => String(line ?? ''))
+                        : String(value ?? '').replace(/\r\n?/g, '\n').split('\n');
+                    if (lines.length !== safeWords.length) {
+                        throw new Error(`[AIAddonManager] Provider ${addon.id} returned ${lines.length} glosses; expected ${safeWords.length}`);
+                    }
+                    this.emit('ai:request:success', { type: 'wordGloss', provider: addon.id });
+                    return lines.map((line) => line.trim());
+                } catch (error) {
+                    console.warn(`[AIAddonManager] Provider ${addon.id} failed for wordGloss:`, error?.message || error);
+                    lastError = error;
+                }
+            }
+            this.emit('ai:request:error', { type: 'wordGloss', error: lastError?.message || 'failed' });
+            throw lastError || new Error(this._t('aiProviders.allProvidersFailed', 'All AI providers failed to process the request.'));
+        }
+
+        buildWordPronunciationPrompt({ words = [], lineText = '', targetLang = 'en', sourceLang = 'auto', notation = 'latin' } = {}) {
+            const safeWords = Array.isArray(words) ? words.map((word) => String(word ?? '')) : [];
+            const wordCount = safeWords.length;
+            const langInfo = getTranslationLanguageInfo(targetLang);
+            const normalizedNotation = String(notation || 'latin').trim().toLowerCase() === 'ipa' ? 'ipa' : 'latin';
+            const scriptName = normalizedNotation === 'ipa' ? 'broad IPA transcription' : `romanization for ${langInfo.name} speakers`;
+            const systemPrompt = `Convert each lyric word's sung sound into ${scriptName}. Pronunciation only, never meaning. One per line, same order, exactly ${wordCount} lines. Use ${scriptName} for every sound, no source script left. Never merge, split, reorder, or explain. Empty in, empty out.`;
+
+            const userPrompt = `Sense context (do not convert these lines):
+${String(lineText ?? '')}
+Convert these ${wordCount} words into ${scriptName}, one per line, nothing else:
+${safeWords.join('\n')}`;
+
+            return { systemPrompt, userPrompt, wordCount };
+        }
+
+        async generateWordPronunciation({ words = [], lineText = '', targetLang = 'en', sourceLang = 'auto', notation = 'latin' } = {}) {
+            const safeWords = Array.isArray(words) ? words.map((word) => String(word ?? '')) : [];
+            if (safeWords.length === 0) return [];
+            const providers = this.getEnabledProvidersFor('wordSupplements')
+                .filter((addon) => addon.supports?.pronunciation !== false);
+            if (providers.length === 0) {
+                throw new Error(this._t('aiProviders.noEnabledProviders', 'No AI providers enabled. Please enable at least one provider in settings.'));
+            }
+
+            const text = safeWords.join('\n');
+            const pronunciationPrompt = this.buildWordPronunciationPrompt({ words: safeWords, lineText, targetLang, sourceLang, notation });
+
+            this.emit('ai:request:start', {
+                type: 'wordPronunciation',
+                providers: providers.map((provider) => provider.id),
+                params: { targetLang, sourceLang, notation, wordCount: safeWords.length }
+            });
+
+            let lastError = null;
+            for (const addon of providers) {
+                if (typeof addon.translateLyrics !== 'function') continue;
+                try {
+                    const raw = await this._callProvider(addon, 'translateLyrics', {
+                        text,
+                        lang: targetLang,
+                        wantSmartPhonetic: true,
+                        translationPrompt: null,
+                        phoneticPrompt: pronunciationPrompt,
+                        pronunciationNotation: notation,
+                        sourceLang,
+                        onLine: null,
+                        onStreamReset: null,
+                        endpointCapability: 'wordSupplements',
+                    });
+                    const value = raw?.phonetic;
+                    const lines = Array.isArray(value)
+                        ? value.map((line) => String(line ?? ''))
+                        : String(value ?? '').replace(/\r\n?/g, '\n').split('\n');
+                    if (lines.length !== safeWords.length) {
+                        throw new Error(`[AIAddonManager] Provider ${addon.id} returned ${lines.length} pronunciations; expected ${safeWords.length}`);
+                    }
+                    this.emit('ai:request:success', { type: 'wordPronunciation', provider: addon.id });
+                    return lines.map((line) => line.trim());
+                } catch (error) {
+                    console.warn(`[AIAddonManager] Provider ${addon.id} failed for wordPronunciation:`, error?.message || error);
+                    lastError = error;
+                }
+            }
+            this.emit('ai:request:error', { type: 'wordPronunciation', error: lastError?.message || 'failed' });
+            throw lastError || new Error(this._t('aiProviders.allProvidersFailed', 'All AI providers failed to process the request.'));
         }
 
         /**

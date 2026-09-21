@@ -465,7 +465,8 @@ window.LANG_FA = {
         "tmi": "TMI",
         "lyricsStudy": "یادگیری",
         "characterPronunciation": "تلفظ حرف‌به‌حرف",
-        "culturalAnnotations": "زمینه فرهنگی"
+        "culturalAnnotations": "زمینه فرهنگی",
+        "wordSupplements": "جزئیات واژه‌ها"
       },
       "noEnabledProviders": "هیچ ارائه دهنده هوش مصنوعی فعال نیست. لطفاً حداقل یک ارائه دهنده را در تنظیمات فعال کنید.",
       "allProvidersFailed": "همه ارائه دهندگان هوش مصنوعی در پردازش درخواست ناموفق بودند.",
@@ -598,6 +599,7 @@ window.LANG_FA = {
     "regeneratePronunciationOnly": "فقط تلفظ",
     "regenerateTranslationOnly": "فقط ترجمه",
     "regenerateBoth": "تلفظ و ترجمه",
+    "regenerateWordDetails": "جزئیات واژه‌ها",
     "regenerateAction": "بازتولید",
     "fullscreen": "تمام صفحه",
     "exitFullscreen": "خروج از تمام‌صفحه"
@@ -814,6 +816,9 @@ window.LANG_FA = {
     "culturalAnnotationsRegenerated": "توضیحات زمینه فرهنگی دوباره ایجاد شد.",
     "translationRegenerateFailed": "تولید مجدد ترجمه ناموفق بود",
     "culturalAnnotationsRegenerateFailed": "ایجاد دوباره توضیحات زمینه فرهنگی ناموفق بود.",
+    "regeneratingWordDetails": "در حال بازسازی جزئیات...",
+    "wordDetailsRegenerated": "جزئیات بازسازی شد.",
+    "wordDetailsRegenerateFailed": "بازسازی ناموفق بود",
     "lyricsProviderSaved": "تنظیم ارائه‌دهنده متن ترانه برای این قطعه ذخیره شد.",
     "lyricsProviderSaveFailed": "ذخیره تنظیم ارائه‌دهنده متن ترانه ناموفق بود.",
     "translationCacheRemoved": "کش ترجمه حذف و دوباره بارگذاری شد!",
@@ -1910,7 +1915,9 @@ window.LANG_FA = {
   "generationStatus": {
     "complete": "انجام شد!",
     "culturalAnnotations": "توضیح زمینه فرهنگی",
-    "culturalAnnotationsLoading": "در حال تحلیل زمینه فرهنگی..."
+    "culturalAnnotationsLoading": "در حال تحلیل زمینه فرهنگی...",
+    "wordSupplements": "جزئیات واژه‌ها",
+    "wordSupplementsLoading": "در حال بارگذاری خوانش‌ها و معنی‌ها..."
   },
   "videoBackground": {
     "loading": "در حال بارگذاری اطلاعات ویدیو...",

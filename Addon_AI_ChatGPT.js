@@ -250,7 +250,7 @@
      * support flag: endpoints without web search serve Research through
      * plain chat completions instead of the Responses API.
      */
-    const ENDPOINT_CAPABILITIES = ['translate', 'metadata', 'tmi', 'researchWebSearch', 'lyricsStudy', 'characterPronunciation', 'culturalAnnotations'];
+    const ENDPOINT_CAPABILITIES = ['translate', 'metadata', 'tmi', 'researchWebSearch', 'lyricsStudy', 'characterPronunciation', 'culturalAnnotations', 'wordSupplements'];
     const ENDPOINT_CAPABILITY_FALLBACKS = {
         translate: 'Translation',
         metadata: 'Metadata',
@@ -258,7 +258,8 @@
         researchWebSearch: 'Research web search',
         lyricsStudy: 'Learning',
         characterPronunciation: 'Character pronunciation',
-        culturalAnnotations: 'Cultural context'
+        culturalAnnotations: 'Cultural context',
+        wordSupplements: 'Word details'
     };
 
     function isEndpointCapabilityEnabled(capabilities, capability) {
@@ -1730,7 +1731,7 @@
             }
         },
 
-        async translateLyrics({ text, lang, wantSmartPhonetic, translationPrompt, phoneticPrompt, onLine, onStreamReset }) {
+        async translateLyrics({ text, lang, wantSmartPhonetic, translationPrompt, phoneticPrompt, onLine, onStreamReset, endpointCapability }) {
             if (!text?.trim()) {
                 throw new Error('No text provided');
             }
@@ -1741,11 +1742,14 @@
                 throw new Error('[OpenAI ChatGPT] Central lyrics prompt is unavailable.');
             }
             const parseLines = rawResponse => parseTextLines(rawResponse, sourceLines);
+            // Word-level gloss/pronunciation reuse this entry point with an
+            // endpointCapability override so per-endpoint chips can gate them.
+            const targetCapability = endpointCapability || 'translate';
 
             // Validate inside the provider retry loop so partial/blocked output can retry safely.
             const lines = onLine
-                ? await callChatGPTAPIStream(prompt, onLine, onStreamReset, undefined, parseLines, undefined, undefined, 'translate')
-                : await callChatGPTAPIRaw(prompt, undefined, parseLines, undefined, 'translate');
+                ? await callChatGPTAPIStream(prompt, onLine, onStreamReset, undefined, parseLines, undefined, undefined, targetCapability)
+                : await callChatGPTAPIRaw(prompt, undefined, parseLines, undefined, targetCapability);
 
             // Return in the format expected by LyricsService
             if (wantSmartPhonetic) {

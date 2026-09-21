@@ -3503,6 +3503,7 @@ function openRegenerateTranslationChoiceModal({
   onSelect,
   targets = {},
   includeCulturalAnnotations = false,
+  includeWordSupplements = false,
 }) {
   let closeModal = null;
   const makeTargetButton = (key, text, target) => ({
@@ -3553,6 +3554,15 @@ function openRegenerateTranslationChoiceModal({
         "regenerate-cultural-annotations",
         I18n.t("settings.culturalAnnotations.label"),
         "cultural-annotations"
+      )
+    );
+  }
+  if (includeWordSupplements) {
+    targetItems.push(
+      makeTargetButton(
+        "regenerate-word-supplements",
+        I18n.t("menu.regenerateWordDetails") || "Word details",
+        "word-supplements"
       )
     );
   }

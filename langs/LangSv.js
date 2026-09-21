@@ -465,7 +465,8 @@ window.LANG_SV = {
         "tmi": "TMI",
         "lyricsStudy": "Inlärning",
         "characterPronunciation": "Teckenuttal",
-        "culturalAnnotations": "Kulturell kontext"
+        "culturalAnnotations": "Kulturell kontext",
+        "wordSupplements": "Orddetaljer"
       },
       "noEnabledProviders": "Inga AI-leverantörer aktiverade. Aktivera minst en leverantör i inställningarna.",
       "allProvidersFailed": "Alla AI-leverantörer kunde inte behandla begäran.",
@@ -598,6 +599,7 @@ window.LANG_SV = {
     "regeneratePronunciationOnly": "Endast uttal",
     "regenerateTranslationOnly": "Endast översättning",
     "regenerateBoth": "Uttal och översättning",
+    "regenerateWordDetails": "Orddetaljer",
     "regenerateAction": "Återskapa",
     "fullscreen": "Helskärm",
     "exitFullscreen": "Avsluta helskärm"
@@ -814,6 +816,9 @@ window.LANG_SV = {
     "culturalAnnotationsRegenerated": "Förklaringarna av den kulturella kontexten har återskapats.",
     "translationRegenerateFailed": "Det gick inte att återskapa översättningen",
     "culturalAnnotationsRegenerateFailed": "Det gick inte att återskapa förklaringarna av den kulturella kontexten.",
+    "regeneratingWordDetails": "Regenererar orddetaljer...",
+    "wordDetailsRegenerated": "Orddetaljer regenererade.",
+    "wordDetailsRegenerateFailed": "Regenerering misslyckades",
     "lyricsProviderSaved": "Låttextkälla sparad för den här låten.",
     "lyricsProviderSaveFailed": "Kunde inte spara låttextkälla.",
     "translationCacheRemoved": "Översättningscacheminnet togs bort och laddades om!",
@@ -1910,7 +1915,9 @@ window.LANG_SV = {
   "generationStatus": {
     "complete": "Klart!",
     "culturalAnnotations": "Förklaringar av kulturell kontext",
-    "culturalAnnotationsLoading": "Analyserar kulturell kontext..."
+    "culturalAnnotationsLoading": "Analyserar kulturell kontext...",
+    "wordSupplements": "Orddetaljer",
+    "wordSupplementsLoading": "Läser in uttal och glosor..."
   },
   "videoBackground": {
     "loading": "Laddar videoinformation...",

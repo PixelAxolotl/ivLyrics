@@ -465,7 +465,8 @@ window.LANG_BN = {
         "tmi": "TMI",
         "lyricsStudy": "শেখা",
         "characterPronunciation": "অক্ষরভিত্তিক উচ্চারণ",
-        "culturalAnnotations": "সাংস্কৃতিক প্রেক্ষাপট"
+        "culturalAnnotations": "সাংস্কৃতিক প্রেক্ষাপট",
+        "wordSupplements": "শব্দের বিবরণ"
       },
       "noEnabledProviders": "কোনো AI প্রদানকারী সক্রিয় নেই। দয়া করে সেটিংসে অন্তত একটি প্রদানকারী সক্রিয় করুন।",
       "allProvidersFailed": "সমস্ত AI প্রদানকারী অনুরোধ প্রক্রিয়া করতে ব্যর্থ হয়েছে।",
@@ -598,6 +599,7 @@ window.LANG_BN = {
     "regeneratePronunciationOnly": "শুধু উচ্চারণ",
     "regenerateTranslationOnly": "শুধু অনুবাদ",
     "regenerateBoth": "উচ্চারণ ও অনুবাদ",
+    "regenerateWordDetails": "শব্দের বিবরণ",
     "regenerateAction": "পুনরায় তৈরি",
     "fullscreen": "ফুলস্ক্রিন",
     "exitFullscreen": "ফুলস্ক্রিন থেকে বের হন"
@@ -814,6 +816,9 @@ window.LANG_BN = {
     "culturalAnnotationsRegenerated": "সাংস্কৃতিক প্রেক্ষাপটের ব্যাখ্যা আবার তৈরি হয়েছে।",
     "translationRegenerateFailed": "অনুবাদ পুনরায় তৈরি করতে ব্যর্থ",
     "culturalAnnotationsRegenerateFailed": "সাংস্কৃতিক প্রেক্ষাপটের ব্যাখ্যা আবার তৈরি করা যায়নি।",
+    "regeneratingWordDetails": "শব্দ বিবরণ পুনরায় তৈরি হচ্ছে...",
+    "wordDetailsRegenerated": "বিবরণ তৈরি হয়েছে।",
+    "wordDetailsRegenerateFailed": "পুনরায় তৈরি ব্যর্থ",
     "lyricsProviderSaved": "এই ট্র্যাকের জন্য গানের কথা প্রদানকারী সেটিং সংরক্ষিত হয়েছে।",
     "lyricsProviderSaveFailed": "গানের কথা প্রদানকারী সেটিং সংরক্ষণ করা যায়নি।",
     "translationCacheRemoved": "অনুবাদ ক্যাশ সরিয়ে আবার লোড করা হয়েছে!",
@@ -1910,7 +1915,9 @@ window.LANG_BN = {
   "generationStatus": {
     "complete": "সম্পন্ন!",
     "culturalAnnotations": "সাংস্কৃতিক প্রেক্ষাপটের ব্যাখ্যা",
-    "culturalAnnotationsLoading": "সাংস্কৃতিক প্রেক্ষাপট বিশ্লেষণ করা হচ্ছে..."
+    "culturalAnnotationsLoading": "সাংস্কৃতিক প্রেক্ষাপট বিশ্লেষণ করা হচ্ছে...",
+    "wordSupplements": "শব্দের বিবরণ",
+    "wordSupplementsLoading": "শব্দ উচ্চারণ ও অর্থ লোড হচ্ছে..."
   },
   "videoBackground": {
     "loading": "ভিডিও তথ্য লোড হচ্ছে...",

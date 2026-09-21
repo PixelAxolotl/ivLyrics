@@ -465,7 +465,8 @@ window.LANG_ES = {
         "tmi": "TMI",
         "lyricsStudy": "Aprendizaje",
         "characterPronunciation": "Pronunciación por carácter",
-        "culturalAnnotations": "Contexto cultural"
+        "culturalAnnotations": "Contexto cultural",
+        "wordSupplements": "Detalles de palabras"
       },
       "noEnabledProviders": "No hay proveedores de IA habilitados. Por favor, habilite al menos uno en la configuración.",
       "allProvidersFailed": "Todos los proveedores de IA fallaron al procesar la solicitud.",
@@ -598,6 +599,7 @@ window.LANG_ES = {
     "regeneratePronunciationOnly": "Solo pronunciación",
     "regenerateTranslationOnly": "Solo traducción",
     "regenerateBoth": "Pronunciación y traducción",
+    "regenerateWordDetails": "Detalles de palabras",
     "regenerateAction": "Regenerar",
     "fullscreen": "Pantalla completa",
     "exitFullscreen": "Salir de pantalla completa"
@@ -814,6 +816,9 @@ window.LANG_ES = {
     "culturalAnnotationsRegenerated": "Se regeneraron las explicaciones del contexto cultural.",
     "translationRegenerateFailed": "Error al regenerar traducción",
     "culturalAnnotationsRegenerateFailed": "No se pudieron regenerar las explicaciones del contexto cultural.",
+    "regeneratingWordDetails": "Regenerando detalles de palabras...",
+    "wordDetailsRegenerated": "Detalles de palabras regenerados.",
+    "wordDetailsRegenerateFailed": "Error al regenerar los detalles",
     "lyricsProviderSaved": "Proveedor de letras guardado para esta canción.",
     "lyricsProviderSaveFailed": "No se pudo guardar el proveedor de letras.",
     "translationCacheRemoved": "¡Caché de traducción eliminada y recargada!",
@@ -1910,7 +1915,9 @@ window.LANG_ES = {
   "generationStatus": {
     "complete": "¡Listo!",
     "culturalAnnotations": "Explicaciones del contexto cultural",
-    "culturalAnnotationsLoading": "Analizando el contexto cultural..."
+    "culturalAnnotationsLoading": "Analizando el contexto cultural...",
+    "wordSupplements": "Detalles de palabras",
+    "wordSupplementsLoading": "Cargando lecturas y glosas..."
   },
   "videoBackground": {
     "loading": "Cargando info de video...",

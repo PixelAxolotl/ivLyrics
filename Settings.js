@@ -132,6 +132,7 @@ const SETTINGS_OUTLINE_ICONS = Object.freeze({
   tmi: "M21 12a9 9 0 0 1-9 9H5l1.8-3.2A9 9 0 1 1 21 12Zm-9-1v5M12 7h.01",
   lyricsStudy: "M4 5.5A3.5 3.5 0 0 1 7.5 2H12v17H7.5A3.5 3.5 0 0 0 4 22V5.5ZM20 5.5A3.5 3.5 0 0 0 16.5 2H12v17h4.5A3.5 3.5 0 0 1 20 22V5.5Z",
   characterPronunciation: "M5 9v6M9 6v12M13 9v6M17 4v16M21 8v8",
+  wordSupplements: "M3 6h4l2 12h2l3-12h4l3 12M4.5 13h3M14.5 13h5M4 20h16",
   culturalAnnotations: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Zm0-20c3 3 4.5 6.3 4.5 10S15 19 12 22M12 2C9 5 7.5 8.3 7.5 12S9 19 12 22M2 12h20",
 });
 
@@ -1341,6 +1342,9 @@ const AddonSettingsCard = ({ addon, isEnabled, onToggle, isExpanded, onExpandTog
     }
     if (addon.supports?.culturalAnnotations) {
       badges.push(react.createElement(ProviderSupportIconChip, { key: "culturalAnnotations", type: "culturalAnnotations", label: I18n.t("settings.aiProviders.supports.culturalAnnotations") || "Cultural context" }));
+    }
+    if (addon.supports?.wordSupplements) {
+      badges.push(react.createElement(ProviderSupportIconChip, { key: "wordSupplements", type: "wordSupplements", label: I18n.t("settings.aiProviders.supports.wordSupplements") || "Word details" }));
     }
     return badges;
   };
@@ -10579,6 +10583,12 @@ const ConfigModal = ({
               key: "prefetch-video-enabled",
               type: ConfigSlider,
             },
+            {
+              desc: I18n.t("settingsAdvanced.prefetch.wordDetailsEnabled.label") || "Word details",
+              info: I18n.t("settingsAdvanced.prefetch.wordDetailsEnabled.desc") || "Preload per-word readings and translations for word-level karaoke",
+              key: "prefetch-word-details-enabled",
+              type: ConfigSlider,
+            },
           ],
           onChange: handlePerformanceSettingChange,
         })
@@ -10804,6 +10814,12 @@ const ConfigModal = ({
               desc: I18n.t("settingsAdvanced.prefetch.videoEnabled.label"),
               info: I18n.t("settingsAdvanced.prefetch.videoEnabled.desc"),
               key: "prefetch-video-enabled",
+              type: ConfigSlider,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.prefetch.wordDetailsEnabled.label") || "Word details",
+              info: I18n.t("settingsAdvanced.prefetch.wordDetailsEnabled.desc") || "Preload per-word readings and translations for word-level karaoke",
+              key: "prefetch-word-details-enabled",
               type: ConfigSlider,
             },
           ],

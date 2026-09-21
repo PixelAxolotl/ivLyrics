@@ -465,7 +465,8 @@ window.LANG_CS = {
         "tmi": "TMI",
         "lyricsStudy": "Učení",
         "characterPronunciation": "Výslovnost znaků",
-        "culturalAnnotations": "Kulturní kontext"
+        "culturalAnnotations": "Kulturní kontext",
+        "wordSupplements": "Podrobnosti slov"
       },
       "noEnabledProviders": "Nejsou povoleni žádní poskytovatelé AI. Povolte v nastavení alespoň jednoho poskytovatele.",
       "allProvidersFailed": "Všem poskytovatelům AI se nepodařilo požadavek zpracovat.",
@@ -598,6 +599,7 @@ window.LANG_CS = {
     "regeneratePronunciationOnly": "Pouze výslovnost",
     "regenerateTranslationOnly": "Pouze překlad",
     "regenerateBoth": "Výslovnost a překlad",
+    "regenerateWordDetails": "Podrobnosti slov",
     "regenerateAction": "Regenerovat",
     "fullscreen": "Celá obrazovka",
     "exitFullscreen": "Ukončete celou obrazovku"
@@ -814,6 +816,9 @@ window.LANG_CS = {
     "culturalAnnotationsRegenerated": "Vysvětlení kulturního kontextu byla znovu vytvořena.",
     "translationRegenerateFailed": "Obnovení překladu se nezdařilo",
     "culturalAnnotationsRegenerateFailed": "Vysvětlení kulturního kontextu se nepodařilo znovu vytvořit.",
+    "regeneratingWordDetails": "Regeneruji podrobnosti...",
+    "wordDetailsRegenerated": "Podrobnosti regenerovány.",
+    "wordDetailsRegenerateFailed": "Regenerace se nezdařila",
     "lyricsProviderSaved": "Nastavení poskytovatele textů uloženo pro tuto skladbu.",
     "lyricsProviderSaveFailed": "Nastavení poskytovatele textů se nepodařilo uložit.",
     "translationCacheRemoved": "Mezipaměť překladu odstraněna a znovu načtena!",
@@ -1910,7 +1915,9 @@ window.LANG_CS = {
   "generationStatus": {
     "complete": "Hotovo!",
     "culturalAnnotations": "Vysvětlení kulturního kontextu",
-    "culturalAnnotationsLoading": "Analyzuje se kulturní kontext..."
+    "culturalAnnotationsLoading": "Analyzuje se kulturní kontext...",
+    "wordSupplements": "Podrobnosti slov",
+    "wordSupplementsLoading": "Načítání výslovnosti a glos..."
   },
   "videoBackground": {
     "loading": "Načítání informací o videu...",

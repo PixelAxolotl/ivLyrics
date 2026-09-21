@@ -465,7 +465,8 @@ window.LANG_ZH_TW = {
         "tmi": "TMI",
         "lyricsStudy": "學習",
         "characterPronunciation": "逐字發音",
-        "culturalAnnotations": "文化背景"
+        "culturalAnnotations": "文化背景",
+        "wordSupplements": "單字詳情"
       },
       "noEnabledProviders": "未啟用 AI 提供商。請在設置中至少啟用一個提供商。",
       "allProvidersFailed": "所有 AI 提供商都無法處理該請求。",
@@ -598,6 +599,7 @@ window.LANG_ZH_TW = {
     "regeneratePronunciationOnly": "僅發音",
     "regenerateTranslationOnly": "僅翻譯",
     "regenerateBoth": "發音與翻譯",
+    "regenerateWordDetails": "單字詳情",
     "regenerateAction": "重新生成",
     "fullscreen": "全螢幕",
     "exitFullscreen": "退出全螢幕"
@@ -814,6 +816,9 @@ window.LANG_ZH_TW = {
     "culturalAnnotationsRegenerated": "已重新產生文化背景說明。",
     "translationRegenerateFailed": "重新產生翻譯失敗",
     "culturalAnnotationsRegenerateFailed": "無法重新產生文化背景說明。",
+    "regeneratingWordDetails": "正在重新產生單字詳情...",
+    "wordDetailsRegenerated": "單字詳情已重新產生。",
+    "wordDetailsRegenerateFailed": "單字詳情重新產生失敗",
     "lyricsProviderSaved": "已儲存這首歌的歌詞提供者設定。",
     "lyricsProviderSaveFailed": "無法儲存歌詞提供者設定。",
     "translationCacheRemoved": "翻譯快取已移除並重新載入！",
@@ -1910,7 +1915,9 @@ window.LANG_ZH_TW = {
   "generationStatus": {
     "complete": "完成！",
     "culturalAnnotations": "文化背景說明",
-    "culturalAnnotationsLoading": "正在分析文化背景..."
+    "culturalAnnotationsLoading": "正在分析文化背景...",
+    "wordSupplements": "單字詳情",
+    "wordSupplementsLoading": "正在載入單字發音和釋義..."
   },
   "videoBackground": {
     "loading": "正在載入影片資訊...",

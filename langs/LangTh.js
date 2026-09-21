@@ -465,7 +465,8 @@ window.LANG_TH = {
         "tmi": "TMI",
         "lyricsStudy": "การเรียนรู้",
         "characterPronunciation": "การออกเสียงรายอักขระ",
-        "culturalAnnotations": "บริบททางวัฒนธรรม"
+        "culturalAnnotations": "บริบททางวัฒนธรรม",
+        "wordSupplements": "รายละเอียดคำ"
       },
       "noEnabledProviders": "ไม่ได้เปิดใช้งานผู้ให้บริการ AI โปรดเปิดใช้งานอย่างน้อยหนึ่งรายในการตั้งค่า",
       "allProvidersFailed": "ผู้ให้บริการ AI ทั้งหมดล้มเหลวในการร้องขอ",
@@ -598,6 +599,7 @@ window.LANG_TH = {
     "regeneratePronunciationOnly": "เฉพาะการออกเสียง",
     "regenerateTranslationOnly": "เฉพาะคำแปล",
     "regenerateBoth": "การออกเสียงและคำแปล",
+    "regenerateWordDetails": "รายละเอียดคำ",
     "regenerateAction": "สร้างใหม่",
     "fullscreen": "เต็มหน้าจอ",
     "exitFullscreen": "ออกจากโหมดเต็มหน้าจอ"
@@ -814,6 +816,9 @@ window.LANG_TH = {
     "culturalAnnotationsRegenerated": "สร้างคำอธิบายบริบททางวัฒนธรรมใหม่แล้ว",
     "translationRegenerateFailed": "สร้างคำแปลใหม่ล้มเหลว",
     "culturalAnnotationsRegenerateFailed": "ไม่สามารถสร้างคำอธิบายบริบททางวัฒนธรรมใหม่ได้",
+    "regeneratingWordDetails": "กำลังสร้างรายละเอียดคำใหม่...",
+    "wordDetailsRegenerated": "สร้างรายละเอียดคำใหม่แล้ว",
+    "wordDetailsRegenerateFailed": "สร้างใหม่ล้มเหลว",
     "lyricsProviderSaved": "บันทึกการตั้งค่าผู้ให้บริการเนื้อเพลงสำหรับเพลงนี้แล้ว",
     "lyricsProviderSaveFailed": "ไม่สามารถบันทึกการตั้งค่าผู้ให้บริการเนื้อเพลงได้",
     "translationCacheRemoved": "ลบแคชคำแปลและโหลดใหม่แล้ว!",
@@ -1910,7 +1915,9 @@ window.LANG_TH = {
   "generationStatus": {
     "complete": "เสร็จแล้ว!",
     "culturalAnnotations": "คำอธิบายบริบททางวัฒนธรรม",
-    "culturalAnnotationsLoading": "กำลังวิเคราะห์บริบททางวัฒนธรรม..."
+    "culturalAnnotationsLoading": "กำลังวิเคราะห์บริบททางวัฒนธรรม...",
+    "wordSupplements": "รายละเอียดคำ",
+    "wordSupplementsLoading": "กำลังโหลดคำอ่านและคำแปล..."
   },
   "videoBackground": {
     "loading": "กำลังโหลดข้อมูลวิดีโอ...",

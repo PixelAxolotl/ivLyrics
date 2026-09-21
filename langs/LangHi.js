@@ -465,7 +465,8 @@ window.LANG_HI = {
         "tmi": "TMI",
         "lyricsStudy": "सीखना",
         "characterPronunciation": "प्रति-अक्षर उच्चारण",
-        "culturalAnnotations": "सांस्कृतिक संदर्भ"
+        "culturalAnnotations": "सांस्कृतिक संदर्भ",
+        "wordSupplements": "शब्द विवरण"
       },
       "noEnabledProviders": "कोई AI प्रदाता सक्षम नहीं है। कृपया सेटिंग्स में कम से कम एक प्रदाता सक्षम करें।",
       "allProvidersFailed": "सभी AI प्रदाता अनुरोध को संसाधित करने में विफल रहेा",
@@ -598,6 +599,7 @@ window.LANG_HI = {
     "regeneratePronunciationOnly": "केवल उच्चारण",
     "regenerateTranslationOnly": "केवल अनुवाद",
     "regenerateBoth": "उच्चारण और अनुवाद",
+    "regenerateWordDetails": "शब्द विवरण",
     "regenerateAction": "फिर से बनाएँ",
     "fullscreen": "फुलस्क्रीन",
     "exitFullscreen": "फुलस्क्रीन से बाहर निकलें"
@@ -814,6 +816,9 @@ window.LANG_HI = {
     "culturalAnnotationsRegenerated": "सांस्कृतिक संदर्भ की व्याख्याएँ फिर से बनाई गईं।",
     "translationRegenerateFailed": "अनुवाद पुनर्जनन विफल",
     "culturalAnnotationsRegenerateFailed": "सांस्कृतिक संदर्भ की व्याख्याएँ फिर से नहीं बनाई जा सकीं।",
+    "regeneratingWordDetails": "शब्द विवरण पुनः बनाया जा रहा है...",
+    "wordDetailsRegenerated": "शब्द विवरण बन गया।",
+    "wordDetailsRegenerateFailed": "पुनः बनाने में विफल",
     "lyricsProviderSaved": "इस ट्रैक के लिए गीत प्रदाता सेटिंग सहेजी गई।",
     "lyricsProviderSaveFailed": "गीत प्रदाता सेटिंग सहेजने में विफल।",
     "translationCacheRemoved": "अनुवाद कैश हटा दिया गया और फिर से लोड किया गया!",
@@ -1910,7 +1915,9 @@ window.LANG_HI = {
   "generationStatus": {
     "complete": "पूर्ण!",
     "culturalAnnotations": "सांस्कृतिक संदर्भ की व्याख्या",
-    "culturalAnnotationsLoading": "सांस्कृतिक संदर्भ का विश्लेषण हो रहा है..."
+    "culturalAnnotationsLoading": "सांस्कृतिक संदर्भ का विश्लेषण हो रहा है...",
+    "wordSupplements": "शब्द विवरण",
+    "wordSupplementsLoading": "शब्द उच्चारण और अर्थ लोड हो रहे हैं..."
   },
   "videoBackground": {
     "loading": "वीडियो जानकारी लोड हो रही है...",

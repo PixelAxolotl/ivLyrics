@@ -35,6 +35,10 @@
             characterPronunciation: true,
             culturalAnnotations: true
         },
+        // Capabilities are toggled per endpoint inside this addon's settings
+        // UI, so the provider-level toggle group in Settings stays hidden and
+        // the manager skips its stored provider-level capability check.
+        perEndpointCapabilities: true,
         // 하드코딩된 모델 목록 (fallback용)
         // models: [
         //     { id: 'gpt-5.2-2025-12-11', name: 'GPT-5.2', default: true },

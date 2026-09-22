@@ -8700,7 +8700,7 @@
     // 전역 요청 상태 관리 (중복 요청 방지)
     const _translatorInflightRequests = new Map();
     const _translatorPendingRetries = new Map();
-    const PHONETIC_PROMPT_CACHE_VERSION = 2;
+    const PHONETIC_PROMPT_CACHE_VERSION = 3;
 
     function normalizeServicePronunciationNotation(value) {
         const normalized = String(value || '').trim().toLowerCase();

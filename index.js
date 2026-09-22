@@ -356,7 +356,7 @@ const getCurrentTranslationTargetLanguage = () => {
 
 const LYRICS_PRONUNCIATION_NOTATION_STORAGE_KEY =
   "ivLyrics:visual:translate:pronunciation-notation";
-const LYRICS_PHONETIC_PROMPT_CACHE_VERSION = 2;
+const LYRICS_PHONETIC_PROMPT_CACHE_VERSION = 3;
 
 const normalizeIvLyricsPronunciationNotation = (value) => {
   const normalized = String(value || "").trim().toLowerCase();

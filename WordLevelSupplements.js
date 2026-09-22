@@ -113,6 +113,12 @@
 		String(notation || "latin").trim().toLowerCase() !== "ipa" && isLatinWord(word);
 	const sameText = (left, right) =>
 		String(left ?? "").trim().toLowerCase() === String(right ?? "").trim().toLowerCase();
+	// Chinese-only: AI readings now carry pinyin tone marks, so persisted word
+	// pronunciations recorded before that change must not be served for
+	// Chinese songs. Non-Chinese caches keep their existing keys.
+	const CHINESE_TONES_LANG_RE = /^(zh|cmn|yue|cn|tw|hk)(?:-|$)/i;
+	const zhToneCacheFlag = (lang) =>
+		CHINESE_TONES_LANG_RE.test(String(lang || "").trim().toLowerCase()) ? ":zh-tones" : "";
 	// Split units into AI-worthy words; reinsert "" for passthrough words.
 	const partitionWords = (units, skip) => {
 		const active = [];
@@ -425,7 +431,7 @@
 				targetLang: notation,
 				sourceLang: language,
 				words: wordList,
-				extra: mode,
+				extra: `${mode}${zhToneCacheFlag(language)}`,
 			});
 			if (persisted) {
 				const restored = reinsertSkipped(units.length, activeIndexes, persisted.values);
@@ -463,7 +469,7 @@
 				targetLang: getPronunciationNotation(),
 				sourceLang: language,
 				words: wordList,
-				extra: mode,
+				extra: `${mode}${zhToneCacheFlag(language)}`,
 				values: activeReadings,
 			});
 			return normalized;

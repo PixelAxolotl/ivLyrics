@@ -928,6 +928,35 @@
     const CHARACTER_PRONUNCIATION_LETTER_RE = /\p{L}/u;
     const CHARACTER_PRONUNCIATION_LATIN_LETTER_RE = /\p{Script=Latin}/u;
 
+    const CHINESE_SOURCE_LANG_RE = /^(zh|cmn|yue|cn|tw|hk)(?:-|$)/i;
+    const HAN_SCRIPT_RE = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/u;
+    const NON_CHINESE_CJK_SCRIPT_RE = /[\u3040-\u30ff\uff66-\uff9f\uac00-\ud7af\u1100-\u11ff\u3130-\u318f]/u;
+
+    // Tone/intonation marks belong to Chinese pronunciation tasks only.
+    // A detected language code decides first; when the hint is "auto", Han
+    // characters with no kana/hangul identify Chinese lyrics, so Japanese and
+    // Korean songs never match.
+    const isChinesePronunciationTask = (sourceLang, text) => {
+        const lang = String(sourceLang || '').trim().toLowerCase().replace(/_/g, '-');
+        if (lang && lang !== 'auto') return CHINESE_SOURCE_LANG_RE.test(lang);
+        const sample = String(text || '');
+        return HAN_SCRIPT_RE.test(sample) && !NON_CHINESE_CJK_SCRIPT_RE.test(sample);
+    };
+
+    // Chinese-only tone rule, phrased for the target writing system. Returns
+    // an empty string for output scripts that cannot carry tone marks (tones
+    // are inherent in hanzi) and for every non-Chinese task, so those prompts
+    // stay byte-identical to what they were before.
+    const buildChineseTonePolicyRule = (scriptRule) => {
+        if (scriptRule?.id === 'latin') {
+            return '- The lyrics are Chinese: write every pronounceable syllable in Hanyu Pinyin with tone marks (nǐ hǎo, máma, xièxie). Leave the neutral tone unmarked, but every toned syllable must carry its tone mark. Never drop tone marks and never replace them with tone numbers.';
+        }
+        if (scriptRule?.id === 'ipa') {
+            return '- The lyrics are Chinese. Mandarin is tonal: mark the tone of every syllable in the IPA transcription.';
+        }
+        return '';
+    };
+
     const getPronunciationScriptRule = (lang) => {
         const normalizedLang = String(lang || 'en').trim().replace(/_/g, '-').toLowerCase();
         const shortLang = normalizedLang.split('-')[0];
@@ -1076,6 +1105,14 @@ ${isWordMode ? '- In word mode, return each spoken word as one u item, never as 
         const phoneticDescription = isIpa || PROVIDERS_WITHOUT_PHONETIC_DESCRIPTION.has(providerId)
             ? ''
             : langInfo.phoneticDesc || '';
+        const chineseToneRule = isChinesePronunciationTask(sourceLanguageHint, normalizedText)
+            ? buildChineseTonePolicyRule(scriptRule)
+            : '';
+        const chineseToneUserHint = chineseToneRule
+            ? (isIpa
+                ? ' Mandarin is tonal: mark the tone of every syllable.'
+                : ' Write Chinese syllables as Hanyu Pinyin with tone marks.')
+            : '';
         const audienceLine = isIpa
             ? `Transcribe the original sung lyric sounds into ${scriptRule.name}. The source-language hint is ${sourceLanguageHint}; infer the language from the lyrics when the hint is auto or uncertain.`
             : `Convert lyric sounds for ${langInfo.name} (${langInfo.native}) speakers. The required output writing system is ${scriptRule.name}.`;
@@ -1084,14 +1121,14 @@ ${isWordMode ? '- In word mode, return each spoken word as one u item, never as 
 - Use the source-language hint (${sourceLanguageHint}) and the full lyric context to infer the actual sung pronunciation.
 - ${scriptRule.instruction}
 - Prefer a broad standard-language transcription. Preserve a clearly written dialectal or contracted pronunciation only when the lyric spelling makes it explicit.
-- Fully transcribe every pronounceable lyric token. Never copy source orthography merely because it resembles IPA.`
+- Fully transcribe every pronounceable lyric token. Never copy source orthography merely because it resembles IPA.${chineseToneRule ? `\n${chineseToneRule}` : ''}`
             : `- The target language selected by the user determines the output script. The source lyric language NEVER determines the output script.
 - ${scriptRule.instruction}
 - ${phoneticDescription
     ? `Follow the target convention: ${phoneticDescription}.`
     : `Use natural phonetic spelling that a ${langInfo.name} speaker can read aloud.`}
 - Fully transliterate every pronounceable lyric token into ${scriptRule.name}. Do not leave Japanese, Korean, Thai, or any other source-script text mixed into the pronunciation.
-- Before answering, inspect every output line character by character. If a pronounceable token uses the source script or any script other than ${scriptRule.name}, rewrite that token in ${scriptRule.name}.`;
+- Before answering, inspect every output line character by character. If a pronounceable token uses the source script or any script other than ${scriptRule.name}, rewrite that token in ${scriptRule.name}.${chineseToneRule ? `\n${chineseToneRule}` : ''}`;
         const scriptExamples = isIpa
             ? `- English: night → naɪt
 - Japanese: 夢 → jɯme
@@ -1126,7 +1163,7 @@ ${scriptExamples}`;
         const userPrompt = `${personalStudyPrefix}${isIpa
     ? `Transcribe the following ${lineCount} lyric lines into broad Unicode IPA. Source-language hint: ${sourceLanguageHint}.`
     : `Convert the following ${lineCount} lyric lines into pronunciation for ${langInfo.name} speakers.`}
-Use ${scriptRule.name} for every pronounceable lyric sound. Do not answer in the source lyric's writing system.
+Use ${scriptRule.name} for every pronounceable lyric sound. Do not answer in the source lyric's writing system.${chineseToneUserHint}
 
 <lyrics>
 ${normalizedText}
@@ -1171,6 +1208,9 @@ Return exactly ${lineCount} pronunciation lines in ${scriptRule.name}, and nothi
             ? '{"l":[{"i":0,"u":[{"s":0,"e":4,"p":"??"}]}]}'
             : '{"l":[{"i":0,"p":["?"]}]}';
         const targetExamples = buildCharacterPronunciationTargetExamples(scriptRule, lang, isWordMode);
+        const chineseToneRule = isChinesePronunciationTask(sourceLang, safeLines.join('\n'))
+            ? buildChineseTonePolicyRule(scriptRule)
+            : '';
 
         return `You are a multilingual lyrics pronunciation aligner for karaoke sync editing.
 
@@ -1188,7 +1228,7 @@ Rules:
 ${outputRules}
 ${alignmentRules}
 - The target language determines the output writing system. The source lyric language never determines it.
-- ${scriptRule.instruction}
+- ${scriptRule.instruction}${chineseToneRule ? `\n${chineseToneRule}` : ''}
 - Before answering, inspect every pronunciation value. Rewrite any pronounceable token that is not written in ${scriptRule.name}.
 - For syllabic scripts, align by natural syllable sound while keeping exactly one p array slot per source character.
 - For logographic scripts such as hanzi/kanji/hanja, infer the common reading from the word and put each source character's reading in that character's p slot. If a character has no separate sound, use an empty string.
@@ -1861,6 +1901,10 @@ ${normalizedText}
 
         buildCharacterPronunciationPrompt(params = {}) {
             return buildCharacterPronunciationPrompt(params);
+        }
+
+        isChinesePronunciationTask(sourceLang, text) {
+            return isChinesePronunciationTask(sourceLang, text);
         }
 
         buildMetadataTranslationPrompt(params = {}) {
@@ -3428,7 +3472,12 @@ ${safeWords.join('\n')}`;
             const langInfo = getTranslationLanguageInfo(targetLang);
             const normalizedNotation = String(notation || 'latin').trim().toLowerCase() === 'ipa' ? 'ipa' : 'latin';
             const scriptName = normalizedNotation === 'ipa' ? 'broad IPA transcription' : `romanization for ${langInfo.name} speakers`;
-            const systemPrompt = `Convert each lyric word's sung sound into ${scriptName}. Output one line per input word as "word: pronunciation" — copy the word exactly, then a colon, then the pronunciation. Exactly ${wordCount} lines, same order. PRONUNCIATION only, never meaning. ${scriptName} for every sound. Never merge, split, reorder, or explain.`;
+            const chineseToneRule = isChinesePronunciationTask(sourceLang, `${lineText} ${safeWords.join(' ')}`)
+                ? (normalizedNotation === 'ipa'
+                    ? ' Mandarin is tonal: mark the tone of every syllable.'
+                    : ' Chinese lyrics: write each reading as Hanyu Pinyin with tone marks (nǐ hǎo); leave the neutral tone unmarked.')
+                : '';
+            const systemPrompt = `Convert each lyric word's sung sound into ${scriptName}. Output one line per input word as "word: pronunciation" — copy the word exactly, then a colon, then the pronunciation. Exactly ${wordCount} lines, same order. PRONUNCIATION only, never meaning. ${scriptName} for every sound. Never merge, split, reorder, or explain.${chineseToneRule}`;
 
             const userPrompt = `Sense context (do not convert these lines):
 ${String(lineText ?? '')}

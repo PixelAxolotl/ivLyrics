@@ -56,7 +56,7 @@ const SYNC_CREATOR_POSITION_COMMIT_THRESHOLD_MS = 80;
 const SYNC_CREATOR_RECORD_POSITION_COMMIT_THRESHOLD_MS = 35;
 const SYNC_CREATOR_HISTORY_HEIGHT_STORAGE_KEY = 'ivLyrics:syncCreator:history-panel-height';
 const SYNC_CREATOR_AUTOSAVE_ENABLED_STORAGE_KEY = 'ivLyrics:syncCreator:autosave-enabled';
-const SYNC_CREATOR_AUTOSAVE_INTERVAL_MS = 30_000;
+const SYNC_CREATOR_AUTOSAVE_INTERVAL_MS = 3_000;
 const SYNC_CREATOR_HISTORY_MIN_HEIGHT = 130;
 const SYNC_CREATOR_PROGRESS_COLOR = 'rgb(var(--spice-rgb-accent, 30, 215, 96))';
 const SYNC_CREATOR_PROGRESS_BACKGROUND = 'rgba(var(--spice-rgb-accent, 30, 215, 96), 0.18)';
@@ -556,6 +556,48 @@ const assertValidSyncCreatorSyncData = (data) => {
 	const validationError = getSyncCreatorSyncDataValidationError(data);
 	if (validationError) throw new Error(`Invalid sync data: ${validationError}`);
 	return data;
+};
+const canonicalSyncCreatorSyncLineForUnsubmittedCompare = (line) => {
+	const finiteTime = (value) => {
+		const numeric = Number(value);
+		return Number.isFinite(numeric) ? roundSyncCreatorTime(numeric) : null;
+	};
+	const canonicalRanges = (ranges) => (Array.isArray(ranges) ? ranges : []).map(range => [
+		Number(range?.start),
+		Number(range?.end)
+	]);
+	return {
+		start: Number(line?.start),
+		end: Number(line?.end),
+		chars: (Array.isArray(line?.chars) ? line.chars : []).map(finiteTime),
+		kind: normalizeSyncCreatorKind(line?.kind) || SYNC_CREATOR_DEFAULT_KIND,
+		speaker: normalizeSyncCreatorSpeaker(line?.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER,
+		hiddenRanges: canonicalRanges(line?.hiddenRanges),
+		styleRanges: (Array.isArray(line?.styleRanges) ? line.styleRanges : []).map(range => ([
+			Number(range?.start),
+			Number(range?.end),
+			normalizeSyncCreatorKind(range?.kind) || '',
+			normalizeSyncCreatorSpeaker(range?.speaker) || ''
+		])),
+		parts: (Array.isArray(line?.parallel?.parts) ? line.parallel.parts : []).map(part => ({
+			id: String(part?.id || ''),
+			ranges: canonicalRanges(part?.ranges),
+			chars: (Array.isArray(part?.chars) ? part.chars : []).map(finiteTime),
+			kind: normalizeSyncCreatorKind(part?.kind) || SYNC_CREATOR_DEFAULT_KIND,
+			speaker: normalizeSyncCreatorSpeaker(part?.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER
+		}))
+	};
+};
+const areSyncCreatorSyncBodiesEqual = (left, right) => {
+	const leftLines = Array.isArray(left?.lines) ? left.lines : [];
+	const rightLines = Array.isArray(right?.lines) ? right.lines : [];
+	if (leftLines.length !== rightLines.length) return false;
+	try {
+		return JSON.stringify(leftLines.map(canonicalSyncCreatorSyncLineForUnsubmittedCompare))
+			=== JSON.stringify(rightLines.map(canonicalSyncCreatorSyncLineForUnsubmittedCompare));
+	} catch (error) {
+		return false;
+	}
 };
 const areSyncCreatorParallelRangesEqual = (leftRanges, rightRanges) => (
 	Array.isArray(leftRanges)
@@ -2850,6 +2892,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const [syncGranularity, setSyncGranularity] = useState(SYNC_CREATOR_DEFAULT_GRANULARITY);
 	const [position, setPosition] = useState(0);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const [hasUnsubmittedSync, setHasUnsubmittedSync] = useState(false);
+	const [hasPublishedSync, setHasPublishedSync] = useState(false);
+	const [isReverting, setIsReverting] = useState(false);
 	const [recordingCharIndex, setRecordingCharIndex] = useState(-1);
 	const [recordingLockIndex, setRecordingLockIndex] = useState(-1);
 	const [dragStartTime, setDragStartTime] = useState(null);
@@ -2936,6 +2981,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const sessionSkipRecoveryDraftKeyRef = useRef('');
 	const sessionSkipNextSourceRecoveryRef = useRef(false);
 	const latestSessionRecordRef = useRef(null);
+	const serverBaselineSyncDataRef = useRef(null);
 	const sessionLastRecoveryAnnouncementRef = useRef('');
 	const historyListRef = useRef(null);
 	const historyPanelRef = useRef(null);
@@ -3372,6 +3418,59 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		return sourceChangeRequestId;
 	}, [syncCreatorDraftStore]);
 
+	const tryRestoreUnsubmittedSyncDraft = async ({ text, provider: draftProvider, addonId: draftAddonId, lrclibSource }) => {
+		if (!syncCreatorDraftStore || !sessionTrackKey || !text || (!draftProvider && !draftAddonId)) return null;
+		const fingerprint = syncCreatorDraftStore.createLyricsFingerprint?.(text)
+			|| getSyncCreatorLyricsFingerprintFromText(text);
+		const exactDraftKey = syncCreatorDraftStore.createDraftKey({
+			trackKey: sessionTrackKey,
+			provider: draftProvider,
+			addonId: draftAddonId,
+			lyricsFingerprint: fingerprint,
+			lrclibId: lrclibSource?.lrclibId ?? ''
+		});
+		const candidates = [];
+		if (exactDraftKey) {
+			try {
+				const exact = await syncCreatorDraftStore.getDraft(exactDraftKey);
+				if (exact) candidates.push(exact);
+			} catch (error) {
+				console.warn('[SyncDataCreator] Failed to check the unsubmitted draft:', error);
+			}
+		}
+		try {
+			const trackDrafts = await syncCreatorDraftStore.getDraftsForTrack(sessionTrackKey);
+			for (const trackDraft of Array.isArray(trackDrafts) ? trackDrafts : []) {
+				if (
+					trackDraft
+					&& trackDraft.draftKey !== exactDraftKey
+					&& trackDraft.lyricsFingerprint === fingerprint
+					&& Array.isArray(trackDraft.draft?.syncData?.lines)
+					&& trackDraft.draft.syncData.lines.length > 0
+				) {
+					candidates.push(trackDraft);
+				}
+			}
+		} catch (error) {
+			console.warn('[SyncDataCreator] Failed to list unsubmitted drafts:', error);
+		}
+		for (const candidate of candidates) {
+			let validated = null;
+			try {
+				validated = applySyncCreatorSessionRecord(candidate, { validateOnly: true });
+			} catch (error) {
+				continue;
+			}
+			if (!validated?.draft?.syncData?.lines?.length) continue;
+			const applied = applySyncCreatorSessionRecord(validated, { announce: false });
+			if (applied) {
+				announceRecoveredSession(applied);
+				return applied;
+			}
+		}
+		return null;
+	};
+
 	const applyLoadedLyricsResult = useCallback(async (result, usedProvider, sourceChangeRequestId) => {
 		if (!isCurrentSyncCreatorSourceChange(sourceChangeRequestId)) return false;
 		let finalProvider = result.provider || usedProvider;
@@ -3409,6 +3508,23 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		if (!isCurrentSyncCreatorSourceChange(sourceChangeRequestId)) return false;
 
 		const text = extractLyricsText(result.synced || result.unsynced);
+		// An unsubmitted local draft survives closing the editor. Prefer it over
+		// the server state so earlier taps stay in place until they are submitted.
+		let restoredUnsubmittedDraft = null;
+		if (text.trim().length > 0 && syncCreatorDraftStore) {
+			try {
+				restoredUnsubmittedDraft = await tryRestoreUnsubmittedSyncDraft({
+					text,
+					provider: finalProvider,
+					addonId: usedProvider,
+					lrclibSource: finalProvider === 'lrclib' ? (result?.lrclibSource || null) : null
+				});
+			} catch (error) {
+				console.warn('[SyncDataCreator] Failed to restore the unsubmitted draft:', error);
+				restoredUnsubmittedDraft = null;
+			}
+			if (!isCurrentSyncCreatorSourceChange(sourceChangeRequestId)) return false;
+		}
 		if (loadedSyncBody) {
 			const normalizedLoadedSyncBody = normalizeLoadedSyncCreatorBodyForLyrics(loadedSyncBody, text);
 			if (normalizedLoadedSyncBody !== loadedSyncBody) {
@@ -3418,14 +3534,22 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				normalizedLoadedSyncBody,
 				getSyncCreatorFlatLyricsCharsFromText(text)
 			);
-			if (loadedSyncBody) {
+			serverBaselineSyncDataRef.current = loadedSyncBody
+				? (syncCreatorDraftStore?.cloneValue?.(loadedSyncBody) || loadedSyncBody)
+				: null;
+			setHasPublishedSync(!!loadedSyncBody && Array.isArray(loadedSyncBody.lines) && loadedSyncBody.lines.length > 0);
+			if (loadedSyncBody && !restoredUnsubmittedDraft) {
 				setSyncData(loadedSyncBody);
 				Toast.success(I18n.t('syncCreator.loadedExistingSyncData') || 'Loaded existing sync data');
 			}
+		} else {
+			serverBaselineSyncDataRef.current = null;
+			setHasPublishedSync(false);
 		}
 		if (text.trim().length > 0) {
-			const existingHasParallel = Array.isArray(loadedSyncBody?.lines)
-				&& loadedSyncBody.lines.some(line => Array.isArray(line?.parallel?.parts) && line.parallel.parts.length > 1);
+			const effectiveSyncBody = restoredUnsubmittedDraft?.draft?.syncData || loadedSyncBody;
+			const existingHasParallel = Array.isArray(effectiveSyncBody?.lines)
+				&& effectiveSyncBody.lines.some(line => Array.isArray(line?.parallel?.parts) && line.parallel.parts.length > 1);
 			const detectedParallel = detectSyncCreatorParallelVocalHints(text);
 			if (!existingHasParallel && detectedParallel) {
 				setPendingMultiVocalDecision({
@@ -3453,9 +3577,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		isCurrentSyncCreatorSourceChange,
 		setProviderValue,
 		setSelectedLrclibSourceValue,
+		syncCreatorDraftStore,
 		trackId,
 		trackIsrc,
-		trackName
+		trackName,
+		tryRestoreUnsubmittedSyncDraft
 	]);
 
 	const resolveMultiVocalDecision = useCallback((useMultiVocalMode) => {
@@ -8625,6 +8751,19 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	}, [syncCreatorDraftStore]);
 
 	useEffect(() => {
+		const baseline = serverBaselineSyncDataRef.current;
+		if (!syncData || !Array.isArray(syncData.lines) || syncData.lines.length === 0) {
+			setHasUnsubmittedSync(false);
+			return;
+		}
+		if (!baseline || !Array.isArray(baseline.lines) || baseline.lines.length === 0) {
+			setHasUnsubmittedSync(true);
+			return;
+		}
+		setHasUnsubmittedSync(!areSyncCreatorSyncBodiesEqual(syncData, baseline));
+	}, [syncData]);
+
+	useEffect(() => {
 		const activeEntry = historyListRef.current?.querySelector?.('[aria-current="step"]');
 		activeEntry?.scrollIntoView?.({ block: 'nearest' });
 	}, [sessionHistory.length, sessionHistoryCursorId]);
@@ -8751,6 +8890,78 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			lines
 		};
 	}, [getMergedLineIndexesForStart, getParallelTemplateForLineData, lineIndexByStart, lyricsLines, manualParallelSplitDrafts]);
+
+	const handleRevertToPublished = useCallback(async () => {
+		if (isSubmitting || isReverting) return;
+		if (mode === 'record' || isDragging || isKeyboardSyncingRef.current) {
+			Toast.error(I18n.t('syncCreator.historyStopRecording') || '기록을 멈춘 뒤 작업 내역을 복원하세요.');
+			return;
+		}
+		if (!lyricsText || !lyricsText.trim()) {
+			Toast.error(I18n.t('syncCreator.noLyrics') || 'No lyrics loaded');
+			return;
+		}
+		const hasLocalWork = hasUnsubmittedSync || (Array.isArray(syncData?.lines) && syncData.lines.length > 0);
+		if (hasLocalWork && !confirm(I18n.t('syncCreator.revertConfirm') || 'Discard local sync edits and reload the published sync?')) return;
+		setIsReverting(true);
+		try {
+			const revertProvider = providerRef.current || provider || null;
+			let publishedBody = null;
+			if (window.SyncDataService && trackId) {
+				try {
+					const existing = await window.SyncDataService.getSyncData(trackId, revertProvider, {
+						isrc: trackIsrc || undefined,
+						title: trackName,
+						artist: artistName,
+						album: albumName
+					});
+					if (existing?.syncData?.lines) publishedBody = existing.syncData;
+				} catch (error) {
+					console.warn('[SyncDataCreator] Failed to reload the published sync data:', error);
+				}
+			}
+			if (!publishedBody) publishedBody = serverBaselineSyncDataRef.current;
+			if (!publishedBody || !Array.isArray(publishedBody.lines) || publishedBody.lines.length === 0) {
+				Toast.error(I18n.t('syncCreator.noPublishedSync') || 'No published sync found for this song.');
+				return;
+			}
+			const restored = sanitizeSyncCreatorSyncData(
+				normalizeLoadedSyncCreatorBodyForLyrics(publishedBody, lyricsText),
+				getSyncCreatorFlatLyricsCharsFromText(lyricsText)
+			);
+			if (!restored) throw new Error('Published sync does not match the current lyrics.');
+			await deleteActiveSyncCreatorDraft({ resumeAutosave: true });
+			serverBaselineSyncDataRef.current = syncCreatorDraftStore?.cloneValue?.(restored) || restored;
+			setParallelPartMetaDrafts({});
+			setManualParallelSplitDrafts({});
+			setParentheticalLayoutDrafts({});
+			setMergedLineDrafts({});
+			setLineMetaDrafts({});
+			setLineStyleDrafts({});
+			setPendingParentheticalLayoutDecision(null);
+			setPendingMultiVocalDecision(null);
+			const hasParallel = restored.lines.some(line => Array.isArray(line?.parallel?.parts) && line.parallel.parts.length > 1);
+			setMultiVocalMode(hasParallel);
+			setActiveParallelPartId(hasParallel ? '' : 'full');
+			setGlobalOffset(0);
+			setCurrentLineIndex(0);
+			setSyncData(restored);
+			setMode('idle');
+			setDragStartTime(null);
+			setDragStartCharIndex(-1);
+			setIsDragging(false);
+			setRecordingProgressIndex(-1);
+			clearRecordingLock();
+			setHasUnsubmittedSync(false);
+			setHasPublishedSync(true);
+			Toast.success(I18n.t('syncCreator.reverted') || 'Reloaded the published sync.');
+		} catch (error) {
+			console.error('[SyncDataCreator] Failed to revert to the published sync:', error);
+			Toast.error(error?.message || I18n.t('syncCreator.submitError'));
+		} finally {
+			setIsReverting(false);
+		}
+	}, [albumName, artistName, trackName, clearRecordingLock, deleteActiveSyncCreatorDraft, hasUnsubmittedSync, isDragging, isReverting, isSubmitting, lyricsText, mode, provider, setRecordingProgressIndex, syncCreatorDraftStore, syncData, trackId, trackIsrc]);
 
 	const handleSubmit = useCallback(async () => {
 		if (!syncData || !syncData.lines || syncData.lines.length === 0) {
@@ -8948,6 +9159,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					// 캐시 무효화
 					await clearLyricsCachesAfterSyncSubmit(resolvedTrackIsrc);
 					await deleteActiveSyncCreatorDraft();
+					serverBaselineSyncDataRef.current = syncCreatorDraftStore?.cloneValue?.(syncDataToSubmit) || syncDataToSubmit;
+					setHasUnsubmittedSync(false);
+					setHasPublishedSync(true);
 					// 가사 페이지 새로고침
 					setTimeout(() => {
 						if (typeof window.reloadLyrics === 'function') {
@@ -8980,6 +9194,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					// 캐시 무효화
 					await clearLyricsCachesAfterSyncSubmit(resolvedTrackIsrc);
 					await deleteActiveSyncCreatorDraft();
+					serverBaselineSyncDataRef.current = syncCreatorDraftStore?.cloneValue?.(syncDataToSubmit) || syncDataToSubmit;
+					setHasUnsubmittedSync(false);
+					setHasPublishedSync(true);
 					// 가사 페이지 새로고침
 					setTimeout(() => {
 						if (typeof window.reloadLyrics === 'function') {
@@ -8999,7 +9216,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 
 		setIsSubmitting(false);
-	}, [syncData, lyricsLines, lyricsFullTextChars, lyricsLanguage, lineCharOffsets, multiVocalMode, trackId, trackIsrc, provider, trackName, artistName, albumName, trackInfo, onClose, attachSelectedLrclibSource, clearLyricsCachesAfterSyncSubmit, deleteActiveSyncCreatorDraft, getParallelTemplateForLineData, getMergedLineIndexesForStart, isLineCoveredByMergedPrevious, materializeSyncCreatorParallelDrafts, ensureScoreTracker]);
+	}, [syncData, lyricsLines, lyricsFullTextChars, lyricsLanguage, lineCharOffsets, multiVocalMode, trackId, trackIsrc, provider, trackName, artistName, albumName, trackInfo, onClose, attachSelectedLrclibSource, clearLyricsCachesAfterSyncSubmit, deleteActiveSyncCreatorDraft, getParallelTemplateForLineData, getMergedLineIndexesForStart, isLineCoveredByMergedPrevious, materializeSyncCreatorParallelDrafts, ensureScoreTracker, syncCreatorDraftStore]);
 
 	// 싱크 데이터 내보내기 (JSON 파일로 저장)
 	const exportSyncData = useCallback(async () => {
@@ -9378,6 +9595,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const TOSS_BLUE_SOFT = 'rgba(var(--spice-rgb-accent, 30, 215, 96), 0.13)';
 	const TOSS_BLUE_BORDER = 'rgba(var(--spice-rgb-accent, 30, 215, 96), 0.36)';
 	const TOSS_BLUE_RING = 'rgba(var(--spice-rgb-accent, 30, 215, 96), 0.15)';
+	const TOSS_RED = '#e5484d';
 	const TOSS_BORDER = 'rgba(255,255,255,0.08)';
 
 
@@ -11015,8 +11233,23 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		react.createElement('button', {
 			className: 'sync-creator-header-back',
 			style: s.backBtn,
-			onClick: () => {
+			onClick: async () => {
 				preventNextTrackRef.current = false;
+				try {
+					const record = latestSessionRecordRef.current;
+					if (
+						record
+						&& syncCreatorDraftStore
+						&& sessionAutosaveEnabledRef.current
+						&& !sessionAutosaveSuppressedRef.current
+						&& record.draftKey === activeSessionDraftKeyRef.current
+					) {
+						await syncCreatorDraftStore.saveDraft(record);
+						await syncCreatorDraftStore.flush();
+					}
+				} catch (error) {
+					console.warn('[SyncDataCreator] Failed to save the draft before closing:', error);
+				}
 				if (onClose) onClose();
 			}
 		},
@@ -11026,11 +11259,33 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			I18n.t('syncCreator.back') || '닫기'
 		),
 		renderGranularitySelector(),
+		(hasUnsubmittedSync || hasPublishedSync) && react.createElement('button', {
+			className: 'sync-creator-revert',
+			style: {
+				...s.loadBtn,
+				opacity: isSubmitting || isReverting || !lyricsText ? 0.5 : 1,
+				cursor: isSubmitting || isReverting || !lyricsText ? 'not-allowed' : 'pointer',
+				...(hasUnsubmittedSync && !isSubmitting && !isReverting
+					? { borderColor: TOSS_RED, color: TOSS_RED }
+					: {})
+			},
+			title: I18n.t('syncCreator.revertDesc') || 'Discard local edits and reload the published sync',
+			onClick: handleRevertToPublished,
+			disabled: isSubmitting || isReverting || !lyricsText
+		}, isReverting ? (I18n.t('syncCreator.reverting') || 'Reverting...') : (I18n.t('syncCreator.revert') || 'Revert')),
 		react.createElement('button', {
 			className: 'sync-creator-submit',
-			style: { ...s.submitBtn, opacity: isSubmitting || !syncData ? 0.5 : 1, cursor: isSubmitting || !syncData ? 'not-allowed' : 'pointer' },
+			style: {
+				...s.submitBtn,
+				background: hasUnsubmittedSync && !isSubmitting && !isReverting && syncData ? TOSS_RED : s.submitBtn.background,
+				opacity: isSubmitting || isReverting || !syncData ? 0.5 : 1,
+				cursor: isSubmitting || isReverting || !syncData ? 'not-allowed' : 'pointer'
+			},
+			title: hasUnsubmittedSync && !isSubmitting && !isReverting && syncData
+				? (I18n.t('syncCreator.unsubmittedChanges') || 'Unsubmitted sync changes — submit to publish them')
+				: undefined,
 			onClick: handleSubmit,
-			disabled: isSubmitting || !syncData
+			disabled: isSubmitting || isReverting || !syncData
 		}, isSubmitting ? I18n.t('syncCreator.submitting') : I18n.t('syncCreator.submit'))
 	);
 

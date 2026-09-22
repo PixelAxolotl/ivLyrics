@@ -135,7 +135,7 @@
 	// single AI request per kind instead of one request per line. Without
 	// this, N lines x 2 kinds x provider retries x provider fallback = spam.
 	const WORD_BATCH_DEBOUNCE_MS = 350;
-	const WORD_BATCH_MAX_WORDS = 250;
+	const WORD_BATCH_MAX_WORDS = 500;
 	const batchQueues = new Map();
 	// Pill lifecycle for the top-left generation status stack: active while
 	// any AI word batch is pending.

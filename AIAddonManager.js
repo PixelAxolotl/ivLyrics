@@ -981,6 +981,22 @@ ${isWordMode ? '- In word mode, return each spoken word as one u item, never as 
 - For 爺ちゃん, combine small ゃ with the preceding ち reading and leave the ゃ slot empty when the target writing system does not need a separate mark.`;
     };
 
+    // Word-list prefix stripping for `word: value` responses (Image-3 shape).
+    // Keeps the line count intact for provider parsers while removing the
+    // echoed word before display. Lines without a matching prefix pass through.
+    const stripWordListPrefix = (line, word) => {
+        const text = String(line ?? '').trim();
+        const surface = String(word ?? '').trim();
+        if (!surface) return text;
+        for (const separator of [':', '：']) {
+            if (text.startsWith(surface + separator)
+                || text.toLowerCase().startsWith(surface.toLowerCase() + separator)) {
+                return text.slice(surface.length + 1).trim();
+            }
+        }
+        return text;
+    };
+
     const validateLyricsTranslationResult = (result, params, providerId) => {
         const field = params?.wantSmartPhonetic ? 'phonetic' : 'translation';
         const value = field === 'translation'
@@ -2278,12 +2294,16 @@ ${normalizedText}
                     return false;
                 }
                 // 2. 사용자가 해당 기능을 활성화했는지 확인 (기본값 true)
+                // perEndpointCapabilities Addon은 엔드포인트별 선택이 유일한
+                // 기준이므로 저장된 제공자 수준 검사를 건너뛴다.
                 // 메서드가 존재하지 않는 경우(구버전 캐시 등) 안전하게 true 처리
                 if (typeof this.isCapabilityEnabled !== 'function') {
                     return true;
                 }
 
-                const isEnabled = this.isCapabilityEnabled(addon.id, storedCapability);
+                const isEnabled = addon.perEndpointCapabilities === true
+                    ? true
+                    : this.isCapabilityEnabled(addon.id, storedCapability);
                 if (!isEnabled) {
                     // console.log(`[AIAddonManager] Filtered out ${addon.id}: capability ${capability} disabled by user setting`);
                     return false;
@@ -3342,11 +3362,11 @@ ${normalizedText}
             const langInfo = getTranslationLanguageInfo(targetLang);
             // Line-based transport (provider line parsers require one output
             // line per input line), kept terse: bare words, short keys style.
-            const systemPrompt = `Gloss lyric words for learners in ${langInfo.name} (${langInfo.native}). One gloss per line, same order, exactly ${wordCount} lines. Short (1-4 words), contextual sense, plain words with normal spacing. For particles and function words, give the grammatical role in square brackets like [topic], [subject], [object]. Never merge, split, reorder, or explain. Empty in, empty out.`;
+            const systemPrompt = `Gloss lyric words for learners in ${langInfo.name} (${langInfo.native}). Output one line per input word as "word: gloss" — copy the word exactly, then a colon, then the gloss. Exactly ${wordCount} lines, same order. One word per gloss; add a second word only when one word cannot carry the meaning. No periods, commas, or other punctuation — except [role] markers like [topic] for particles/function words. Never merge, split, reorder, or explain.`;
 
             const userPrompt = `Sense context (do not gloss these lines):
 ${String(lineText ?? '')}
-Gloss these ${wordCount} words, one per line, nothing else:
+Gloss these ${wordCount} words, one per line as "word: gloss", nothing else:
 ${safeWords.join('\n')}`;
 
             return { systemPrompt, userPrompt, wordCount };
@@ -3392,7 +3412,7 @@ ${safeWords.join('\n')}`;
                         throw new Error(`[AIAddonManager] Provider ${addon.id} returned ${lines.length} glosses; expected ${safeWords.length}`);
                     }
                     this.emit('ai:request:success', { type: 'wordGloss', provider: addon.id });
-                    return lines.map((line) => line.trim());
+                    return lines.map((line, index) => stripWordListPrefix(line, safeWords[index]).trim());
                 } catch (error) {
                     console.warn(`[AIAddonManager] Provider ${addon.id} failed for wordGloss:`, error?.message || error);
                     lastError = error;
@@ -3408,11 +3428,11 @@ ${safeWords.join('\n')}`;
             const langInfo = getTranslationLanguageInfo(targetLang);
             const normalizedNotation = String(notation || 'latin').trim().toLowerCase() === 'ipa' ? 'ipa' : 'latin';
             const scriptName = normalizedNotation === 'ipa' ? 'broad IPA transcription' : `romanization for ${langInfo.name} speakers`;
-            const systemPrompt = `Convert each lyric word's sung sound into ${scriptName}. Pronunciation only, never meaning. One per line, same order, exactly ${wordCount} lines. Use ${scriptName} for every sound, no source script left. Never merge, split, reorder, or explain. Empty in, empty out.`;
+            const systemPrompt = `Convert each lyric word's sung sound into ${scriptName}. Output one line per input word as "word: pronunciation" — copy the word exactly, then a colon, then the pronunciation. Exactly ${wordCount} lines, same order. PRONUNCIATION only, never meaning. ${scriptName} for every sound. Never merge, split, reorder, or explain.`;
 
             const userPrompt = `Sense context (do not convert these lines):
 ${String(lineText ?? '')}
-Convert these ${wordCount} words into ${scriptName}, one per line, nothing else:
+Convert these ${wordCount} words into ${scriptName}, one per line as "word: pronunciation", nothing else:
 ${safeWords.join('\n')}`;
 
             return { systemPrompt, userPrompt, wordCount };
@@ -3460,7 +3480,7 @@ ${safeWords.join('\n')}`;
                         throw new Error(`[AIAddonManager] Provider ${addon.id} returned ${lines.length} pronunciations; expected ${safeWords.length}`);
                     }
                     this.emit('ai:request:success', { type: 'wordPronunciation', provider: addon.id });
-                    return lines.map((line) => line.trim());
+                    return lines.map((line, index) => stripWordListPrefix(line, safeWords[index]).trim());
                 } catch (error) {
                     console.warn(`[AIAddonManager] Provider ${addon.id} failed for wordPronunciation:`, error?.message || error);
                     lastError = error;

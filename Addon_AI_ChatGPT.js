@@ -512,6 +512,55 @@
     /**
      * Call ChatGPT API and return raw text response
      */
+    function getHttpStatusHint(status) {
+        if (status === 401) return ' — invalid API key or permission denied';
+        if (status === 403) return ' — check the API key and account credits/quota';
+        if (status === 404) return ' — check the endpoint Base URL and Model ID (refresh the model list with ↻)';
+        if (status === 410) return ' — the model appears retired; pick a current model from the refreshed list';
+        if (status === 429) return ' — rate limited';
+        return '';
+    }
+
+    async function buildHttpErrorDetail(response) {
+        const status = response?.status;
+        const hint = getHttpStatusHint(status);
+        let detail = '';
+        try {
+            const rawText = typeof response?.clone === 'function'
+                ? await response.clone().text()
+                : '';
+            const trimmed = String(rawText || '').trim();
+            if (trimmed) {
+                let parsedMessage = '';
+                try {
+                    const parsed = JSON.parse(trimmed);
+                    parsedMessage = parsed?.error?.message || parsed?.error?.code || parsed?.message || '';
+                } catch {
+                    // Plain-text error body (e.g. "404 page not found").
+                }
+                detail = parsedMessage || trimmed.slice(0, 200);
+            }
+        } catch {
+            // Unreadable body; fall through to the generic status below.
+        }
+        if (!detail) return `HTTP ${status}${hint}`;
+        // A terse server body (e.g. NIM's bare "404 page not found") still
+        // needs the actionable hint; descriptive messages stay untouched
+        // except for statuses where the next step is always the same.
+        if (status === 403 || status === 404 || status === 410) return `${detail}${hint}`;
+        return detail;
+    }
+
+    function recordSkipError(target, status) {
+        return new Error(`[ChatGPT] ${target?.label || 'Endpoint'} failed: HTTP ${status}${getHttpStatusHint(status)}`);
+    }
+
+    function isResponsesApiUnsupported(error) {
+        if (!error) return false;
+        if (error.responsesApiUnsupported === true) return true;
+        const message = String(error.message || '');
+        return /HTTP (404|405)\b/.test(message) || /404 page not found/.test(message);
+    }
     function normalizeFinishReason(reason) {
         return reason === null || reason === undefined
             ? ''
@@ -631,29 +680,18 @@
 
                     if (response.status === 429 || response.status === 403) {
                         window.__ivLyricsDebugLog?.(`[ChatGPT Addon] Target ${target.label} failed (${response.status}), trying next...`);
+                        // Remember the failure so a run with no usable target
+                        // reports the real HTTP error instead of a generic one.
+                        lastError = recordSkipError(target, response.status);
                         break; // Try next target
                     }
 
                     if (response.status === 401) {
-                        let errorMessage = 'Invalid API key or permission denied.';
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error?.message) {
-                                errorMessage = errorData.error.message;
-                            }
-                        } catch (parseError) { }
-                        throw new Error(`[ChatGPT] ${errorMessage}`);
+                        throw new Error(`[ChatGPT] ${await buildHttpErrorDetail(response)}`);
                     }
 
                     if (!response.ok) {
-                        let errorMessage = `HTTP ${response.status}`;
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error?.message) {
-                                errorMessage = errorData.error.message;
-                            }
-                        } catch (parseError) { }
-                        throw new Error(`[ChatGPT] ${errorMessage}`);
+                        throw new Error(`[ChatGPT] ${await buildHttpErrorDetail(response)}`);
                     }
 
                     const data = await response.json();
@@ -789,11 +827,20 @@
                         body: JSON.stringify(buildResponsesRequestBody(model, prompt))
                     }, requestTimeoutMs);
 
-                    if (response.status === 429 || response.status === 403) break;
+                    if (response.status === 429 || response.status === 403) {
+                        lastError = new Error(`[ChatGPT Web Search] ${target.label} failed: HTTP ${response.status}${getHttpStatusHint(response.status)}`);
+                        break;
+                    }
                     if (!response.ok) {
                         let errorData = null;
                         try { errorData = await response.json(); } catch { }
-                        throw createResponsesAPIError(errorData, `HTTP ${response.status}`);
+                        const unsupported = response.status === 404 || response.status === 405;
+                        const error = createResponsesAPIError(
+                            errorData,
+                            `HTTP ${response.status}${unsupported ? ' — this endpoint does not support the Responses API' : getHttpStatusHint(response.status)}`
+                        );
+                        if (unsupported) error.responsesApiUnsupported = true;
+                        throw error;
                     }
 
                     const contentType = String(response.headers?.get?.('content-type') || '').toLowerCase();
@@ -970,19 +1017,18 @@
 
                     if (response.status === 429 || response.status === 403) {
                         window.__ivLyricsDebugLog?.(`[ChatGPT Addon] Stream: target ${target.label} failed (${response.status}), trying next...`);
+                        // Remember the failure so a run with no usable target
+                        // reports the real HTTP error instead of a generic one.
+                        lastError = recordSkipError(target, response.status);
                         break;
                     }
 
                     if (response.status === 401) {
-                        let errorMessage = 'Invalid API key or permission denied.';
-                        try { const d = await response.json(); if (d.error?.message) errorMessage = d.error.message; } catch (e) { }
-                        throw new Error(`[ChatGPT] ${errorMessage}`);
+                        throw new Error(`[ChatGPT] ${await buildHttpErrorDetail(response)}`);
                     }
 
                     if (!response.ok) {
-                        let errorMessage = `HTTP ${response.status}`;
-                        try { const d = await response.json(); if (d.error?.message) errorMessage = d.error.message; } catch (e) { }
-                        throw new Error(`[ChatGPT] ${errorMessage}`);
+                        throw new Error(`[ChatGPT] ${await buildHttpErrorDetail(response)}`);
                     }
 
                     // Some compatible APIs accept `stream: true` but still
@@ -1136,12 +1182,7 @@
             })
         });
         if (!response.ok) {
-            let errorMessage = `HTTP ${response.status}`;
-            try {
-                const errorData = await response.json();
-                if (errorData.error?.message) errorMessage = errorData.error.message;
-            } catch { }
-            throw new Error(`[ChatGPT] ${errorMessage}`);
+            throw new Error(`[ChatGPT] ${await buildHttpErrorDetail(response)}`);
         }
         const data = await response.json();
         const rawText = readChatGPTResponseText(data);
@@ -1843,20 +1884,30 @@
             const tmiTargets = ensureRequestTargets(getRequestTargets('tmi'), 'tmi');
             const searchTargets = tmiTargets.filter(target => target.researchWebSearch !== false);
             const plainTargets = tmiTargets.filter(target => target.researchWebSearch === false);
+            let responsesAttempted = false;
             if (searchTargets.length > 0 && plainTargets.length === 0) {
-                return await callResponsesAPIStream(
-                    prompt,
-                    null,
-                    resetProgress,
-                    1,
-                    extractJSON,
-                    requestTimeoutMs,
-                    onRawChunk,
-                    'tmi',
-                    searchTargets
-                );
+                try {
+                    responsesAttempted = true;
+                    return await callResponsesAPIStream(
+                        prompt,
+                        null,
+                        resetProgress,
+                        1,
+                        extractJSON,
+                        requestTimeoutMs,
+                        onRawChunk,
+                        'tmi',
+                        searchTargets
+                    );
+                } catch (searchError) {
+                    // Hosts without a Responses API (e.g. NVIDIA NIM answers
+                    // /responses with 404) fall back to plain chat instead of
+                    // failing the whole request. Other errors still throw.
+                    if (!isResponsesApiUnsupported(searchError)) throw searchError;
+                    window.__ivLyricsDebugLog?.('[ChatGPT Addon] Responses API unsupported, falling back to plain chat:', searchError?.message);
+                }
             }
-            if (searchTargets.length > 0) {
+            if (!responsesAttempted && searchTargets.length > 0) {
                 try {
                     return await callResponsesAPIStream(
                         prompt,

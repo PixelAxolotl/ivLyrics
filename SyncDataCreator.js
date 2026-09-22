@@ -4557,6 +4557,39 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			|| characterPronunciations.lines[currentLineIndex]
 			|| null;
 	}, [showCharacterPronunciations, characterPronunciations, currentLineIndex]);
+	// Shared merged-aware pronunciation lookup by local char index within
+	// currentFullLineChars. The active line and the inactive parallel previews
+	// use the same method so selecting a part never drops its readings.
+	const currentFullLinePronunciationByLocal = useMemo(() => {
+		const map = new Map();
+		if (!showCharacterPronunciations || !characterPronunciations || !Array.isArray(characterPronunciations.lines)) {
+			return map;
+		}
+		const mergedIndexes = Array.isArray(currentMergedLineIndexes) && currentMergedLineIndexes.length > 0
+			? currentMergedLineIndexes
+			: [currentLineIndex];
+		const linesByIndex = new Map();
+		characterPronunciations.lines.forEach((line) => {
+			const idx = Number(line?.index);
+			if (Number.isInteger(idx) && !linesByIndex.has(idx)) linesByIndex.set(idx, line);
+		});
+		let offset = 0;
+		mergedIndexes.forEach((lyricsIndex) => {
+			const lineChars = Array.from(lyricsLines[lyricsIndex] || '');
+			const lineData = linesByIndex.get(lyricsIndex) || characterPronunciations.lines[lyricsIndex] || null;
+			if (lineData && Array.isArray(lineData.chars)) {
+				lineData.chars.forEach((item, fallbackIndex) => {
+					const sourceIndex = Number.isInteger(Number(item?.i)) ? Number(item.i) : fallbackIndex;
+					const pronunciation = typeof item?.pronunciation === 'string' ? item.pronunciation.trim() : '';
+					if (pronunciation && Number.isInteger(sourceIndex) && sourceIndex >= 0 && sourceIndex < lineChars.length) {
+						map.set(offset + sourceIndex, pronunciation);
+					}
+				});
+			}
+			offset += lineChars.length;
+		});
+		return map;
+	}, [showCharacterPronunciations, characterPronunciations, currentMergedLineIndexes, currentLineIndex, lyricsLines]);
 	const currentLinePronunciationUnits = useMemo(
 		() => activeParallelPart ? [] : normalizeSyncCreatorPronunciationUnits(currentLineCharacterPronunciationData, currentLineChars),
 		[activeParallelPart, currentLineCharacterPronunciationData, currentLineChars]
@@ -4571,25 +4604,24 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		return currentLineSyllableSegments;
 	}, [currentLinePronunciationUnits, currentLineSyllableSegments]);
 	const currentLineCharacterPronunciationMap = useMemo(() => {
-		const lineData = currentLineCharacterPronunciationData;
-		if (!Array.isArray(lineData?.chars)) {
+		if (currentFullLinePronunciationByLocal.size === 0) {
 			return new Map();
 		}
 
-		const partIndexMap = activeParallelPart
-			? new Map(currentLineCharRefs.map((ref, displayIndex) => [ref.localIndex, displayIndex]))
-			: null;
+		if (!activeParallelPart) {
+			return new Map(currentFullLinePronunciationByLocal);
+		}
+
+		const partIndexMap = new Map(currentLineCharRefs.map((ref, displayIndex) => [ref.localIndex, displayIndex]));
 		const map = new Map();
-		lineData.chars.forEach((item, fallbackIndex) => {
-			const sourceIndex = Number.isInteger(Number(item?.i)) ? Number(item.i) : fallbackIndex;
-			const index = partIndexMap ? partIndexMap.get(sourceIndex) : sourceIndex;
-			const pronunciation = typeof item?.pronunciation === 'string' ? item.pronunciation.trim() : '';
+		currentFullLinePronunciationByLocal.forEach((pronunciation, localIndex) => {
+			const index = partIndexMap.get(localIndex);
 			if (pronunciation && Number.isInteger(index)) {
 				map.set(index, pronunciation);
 			}
 		});
 		return map;
-	}, [activeParallelPart, currentLineCharacterPronunciationData, currentLineCharRefs]);
+	}, [activeParallelPart, currentFullLinePronunciationByLocal, currentLineCharRefs]);
 	const hasCurrentLineCharacterPronunciation = currentLineCharacterPronunciationMap.size > 0 || currentLinePronunciationUnits.length > 0;
 	const usePrimaryCharacterPronunciation = isCharacterPronunciationPrimary && hasCurrentLineCharacterPronunciation;
 	const currentLineRenderedPronunciationUnits = useMemo(() => {
@@ -4616,6 +4648,56 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		});
 		return set;
 	}, [currentLineRenderedPronunciationUnits]);
+	// Per-part readings for inactive parallel previews. The active part already
+	// renders furigana + AI pronunciation via currentLine* maps; inactive parts
+	// previously rendered plain text only, so their readings were missing.
+	// This memo slices the same sources per part (read-only, no timestamps).
+	const currentParallelPartReadingMaps = useMemo(() => {
+		const maps = new Map();
+		if (!hasCurrentParallelParts || !Array.isArray(currentFullLineChars) || currentFullLineChars.length === 0) {
+			return maps;
+		}
+		const fullPronByLocal = currentFullLinePronunciationByLocal;
+		const hasAnyPron = fullPronByLocal.size > 0;
+		for (const part of currentParallelParts) {
+			if (!part || typeof part.id !== 'string') continue;
+			const refs = rangesToCharRefs(part.ranges, currentFullLineChars, currentLineStart);
+			if (refs.length === 0) continue;
+			const partChars = refs.map((ref) => ref.char);
+			let furiganaMap = new Map();
+			try {
+				if (typeof getSyncCreatorFuriganaMap === 'function' && partChars.join('')) {
+					furiganaMap = getSyncCreatorFuriganaMap(partChars.join('')) || new Map();
+				}
+			} catch { furiganaMap = new Map(); }
+			const pronMap = new Map();
+			if (hasAnyPron) {
+				refs.forEach((ref, displayIndex) => {
+					const pronunciation = fullPronByLocal.get(ref.localIndex);
+					if (pronunciation) pronMap.set(displayIndex, pronunciation);
+				});
+			}
+			if (furiganaMap.size === 0 && pronMap.size === 0) continue;
+			let units = [];
+			try {
+				if (typeof buildSyncCreatorVisualPronunciationUnits === 'function') {
+					units = buildSyncCreatorVisualPronunciationUnits(partChars, pronMap) || [];
+				}
+			} catch { units = []; }
+			const unitByStart = new Map();
+			const covered = new Set();
+			units.forEach((unit) => {
+				unitByStart.set(unit.start, unit);
+				for (let i = unit.start + 1; i <= unit.end; i++) covered.add(i);
+			});
+			maps.set(part.id, {
+				partChars, furiganaMap, pronMap, units, unitByStart, covered,
+				hasFurigana: furiganaMap.size > 0,
+				hasPron: pronMap.size > 0 || units.length > 0
+			});
+		}
+		return maps;
+	}, [hasCurrentParallelParts, currentParallelParts, currentFullLineChars, currentLineStart, currentFullLinePronunciationByLocal, getSyncCreatorFuriganaMap]);
 	const useFixedPrimaryCharacterCells = usePrimaryCharacterPronunciation
 		&& currentLineRenderedPronunciationUnits.length === 0
 		&& /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uac00-\ud7af]/u.test(currentLineText);
@@ -10207,10 +10289,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		},
 		lyricsBoxParallelScrollable: {
 			alignItems: 'stretch',
-			maxHeight: 'min(430px, 44vh)',
+			// Grow to fit 3 vocal lines before inner scrolling kicks in.
+			// overscrollBehavior auto lets wheel scroll chain to the outer
+			// stage (text effect / partial effects) at the top/bottom edge.
+			maxHeight: 'min(500px, 54vh)',
 			overflowY: 'auto',
 			overflowX: 'hidden',
-			overscrollBehavior: 'contain',
+			overscrollBehavior: 'auto',
 			scrollbarWidth: 'thin',
 			paddingRight: '14px',
 			paddingLeft: '14px',
@@ -10219,16 +10304,21 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		lyricsLine: { display: 'inline-flex', flexWrap: 'nowrap', gap: '0px', paddingLeft: '32px', paddingRight: '32px', justifyContent: 'center', alignItems: usePrimaryCharacterPronunciation ? 'flex-start' : 'stretch', color: currentSpeakerTextColor },
 		rtlLyricsLine: { display: 'block', width: '100%', paddingLeft: '32px', paddingRight: '32px', textAlign: 'center', direction: 'rtl', unicodeBidi: 'plaintext', color: currentSpeakerTextColor },
 		rtlTextRun: { display: 'inline-block', maxWidth: '100%', padding: '10px 1px', fontSize: '32px', fontWeight: '600', lineHeight: 1.45, letterSpacing: 0, whiteSpace: 'pre', cursor: mode === 'record' ? 'pointer' : 'default', color: 'transparent', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' },
-		charSpan: { padding: usePrimaryCharacterPronunciation ? '4px 4px 6px' : `${hasCurrentLineFurigana ? 18 : 10}px 1px ${(hasCurrentLineCharacterPronunciation && currentLineRenderedPronunciationUnits.length === 0) ? 26 : 10}px`, marginInline: 0, borderRadius: 0, cursor: mode === 'record' ? 'pointer' : 'default', position: 'relative', fontSize: usePrimaryCharacterPronunciation ? '15px' : '32px', fontWeight: '600', minWidth: usePrimaryCharacterPronunciation ? '18px' : '6px', minHeight: usePrimaryCharacterPronunciation ? '68px' : undefined, boxSizing: 'border-box', textAlign: 'center', flexShrink: 0, color: currentSpeakerTextColor, letterSpacing: 0, lineHeight: usePrimaryCharacterPronunciation ? 1.05 : 1.15 },
+		charSpan: { padding: usePrimaryCharacterPronunciation ? '4px 4px 6px' : `${hasCurrentLineFurigana ? 18 : 10}px 1px ${(hasCurrentLineCharacterPronunciation && currentLineRenderedPronunciationUnits.length === 0) ? 26 : (currentLineRenderedPronunciationUnits.length > 0 ? (activeParallelPart ? 28 : 27) : 10)}px`, marginInline: 0, borderRadius: 0, cursor: mode === 'record' ? 'pointer' : 'default', position: 'relative', fontSize: usePrimaryCharacterPronunciation ? '15px' : '32px', fontWeight: '600', minWidth: usePrimaryCharacterPronunciation ? '18px' : '6px', minHeight: usePrimaryCharacterPronunciation ? '68px' : undefined, boxSizing: 'border-box', textAlign: 'center', flexShrink: 0, color: currentSpeakerTextColor, letterSpacing: 0, lineHeight: usePrimaryCharacterPronunciation ? 1.05 : 1.15 },
 		charJoinSeparator: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: usePrimaryCharacterPronunciation ? '12px' : '16px', minWidth: usePrimaryCharacterPronunciation ? '12px' : '16px', padding: 0, flexShrink: 0, color: 'transparent', pointerEvents: 'none' },
 		charSpanPronunciationPrimary: { display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: '2px' },
 		charWordGroup: { display: 'inline-flex', position: 'relative', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', flexShrink: 0, borderRadius: 0, padding: '0 0 3px', boxSizing: 'border-box', color: currentSpeakerTextColor },
 		charWordGroupPrimary: { flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', minHeight: '68px', padding: '2px 3px 6px', boxSizing: 'border-box' },
 		charWordOriginalRow: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: usePrimaryCharacterPronunciation ? '30px' : 'auto', whiteSpace: 'nowrap' },
 		charWordSpace: { display: 'inline-flex', width: usePrimaryCharacterPronunciation ? '10px' : '12px', minWidth: usePrimaryCharacterPronunciation ? '10px' : '12px', padding: 0, margin: 0, flexShrink: 0, color: 'transparent', background: 'transparent', pointerEvents: mode === 'record' ? 'auto' : 'none', boxSizing: 'border-box' },
-		charSpanInWord: { padding: `${hasCurrentLineFurigana ? 18 : 10}px 1px 8px`, minWidth: '6px', minHeight: undefined },
+		charSpanInWord: { padding: `${hasCurrentLineFurigana ? 18 : 10}px 1px ${activeParallelPart ? 28 : 27}px`, minWidth: '6px', minHeight: undefined },
 		charSpanInWordPrimary: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 'auto', width: 'auto', minHeight: '24px', padding: '4px 0 0', fontSize: '14px', lineHeight: 1, letterSpacing: 0 },
-		charWordPronunciation: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '13px', marginTop: '1px', fontSize: '10px', fontWeight: '700', color: currentSpeakerTextColor, opacity: 0.76, lineHeight: 1, whiteSpace: 'nowrap', letterSpacing: 0, pointerEvents: 'none' },
+		// The reading row is pulled up (-18px) into the cell's extended bottom
+		// padding (13px row + 5px bubble trailing), so it renders inside the
+		// character bubble; the per-mode cell padding carries the visual offset
+		// (27px normal, 28px selected box and preview), so text-to-reading
+		// matches reading-to-time spacing (~11px) everywhere.
+		charWordPronunciation: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '13px', marginTop: '-18px', fontSize: '10px', fontWeight: '700', color: currentSpeakerTextColor, opacity: 0.76, lineHeight: 1, whiteSpace: 'nowrap', letterSpacing: 0, pointerEvents: 'none' },
 		charWordPronunciationPrimary: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '28px', fontSize: '24px', fontWeight: '700', color: currentSpeakerTextColor, lineHeight: 1.05, whiteSpace: 'nowrap', letterSpacing: 0, pointerEvents: 'none' },
 		charFixedPrimaryCell: { width: '28px', minWidth: '28px', maxWidth: '28px', padding: '4px 0 6px', overflow: 'visible' },
 		charFuriganaWrap: { position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '1em', lineHeight: 'inherit' },
@@ -10660,7 +10750,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const characterPronunciation = options.hidePronunciation ? '' : currentLineCharacterPronunciationMap.get(i);
 		const usePrimaryLayout = usePrimaryCharacterPronunciation && !options.suppressPrimaryPronunciation;
 		const useFixedPrimaryLayout = usePrimaryLayout && useFixedPrimaryCharacterCells;
-		const shouldShowCharTime = !options.hideTime && currentLineRenderedPronunciationUnits.length === 0;
+		const shouldShowCharTime = !options.hideTime;
 		const baseBackground = !options.wordSpacer && isSynced
 			? (isPlayed ? SYNC_CREATOR_PROGRESS_BACKGROUND : SYNC_CREATOR_SYNCED_BACKGROUND)
 			: '';
@@ -10730,7 +10820,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			usePrimaryLayout
 				? react.createElement('span', { style: pronunciationStyle }, characterPronunciation || '\u00A0')
 				: (characterPronunciation && react.createElement('span', { style: pronunciationStyle }, characterPronunciation)),
-			shouldShowCharTime && isSynced && charTime !== null && react.createElement('span', { style: s.charTime }, formatSeconds(charTime))
+			shouldShowCharTime && isSynced && charTime !== null && react.createElement('span', { style: options.timeBottom ? { ...s.charTime, bottom: options.timeBottom } : s.charTime }, formatSeconds(charTime))
 		);
 		return charNode;
 	};
@@ -10742,7 +10832,12 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				hidePronunciation: true,
 				suppressPrimaryPronunciation: true,
 				inWordUnit: true,
-				inWordPrimary: usePrimaryCharacterPronunciation
+				inWordPrimary: usePrimaryCharacterPronunciation,
+				// Times hang just below the character bubble: the reading row now
+				// lives inside the cell's extended padding, so the bubble edge
+				// is the span edge and one small offset fits every mode
+				// (40px in primary, whose cells keep their own layout).
+				timeBottom: usePrimaryCharacterPronunciation ? '-40px' : '-16px'
 			}));
 		}
 
@@ -10870,7 +10965,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			isActive
 				? react.createElement('div', {
 					className: 'lyrics-karaoke-line is-active is-effect-live is-effect-focused',
-					style: useCurrentLineTextRun ? { ...s.rtlLyricsLine, direction: currentLineDirection, paddingLeft: 0, paddingRight: 0 } : s.parallelStackText
+					style: useCurrentLineTextRun ? { ...s.rtlLyricsLine, direction: currentLineDirection, paddingLeft: 0, paddingRight: 0 } : (((typeof hasCurrentLineCharacterPronunciation !== 'undefined' && hasCurrentLineCharacterPronunciation) ? { ...s.parallelStackText, paddingBottom: '16px' } : s.parallelStackText))
 				},
 					renderCurrentLineCharacters()
 				)
@@ -10893,23 +10988,107 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							partMutedColor
 						)
 					}
-				}, partDisplayItems.map(item => item.text || item.char || '').join('')) : partDisplayItems.map((item) => {
-						if (item.type === 'separator') {
-							return react.createElement('span', {
-								key: `${part.id}-${item.key}`,
-								style: s.parallelStackJoinSeparator
-							}, item.text === ' ' ? '\u00A0' : item.text);
+				}, partDisplayItems.map(item => item.text || item.char || '').join('')) : (() => {
+						const previewReadings = (typeof currentParallelPartReadingMaps !== 'undefined' && currentParallelPartReadingMaps && typeof currentParallelPartReadingMaps.get === 'function')
+							? currentParallelPartReadingMaps.get(part.id)
+							: undefined;
+						const hasPreviewReadings = !!(previewReadings && (previewReadings.hasFurigana || previewReadings.hasPron));
+						if (!hasPreviewReadings) {
+							return partDisplayItems.map((item) => {
+								if (item.type === 'separator') {
+									return react.createElement('span', {
+										key: `${part.id}-${item.key}`,
+										style: s.parallelStackJoinSeparator
+									}, item.text === ' ' ? '\u00A0' : item.text);
+								}
+								return react.createElement('span', {
+									key: `${part.id}-${item.charIndex}`,
+									'data-iv-sync-creator-preview-index': item.charIndex,
+									style: {
+										...s.parallelStackChar,
+										...(item.charIndex < syncedCount ? s.parallelStackCharSynced : null),
+										color: partSpeakerTextColor
+									}
+								}, item.char === ' ' ? '\u00A0' : item.char);
+							});
 						}
-						return react.createElement('span', {
-							key: `${part.id}-${item.charIndex}`,
-							'data-iv-sync-creator-preview-index': item.charIndex,
-							style: {
-								...s.parallelStackChar,
-								...(item.charIndex < syncedCount ? s.parallelStackCharSynced : null),
-								color: partSpeakerTextColor
+						const isPreviewPrimary = (typeof usePrimaryCharacterPronunciation !== 'undefined') && !!usePrimaryCharacterPronunciation;
+						const previewHasFurigana = !!previewReadings.hasFurigana;
+						const previewHasSinglePron = !!previewReadings.hasPron && previewReadings.units.length === 0;
+						const previewCharBase = {
+							...s.parallelStackChar,
+							position: 'relative',
+							...(isPreviewPrimary
+								? { display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '2px 3px 6px', minHeight: '68px' }
+								: { paddingTop: previewHasFurigana ? '18px' : '6px', paddingBottom: previewReadings.units.length > 0 ? '28px' : (previewHasSinglePron ? '26px' : '10px') })
+						};
+						const previewPronStyle = isPreviewPrimary
+							? { ...s.charPronunciationPrimary, color: partSpeakerTextColor }
+							: { ...s.charPronunciation, color: partSpeakerTextColor };
+						const renderPreviewSingle = (char, displayIndex, key, options = {}) => {
+							const furigana = previewReadings.furiganaMap.get(displayIndex);
+							const pronunciation = options.hidePron ? '' : (previewReadings.pronMap.get(displayIndex) || '');
+							const originalContent = furigana
+								? react.createElement('span', { style: s.charFuriganaWrap }, char === ' ' ? '\u00A0' : char,
+									react.createElement('span', { style: s.charFuriganaText }, furigana))
+								: (char === ' ' ? '\u00A0' : char);
+							if (isPreviewPrimary) {
+								return react.createElement('span', {
+									key,
+									'data-iv-sync-creator-preview-index': displayIndex,
+									style: { ...previewCharBase, ...(displayIndex < syncedCount ? s.parallelStackCharSynced : null), color: partSpeakerTextColor }
+								},
+									react.createElement('span', { style: s.charOriginalSmall }, originalContent),
+									react.createElement('span', { style: { ...previewPronStyle, visibility: pronunciation ? 'visible' : 'hidden' } }, pronunciation || '\u00A0')
+								);
 							}
-						}, item.char === ' ' ? '\u00A0' : item.char);
-					})
+							return react.createElement('span', {
+								key,
+								'data-iv-sync-creator-preview-index': displayIndex,
+								style: {
+									...previewCharBase,
+									...(options.inUnit ? { paddingBottom: '28px' } : null),
+									...(displayIndex < syncedCount ? s.parallelStackCharSynced : null),
+									color: partSpeakerTextColor
+								}
+							},
+								originalContent,
+								(!!pronunciation && react.createElement('span', { style: previewPronStyle }, pronunciation))
+							);
+						};
+						const renderPreviewUnit = (unit) => {
+							const wordChars = [];
+							for (let i = unit.start; i <= unit.end; i++) {
+								wordChars.push(renderPreviewSingle(previewReadings.partChars[i] ?? '', i, `${part.id}-unit-${unit.start}-${i}`, { hidePron: true, inUnit: !isPreviewPrimary }));
+							}
+							const groupStyle = isPreviewPrimary
+								? { ...s.charWordGroup, ...s.charWordGroupPrimary, color: partSpeakerTextColor }
+								: { ...s.charWordGroup, color: partSpeakerTextColor };
+							const unitPronStyle = isPreviewPrimary
+								? { ...s.charWordPronunciationPrimary, marginTop: '4px', color: partSpeakerTextColor }
+								: { ...s.charWordPronunciation, marginTop: '-18px', color: partSpeakerTextColor };
+							return react.createElement('span', {
+								key: `${part.id}-unit-${unit.start}-${unit.end}`,
+								style: groupStyle
+							},
+								react.createElement('span', { style: s.charWordOriginalRow }, wordChars),
+								react.createElement('span', { style: unitPronStyle }, unit.pronunciation)
+							);
+						};
+						return partDisplayItems.flatMap((item) => {
+							if (item.type === 'separator') {
+								return [react.createElement('span', {
+									key: `${part.id}-${item.key}`,
+									style: s.parallelStackJoinSeparator
+								}, item.text === ' ' ? '\u00A0' : item.text)];
+							}
+							const displayIndex = item.charIndex;
+							if (previewReadings.covered.has(displayIndex)) return [];
+							const unit = previewReadings.unitByStart.get(displayIndex);
+							if (unit) return [renderPreviewUnit(unit)];
+							return [renderPreviewSingle(item.char, displayIndex, `${part.id}-${displayIndex}`)];
+						});
+					})()
 				)
 		);
 	};
@@ -11948,7 +12127,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			react.createElement('div', {
 				className: `sync-creator-stage-lyrics${hasCurrentParallelParts ? ' is-parallel' : ''}`,
 				style: hasCurrentParallelParts
-					? { ...s.lyricsBox, ...s.lyricsBoxParallelScrollable, ...s.stageLyricsBox }
+					? { ...s.lyricsBox, ...s.stageLyricsBox, ...s.lyricsBoxParallelScrollable }
 					: { ...s.lyricsBox, ...s.stageLyricsBox },
 				onMouseDown: hasCurrentParallelParts ? undefined : handleContainerMouseDown,
 				onTouchStart: hasCurrentParallelParts ? undefined : handleContainerMouseDown,

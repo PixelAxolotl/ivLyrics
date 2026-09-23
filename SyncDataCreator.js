@@ -2962,6 +2962,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const lastPaintedPlaybackIndexRef = useRef(-1);
 	const preventNextTrackRef = useRef(false);
 	const hasAutoLoadedLyricsRef = useRef(false);
+	const lrclibSearchAutoPrefillRef = useRef({ trackKey: '', appliedQuery: '' });
+	const lrclibSearchUserTouchedRef = useRef('');
+	const lrclibSearchLastTrackKeyRef = useRef('');
 	const pendingPlaybackNavigationRef = useRef(true);
 	const providerRef = useRef(provider);
 	const selectedLrclibSourceRef = useRef(selectedLrclibSource);
@@ -5056,6 +5059,50 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		hasAutoLoadedLyricsRef.current = true;
 		void loadLyrics();
 	}, [loadLyrics]);
+
+	// Prefill the manual LRCLIB search box with "title artist" (Format A) only
+	// when the track has no sync to work with. Never triggers a search; the
+	// initial loadLyrics() result is always used first. The text is just an
+	// editable backup for Spotify/LRCLIB title mismatches.
+	useEffect(() => {
+		if (isLoading || isSearchingLrclib) return;
+		const trackKey = trackId || trackUri || trackIsrc || `${trackName}::${artistName}`;
+		if (!trackKey) return;
+		// Track switched: never leak the previous track's query. Clear stale
+		// text (auto-prefilled or user-typed) when the new track is untouched.
+		if (lrclibSearchLastTrackKeyRef.current && lrclibSearchLastTrackKeyRef.current !== trackKey) {
+			lrclibSearchAutoPrefillRef.current = { trackKey: '', appliedQuery: '' };
+			if (lrclibSearchUserTouchedRef.current !== trackKey && String(lrclibSearchQuery || '').trim()) {
+				setLrclibSearchQuery('');
+				lrclibSearchLastTrackKeyRef.current = trackKey;
+				return;
+			}
+		}
+		lrclibSearchLastTrackKeyRef.current = trackKey;
+		if (lrclibSearchUserTouchedRef.current === trackKey) return;
+		if (lrclibSearchAutoPrefillRef.current.trackKey === trackKey) {
+			// If our prefill is showing but sync/lyrics have since arrived,
+			// withdraw it so tracks with sync keep an empty box.
+			const hasSyncLines = Array.isArray(syncData?.lines) && syncData.lines.length > 0;
+			const hasLyrics = String(lyricsText || '').trim().length > 0;
+			const hasCandidates = Array.isArray(lrclibCandidates) && lrclibCandidates.length > 0;
+			if ((hasSyncLines || hasLyrics || hasCandidates)
+				&& String(lrclibSearchQuery || '') === String(lrclibSearchAutoPrefillRef.current.appliedQuery || '')) {
+				lrclibSearchAutoPrefillRef.current = { trackKey, appliedQuery: '' };
+				setLrclibSearchQuery('');
+			}
+			return;
+		}
+		if (String(lrclibSearchQuery || '').trim()) return;
+		const hasSyncLines = Array.isArray(syncData?.lines) && syncData.lines.length > 0;
+		const hasLyrics = String(lyricsText || '').trim().length > 0;
+		const hasCandidates = Array.isArray(lrclibCandidates) && lrclibCandidates.length > 0;
+		if (hasSyncLines || hasLyrics || hasCandidates) return;
+		const fallbackQuery = `${trackName} ${artistName}`.trim();
+		if (!fallbackQuery) return;
+		lrclibSearchAutoPrefillRef.current = { trackKey, appliedQuery: fallbackQuery };
+		setLrclibSearchQuery(fallbackQuery);
+	}, [artistName, isLoading, isSearchingLrclib, lrclibCandidates, lrclibSearchQuery, lyricsText, syncData, trackId, trackIsrc, trackName, trackUri]);
 
 	const playbackTimeline = useMemo(() => {
 		const linesByStart = new Map((syncData?.lines || []).map(line => [line.start, line]));
@@ -11674,8 +11721,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				type: 'text',
 				style: s.lrclibIdInput,
 				value: lrclibSearchQuery,
-				placeholder: I18n.t('syncCreator.lrclibSearchQueryPlaceholder') || `${trackName} ${artistName}`.trim(),
-				onChange: (e) => setLrclibSearchQuery(e.target.value),
+				placeholder: I18n.t('syncCreator.lrclibSearchQueryPlaceholder') || 'Song title or artist',
+				onChange: (e) => {
+					lrclibSearchUserTouchedRef.current = trackId || trackUri || trackIsrc || `${trackName}::${artistName}`;
+					setLrclibSearchQuery(e.target.value);
+				},
 				onKeyDown: (e) => {
 					if (e.key === 'Enter') searchLrclibByQuery();
 				},

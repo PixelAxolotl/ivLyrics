@@ -66,7 +66,8 @@
         TMI: 'tmi',                // 기존 Addon 설정 호환용 별칭
         LYRICS_STUDY: 'lyricsStudy', // 가사 기반 학습 모드 생성
         CHARACTER_PRONUNCIATION: 'characterPronunciation', // 문자별 발음
-        CULTURAL_ANNOTATIONS: 'culturalAnnotations' // 번역만으로 전달되지 않는 문화적 배경 설명
+        CULTURAL_ANNOTATIONS: 'culturalAnnotations', // 번역만으로 전달되지 않는 문화적 배경 설명
+        LYRICS_ALIGNMENT: 'lyricsAlignment' // 원문과 발음/번역의 의미 구간 대응
     };
 
     const TRANSLATION_STYLES = Object.freeze({
@@ -1515,6 +1516,25 @@ Input lines:
 ${JSON.stringify(payload)}`;
     }
 
+    function buildLyricsAlignmentPrompt({ sourceLang = 'auto', targetLang = 'auto', lines = [] } = {}) {
+        const payload = (Array.isArray(lines) ? lines : []).map(line => ({
+            id: String(line?.id ?? ''), kind: String(line?.kind ?? 'translation'),
+            sourceText: String(line?.sourceText ?? ''), targetText: String(line?.targetText ?? ''),
+            sourceLang: String(line?.sourceLang ?? sourceLang ?? 'auto'), targetLang: String(line?.targetLang ?? targetLang ?? 'auto'),
+            sourceUnits: Array.isArray(line?.sourceUnits) ? line.sourceUnits : [],
+            targetUnits: Array.isArray(line?.targetUnits) ? line.targetUnits : [],
+        }));
+        return `You align meaning between an original lyric and an existing pronunciation or translation. Do not translate, rewrite, reorder, or normalize either text.
+
+Source language: ${sourceLang || 'auto'}
+Target language: ${targetLang || 'auto'}
+
+For every input line return one JSON object in {"lines":[{"id":"...","groups":[{"source":[[start,end]],"target":[[start,end]]}]}]}. Ranges are zero-based, half-open grapheme-unit indexes. Use the supplied unit arrays exactly; they are already segmented for display. A group may contain multiple ranges on either side, including discontinuous or non-monotonic source ranges when that is the actual meaning. Keep target ranges in their existing reading order. For pronunciation, group a word or compound reading with its source characters; never split a compound evenly just because the glyph count differs. For translation, connect semantic phrases even when English, Korean, and Japanese word order differs. Do not invent timestamps. If a line is uncertain, return groups: []. Do not include explanations or markdown.
+
+Input lines:
+${JSON.stringify(payload)}`;
+    }
+
     function buildCulturalAnnotationsPrompt({ sourceLang = 'auto', targetLang = 'ko', lines = [] } = {}) {
         const targetLangInfo = getProviderPromptLanguageInfo(targetLang || 'ko');
         const payload = (Array.isArray(lines) ? lines : [])
@@ -1892,6 +1912,10 @@ ${normalizedText}
             return buildCulturalAnnotationsPrompt(params);
         }
 
+        buildLyricsAlignmentPrompt(params = {}) {
+            return buildLyricsAlignmentPrompt(params);
+        }
+
         // ============================================
         // EventEmitter Methods
         // ============================================
@@ -2096,7 +2120,7 @@ ${normalizedText}
             }
 
             // 기능 메서드 중 최소 하나는 있어야 함
-            const featureMethods = ['translateLyrics', 'translateMetadata', 'generateResearch', 'generateTMI', 'generateLyricsStudy', 'generateCharacterPronunciation', 'generateCulturalAnnotations'];
+            const featureMethods = ['translateLyrics', 'translateMetadata', 'generateResearch', 'generateTMI', 'generateLyricsStudy', 'generateCharacterPronunciation', 'generateCulturalAnnotations', 'generateLyricsAlignment'];
             const hasAnyFeature = featureMethods.some(m => typeof addon[m] === 'function');
             if (!hasAnyFeature) {
                 errors.push(`Must implement at least one of: ${featureMethods.join(', ')}`);
@@ -3217,6 +3241,23 @@ ${normalizedText}
          * @param {Object} params - { trackId, title, artist, targetLang, sourceLang, lines, provider, onProviderLoading }
          * @returns {Promise<{annotations: Array<{lineIndex: number, expression: string, note: string}>, provider: string|null}>}
          */
+        /** Generate semantic relations only; translation providers are never treated as aligners. */
+        async generateLyricsAlignment(params = {}) {
+            let providers = this.getEnabledProvidersFor('lyricsAlignment')
+                .filter(addon => typeof addon.generateLyricsAlignment === 'function');
+            if (params.provider) providers = providers.filter(addon => addon.id === params.provider);
+            if (!providers.length) throw new Error(this._t('aiProviders.noAlignmentProviders', 'An AI provider that supports semantic alignment is required.'));
+            this.emit('ai:request:start', { type: 'lyricsAlignment', providers: providers.map(provider => provider.id), params: { ...params, lines: '[...]' } });
+            return this._runProviderFallback(providers, 'generateLyricsAlignment', 'lyricsAlignment', async addon => {
+                const result = await this._callProvider(addon, 'generateLyricsAlignment', {
+                    ...params,
+                    lyricsAlignmentPrompt: params.lyricsAlignmentPrompt || this.buildLyricsAlignmentPrompt({ ...params, providerId: addon.id }),
+                });
+                this.emit('ai:request:success', { type: 'lyricsAlignment', provider: addon.id });
+                return result;
+            });
+        }
+
         async generateCulturalAnnotations(params) {
             let providers = this.getEnabledProvidersFor('culturalAnnotations');
             if (params?.provider) {

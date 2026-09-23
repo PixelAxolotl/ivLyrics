@@ -1632,6 +1632,7 @@ const PRIVATE_OR_TRANSIENT_STORAGE_KEYS = new Set([
 const CLOUD_SYNC_EXCLUDED_STORAGE_KEYS = new Set([
   TRACK_SYNC_OFFSETS_STORAGE_KEY,
   `${APP_NAME}:settings-presets`,
+  `${APP_NAME}:ai:addon:chatgpt:fallback-providers`,
 ]);
 const CLOUD_SYNC_FORBIDDEN_KEY_PATTERN = /(apikey|token|password|secret|credential|clientid|userhash)/i;
 const CLOUD_SYNC_SAFE_TOKEN_LIMIT_PATTERN = /max(?:output)?tokens?/gi;
@@ -2717,6 +2718,14 @@ const CONFIG = {
     translate: StorageManager.get("ivLyrics:visual:translate", false),
     "furigana-enabled": StorageManager.get(
       "ivLyrics:visual:furigana-enabled",
+      false
+    ),
+    "phonetic-semantic-highlight": StorageManager.get(
+      "ivLyrics:visual:phonetic-semantic-highlight",
+      false
+    ),
+    "translation-semantic-highlight": StorageManager.get(
+      "ivLyrics:visual:translation-semantic-highlight",
       false
     ),
     "ja-detect-threshold":

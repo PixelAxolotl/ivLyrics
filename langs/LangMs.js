@@ -1,5 +1,13 @@
 // Malaysian language file for ivLyrics
 window.LANG_MS = {
+  "semanticHighlight": {
+    "title": "Serlahkan mengikut makna",
+    "description": "Menyerlahkan bahagian sebutan dan terjemahan yang sepadan seiring dengan lirik asal, tanpa mengubah susunan perkataan.",
+    "unavailable": "Aktifkan penyedia AI yang menyokong analisis semantik. Bing atau Terjemahan Google sahaja tidak dapat menyediakan ciri ini.",
+    "available": "Analisis terjemahan semasa menggunakan AI. Terjemahan daripada Bing dan Google turut disokong.",
+    "phonetic": "Penyerlahan semantik sebutan",
+    "translation": "Penyerlahan semantik terjemahan"
+  },
   "meta": {
     "language": "Bahasa Melayu",
     "code": "ms",
@@ -470,7 +478,44 @@ window.LANG_MS = {
       "noEnabledProviders": "Tiada penyedia AI yang aktif. Sila aktifkan sekurang-kurangnya satu penyedia dalam tetapan.",
       "allProvidersFailed": "Semua penyedia AI gagal memproses permintaan.",
       "enabledCapabilities": "Fungsi Diaktifkan",
-      "capabilitiesDesc": "Pilih fungsi yang akan dikendalikan oleh penyedia ini"
+      "capabilitiesDesc": "Pilih fungsi yang akan dikendalikan oleh penyedia ini",
+      "openaiConnections": "Penyedia tambahan yang serasi dengan OpenAI",
+      "openaiConnectionsDesc": "Jika sambungan utama gagal, penyedia yang diaktifkan di bawah akan dicuba mengikut turutan.",
+      "addOpenaiConnection": "Tambah penyedia tersuai",
+      "connectionName": "Nama penyedia",
+      "removeConnection": "Alih keluar penyedia",
+      "testThisConnection": "Uji penyedia ini",
+      "connectionSuccess": "Sambungan berjaya.",
+      "saveConnection": "Simpan",
+      "sonarModelsFallback": "Sonar tiada API senarai model. Senarai terbina dalam bagi model yang disokong dipaparkan.",
+      "pollinationsAllModels": "Akses kepada semua model akan diminta. Pilih model selepas disambungkan.",
+      "model": "Model",
+      "modelId": "Model ID",
+      "baseUrl": "Pangkalan URL",
+      "apiKey": "API Kunci",
+      "apiKeyDesc": "Menyokong satu kunci, senarai baris baharu atau tatasusunan JSON. Hanya disimpan pada peranti ini.",
+      "refreshModels": "Muat Semula",
+      "selectModel": "Pilih daripada senarai",
+      "loadingModels": "Memuatkan model…",
+      "modelsUnavailable": "Senarai model tidak dapat dimuatkan. Anda boleh memasukkan ID model secara manual.",
+      "testingConnection": "Uji sambungan…",
+      "testConnection": "Uji sambungan",
+      "getApiKey": "Dapatkan Alat",
+      "noModels": "Tiada model tersedia",
+      "pollinationsAccount": "Akaun Pollinations",
+      "pollinationsConnect": "Log masuk ke Pollinations",
+      "pollinationsReconnect": "Sambung semula",
+      "pollinationsWaiting": "Menunggu log masuk",
+      "pollinationsOpenLogin": "Buka halaman log masuk",
+      "pollinationsDisconnect": "Putuskan sambungan",
+      "pollinationsDisconnected": "Akaun Pollinations · Dinyahaktifkan",
+      "pollinationsRequesting": "Log masuk ke Pollinations…",
+      "pollinationsConnected": "Akaun Pollinations · Diaktifkan",
+      "pollinationsKeyConfigured": "Akaun Pollinations · Dikonfigurasikan",
+      "pollinationsKeyStatus": "Akaun Pollinations · Diaktifkan: %s",
+      "pollinationsDescription": "Menyokong kunci API manual dan token log masuk akaun. Token log masuk digunakan dahulu jika tersedia.",
+      "pollinationsInvalid": "Kunci API tidak sah. Sambung semula atau masukkan kunci baharu.",
+      "pollinationsExpires": "Tamat tempoh dalam %d hari"
     },
     "lyricsProviders": {
       "title": "Penyedia Lirik",
@@ -1950,16 +1995,6 @@ window.LANG_MS = {
     "translationFailed": "Terjemahan gagal",
     "requestTimeout": "Permintaan terjemahan telah tamat masa. Sila cuba lagi.",
     "failedPrefix": "Gagal menterjemah"
-  },
-  "utils": {
-    "allUrlsFailed": "Gagal mengambil maklumat versi dari semua URL",
-    "invalidVersionFormat": "Format versi tidak sah",
-    "unknownError": "Ralat tidak diketahui",
-    "requestTimeout": "Permintaan tamat masa",
-    "networkError": "Sambungan rangkaian gagal",
-    "securityRestriction": "Sekatan disebabkan oleh dasar keselamatan pelayar",
-    "serverError": "Ralat respons pelayan",
-    "terminalMac": "Terminal"
   },
   "utils": {
     "allUrlsFailed": "Gagal mengambil maklumat versi dari semua URL",

@@ -2543,15 +2543,91 @@ const renderAnnotatedLyricHTML = (text, annotations = []) => {
 	return html;
 };
 
+// Meaning-linked highlighting is an auxiliary layer. It never changes the
+// target text or its order; it only paints target graphemes whose source range
+// is currently singing. Without detailed source timings, the ordinary line is
+// kept intact so unsynchronised providers do not acquire invented timing.
+const MeaningLinkedSubline = ({ className, text, line, kind, position = 0, singleLineScroll = false, onContextMenu = null, culturalAnnotations = [], key = null, inline = false }) => {
+	const enabled = Boolean(window.LyricsAlignment?.isEnabled?.(kind));
+	const source = useMemo(() => {
+		if (!enabled || !line || typeof text !== "string" || culturalAnnotations.length) return null;
+		const syllables = Array.isArray(line.syllables) ? line.syllables.filter(item => item && String(item.text || "")) : [];
+		if (!syllables.length) return null;
+		const sourceUnits = [];
+		const sourceTimes = [];
+		syllables.forEach(syllable => {
+			const units = window.LyricsAlignment?.graphemes?.(String(syllable.text || "")) || Array.from(String(syllable.text || ""));
+			const start = Number(syllable.startTime ?? syllable.start ?? line.startTime);
+			const end = Number(syllable.endTime ?? syllable.end ?? start);
+			if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+			units.forEach((unit, index) => {
+				sourceUnits.push(unit);
+				sourceTimes.push({ start: start + ((end - start) * index / units.length), end: start + ((end - start) * (index + 1) / units.length) });
+			});
+		});
+		const sourceText = sourceUnits.join("");
+		if (!sourceText || !sourceTimes.length) return null;
+		return { id: String(line.id ?? line.lineIndex ?? "line"), kind, sourceText, sourceUnits, sourceTimes, targetText: text, targetUnits: window.LyricsAlignment?.graphemes?.(text) || Array.from(text), sourceLang: line.language || line.lang || "", targetLang: "" };
+	}, [enabled, line, text, kind, culturalAnnotations.length]);
+	const [alignment, setAlignment] = react.useState(null);
+	useEffect(() => {
+		let alive = true;
+		setAlignment(null);
+		if (!source || !window.LyricsAlignment?.request) return () => { alive = false; };
+		window.LyricsAlignment.request(source).then(rows => {
+			if (alive) setAlignment(Array.isArray(rows) ? rows[0] : null);
+		}).catch(() => { if (alive) setAlignment(null); });
+		return () => { alive = false; };
+	}, [source]);
+	const targetUnits = source?.targetUnits || [];
+	const activeTargets = useMemo(() => {
+		const activeSource = new Set();
+		(source?.sourceTimes || []).forEach((time, index) => {
+			if (Number.isFinite(time.start) && Number.isFinite(time.end) && position >= time.start && position < time.end) activeSource.add(index);
+		});
+		const result = new Set();
+		(alignment?.groups || []).forEach(group => {
+			const sourceActive = (group.source || []).some(([start, end]) => {
+				for (let index = start; index < end; index += 1) if (activeSource.has(index)) return true;
+				return false;
+			});
+			if (sourceActive) (group.target || []).forEach(([start, end]) => { for (let index = start; index < end; index += 1) result.add(index); });
+		});
+		return result;
+	}, [alignment, source, position]);
+	const props = { className: `${className}${singleLineScroll ? " ivlyrics-vinyl-lyric-scroll-viewport" : ""}`, style: { "--sub-lyric-color": CONFIG.visual["inactive-color"] } };
+	if (key) props.key = key;
+	if (onContextMenu) props.onContextMenu = onContextMenu;
+	if (!source || !targetUnits.length || !alignment || alignment.status !== "ready") {
+		const html = renderAnnotatedLyricHTML(text, culturalAnnotations);
+		if (inline) return react.createElement("span", { ...props, dangerouslySetInnerHTML: { __html: html } });
+		if (!singleLineScroll) return react.createElement("p", { ...props, dangerouslySetInnerHTML: { __html: html } });
+		return react.createElement("p", props, react.createElement("span", { className: "ivlyrics-vinyl-lyric-scroll-content", dangerouslySetInnerHTML: { __html: html } }));
+	}
+	const children = targetUnits.map((unit, index) => react.createElement("span", { key: `${index}-${unit}`, className: `ivlyrics-semantic-unit${activeTargets.has(index) ? " ivlyrics-semantic-unit-active" : ""}` }, unit));
+	const content = react.createElement("span", { className: "ivlyrics-semantic-text" }, children);
+	if (inline) return react.createElement("span", props, content);
+	return react.createElement("p", props, singleLineScroll ? react.createElement("span", { className: "ivlyrics-vinyl-lyric-scroll-content" }, content) : content);
+};
+
+const renderMeaningLinkedInline = (text, line, kind, position) =>
+	text && typeof window !== "undefined" && window.LyricsAlignment?.isEnabled?.(kind)
+		? react.createElement(MeaningLinkedSubline, { className: `lyrics-lyricsContainer-LyricsLine-${kind}`, text, line, kind, position, inline: true })
+		: text;
+
 const renderLyricSubLine = (
 	className,
 	text,
 	onContextMenu = null,
 	singleLineScroll = false,
 	culturalAnnotations = [],
-	key = null
+	key = null,
+	semanticOptions = null
 ) => {
 	if (!text) return null;
+	if (semanticOptions?.line && semanticOptions.kind && typeof window !== "undefined" && window.LyricsAlignment?.isEnabled?.(semanticOptions.kind)) {
+		return react.createElement(MeaningLinkedSubline, { className, text, ...semanticOptions, onContextMenu, singleLineScroll, culturalAnnotations, key });
+	}
 	const props = {
 		className: `${className}${singleLineScroll ? " ivlyrics-vinyl-lyric-scroll-viewport" : ""}`,
 		style: { "--sub-lyric-color": CONFIG.visual["inactive-color"] },
@@ -5519,12 +5595,14 @@ const LyricsLineBlock = react.memo(({
 		!shouldRenderInterlude && !hasParallelKaraokeRows && renderLyricSubLine(
 			"lyrics-lyricsContainer-LyricsLine-phonetic", subText,
 			subCopyText ? createCopyHandler(subCopyText, subCopySuccessKey, subCopyFailureKey) : null,
-			singleLineScroll, culturalAnnotationsByTarget.sub
+			singleLineScroll, culturalAnnotationsByTarget.sub, null,
+			{ line: mainLine, kind: "phonetic", position }
 		),
 		!shouldRenderInterlude && !hasParallelKaraokeRows && renderLyricSubLine(
 			"lyrics-lyricsContainer-LyricsLine-translation", subText2,
 			subText2CopyText ? createCopyHandler(subText2CopyText, subText2CopySuccessKey, subText2CopyFailureKey) : null,
-			singleLineScroll, culturalAnnotationsByTarget.sub2
+			singleLineScroll, culturalAnnotationsByTarget.sub2, null,
+			{ line: mainLine, kind: "translation", position }
 		),
 		!shouldRenderInterlude && displayedCulturalAnnotations.map((annotation) => {
 			const noteText = `${annotation.marker}. ${annotation.note}`;
@@ -5537,7 +5615,8 @@ const LyricsLineBlock = react.memo(({
 	], [shouldRenderInterlude, hasParallelKaraokeRows, subText, subText2,
 		subCopyText, subCopySuccessKey, subCopyFailureKey, subText2CopyText,
 		subText2CopySuccessKey, subText2CopyFailureKey, singleLineScroll,
-		culturalAnnotationsByTarget, displayedCulturalAnnotations, settingsRevision]);
+		culturalAnnotationsByTarget, displayedCulturalAnnotations, settingsRevision,
+		mainLine, position]);
 
 	return react.createElement(
 		"div",
@@ -7667,12 +7746,12 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 				rowPhonetic && react.createElement(
 					"span",
 					{ className: "lyrics-lyricsContainer-LyricsLine-phonetic lyrics-karaoke-part-subline" },
-					rowPhonetic
+					typeof renderMeaningLinkedInline === "function" ? renderMeaningLinkedInline(rowPhonetic, rowLine, "phonetic", getKaraokeVocalRowRenderPosition(rowRenderData, position)) : rowPhonetic
 				),
 				rowTranslation && react.createElement(
 					"span",
 					{ className: "lyrics-lyricsContainer-LyricsLine-translation lyrics-karaoke-part-subline" },
-					rowTranslation
+					typeof renderMeaningLinkedInline === "function" ? renderMeaningLinkedInline(rowTranslation, rowLine, "translation", getKaraokeVocalRowRenderPosition(rowRenderData, position)) : rowTranslation
 				)
 			);
 		});
@@ -7681,7 +7760,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 			stackChildren.push(react.createElement(
 				"span",
 				{ key: "stack-phonetic", className: "lyrics-lyricsContainer-LyricsLine-phonetic lyrics-karaoke-part-subline lyrics-karaoke-stack-subline" },
-				stackPhonetic
+				typeof renderMeaningLinkedInline === "function" ? renderMeaningLinkedInline(stackPhonetic, line, "phonetic", position) : stackPhonetic
 			));
 		}
 
@@ -7689,7 +7768,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 			stackChildren.push(react.createElement(
 				"span",
 				{ key: "stack-translation", className: "lyrics-lyricsContainer-LyricsLine-translation lyrics-karaoke-part-subline lyrics-karaoke-stack-subline" },
-				stackTranslation
+				typeof renderMeaningLinkedInline === "function" ? renderMeaningLinkedInline(stackTranslation, line, "translation", position) : stackTranslation
 			));
 		}
 

@@ -33,7 +33,8 @@
             researchWebSearch: true,
             lyricsStudy: true,  // 학습 모드 생성
             characterPronunciation: true,
-            culturalAnnotations: true
+            culturalAnnotations: true,
+            lyricsAlignment: true
         },
         // 하드코딩된 모델 목록 (fallback용)
         // models: [
@@ -1018,6 +1019,17 @@
             const prompt = params.culturalAnnotationsPrompt;
             if (!prompt) {
                 throw new Error('[Google Gemini] Central cultural annotations prompt is unavailable.');
+            }
+            return await callGeminiAPI(prompt);
+        },
+
+        async generateLyricsAlignment(params) {
+            if (!Array.isArray(params?.lines) || params.lines.length === 0) {
+                throw new Error('No lyric alignment lines provided');
+            }
+            const prompt = params.lyricsAlignmentPrompt;
+            if (!prompt) {
+                throw new Error('Central lyrics alignment prompt is unavailable.');
             }
             return await callGeminiAPI(prompt);
         }

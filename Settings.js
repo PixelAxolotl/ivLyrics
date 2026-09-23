@@ -8673,7 +8673,7 @@ const ConfigModal = ({
       {
         id: "auto",
         label: getSettingsText("settingsUi.theme.autoShort", "Auto"),
-        title: `${getSettingsText("settingsUi.theme.auto", "Use system theme")} (${getSettingsText("settingsUi.theme.detected", "Detected")}: ${systemUiTheme === "light" ? getSettingsText("settingsUi.theme.lightShort", "Light") : getSettingsText("settingsUi.theme.darkShort", "Dark")})`,
+        title: getSettingsText("settingsUi.theme.auto", "Use system theme"),
         icon: '<rect x="3" y="4" width="18" height="13" rx="2"></rect><path d="M8 21h8M12 17v4"></path>',
       },
     ];

@@ -3916,7 +3916,11 @@ const Prefetcher = {
       const prefetch = window.ivLyricsPrefetchWordSupplements;
       if (typeof prefetch !== "function") return null;
       const detected = LyricsService.detectLanguage(karaoke);
-      await prefetch(karaoke, { sourceLang: detected });
+      // Target track must be explicit: supplements cached while prefetching B
+      // must not be keyed by whichever track (A) is still playing.
+      const uri = String(trackInfo?.uri || "");
+      const trackId = Utils.extractTrackId(uri) || (uri.includes(":") ? uri.split(":").pop() : uri);
+      await prefetch(karaoke, { sourceLang: detected, trackId });
       return true;
     } catch (error) {
       console.warn(`[Prefetcher] Word details prefetch failed:`, error?.message || error);

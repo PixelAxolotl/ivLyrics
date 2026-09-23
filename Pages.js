@@ -7740,13 +7740,16 @@ const useKaraokeWordStackSupplements = ({ line, timedChars, timedText, wordTimed
 // timed-char pipeline as KaraokeLine, so warmed memory/persistent caches hit
 // on mount. Vocal-row sublines warm on mount instead (row construction needs
 // live render data). Best effort per line: failures stay silent.
-const prefetchWordSupplementsForLyrics = (karaokeLines, { locale = "auto", sourceLang = "auto" } = {}) => {
+const prefetchWordSupplementsForLyrics = (karaokeLines, { locale = "auto", sourceLang = "auto", trackId = "" } = {}) => {
 	const api = window.ivLyricsWordSupplements;
 	if (!api || !Array.isArray(karaokeLines) || karaokeLines.length === 0) return Promise.resolve(false);
 	if (window.CONFIG?.visual?.["prefetch-word-details-enabled"] === false) return Promise.resolve(false);
 	const lyricsLocale = locale && locale !== "auto"
 		? locale
 		: String(window.Utils?.getDetectedLanguage?.() || "auto");
+	// Render-path callers omit trackId and keep the current-player default;
+	// prefetch passes the target track so its warm caches hit on mount.
+	const supplementOptions = trackId ? { trackId: String(trackId) } : {};
 	const jobs = [];
 	for (const line of karaokeLines) {
 		try {
@@ -7765,9 +7768,9 @@ const prefetchWordSupplementsForLyrics = (karaokeLines, { locale = "auto", sourc
 			if (!api.isSuitableSourceLanguage(lang)) continue;
 			const readingMode = api.resolveReadingMode(lang);
 			if (readingMode) {
-				jobs.push(api.getWordReadings(units, lang, readingMode, timedText).catch(() => []));
+				jobs.push(api.getWordReadings(units, lang, readingMode, timedText, supplementOptions).catch(() => []));
 			}
-			jobs.push(api.getWordGlosses(units, timedText, lang).catch(() => []));
+			jobs.push(api.getWordGlosses(units, timedText, lang, supplementOptions).catch(() => []));
 		} catch { /* per-line best effort */ }
 	}
 	if (!jobs.length) return Promise.resolve(false);

@@ -18,6 +18,27 @@
 
 	const readingCache = new Map();
 	const glossCache = new Map();
+	// In-flight promises keyed like the memory caches. Caches only store
+	// completed results, so without sharing, the supplement retry effect
+	// (and a prefetch racing a line mount) would enqueue the same words a
+	// second time while the original batch promise is still pending.
+	const pendingReadings = new Map();
+	const pendingGlosses = new Map();
+	// Share one promise per cache key while a request is in flight: callers
+	// arriving before settlement join it instead of enqueuing a duplicate
+	// batch (empty results are also the loading state, so the retry effect
+	// cannot tell them apart on its own). The token guard only removes our
+	// own entry, so clearCaches() emptying the map cannot delete a newer
+	// request's bookkeeping — a settled failure always frees the key again.
+	const sharePending = (map, cacheKey, start) => {
+		const existing = map.get(cacheKey);
+		if (existing) return existing;
+		const shared = start().finally(() => {
+			if (map.get(cacheKey) === shared) map.delete(cacheKey);
+		});
+		map.set(cacheKey, shared);
+		return shared;
+	};
 
 	// Circuit breaker: the word backend is one AI gateway for every line, so
 	// a few consecutive failures pause all word requests instead of firing
@@ -60,9 +81,12 @@
 		}
 		return (hash >>> 0).toString(36);
 	};
-	const persistentGet = async (kind, { targetLang, sourceLang, words, extra = "" }) => {
+	// Every caller resolves its track identity once, at entry, and passes it
+	// through: prefetching track B while A plays must not key caches by A,
+	// and a cache write that lands after playback changed must still use the
+	// requesting track's ID.
+	const persistentGet = async (kind, { targetLang, sourceLang, words, extra = "", trackId = "" }) => {
 		try {
-			const trackId = getTrackId();
 			if (!trackId) return null;
 			const service = window.LyricsService;
 			if (typeof service?.getWordSupplements !== "function") return null;
@@ -74,9 +98,8 @@
 		} catch { /* cache miss behaves like absence */ }
 		return null;
 	};
-	const persistentSet = (kind, { targetLang, sourceLang, words, extra = "", values }) => {
+	const persistentSet = (kind, { targetLang, sourceLang, words, extra = "", values, trackId = "" }) => {
 		try {
-			const trackId = getTrackId();
 			if (!trackId || !Array.isArray(values) || values.length !== words.length) return;
 			const service = window.LyricsService;
 			if (typeof service?.cacheWordSupplements !== "function") return;
@@ -403,8 +426,11 @@
 	const isAiReadingMode = (mode) =>
 		String(mode ?? "").trim().toLowerCase().startsWith("gemini");
 
-	const getWordReadings = async (units, language, mode, lineText = "") => {
+	const getWordReadings = async (units, language, mode, lineText = "", options = {}) => {
 		if (!units.length || !language || !mode) return units.map(() => "");
+		// Synchronous, before any await: cache reads/writes below must keep
+		// this track's identity even if playback changes mid-flight.
+		const trackId = resolveTrackId(options);
 		// AI pronunciation modes (e.g. gemini_romaji) have no local converter:
 		// request per-word pronunciation from the AI provider instead.
 		if (isAiReadingMode(mode)) {
@@ -427,52 +453,56 @@
 				return skipped;
 			}
 			const wordList = active;
-			const persisted = await persistentGet("reading", {
-				targetLang: notation,
-				sourceLang: language,
-				words: wordList,
-				extra: `${mode}${zhToneCacheFlag(language)}`,
-			});
-			if (persisted) {
-				const restored = reinsertSkipped(units.length, activeIndexes, persisted.values);
-				readingCache.set(cacheKey, restored);
-				return restored;
-			}
-			const batchKey = `pron::${getTrackId()}::${normalizeLanguage(language)}::${getGlossTargetLanguage()}::${notation}`;
-			const slice = await enqueueWordBatch({
-				kind: "pronunciation",
-				batchKey,
-				words: wordList,
-				lineText: String(lineText || ""),
-				run: (allWords, allLineTexts) => manager.generateWordPronunciation({
-					words: allWords,
-					lineText: allLineTexts.join("\n"),
-					targetLang: getGlossTargetLanguage(),
+			return sharePending(pendingReadings, cacheKey, async () => {
+				const persisted = await persistentGet("reading", {
+					targetLang: notation,
 					sourceLang: language,
-					notation: getPronunciationNotation(),
-				}),
+					words: wordList,
+					extra: `${mode}${zhToneCacheFlag(language)}`,
+					trackId,
+				});
+				if (persisted) {
+					const restored = reinsertSkipped(units.length, activeIndexes, persisted.values);
+					readingCache.set(cacheKey, restored);
+					return restored;
+				}
+				const batchKey = `pron::${trackId}::${normalizeLanguage(language)}::${getGlossTargetLanguage()}::${notation}`;
+				const slice = await enqueueWordBatch({
+					kind: "pronunciation",
+					batchKey,
+					words: wordList,
+					lineText: String(lineText || ""),
+					run: (allWords, allLineTexts) => manager.generateWordPronunciation({
+						words: allWords,
+						lineText: allLineTexts.join("\n"),
+						targetLang: getGlossTargetLanguage(),
+						sourceLang: language,
+						notation: getPronunciationNotation(),
+					}),
+				});
+				if (!slice) return units.map(() => "");
+				const activeReadings = active.map((surface, activePosition) => {
+					const reading = String(slice[activePosition] ?? "").trim();
+					return reading && !sameText(reading, surface) ? reading : "";
+				});
+				const normalized = reinsertSkipped(units.length, activeIndexes, activeReadings);
+				readingCache.set(cacheKey, normalized);
+				if (readingCache.size > 400) {
+					const firstKey = readingCache.keys().next().value;
+					readingCache.delete(firstKey);
+				}
+				// Persist the active subset (same shape as the lookup key);
+				// the full-width array is only the render shape.
+				persistentSet("reading", {
+					targetLang: getPronunciationNotation(),
+					sourceLang: language,
+					words: wordList,
+					extra: `${mode}${zhToneCacheFlag(language)}`,
+					values: activeReadings,
+					trackId,
+				});
+				return normalized;
 			});
-			if (!slice) return units.map(() => "");
-			const activeReadings = active.map((surface, activePosition) => {
-				const reading = String(slice[activePosition] ?? "").trim();
-				return reading && !sameText(reading, surface) ? reading : "";
-			});
-			const normalized = reinsertSkipped(units.length, activeIndexes, activeReadings);
-			readingCache.set(cacheKey, normalized);
-			if (readingCache.size > 400) {
-				const firstKey = readingCache.keys().next().value;
-				readingCache.delete(firstKey);
-			}
-			// Persist the active subset (same shape as the lookup key);
-			// the full-width array is only the render shape.
-			persistentSet("reading", {
-				targetLang: getPronunciationNotation(),
-				sourceLang: language,
-				words: wordList,
-				extra: `${mode}${zhToneCacheFlag(language)}`,
-				values: activeReadings,
-			});
-			return normalized;
 		}
 		const helper = window.ivLyricsTranslationModes;
 		if (!helper?.convertTraditional) return units.map(() => "");
@@ -490,47 +520,51 @@
 			return skippedLocal;
 		}
 		const localWords = localPartition.active;
-		const persistedLocal = await persistentGet("reading", {
-			targetLang: localNotation,
-			sourceLang: language,
-			words: localWords,
-			extra: mode,
-		});
-		if (persistedLocal) {
-			const restoredLocal = reinsertSkipped(units.length, localPartition.activeIndexes, persistedLocal.values);
-			readingCache.set(cacheKey, restoredLocal);
-			return restoredLocal;
-		}
-		try {
-			const converted = await helper.convertTraditional({
-				language,
-				mode,
-				texts: localWords,
-			});
-			const activeReadings = localWords.map((surface, activePosition) => {
-				const reading = String(converted?.[activePosition] ?? "").trim();
-				// A no-op conversion (e.g. kana in -> kana out unchanged for a
-				// symbol) carries no information; hide it to reduce noise.
-				return reading && !sameText(reading, surface) ? reading : "";
-			});
-			const readings = reinsertSkipped(units.length, localPartition.activeIndexes, activeReadings);
-			readingCache.set(cacheKey, readings);
-			if (readingCache.size > 400) {
-				const firstKey = readingCache.keys().next().value;
-				readingCache.delete(firstKey);
-			}
-			persistentSet("reading", {
-				targetLang: getPronunciationNotation(),
+		return sharePending(pendingReadings, cacheKey, async () => {
+			const persistedLocal = await persistentGet("reading", {
+				targetLang: localNotation,
 				sourceLang: language,
 				words: localWords,
 				extra: mode,
-				values: activeReadings,
+				trackId,
 			});
-			return readings;
-		} catch (error) {
-			console.warn("[ivLyrics] Word reading conversion failed:", error?.message || error);
-			return units.map(() => "");
-		}
+			if (persistedLocal) {
+				const restoredLocal = reinsertSkipped(units.length, localPartition.activeIndexes, persistedLocal.values);
+				readingCache.set(cacheKey, restoredLocal);
+				return restoredLocal;
+			}
+			try {
+				const converted = await helper.convertTraditional({
+					language,
+					mode,
+					texts: localWords,
+				});
+				const activeReadings = localWords.map((surface, activePosition) => {
+					const reading = String(converted?.[activePosition] ?? "").trim();
+					// A no-op conversion (e.g. kana in -> kana out unchanged for a
+					// symbol) carries no information; hide it to reduce noise.
+					return reading && !sameText(reading, surface) ? reading : "";
+				});
+				const readings = reinsertSkipped(units.length, localPartition.activeIndexes, activeReadings);
+				readingCache.set(cacheKey, readings);
+				if (readingCache.size > 400) {
+					const firstKey = readingCache.keys().next().value;
+					readingCache.delete(firstKey);
+				}
+				persistentSet("reading", {
+					targetLang: getPronunciationNotation(),
+					sourceLang: language,
+					words: localWords,
+					extra: mode,
+					values: activeReadings,
+					trackId,
+				});
+				return readings;
+			} catch (error) {
+				console.warn("[ivLyrics] Word reading conversion failed:", error?.message || error);
+				return units.map(() => "");
+			}
+		});
 	};
 
 	const getTrackId = () => {
@@ -542,8 +576,21 @@
 		}
 	};
 
-	const getWordGlosses = async (units, lineText, sourceLang) => {
+	// Explicit target wins (prefetch knows which track it is warming);
+	// otherwise fall back to the currently playing track (render path).
+	const resolveTrackId = (options) => {
+		const explicit = options?.trackId;
+		if (explicit !== undefined && explicit !== null && String(explicit).trim() !== "") {
+			return String(explicit).trim();
+		}
+		return getTrackId();
+	};
+
+	const getWordGlosses = async (units, lineText, sourceLang, options = {}) => {
 		const empty = units.map(() => "");
+		// Synchronous, before any await: gloss cache keys, batch keys and
+		// persistent writes must all agree on the requesting track.
+		const trackId = resolveTrackId(options);
 		const resolvedSourceLang = sourceLang || getSourceLanguage();
 		if (!units.length || !isGlossModeActive(resolvedSourceLang)) return empty;
 		const manager = window.AIAddonManager;
@@ -551,7 +598,7 @@
 		if (isAiCoolingDown()) return empty;
 		const targetLang = getGlossTargetLanguage();
 		const sourceLangKey = resolvedSourceLang;
-		const cacheKey = `${getTrackId()}::${targetLang}::${sourceLangKey}::${units
+		const cacheKey = `${trackId}::${targetLang}::${sourceLangKey}::${units
 			.map((unit) => unit.surface)
 			.join("\u0001")}::${String(lineText || "").slice(0, 120)}`;
 		if (glossCache.has(cacheKey)) return glossCache.get(cacheKey);
@@ -563,49 +610,53 @@
 			return empty;
 		}
 		const wordList = glossPartition.active;
-		const persisted = await persistentGet("gloss", {
-			targetLang,
-			sourceLang: sourceLangKey,
-			words: wordList,
-			extra: String(lineText || ""),
-		});
-		if (persisted) {
-			const restored = reinsertSkipped(units.length, glossPartition.activeIndexes, persisted.values);
-			glossCache.set(cacheKey, restored);
-			return restored;
-		}
-		const batchKey = `gloss::${getTrackId()}::${targetLang}::${sourceLangKey}`;
-		const slice = await enqueueWordBatch({
-			kind: "gloss",
-			batchKey,
-			words: wordList,
-			lineText: String(lineText || ""),
-			run: (allWords, allLineTexts) => manager.generateWordGloss({
-				words: allWords,
-				lineText: allLineTexts.join("\n"),
+		return sharePending(pendingGlosses, cacheKey, async () => {
+			const persisted = await persistentGet("gloss", {
 				targetLang,
 				sourceLang: sourceLangKey,
-			}),
+				words: wordList,
+				extra: String(lineText || ""),
+				trackId,
+			});
+			if (persisted) {
+				const restored = reinsertSkipped(units.length, glossPartition.activeIndexes, persisted.values);
+				glossCache.set(cacheKey, restored);
+				return restored;
+			}
+			const batchKey = `gloss::${trackId}::${targetLang}::${sourceLangKey}`;
+			const slice = await enqueueWordBatch({
+				kind: "gloss",
+				batchKey,
+				words: wordList,
+				lineText: String(lineText || ""),
+				run: (allWords, allLineTexts) => manager.generateWordGloss({
+					words: allWords,
+					lineText: allLineTexts.join("\n"),
+					targetLang,
+					sourceLang: sourceLangKey,
+				}),
+			});
+			if (!slice) return empty;
+			const activeGlosses = wordList.map((surface, activePosition) => {
+				const gloss = String(slice[activePosition] ?? "").trim();
+				return gloss && !sameText(gloss, surface) ? gloss : "";
+			});
+			const normalized = reinsertSkipped(units.length, glossPartition.activeIndexes, activeGlosses);
+			glossCache.set(cacheKey, normalized);
+			if (glossCache.size > 200) {
+				const firstKey = glossCache.keys().next().value;
+				glossCache.delete(firstKey);
+			}
+			persistentSet("gloss", {
+				targetLang,
+				sourceLang: sourceLangKey,
+				words: wordList,
+				extra: String(lineText || ""),
+				values: activeGlosses,
+				trackId,
+			});
+			return normalized;
 		});
-		if (!slice) return empty;
-		const activeGlosses = wordList.map((surface, activePosition) => {
-			const gloss = String(slice[activePosition] ?? "").trim();
-			return gloss && !sameText(gloss, surface) ? gloss : "";
-		});
-		const normalized = reinsertSkipped(units.length, glossPartition.activeIndexes, activeGlosses);
-		glossCache.set(cacheKey, normalized);
-		if (glossCache.size > 200) {
-			const firstKey = glossCache.keys().next().value;
-			glossCache.delete(firstKey);
-		}
-		persistentSet("gloss", {
-			targetLang,
-			sourceLang: sourceLangKey,
-			words: wordList,
-			extra: String(lineText || ""),
-			values: activeGlosses,
-		});
-		return normalized;
 	};
 
 	const api = Object.freeze({
@@ -629,6 +680,8 @@
 		clearCaches: () => {
 			readingCache.clear();
 			glossCache.clear();
+			pendingReadings.clear();
+			pendingGlosses.clear();
 			for (const [batchKey, queue] of batchQueues) {
 				batchQueues.delete(batchKey);
 				if (queue.timer) clearTimeout(queue.timer);

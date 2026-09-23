@@ -270,8 +270,25 @@
 
     function getPrimaryCapabilities() {
         const raw = getSetting('primary-capabilities', null);
-        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
-        return raw;
+        if (raw && typeof raw === 'object' && !Array.isArray(raw)) return raw;
+        // One-time migration: capability choices made under the old
+        // provider-level keys (addon:chatgpt:capability:*) must carry over
+        // to endpoint-level gating, otherwise a previously disabled
+        // capability (e.g. metadata) silently re-enables on upgrade.
+        // Missing keys default to enabled; persist the seed so later edits
+        // happen through this addon's endpoint UI.
+        const seeded = {};
+        for (const capability of ENDPOINT_CAPABILITIES) {
+            let enabled = true;
+            try {
+                enabled = window.AIAddonManager?.isCapabilityEnabled?.(ADDON_INFO.id, capability) ?? true;
+            } catch {
+                enabled = true;
+            }
+            seeded[capability] = enabled === true || enabled === 'true';
+        }
+        setPrimaryCapabilities(seeded);
+        return seeded;
     }
 
     function setPrimaryCapabilities(capabilities) {

@@ -5701,6 +5701,45 @@ const advanceLiveSyncedRenderItems = (frame, position, activeGlobalCharIndex) =>
 	return items;
 };
 
+const usePreparedSyncedLyrics = (lyrics, isKara) => {
+	// Keep display preparation shared with the playback-only fullscreen tracker.
+	const lyricsDisplayMode = CONFIG.visual["translate:display-mode"];
+	const furiganaEnabled = !!CONFIG.visual["furigana-enabled"];
+	const furiganaReady = window.FuriganaConverter?.isAvailable?.() === true;
+	const lyricsLocale = String(window.Utils?.getDetectedLanguage?.() || "auto");
+	const trackDuration = getCurrentTrackDurationMs();
+	return useMemo(
+		() => buildPreparedSyncedLyrics(lyrics, isKara),
+		[lyrics, isKara, lyricsDisplayMode, furiganaEnabled, furiganaReady, lyricsLocale, trackDuration]
+	);
+};
+
+const useLyricIndexNotification = (activeLineIndex, leadingEmptyLines, total) => {
+	useEffect(() => {
+		const actualIndex = Math.max(0, activeLineIndex - leadingEmptyLines);
+		window.dispatchEvent(new CustomEvent("ivLyrics:lyric-index-changed", {
+			detail: { index: actualIndex, total }
+		}));
+	}, [activeLineIndex, leadingEmptyLines, total]);
+};
+
+// Focused fullscreen modes render their own lyric surface. Keep the same clock
+// and index notifications without mounting the hidden page's rows or scroll effects.
+const SyncedLyricsPlaybackTracker = react.memo(({ lyrics = [], isKara = false, karaokeSource = null }) => {
+	const position = useLyricsPlaybackPosition();
+	const karaokePosition = isKara ? position + getPseudoKaraokeRenderAdvance(karaokeSource) : position;
+	const preparedLyrics = usePreparedSyncedLyrics(lyrics, isKara);
+	const leadingEmptyLines = isKara || CONFIG.visual["synced-compact"] ? 2 : 1;
+	const paddedLyrics = useMemo(
+		() => buildPaddedSyncedLyrics(preparedLyrics, leadingEmptyLines),
+		[preparedLyrics, leadingEmptyLines]
+	);
+	const lineStartIndex = useMemo(() => prepareSyncedLineStartIndex(paddedLyrics), [paddedLyrics]);
+	const activeLineIndex = getActiveTimedLineIndex(paddedLyrics, karaokePosition, lineStartIndex);
+	useLyricIndexNotification(activeLineIndex, leadingEmptyLines, lyrics.length);
+	return null;
+});
+
 const useSyncedLyricsEngine = ({
 	lyrics,
 	position,
@@ -5719,19 +5758,9 @@ const useSyncedLyricsEngine = ({
 		compact ? [lyricsId, containerReady] : [lyricsId]
 	);
 
-	// Display text is derived from these settings as well as the lyric array.
-	// Keep playback-only renders cached, but do not retain a previous replacement
-	// after the user switches back to showing supplements below the original.
-	const lyricsDisplayMode = CONFIG.visual["translate:display-mode"];
-	const furiganaEnabled = !!CONFIG.visual["furigana-enabled"];
-	const furiganaReady = window.FuriganaConverter?.isAvailable?.() === true;
-	const lyricsLocale = String(window.Utils?.getDetectedLanguage?.() || "auto");
-	const trackDuration = getCurrentTrackDurationMs();
-	const preparedLyrics = useMemo(
-		() => buildPreparedSyncedLyrics(lyrics, isKara),
-		[lyrics, isKara, lyricsDisplayMode, furiganaEnabled, furiganaReady, lyricsLocale, trackDuration]
-	);
+	const preparedLyrics = usePreparedSyncedLyrics(lyrics, isKara);
 
+	const trackDuration = getCurrentTrackDurationMs();
 	// Presentation metadata belongs to the lyric/settings revision, not the
 	// playback clock. Keep scroll styles stable so an unchanged row can retain
 	// its memoized text and karaoke children while another row is singing.
@@ -6062,12 +6091,7 @@ const useSyncedLyricsEngine = ({
 		layoutObserverRef.current = null;
 	}, []);
 
-	useEffect(() => {
-		const actualIndex = Math.max(0, activeLineIndex - leadingEmptyLines);
-		window.dispatchEvent(new CustomEvent("ivLyrics:lyric-index-changed", {
-			detail: { index: actualIndex, total: lyrics.length }
-		}));
-	}, [activeLineIndex, leadingEmptyLines, lyrics.length]);
+	useLyricIndexNotification(activeLineIndex, leadingEmptyLines, lyrics.length);
 
 	const hasAutoScrolledRef = useRef(false);
 	useEffect(() => {
@@ -8756,6 +8780,7 @@ const LyricsUnavailableView = react.memo(({ isLoading }) =>
 );
 
 const LyricsPageRenderer = react.memo(({
+	playbackOnly = false,
 	mode = -1,
 	karaokeMode = 0,
 	wordMode = 3,
@@ -8796,7 +8821,7 @@ const LyricsPageRenderer = react.memo(({
 
 		if ((mode === karaokeMode || mode === wordMode) && karaoke) {
 			return {
-				component: SyncedLyricsPage,
+				component: playbackOnly ? SyncedLyricsPlaybackTracker : SyncedLyricsPage,
 				props: {
 					trackUri,
 					lyrics: karaokeLyrics,
@@ -8814,7 +8839,7 @@ const LyricsPageRenderer = react.memo(({
 
 		if (mode === syncedMode && synced) {
 			return {
-				component: CONFIG.visual["synced-compact"]
+				component: playbackOnly ? SyncedLyricsPlaybackTracker : CONFIG.visual["synced-compact"]
 					? SyncedLyricsPage
 					: SyncedExpandedLyricsPage,
 				props: {
@@ -8829,7 +8854,7 @@ const LyricsPageRenderer = react.memo(({
 			};
 		}
 
-		if (mode === unsyncedMode && unsynced) {
+		if (!playbackOnly && mode === unsyncedMode && unsynced) {
 			return {
 				component: UnsyncedLyricsPage,
 				props: {
@@ -8846,6 +8871,7 @@ const LyricsPageRenderer = react.memo(({
 
 		return null;
 	}, [
+		playbackOnly,
 		showMarketplace,
 		onCloseMarketplace,
 		mode,
@@ -8872,11 +8898,13 @@ const LyricsPageRenderer = react.memo(({
 
 	const content = useMemo(() => {
 		if (!renderDescriptor) {
-			return react.createElement(LyricsUnavailableView, { isLoading });
+			return playbackOnly ? null : react.createElement(LyricsUnavailableView, { isLoading });
 		}
 
 		return react.createElement(renderDescriptor.component, renderDescriptor.props);
-	}, [renderDescriptor, isLoading]);
+	}, [renderDescriptor, isLoading, playbackOnly]);
+
+	if (playbackOnly && !showMarketplace) return content;
 
 	return react.createElement(
 		react.Fragment,

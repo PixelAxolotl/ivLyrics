@@ -2125,6 +2125,7 @@ const FullscreenOverlay = (() => {
         trackAccentUri = "",
         presentationMode = "standard",
         onPresentationModeChange = null,
+        onFocusedLyricsChange = null,
         onExitFullscreen = null
     }) => {
         const [uiVisible, setUiVisible] = useState(true);
@@ -2826,10 +2827,17 @@ const FullscreenOverlay = (() => {
             onCancel: closeResearchConsent
         });
 
+        const VinylMode = window.ivLyricsVinylPlayerMode;
+        const focusedLyricsActive = !!(isFullscreen && !tvModeEnabled && focusModeActive && !tmiMode && VinylMode);
+        // The regular page is visible again in TV/research mode, even when the
+        // remembered presentation is vinyl. Report the surface actually rendered.
+        (react.useLayoutEffect || useEffect)(() => {
+            onFocusedLyricsChange?.(focusedLyricsActive);
+        }, [focusedLyricsActive, onFocusedLyricsChange]);
+
         if (!isFullscreen) return null;
 
-        const VinylMode = window.ivLyricsVinylPlayerMode;
-        if (!tvModeEnabled && focusModeActive && !tmiMode && VinylMode) {
+        if (focusedLyricsActive) {
             return react.createElement(react.Fragment, null,
                 react.createElement(VinylMode, {
                 track: liveVinylTrack,

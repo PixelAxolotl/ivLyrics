@@ -81,7 +81,10 @@ const VinylActiveLyricRenderer = (() => {
                 clearScrollEntries();
                 const canMove = motionEnabled && hasScrollTiming && motionPreference?.matches !== true;
                 const viewports = root.querySelectorAll(".ivlyrics-vinyl-lyric-scroll-viewport");
+                const rows = [];
 
+                // Batch writes and reads across original/phonetic/translated rows.
+                // Alternating them per row forces a fresh layout for every measurement.
                 viewports.forEach((viewport) => {
                     const content = viewport.querySelector(":scope > .ivlyrics-vinyl-lyric-scroll-content");
                     viewport.classList.remove("is-vinyl-lyric-overflowing");
@@ -90,31 +93,43 @@ const VinylActiveLyricRenderer = (() => {
                     // Wrapping is the safe default. Only clip a row after measuring
                     // it unwrapped and confirming that playback can reveal its end.
                     viewport.classList.add("is-vinyl-lyric-measuring");
-                    const viewportWidth = viewport.clientWidth;
+                    rows.push({ viewport, content });
+                });
+
+                rows.forEach((row) => {
+                    const { viewport, content } = row;
+                    row.viewportWidth = viewport.clientWidth;
                     const naturalContentWidth = Math.max(
                         content.scrollWidth,
                         content.getBoundingClientRect().width
                     );
-                    const naturalTravel = naturalContentWidth - viewportWidth;
+                    row.overflows = row.viewportWidth > 0
+                        && naturalContentWidth - row.viewportWidth > SCROLL_OVERFLOW_THRESHOLD_PX;
+                    row.direction = window.getComputedStyle(viewport).direction === "rtl" ? "rtl" : "ltr";
+                });
+
+                rows.forEach(({ viewport, overflows }) => {
                     viewport.classList.remove("is-vinyl-lyric-measuring");
+                    if (overflows) viewport.classList.add("is-vinyl-lyric-overflowing");
+                });
 
-                    if (viewportWidth <= 0 || naturalTravel <= SCROLL_OVERFLOW_THRESHOLD_PX) {
-                        return;
-                    }
-
-                    viewport.classList.add("is-vinyl-lyric-overflowing");
+                rows.forEach((row) => {
+                    if (!row.overflows) return;
+                    const { content, viewportWidth } = row;
                     const paddedContentWidth = Math.max(
                         content.scrollWidth,
                         content.getBoundingClientRect().width
                     );
-                    const travel = Math.max(0, Math.ceil(paddedContentWidth - viewportWidth));
+                    row.travel = Math.max(0, Math.ceil(paddedContentWidth - viewportWidth));
+                });
 
+                rows.forEach(({ viewport, content, overflows, travel, direction }) => {
+                    if (!overflows) return;
                     if (travel <= SCROLL_OVERFLOW_THRESHOLD_PX) {
                         viewport.classList.remove("is-vinyl-lyric-overflowing");
                         return;
                     }
 
-                    const direction = window.getComputedStyle(viewport).direction === "rtl" ? "rtl" : "ltr";
                     scrollEntriesRef.current.set(content, { travel, direction });
                     content.style.transform = getScrollTransform(
                         travel,

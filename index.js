@@ -4541,7 +4541,13 @@ const GENERATION_REQUEST_PILL_CONFIG = Object.freeze({
 class LyricsContainer extends react.Component {
   constructor() {
     super();
+    this.handleFocusedLyricsChange = (fullscreenFocusedLyricsActive) => {
+      if (this.state.fullscreenFocusedLyricsActive !== fullscreenFocusedLyricsActive) {
+        this.setState({ fullscreenFocusedLyricsActive });
+      }
+    };
     this.state = {
+      fullscreenFocusedLyricsActive: false,
       karaoke: null,
       karaokeGranularity: null,
       synced: null,
@@ -9970,8 +9976,17 @@ class LyricsContainer extends react.Component {
           : react.createElement("div", null, I18n.t("messages.noLyrics"))
       )
       : null;
+    const fullscreenPresentation = this.state.isFullscreen
+      ? normalizeIvLyricsFullscreenPresentation(
+        this.state.fullscreenPresentation
+      )
+      : "standard";
+    const isFocusedFullscreenPresentation =
+      fullscreenPresentation === "vinyl"
+      || fullscreenPresentation === "video";
     const activeLyricsPage = syncCreatorPlainPage || (window.LyricsPageRenderer
       ? react.createElement(window.LyricsPageRenderer, {
+        playbackOnly: isFocusedFullscreenPresentation && this.state.fullscreenFocusedLyricsActive,
         mode,
         karaokeMode: KARAOKE,
         wordMode: WORD_KARAOKE,
@@ -10081,14 +10096,6 @@ class LyricsContainer extends react.Component {
     };
     const renderTrackUri = currentTrackInfo?.uri || this.currentTrackUri || this.state.uri || "";
     const isLocalTrack = !!renderTrackUri && !Utils.extractTrackId(renderTrackUri);
-    const fullscreenPresentation = this.state.isFullscreen
-      ? normalizeIvLyricsFullscreenPresentation(
-        this.state.fullscreenPresentation
-      )
-      : "standard";
-    const isFocusedFullscreenPresentation =
-      fullscreenPresentation === "vinyl"
-      || fullscreenPresentation === "video";
     const isVideoStagePresentation =
       fullscreenPresentation === "video";
     const floatingToolbarStyle = this.state.isFullscreen
@@ -10420,6 +10427,7 @@ class LyricsContainer extends react.Component {
         trackAccent: vinylTrackAccent,
         trackAccentUri: this.state.colorsUri || "",
         presentationMode: fullscreenPresentation,
+        onFocusedLyricsChange: this.handleFocusedLyricsChange,
         onPresentationModeChange: (nextPresentation) => {
           this.setFullscreenPresentation(nextPresentation);
         },

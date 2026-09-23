@@ -71,6 +71,7 @@ const createEngine = (source) => {
 		}];
 	};
 	const react = {
+		memo: component => component,
 		useMemo, useRef, useState,
 		useCallback: (callback, dependencies) => useMemo(() => callback, dependencies),
 		useEffect: () => {}, useLayoutEffect: () => {},

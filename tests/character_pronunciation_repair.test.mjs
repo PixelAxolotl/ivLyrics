@@ -30,26 +30,45 @@ test("exact slot counts pass through without warnings", async () => {
 	assert.equal(result.warnings.length, 0);
 });
 
-test("14 slots for 12 chars auto-repairs instead of throwing", async () => {
+test("14 slots for 12 chars stay retryable instead of dropping slots", async () => {
 	const manager = await loadManager();
 	const text = "abcdefghijkl";
-	const result = manager._normalizeCharacterPronunciationResult(
-		{ l: [{ i: 0, p: slots(14) }] }, [text], { unitMode: "char" });
-	assert.equal(result.lines[0].chars.length, 12);
-	assert.equal(result.warnings.length, 1);
-	assert.equal(result.warnings[0].got, 14);
-	assert.equal(result.warnings[0].expected, 12);
-	assert.ok(result.lines[0].chars.some(item => item.pronunciation));
+	assert.throws(
+		() => manager._normalizeCharacterPronunciationResult(
+			{ l: [{ i: 0, p: slots(14) }] }, [text], { unitMode: "char" }),
+		(error) => {
+			assert.equal(error.code, "character-pronunciation-slot-mismatch");
+			assert.equal(error.details.got, 14);
+			assert.equal(error.details.expected, 12);
+			assert.equal(manager._isCharacterPronunciationRetryableError(error), true);
+			return true;
+		});
 });
 
-test("short arrays within tolerance are padded to the expected length", async () => {
+test("short arrays with unknown missing positions stay retryable", async () => {
 	const manager = await loadManager();
-	const result = manager._normalizeCharacterPronunciationResult(
-		{ l: [{ i: 0, p: ["a", "b", "c", "d"] }] }, ["abcdef"], { unitMode: "char" });
-	assert.equal(result.lines[0].chars.length, 6);
-	assert.equal(result.lines[0].chars[0].pronunciation, "a");
-	assert.equal(result.lines[0].chars[5].pronunciation, "");
-	assert.equal(result.warnings[0].strategy, "pad-missing");
+	// Reviewer repro: きょうは (4 chars) answered with 3 readings — padding
+	// would attach the readings to the wrong characters and drop は.
+	assert.throws(
+		() => manager._normalizeCharacterPronunciationResult(
+			{ l: [{ i: 0, p: ["kyo", "u", "wa"] }] }, ["きょうは"], { unitMode: "char" }),
+		(error) => {
+			assert.equal(error.code, "character-pronunciation-slot-mismatch");
+			assert.equal(error.details.got, 3);
+			assert.equal(error.details.expected, 4);
+			assert.equal(manager._isCharacterPronunciationRetryableError(error), true);
+			return true;
+		});
+	// Within-tolerance shortfalls are equally position-unknown.
+	assert.throws(
+		() => manager._normalizeCharacterPronunciationResult(
+			{ l: [{ i: 0, p: ["a", "b", "c", "d"] }] }, ["abcdef"], { unitMode: "char" }),
+		(error) => {
+			assert.equal(error.code, "character-pronunciation-slot-mismatch");
+			assert.equal(error.details.got, 4);
+			assert.equal(error.details.expected, 6);
+			return true;
+		});
 });
 
 test("whitespace-omitted responses are realigned, not appended", async () => {

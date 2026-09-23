@@ -2706,27 +2706,12 @@ ${normalizedText}
                 return { slots, repaired: true, strategy: 'reinsert-whitespace' };
             }
 
-            // Only auto-repair small drifts. Gross mismatches still retry
-            // (targeted repair prompt, then smaller chunks) to avoid misaligned karaoke.
-            const tolerance = Math.max(2, Math.ceil(expected * 0.25));
-            if (Math.abs(got - expected) > tolerance) {
-                return { slots: coerced, repaired: false, strategy: 'unrepairable', needsRetry: true };
-            }
-
-            if (got > expected) {
-                const slots = [...coerced];
-                while (slots.length > expected) {
-                    const emptyIndex = slots.lastIndexOf('');
-                    if (emptyIndex < 0) break;
-                    slots.splice(emptyIndex, 1);
-                }
-                while (slots.length > expected) slots.pop();
-                return { slots, repaired: true, strategy: 'drop-extra' };
-            }
-
-            const slots = [...coerced];
-            while (slots.length < expected) slots.push('');
-            return { slots, repaired: true, strategy: 'pad-missing' };
+            // Any other count mismatch has no established source positions:
+            // padding or dropping arbitrary slots shifts readings onto the
+            // wrong characters (e.g. きょうは answered with 3 readings keeps
+            // は unassigned). Keep it retryable — the caller runs the
+            // targeted repair prompt, then smaller chunks.
+            return { slots: coerced, repaired: false, strategy: 'unrepairable', needsRetry: true };
         }
 
         _normalizeCharacterPronunciationResult(result, lines, options = {}) {

@@ -5663,7 +5663,7 @@ const renderLyricsItems = ({ items, isKara, karaokeRenderGranularity = null, pos
 				delay: item.delay,
 				durationMs: item.durationMs,
 				settingsRevision,
-				lineRef: item.isActive ? activeLineRef : null,
+				lineRef: (item.trackLineRef ?? item.isActive) ? activeLineRef : null,
 				detailClassName: item.detailClassName,
 			})
 			: react.createElement(LyricsLineBlock, {
@@ -6537,6 +6537,7 @@ const useSyncedLyricsEngine = ({
 						delay: firstLyricStartTime / 3,
 						durationMs: firstLyricStartTime,
 						isActive: true,
+						trackLineRef: lineNumber === visualAnchorLineNumber,
 						detailClassName: getLyricsLineDetailClass(lyricMotionDetailsEnabled, true, false, isPreludeHandoff),
 					};
 				}
@@ -6550,6 +6551,7 @@ const useSyncedLyricsEngine = ({
 					delay: nextStartTime / 3,
 					durationMs: nextStartTime,
 					isActive: activeLineIndex === 0,
+					trackLineRef: lineNumber === visualAnchorLineNumber,
 					detailClassName: getLyricsLineDetailClass(lyricMotionDetailsEnabled && activeLineIndex === 0, true, false, isPreludeHandoff),
 				};
 			}

@@ -12,7 +12,11 @@ const helper = readFileSync(helperUrl, 'utf8');
 let harness = helper.slice(helper.indexOf('const repoRoot'), helper.indexOf('test("renderer output'))
   .replaceAll('import.meta.url', JSON.stringify(helperUrl.href))
   .replace('6bb234835b0f5762876bbe521ddf665c8f952dfa', '3353a5d')
-  .replace('const comparable = normalizePresentation(output);', 'const comparable = normalize(output);')
+  // The first-line fix intentionally transfers the prelude ref before its
+  // unmount. Compare every visual prop; anchor ownership has its own regression.
+  .replace('const comparable = normalizePresentation(output);', `const comparable = JSON.parse(JSON.stringify(output, function(key, value) {
+    return key === 'lineRef' && Object.hasOwn(this, 'delay') ? undefined : value;
+  }));`)
   .replace('if (props.compact && !props.isKara && !scrolling && !motionPreference.matches)', 'if (false)')
   .replace('const hooks = [];', 'const hooks = [];\nconst cache = { elementsByItem: new WeakMap() };\nlet creates = 0;')
   .replace('createElement: (tag, props, ...children) => ({ tag, props, children }),',

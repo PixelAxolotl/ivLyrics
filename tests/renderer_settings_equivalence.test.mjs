@@ -21,7 +21,10 @@ const slice = (source, startMarker, endMarker) => {
 const normalize = (value) => JSON.parse(JSON.stringify(value));
 // Presentation phases are verified below. Exclude only their new fields from
 // the existing full settings/synchronization/geometry equivalence checks.
-const normalizePresentation = (value) => JSON.parse(JSON.stringify(value, (key, entry) => {
+const normalizePresentation = (value) => JSON.parse(JSON.stringify(value, function(key, entry) {
+	// Anchor ownership now follows the visual handoff instead of assigning the
+	// same ref to both the prelude and first lyric. Its lifecycle is tested below.
+	if (key === "lineRef" && Object.hasOwn(this, "delay")) return undefined;
 	if (key === "detailClassName" || key === "--lyrics-interlude-fade-duration") return undefined;
 	if (key === "className" && typeof entry === "string") return entry.split(" ")
 		.filter(name => !/^lyrics-line-detail(?:-(?:current|past|future))?$/.test(name)
@@ -664,4 +667,17 @@ test("cached postlude updates track duration and remains visible at the end", ()
  assert.notEqual(changed.props.line, before.props.line);
  assert.equal(changed.props.line.endTime, 12000);
  assert.equal(render(12100).props.line, changed.props.line);
+});
+
+test('prelude handoff keeps exactly one DOM anchor through first-line entry', () => {
+	const engine = createEngine(currentSource);
+	const lyrics = [lyric(1000, 3100, 'First vocal'), lyric(4000, 5000, 'Second vocal')];
+	for (const compact of [true, false]) {
+		for (const position of [0, 700, 999, 1000, 1016, 2000]) {
+			const result = engine.render(lyrics, position, { compact }, true);
+			const anchors = result.elements.filter(element => element.props.lineRef);
+			assert.equal(anchors.length, 1, `compact=${compact}, position=${position}: ${anchors.map(e => e.props.key)}`);
+			if (position >= 700) assert.equal(anchors[0].props.line?.text, 'First vocal');
+		}
+	}
 });

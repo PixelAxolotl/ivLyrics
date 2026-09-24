@@ -17,7 +17,7 @@ function shift(data, delta) {
     context.adjust(delta);
     return JSON.parse(JSON.stringify(data));
 }
-const fixture = () => ({ version: 10, lines: [
+const fixture = () => ({ version: 5, lines: [
     { start: 0, end: 2, chars: [1, 2, 3] },
     { start: 3, end: 7, chars: [85, 85.4, 85.8, 86.2, 86.6], parallel: { layout: 'stack', parts: [
         { id: 'lead', ranges: [{ start: 3, end: 5 }], chars: [85, 85.4, 85.8] },
@@ -37,4 +37,30 @@ test('line offset preserves independent sub-line times and repeated edits do not
     result = shift(result, -100);
     assert.deepEqual(result, original);
     assert.deepEqual(original, fixture(), 'saved input was not mutated');
+});
+
+test('offsets can overlap adjacent lines and keep all part intervals when reaching zero', () => {
+    const data = fixture();
+    data.lines[0].chars = [85, 86, 87];
+    data.lines[2].chars = [86, 87];
+    const shifted = shift(data, 100);
+    assert.deepEqual(shifted.lines[1].parallel.parts[1].chars, [85.3, 86.7]);
+    assert.deepEqual(shifted.lines[0], data.lines[0]);
+    assert.deepEqual(shifted.lines[2], data.lines[2]);
+    const atZero = shift(data, -100000);
+    assert.deepEqual(atZero.lines[1].chars, [0, 0.4, 0.8, 1.2, 1.6]);
+    assert.deepEqual(atZero.lines[1].parallel.parts[1].chars, [0.2, 1.6]);
+});
+
+test('committing a vocal preserves overlapping earlier and later lines', () => {
+    const data = fixture();
+    data.lines[0].chars = [85, 86, 87];
+    data.lines[2].chars = [86, 87];
+    const context = { nextLines: structuredClone(data.lines), lineStart: 3, lineEnd: 7,
+        lineData: structuredClone(data.lines[1]), currentLineMergedWithNext: false,
+        currentParallelData: null, SYNC_CREATOR_SYNC_DATA_VERSION: 10 };
+    vm.runInNewContext(source.slice(0, source.indexOf('const SyncDataCreator =')) + '\n'
+        + section('\t\tconst committedLineIndex = nextLines.findIndex', '\t\tconst scoreInput = scoreInputRef.current;')
+        + '\nglobalThis.result = nextSyncData;', context);
+    assert.deepEqual(JSON.parse(JSON.stringify(context.result)), data);
 });

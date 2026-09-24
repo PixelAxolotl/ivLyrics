@@ -2443,13 +2443,18 @@ const createSyncedLyricsScroller = (container, onActiveChange) => {
 		extend();
 	};
 	const keydown = (event) => {
-		if (event.defaultPrevented) return;
+		if (event.defaultPrevented || event.metaKey || event.ctrlKey || event.altKey) return;
 		if (event.key === "Escape" && session) {
 			event.preventDefault();
+			event.stopPropagation();
 			finish();
 			return;
 		}
-		if (event.target?.closest?.('button, a[href], input, select, textarea, [role="button"], [contenteditable="true"]')) return;
+		const interactive = event.target?.closest?.('button, a[href], input, select, textarea, [role="button"], [contenteditable="true"]');
+		const lyric = event.target?.closest?.("[data-lyrics-seek-time]");
+		if (interactive && interactive !== lyric) return;
+		// Focused lyric rows remain browsable; Enter/Space still activate the row.
+		if (lyric && ["Enter", " ", "Spacebar"].includes(event.key)) return;
 		const page = container.clientHeight * 0.8;
 		const delta = { ArrowUp: -80, ArrowDown: 80, PageUp: -page, PageDown: page,
 			Home: -Infinity, End: Infinity, " ": event.shiftKey ? -page : page, Spacebar: event.shiftKey ? -page : page }[event.key];

@@ -42,7 +42,7 @@ function harness({ anchorRatio = 0.5, centers = [-700, -370, -110, 300, 650, 980
   const scroller = context.create(container, active => changes.push(active));
   const emit = (type, data = {}, capture = false) => {
     const event = { type, deltaX: 0, deltaY: 0, deltaMode: 0, target: container,
-      preventDefault() { this.defaultPrevented = true; }, ...data };
+      preventDefault() { this.defaultPrevented = true; }, stopPropagation() { this.propagationStopped = true; }, ...data };
     listeners.get(`${type}:${capture}`)?.(event); return event;
   };
   return { container, root, changes, timers, returns, scroller, listeners, windowListeners, playerListeners, emit,
@@ -140,6 +140,31 @@ test('pinch, horizontal gestures and interactive keys do not start lyric browsin
   h.emit('wheel', { deltaY: 10, deltaX: 100 });
   h.emit('keydown', { key: ' ', target: { closest: () => ({}) } });
   assert.deepEqual(h.changes, []);
+});
+
+test('focused lyrics allow navigation keys while activation and modified shortcuts keep their own actions', () => {
+  const h = harness();
+  const row = h.root.children[3];
+  const target = { closest: () => row };
+  const before = row.getBoundingClientRect().top;
+  assert.equal(h.emit('keydown', { key: 'ArrowDown', target }).defaultPrevented, true);
+  assert.equal(row.getBoundingClientRect().top, before - 80);
+  const scrolled = h.container.scrollTop;
+  for (const key of ['Enter', ' ', 'Spacebar']) {
+    assert.equal(h.emit('keydown', { key, target }).defaultPrevented, undefined);
+  }
+  for (const modifier of ['metaKey', 'ctrlKey', 'altKey']) {
+    assert.equal(h.emit('keydown', { key: 'Home', [modifier]: true, target }).defaultPrevented, undefined);
+  }
+  const input = {};
+  h.emit('keydown', { key: 'ArrowDown', target: { closest: selector => selector === '[data-lyrics-seek-time]' ? row : input } });
+  assert.equal(h.container.scrollTop, scrolled, 'nested controls and browser shortcuts must not move lyrics');
+  const escape = h.emit('keydown', { key: 'Escape', target });
+  assert.equal(escape.defaultPrevented, true);
+  assert.equal(escape.propagationStopped, true, 'returning to playback must not also exit fullscreen');
+  assert.deepEqual(h.changes, [true, false]);
+  assert.equal(h.emit('keydown', { key: 'Escape', target }).propagationStopped, undefined,
+    'a separate Escape after returning may reach the fullscreen handler');
 });
 
 test('touch movement retains the same surface and returns only after release', () => {

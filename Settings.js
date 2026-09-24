@@ -5813,12 +5813,15 @@ const ConfigKaraokeFillCurveEditor = ({
   const graphRef = useRef(null);
   const [points, setPoints] = useState(() => normalizeKaraokeFillCurvePoints(defaultValue));
   const pendingPointsRef = useRef(points);
+  const dragCleanupRef = useRef(null);
 
   useEffect(() => {
+    dragCleanupRef.current?.();
     const nextPoints = normalizeKaraokeFillCurvePoints(defaultValue);
     pendingPointsRef.current = nextPoints;
     setPoints(nextPoints);
-  }, [defaultValue]);
+    return () => dragCleanupRef.current?.();
+  }, [defaultValue, disabled]);
 
   const viewBox = { width: 320, height: 180, padding: 22 };
   const plotWidth = viewBox.width - viewBox.padding * 2;
@@ -5865,22 +5868,43 @@ const ConfigKaraokeFillCurveEditor = ({
   };
 
   const startDrag = (pointIndex, event) => {
-    if (disabled || pointIndex <= 0 || pointIndex >= points.length - 1) {
+    if (disabled || event.button !== 0 || pointIndex <= 0 || pointIndex >= points.length - 1) {
       return;
     }
 
+    dragCleanupRef.current?.();
+    const originalPoints = pendingPointsRef.current;
+    const pointerId = event.pointerId;
     event.preventDefault();
     updatePointFromPointer(pointIndex, event);
 
-    const handlePointerMove = (moveEvent) => updatePointFromPointer(pointIndex, moveEvent);
-    const handlePointerUp = () => {
+    const handlePointerMove = (moveEvent) => {
+      if (moveEvent.pointerId === pointerId) updatePointFromPointer(pointIndex, moveEvent);
+    };
+    const cleanup = () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handleCancel);
+      window.removeEventListener("blur", handleCancel);
+      dragCleanupRef.current = null;
+    };
+    const handlePointerUp = (upEvent) => {
+      if (upEvent.pointerId !== pointerId) return;
+      cleanup();
       commitPoints(pendingPointsRef.current);
     };
+    const handleCancel = (cancelEvent) => {
+      if (cancelEvent.type === "pointercancel" && cancelEvent.pointerId !== pointerId) return;
+      cleanup();
+      pendingPointsRef.current = originalPoints;
+      setPoints(originalPoints);
+    };
 
+    dragCleanupRef.current = cleanup;
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handleCancel);
+    window.addEventListener("blur", handleCancel);
   };
 
   const resetCurve = () => {
@@ -5963,6 +5987,7 @@ const ConfigKaraokeFillCurveEditor = ({
           {
             className: "btn karaoke-fill-curve-reset",
             type: "button",
+            disabled,
             onClick: resetCurve,
           },
           getSettingsText("settings.syncCreatorSettings.fillCurve.reset", "Reset")

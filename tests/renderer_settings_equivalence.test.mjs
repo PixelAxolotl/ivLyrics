@@ -185,7 +185,23 @@ const makeLyrics = () => [
 const pair = () => [createEngine(currentSource), createEngine(baselineSource)];
 const compare = (engines, lyrics, position, options = {}, label = "") => {
 	const actual = engines[0].render(lyrics, position, options);
-	assert.deepEqual(actual, engines[1].render(lyrics, position, options), `${label} at ${position}`);
+	const expected = engines[1].render(lyrics, position, options);
+	if (actual.isScrolling && options.compact !== false) {
+		// Manual layout now retains the playback surface. Compare live source
+		// content/fill against the old list, not its intentionally removed boxes.
+		for (const element of actual.elements) {
+			const row = element.props;
+			if (!row.line?.text?.length || row.line.isVirtualTrailingInterlude || row.line.interludeInfo?.isInterlude) continue;
+			const original = expected.elements.find(item => JSON.stringify(item.props.line?.text) === JSON.stringify(row.line.text))?.props;
+			assert.ok(original, JSON.stringify(row.line.text));
+			for (const key of ["mainText", "subText", "subText2", "originalText", "seekTime", "isActive", "position", "globalCharOffset", "activeGlobalCharIndex"]) {
+				assert.deepEqual(row[key], original[key], `${row.line.text} ${key} at ${position}`);
+			}
+		}
+		assert.equal(actual.activeLineIndex, expected.activeLineIndex);
+	} else {
+		assert.deepEqual(actual, expected, `${label} at ${position}`);
+	}
 	return actual;
 };
 const sourceElement = (result, text) => result.elements.find((element) => element.props.line?.text === text);
@@ -209,7 +225,7 @@ test("renderer output preserves overlapping vocals, precentering, release and in
 	assert.equal(sourceElement(overlap, "Final vocal").props.position, 0);
 });
 
-test("manual scrolling and return to auto-follow preserve all row props on consecutive playback frames", () => {
+test("manual scrolling preserves live source props and returns to unchanged auto-follow on consecutive playback frames", () => {
 	const engines = pair();
 	const lyrics = makeLyrics();
 	compare(engines, lyrics, 2300);
@@ -237,7 +253,7 @@ test("manual playback frames keep unchanged row presentation props reusable by R
 	for (let frame = 1; frame <= 12; frame++) {
 		const position = 1500 + frame * 16;
 		const next = current.render(lyrics, position, {}, true);
-		assert.deepEqual(normalize(next), baseline.render(lyrics, position));
+		compare([current, baseline], lyrics, position);
 		for (const element of next.elements) {
 			assert.equal(element.props.style, initialStyles.get(element.props.key), `style changed for ${element.props.key}`);
 		}
@@ -461,7 +477,7 @@ test("prepared interludes wait for an earlier long vocal while a later response 
 			if (position < 11200) {
 				assert.equal(result.elements.some((element) => element.props.line?.isVirtualTrailingInterlude), false);
 			}
-			if (position === 11500) {
+			if (position === 11500 && !scrolling) {
 				assert.equal(result.elements.find((element) => element.props.line?.isVirtualTrailingInterlude)?.props.line.startTime, 11500);
 			}
 		}
@@ -509,7 +525,7 @@ test("detail phases preserve row styles between boundaries and release a complet
 });
 
 test("motion guards remove all detail phases without changing source timing", () => {
- for (const guard of ["reduced", "transition-off", "scrolling"]) {
+ for (const guard of ["reduced", "transition-off"]) {
   const engine = createEngine(currentSource);
   if (guard === "reduced") engine.motionPreference.matches = true;
   if (guard === "transition-off") engine.CONFIG.visual["karaoke-line-transition"] = false;
@@ -640,7 +656,7 @@ test("virtual interlude caches invalidate on motion controls, settings and lyric
  const scrolling = render(71500, 1);
  assert.equal(scrolling.props.line.startTime, 71051);
  assert.equal(scrolling.props.line.endTime, 74918);
- assert.doesNotMatch(scrolling.props.className, /lyrics-line-detail/);
+ assert.match(scrolling.props.className, /lyrics-line-detail-current/);
  engine.setScrolling(false);
  assert.match(render(71500, 1).props.className, /lyrics-line-detail-current/);
  const precedingReplacement = render(74700, 1);
@@ -680,4 +696,31 @@ test('prelude handoff keeps exactly one DOM anchor through first-line entry', ()
 			if (position >= 700) assert.equal(anchors[0].props.line?.text, 'First vocal');
 		}
 	}
+});
+
+test("manual browsing retains row keys, text, spacing and layout anchor while playback keeps advancing", () => {
+ for (const isKara of [false, true]) {
+  const engine = createEngine(currentSource);
+  const lyrics = makeLyrics();
+  const before = engine.render(lyrics, 2300, { isKara }, true);
+  const keys = before.elements.map(row => row.props.key);
+  const styles = new Map(before.elements.map(row => [row.props.key, row.props.style]));
+  engine.setScrolling(true);
+  for (const position of [2300, 2400, 2700, 3400, 7200, 8000]) {
+   const browsing = engine.render(lyrics, position, { isKara }, true);
+   assert.deepEqual(browsing.elements.map(row => row.props.key), keys, 'browsing must not replace rows or insert moving interludes');
+   for (const row of browsing.elements) {
+    const originalStyle = styles.get(row.props.key);
+    for (const key of ['--position-index', '--animation-index', '--lyrics-color-active']) {
+     assert.equal(row.props.style?.[key], originalStyle?.[key], `${row.props.key}: ${key}`);
+    }
+    assert.equal(row.props.hiddenFromAccessibility, false);
+    assert.doesNotMatch(row.props.className || '', /scrollView|scrollCurrent/);
+   }
+   assert.equal(browsing.activeLyricIndex, position >= 8000 ? 3 : position >= 3400 ? 2 : position >= 2400 ? 1 : 0,
+    'other lyric consumers must still receive the live playhead');
+  }
+  engine.setScrolling(false);
+  assert.deepEqual(engine.render(lyrics, 8500, { isKara }), createEngine(currentSource).render(lyrics, 8500, { isKara }));
+ }
 });

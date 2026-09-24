@@ -114,12 +114,13 @@ const makeEffectHarness = (linearSupport) => {
   let context;
   class Row {
     constructor(index) { this.targetY=index*100; this.padding=false; this.classList={contains:name=>name==='lyrics-lyricsContainer-LyricsLine'}; }
+    getBoundingClientRect() { return { top: this.targetY }; }
     animate(frames,timing) {
       const row=this;
       const animation={frames,timing,startTime:context.document.timeline.currentTime,cancelled:false,
         get currentTime(){return context.document.timeline.currentTime-this.startTime;},
         set currentTime(time){this.startTime=context.document.timeline.currentTime-time;},
-        cancel(){this.cancelled=true;},play(){this.cancelled=false;row.animation=this;},addEventListener(){},
+        pause(){this.paused=true;},cancel(){this.cancelled=true;},play(){this.cancelled=false;row.animation=this;},addEventListener(){},
       };
       row.animation=animation; animationsCreated.push(animation); return animation;
     }
@@ -127,6 +128,7 @@ const makeEffectHarness = (linearSupport) => {
   const rows=Array.from({length:7},(_,i)=>new Row(i));
   context=vm.createContext({
     ...(linearSupport === undefined ? {} : { CSS: { supports: () => linearSupport } }),
+    isScrolling:false, compact:true, syncedManualScrollReturns:new WeakMap(),
     Element:Row, document:{timeline:{currentTime:1000}},
     containerRef:{current:{querySelector:()=>({children:rows})}},
     activeLineRef:{current:{querySelector:()=>null}},
@@ -305,3 +307,47 @@ for (const linearSupport of [false, true]) {
     }
   });
 }
+
+test('manual scroll selection begins at the exact displayed row position and centers without a stagger', () => {
+  for (const distance of [-450, -80, 75, 480]) {
+    const h = makeEffectHarness(true);
+    h.run();
+    const displayed = new Map(h.rows.map(row => [row, row.targetY + distance]));
+    h.context.syncedManualScrollReturns.set(h.context.containerRef.current, {
+      positions: displayed, pending: true, expiresAt: Date.now() + 800,
+    });
+    // Seeking may jump several source lines. The measured handoff still wins.
+    h.context.visualLineIndex = 10;
+    h.rows.forEach(row => { row.targetY -= 900; });
+    h.run();
+    for (const row of h.rows) {
+      assert.equal(row.animation.timing.delay, 0);
+      assert.ok(Math.abs(h.y(row) - displayed.get(row)) < 0.001);
+      h.context.document.timeline.currentTime += row.animation.timing.duration;
+      assert.ok(Math.abs(h.y(row) - row.targetY) < 0.001);
+      h.context.document.timeline.currentTime -= row.animation.timing.duration;
+    }
+  }
+});
+
+test('entering manual scroll pauses an in-flight row handoff instead of snapping to its end', () => {
+  const h = makeEffectHarness(true);
+  h.run(); h.rows.forEach(row => row.targetY -= 150); h.context.visualLineIndex++; h.run();
+  h.context.isScrolling = true;
+  h.context.usesScriptedCompactLineShift = false;
+  const animations = [...h.context.compactLineShiftAnimationsRef.current.values()];
+  h.run();
+  assert.ok(animations.length > 0);
+  assert.ok(animations.every(animation => animation.paused && !animation.cancelled));
+});
+
+test('idle return uses native scroll displacement even when the existing row animation target is unchanged', () => {
+  const h = makeEffectHarness(true);
+  h.run(); h.rows.forEach(row => row.targetY -= 120); h.context.visualLineIndex++; h.run();
+  const displayed = new Map(h.rows.map(row => [row, row.targetY - 275]));
+  h.context.syncedManualScrollReturns.set(h.context.containerRef.current, {
+    positions: displayed, pending: true, expiresAt: Date.now() + 800,
+  });
+  h.run();
+  for (const row of h.rows) assert.ok(Math.abs(h.y(row) - displayed.get(row)) < 0.001);
+});

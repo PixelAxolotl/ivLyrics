@@ -3420,8 +3420,16 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		return sourceChangeRequestId;
 	}, [syncCreatorDraftStore]);
 
-	const tryRestoreUnsubmittedSyncDraft = async ({ text, provider: draftProvider, addonId: draftAddonId, lrclibSource }) => {
+	const tryRestoreUnsubmittedSyncDraft = async ({ text, provider: draftProvider, addonId: draftAddonId, lrclibSource, sourceChangeRequestId }) => {
 		if (!syncCreatorDraftStore || !sessionTrackKey || !text || (!draftProvider && !draftAddonId)) return null;
+		// The caller passes its source-change token so a newer LRCLIB source
+		// load that starts while the draft reads below are pending cannot be
+		// overwritten by this stale completion. Bail out as soon as the token
+		// goes stale, and re-check immediately before mutating session state.
+		const isStaleSource = () => (
+			sourceChangeRequestId !== undefined &&
+			!isCurrentSyncCreatorSourceChange(sourceChangeRequestId)
+		);
 		const fingerprint = syncCreatorDraftStore.createLyricsFingerprint?.(text)
 			|| getSyncCreatorLyricsFingerprintFromText(text);
 		const exactDraftKey = syncCreatorDraftStore.createDraftKey({
@@ -3439,6 +3447,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			} catch (error) {
 				console.warn('[SyncDataCreator] Failed to check the unsubmitted draft:', error);
 			}
+			if (isStaleSource()) return null;
 		}
 		try {
 			const trackDrafts = await syncCreatorDraftStore.getDraftsForTrack(sessionTrackKey);
@@ -3456,6 +3465,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		} catch (error) {
 			console.warn('[SyncDataCreator] Failed to list unsubmitted drafts:', error);
 		}
+		if (isStaleSource()) return null;
 		for (const candidate of candidates) {
 			let validated = null;
 			try {
@@ -3464,6 +3474,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				continue;
 			}
 			if (!validated?.draft?.syncData?.lines?.length) continue;
+			if (isStaleSource()) return null;
 			const applied = applySyncCreatorSessionRecord(validated, { announce: false });
 			if (applied) {
 				announceRecoveredSession(applied);
@@ -3519,7 +3530,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					text,
 					provider: finalProvider,
 					addonId: usedProvider,
-					lrclibSource: finalProvider === 'lrclib' ? (result?.lrclibSource || null) : null
+					lrclibSource: finalProvider === 'lrclib' ? (result?.lrclibSource || null) : null,
+					sourceChangeRequestId
 				});
 			} catch (error) {
 				console.warn('[SyncDataCreator] Failed to restore the unsubmitted draft:', error);

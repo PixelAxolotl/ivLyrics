@@ -76,6 +76,34 @@ test('disabled controls expose their tooltip without enabling or forwarding the 
     assert.equal(result.children[0].props.title, 'Regenerate translation');
 });
 
+test('long tooltip labels remain inside the viewport at either corner', () => {
+    let anchor = null;
+    const document = { body: {} };
+    const window = { innerWidth: 800, innerHeight: 600,
+        ReactDOM: { createPortal: content => content } };
+    const render = vm.runInNewContext(code + '\nIvLyricsTooltip;', {
+        react, window, document, useState: () => [anchor, value => { anchor = value; }], useEffect() {},
+    });
+    const children = { type: 'button', props: {} };
+    for (const [left, top] of [[10, 0], [790, 580], [400, 300]]) {
+        let result = render({ children, label: 'A long translated menu description' });
+        result.children[0].props.onFocus({ currentTarget: { getBoundingClientRect: () => ({ left, top, height: 20 }) } });
+        result = render({ children, label: 'A long translated menu description' });
+        const tooltip = result.children[1];
+        const element = { style: {}, getBoundingClientRect() {
+            const right = window.innerWidth - parseFloat(this.style.right);
+            const middle = parseFloat(this.style.top);
+            return { left: right - 320, right, top: middle - 60, bottom: middle + 60 };
+        } };
+        for (let rerender = 0; rerender < 2; rerender++) {
+            tooltip.props.ref(element);
+            const rect = element.getBoundingClientRect();
+            assert.ok(rect.left >= 8 && rect.right <= 792);
+            assert.ok(rect.top >= 8 && rect.bottom <= 592);
+        }
+    }
+});
+
 test('study control shares the toolbar tooltip and keeps a native fallback', () => {
     const learningSource = readFileSync(new URL('../LearningMode.js', import.meta.url), 'utf8');
     const studyCode = learningSource.slice(learningSource.indexOf('const StudyButton ='), learningSource.indexOf('const TabButton ='));

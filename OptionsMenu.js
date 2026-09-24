@@ -33,6 +33,18 @@ const IvLyricsTooltip = ({ label, children }) => {
     const rect = event.currentTarget.getBoundingClientRect();
     setAnchor({ right: Math.max(8, window.innerWidth - rect.left + 8), top: Math.max(20, Math.min(window.innerHeight - 20, rect.top + rect.height / 2)) });
   };
+  const positionTooltip = (element) => {
+    if (!element || !anchor) return;
+    // Measure only when the tooltip mounts/changes. Long translations can be
+    // taller or wider than the space beside a button near the window edges.
+    element.style.right = `${anchor.right}px`;
+    element.style.top = `${anchor.top}px`;
+    const rect = element.getBoundingClientRect();
+    const shiftX = Math.max(8 - rect.left, Math.min(0, window.innerWidth - 8 - rect.right));
+    const shiftY = Math.max(8 - rect.top, Math.min(0, window.innerHeight - 8 - rect.bottom));
+    element.style.right = `${anchor.right - shiftX}px`;
+    element.style.top = `${anchor.top + shiftY}px`;
+  };
   const handlers = {};
   for (const name of ["onMouseEnter", "onFocus", "onMouseLeave", "onBlur", "onClick"]) {
     handlers[name] = (event) => {
@@ -59,6 +71,7 @@ const IvLyricsTooltip = ({ label, children }) => {
     anchor && label && reactDom?.createPortal
       ? reactDom.createPortal(react.createElement("div", {
           className: "ivlyrics-toolbar-tooltip", role: "tooltip",
+          ref: positionTooltip,
           style: { right: `${anchor.right}px`, top: `${anchor.top}px` },
         }, label), document.body)
       : null);

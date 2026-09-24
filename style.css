@@ -9522,7 +9522,7 @@ html.is-lp-view-exit::view-transition-new(root) {
   z-index: 3;
   bottom: clamp(22px, 4svh, 42px);
   left: 50%;
-  width: min(90vw, 1160px);
+  width: 90%;
   min-height: clamp(94px, 13svh, 146px);
   margin: 0;
   overflow: visible;
@@ -10805,7 +10805,7 @@ html.is-lp-view-exit::view-transition-new(root) {
 
 .fullscreen-vinyl-overlay.is-portrait-layout .fullscreen-vinyl-lyric-stage {
   bottom: clamp(18px, 3.5svh, 38px);
-  width: min(92vw, 760px);
+  width: 92%;
   min-height: clamp(112px, 17svh, 188px);
 }
 

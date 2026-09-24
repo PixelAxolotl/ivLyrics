@@ -9,6 +9,7 @@
 (() => {
     'use strict';
 
+    function createOpenAICompatibleAddon(config = {}) {
     // ============================================
     // Addon Metadata
     // ============================================
@@ -45,13 +46,16 @@
         models: [] // API에서 동적으로 로드
     };
 
+    Object.assign(ADDON_INFO, config.info || {});
+    const DEFAULT_OPENAI_BASE_URL = config.baseUrl || 'https://api.openai.com/v1';
+
     /**
      * OpenAI API에서 사용 가능한 모델 목록을 가져옴 (채팅/텍스트 생성용 모델만)
      */
     async function fetchAvailableModels(apiKey, baseUrl) {
         if (!apiKey) return [];
 
-        const normalizedBaseUrl = (baseUrl || 'https://api.openai.com/v1').replace(/\/$/, '');
+        const normalizedBaseUrl = (baseUrl || DEFAULT_OPENAI_BASE_URL).replace(/\/$/, '');
         const isOpenAIBaseUrl = normalizedBaseUrl === 'https://api.openai.com/v1';
 
         // 제외할 모델 패턴 (이미지 생성, 음성, 임베딩 등)
@@ -167,7 +171,7 @@
      */
     async function getModels() {
         const apiKeys = getApiKeys();
-        const baseUrl = getSetting('base-url', 'https://api.openai.com/v1');
+        const baseUrl = getSetting('base-url', DEFAULT_OPENAI_BASE_URL);
         if (apiKeys.length === 0) return [];
         return await fetchAvailableModels(apiKeys[0], baseUrl);
     }
@@ -201,7 +205,6 @@
         return parseConnectionKeys(getSetting('api-keys', '') || getSetting('api-key', ''));
     }
 
-    const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1';
     function normalizeBaseUrl(value) {
         return String(value || '').trim().replace(/\/+$/, '');
     }
@@ -247,7 +250,7 @@
     }
 
     function getDefaultRequestBodyMergePatch() {
-        return {
+        return config.requestDefaults ? { ...config.requestDefaults } : {
             max_completion_tokens: 16000,
             temperature: 0.3
         };
@@ -1104,7 +1107,7 @@
                 const [apiKeys, setApiKeys] = useState(
                     Array.isArray(initialApiKeys) ? JSON.stringify(initialApiKeys) : initialApiKeys
                 );
-                const [baseUrl, setBaseUrl] = useState(getSetting('base-url', 'https://api.openai.com/v1'));
+                const [baseUrl, setBaseUrl] = useState(getSetting('base-url', DEFAULT_OPENAI_BASE_URL));
                 const [model, setModel] = useState(getSelectedModel());
                 const [customModel, setCustomModel] = useState(getSetting('custom-model', ''));
                 const [testStatus, setTestStatus] = useState('');
@@ -1201,7 +1204,7 @@
                     ),
                     React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, aiText('baseUrl', 'Base URL')),
-                        React.createElement('input', { type: 'text', value: baseUrl, onChange: handleBaseUrlChange, placeholder: 'https://api.openai.com/v1' }),
+                        React.createElement('input', { type: 'text', value: baseUrl, onChange: handleBaseUrlChange, placeholder: DEFAULT_OPENAI_BASE_URL }),
                         React.createElement('small', null, 'Change this to use OpenAI-compatible APIs')
                     ),
                     React.createElement('div', { className: 'ai-addon-setting' },
@@ -1462,7 +1465,7 @@
                     onResearchProgress(null, { ...details, reset: true });
                 }
                 : null;
-            const request = webSearch !== false
+            const request = ADDON_INFO.supports.researchWebSearch && webSearch !== false
                 ? callResponsesAPIStream
                 : callChatGPTAPIStream;
             return await request(
@@ -1525,5 +1528,10 @@
 
     registerAddon();
 
-    window.__ivLyricsDebugLog?.('[ChatGPT Addon] Module loaded');
+    return ChatGPTAddon;
+    }
+
+    // Share request validation, streaming and settings without sharing credentials.
+    window.createOpenAICompatibleAddon = createOpenAICompatibleAddon;
+    createOpenAICompatibleAddon();
 })();

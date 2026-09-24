@@ -72,6 +72,7 @@
 		"AIRequest.js",
 		"Addon_AI_Pollinations.js",
 		"Addon_AI_ChatGPT.js",
+		"Addon_AI_NvidiaNim.js",
 		"Addon_AI_Claude.js",
 		"Addon_AI_BingTranslate.js",
 		"Addon_AI_Gemini.js",

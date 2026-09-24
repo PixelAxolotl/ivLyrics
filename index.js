@@ -10522,20 +10522,26 @@ class LyricsContainer extends react.Component {
         },
         // 전체화면에서만 보이는 메뉴 토글 버튼
         this.state.isFullscreen && react.createElement(
-          "button",
-          {
-            className: "lyrics-config-button lyrics-floating-menu-toggle",
-            type: "button",
-            "aria-label": this.state.isFloatingMenuOpen
-              ? (I18n.t("buttons.close") || "Close")
-              : "ivLyrics menu",
-            "aria-expanded": this.state.isFloatingMenuOpen,
-            onClick: (e) => {
-              e.stopPropagation();
-              this.toggleFloatingMenu();
+          IvLyricsTooltip,
+          { label: this.state.isFloatingMenuOpen
+            ? (I18n.t("buttons.close") || "Close")
+            : "ivLyrics menu" },
+          react.createElement(
+            "button",
+            {
+              className: "lyrics-config-button lyrics-floating-menu-toggle",
+              type: "button",
+              "aria-label": this.state.isFloatingMenuOpen
+                ? (I18n.t("buttons.close") || "Close")
+                : "ivLyrics menu",
+              "aria-expanded": this.state.isFloatingMenuOpen,
+              onClick: (e) => {
+                e.stopPropagation();
+                this.toggleFloatingMenu();
+              },
             },
-          },
-          renderFloatingToolbarIcon(this.state.isFloatingMenuOpen ? "close" : "menu")
+            renderFloatingToolbarIcon(this.state.isFloatingMenuOpen ? "close" : "menu")
+          )
         ),
         // 메뉴 내용 (일반 모드: 항상 표시, 전체화면: 열렸을 때만 표시)
         shouldRenderFloatingMenu && react.createElement(

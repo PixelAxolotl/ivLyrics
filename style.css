@@ -13279,6 +13279,14 @@ html.is-lp-view-exit::view-transition-new(root) {
   display: none;
 }
 
+.ivlyrics-tooltip-disabled-trigger {
+  display: inline-flex;
+}
+
+.ivlyrics-tooltip-disabled-trigger > button:disabled {
+  pointer-events: none;
+}
+
 .ivlyrics-toolbar-tooltip {
   position: fixed;
   z-index: var(--iv-layer-modal, 2147483647);

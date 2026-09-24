@@ -42,10 +42,20 @@ const IvLyricsTooltip = ({ label, children }) => {
     };
   }
   const button = react.cloneElement(children, {
-    ...handlers,
+    ...(children.props.disabled ? {} : handlers),
     title: reactDom?.createPortal ? undefined : label,
   });
-  return react.createElement(react.Fragment, null, button,
+  // Disabled native buttons suppress mouse events. Receive hover on a wrapper
+  // without forwarding clicks to the disabled action or replacing its ref.
+  const trigger = children.props.disabled
+    ? react.createElement("span", {
+        className: "ivlyrics-tooltip-disabled-trigger",
+        onMouseEnter: show,
+        onMouseLeave: () => setAnchor(null),
+        title: reactDom?.createPortal ? undefined : label,
+      }, button)
+    : button;
+  return react.createElement(react.Fragment, null, trigger,
     anchor && label && reactDom?.createPortal
       ? reactDom.createPortal(react.createElement("div", {
           className: "ivlyrics-toolbar-tooltip", role: "tooltip",
@@ -53,6 +63,7 @@ const IvLyricsTooltip = ({ label, children }) => {
         }, label), document.body)
       : null);
 };
+window.IvLyricsTooltip = IvLyricsTooltip;
 
 function getSettingsSurfaceTheme() {
   const storedTheme = window.ivLyricsStoragePersistence?.getItem("ivLyrics:settings-ui-theme")

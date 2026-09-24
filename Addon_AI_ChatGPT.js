@@ -34,8 +34,7 @@
             researchWebSearch: true,
             lyricsStudy: true,  // 학습 모드 생성
             characterPronunciation: true,
-            culturalAnnotations: true,
-            lyricsAlignment: true
+            culturalAnnotations: true
         },
         // Capabilities are toggled per endpoint inside this addon's settings
         // UI, so the provider-level toggle group in Settings stays hidden and

@@ -1,13 +1,5 @@
 ﻿// Simplified Chinese language file for ivLyrics
 window.LANG_ZH_CN = {
-  "semanticHighlight": {
-    "title": "按含义高亮",
-    "description": "根据原歌词的时间同步高亮发音和译文中对应的部分，同时保留原有语序。",
-    "unavailable": "请启用支持语义分析的 AI 提供商。仅使用 Bing 或 Google 翻译无法使用此功能。",
-    "available": "使用 AI 分析当前译文，也支持 Bing 和 Google 生成的译文。",
-    "phonetic": "发音语义高亮",
-    "translation": "译文语义高亮"
-  },
   "meta": {
     "language": "简体中文",
     "code": "zh-CN",

@@ -1,13 +1,5 @@
 ﻿// Spanish language file for ivLyrics
 window.LANG_ES = {
-  "semanticHighlight": {
-    "title": "Resaltar según el significado",
-    "description": "Resalta las partes correspondientes de la pronunciación y la traducción al ritmo de la letra original, sin cambiar el orden de las palabras.",
-    "unavailable": "Activa un proveedor de IA que admita análisis semántico. Bing o Google Traductor por sí solos no permiten esta función.",
-    "available": "Analiza la traducción actual con IA. También se admiten traducciones de Bing y Google.",
-    "phonetic": "Resaltado semántico de la pronunciación",
-    "translation": "Resaltado semántico de la traducción"
-  },
   "meta": {
     "language": "Español",
     "code": "es",

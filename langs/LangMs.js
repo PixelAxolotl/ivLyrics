@@ -1,13 +1,5 @@
 // Malaysian language file for ivLyrics
 window.LANG_MS = {
-  "semanticHighlight": {
-    "title": "Serlahkan mengikut makna",
-    "description": "Menyerlahkan bahagian sebutan dan terjemahan yang sepadan seiring dengan lirik asal, tanpa mengubah susunan perkataan.",
-    "unavailable": "Aktifkan penyedia AI yang menyokong analisis semantik. Bing atau Terjemahan Google sahaja tidak dapat menyediakan ciri ini.",
-    "available": "Analisis terjemahan semasa menggunakan AI. Terjemahan daripada Bing dan Google turut disokong.",
-    "phonetic": "Penyerlahan semantik sebutan",
-    "translation": "Penyerlahan semantik terjemahan"
-  },
   "meta": {
     "language": "Bahasa Melayu",
     "code": "ms",

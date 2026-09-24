@@ -1,13 +1,5 @@
 ﻿// Italian language file for ivLyrics
 window.LANG_IT = {
-  "semanticHighlight": {
-    "title": "Evidenzia in base al significato",
-    "description": "Evidenzia le parti corrispondenti della pronuncia e della traduzione in sincronia con il testo originale, mantenendo l’ordine delle parole.",
-    "unavailable": "Attiva un provider IA che supporti l’analisi semantica. Bing o Google Traduttore da soli non offrono questa funzione.",
-    "available": "Analizza la traduzione attuale con l’IA. Sono supportate anche le traduzioni di Bing e Google.",
-    "phonetic": "Evidenziazione semantica della pronuncia",
-    "translation": "Evidenziazione semantica della traduzione"
-  },
   "meta": {
     "language": "Italiano",
     "code": "it",

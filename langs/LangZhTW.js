@@ -1,13 +1,5 @@
 ﻿// Traditional Chinese language file for ivLyrics
 window.LANG_ZH_TW = {
-  "semanticHighlight": {
-    "title": "依含義醒目顯示",
-    "description": "依照原歌詞的時間同步醒目顯示發音和譯文中對應的部分，同時保留原有語序。",
-    "unavailable": "請啟用支援語意分析的 AI 供應商。僅使用 Bing 或 Google 翻譯無法使用此功能。",
-    "available": "使用 AI 分析目前的譯文，也支援 Bing 和 Google 產生的譯文。",
-    "phonetic": "發音語意醒目顯示",
-    "translation": "譯文語意醒目顯示"
-  },
   "meta": {
     "language": "繁體中文",
     "code": "zh-TW",

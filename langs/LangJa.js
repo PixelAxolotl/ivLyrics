@@ -1,13 +1,5 @@
 // Japanese language file for ivLyrics
 window.LANG_JA = {
-  "semanticHighlight": {
-    "title": "意味に合わせて強調",
-    "description": "原文のタイミングに合わせて、発音表記と翻訳の対応する部分を強調します。語順は維持されます。",
-    "unavailable": "意味解析に対応したAIプロバイダーを有効にしてください。Bing・Google翻訳だけでは利用できません。",
-    "available": "現在の翻訳結果をAIで解析します。Bing・Googleによる翻訳にも対応しています。",
-    "phonetic": "発音表記の意味に沿った強調",
-    "translation": "翻訳の意味に沿った強調"
-  },
   "meta": {
     "language": "日本語",
     "code": "ja",

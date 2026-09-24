@@ -1,13 +1,5 @@
 // Czech language file for ivLyrics
 window.LANG_CS = {
-  "semanticHighlight": {
-    "title": "Zvýraznit podle významu",
-    "description": "Zvýrazňuje odpovídající části výslovnosti a překladu v rytmu původního textu, aniž by měnilo pořadí slov.",
-    "unavailable": "Zapněte poskytovatele AI s podporou sémantické analýzy. Samotný Bing nebo Překladač Google tuto funkci neumožňují.",
-    "available": "Analyzujte aktuální překlad pomocí AI. Podporovány jsou i překlady z Bingu a Googlu.",
-    "phonetic": "Významové zvýraznění výslovnosti",
-    "translation": "Významové zvýraznění překladu"
-  },
   "meta": {
     "language": "Čeština",
     "code": "cs",

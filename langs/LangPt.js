@@ -1,13 +1,5 @@
 ﻿// Portuguese language file for ivLyrics
 window.LANG_PT = {
-  "semanticHighlight": {
-    "title": "Destacar pelo significado",
-    "description": "Destaca os trechos correspondentes da pronúncia e da tradução em sincronia com a letra original, preservando a ordem das palavras.",
-    "unavailable": "Ative um provedor de IA que ofereça análise semântica. Apenas Bing ou Google Tradutor não permitem usar este recurso.",
-    "available": "Analise a tradução atual com IA. Traduções do Bing e do Google também são aceitas.",
-    "phonetic": "Destaque semântico da pronúncia",
-    "translation": "Destaque semântico da tradução"
-  },
   "meta": {
     "language": "Português",
     "code": "pt",

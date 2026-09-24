@@ -1,13 +1,5 @@
 // Korean language file for ivLyrics
 window.LANG_KO = {
-  "semanticHighlight": {
-    "title": "의미에 맞춰 강조",
-    "description": "원어의 싱크에 맞춰 발음과 번역의 대응 구간을 강조합니다. 문장의 어순은 그대로 유지합니다.",
-    "unavailable": "의미 분석을 지원하는 AI 제공자를 켜야 사용할 수 있습니다. Bing·Google 번역만으로는 사용할 수 없습니다.",
-    "available": "현재 번역 결과를 AI로 분석합니다. Bing·Google이 만든 번역도 사용할 수 있습니다.",
-    "phonetic": "발음 의미 강조",
-    "translation": "번역 의미 강조"
-  },
   "meta": {
     "language": "한국어",
     "code": "ko",

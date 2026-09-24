@@ -1,13 +1,5 @@
 ﻿// Indonesian language file for ivLyrics
 window.LANG_ID = {
-  "semanticHighlight": {
-    "title": "Sorot berdasarkan makna",
-    "description": "Menyorot bagian pelafalan dan terjemahan yang sesuai secara sinkron dengan lirik asli, tanpa mengubah urutan kata.",
-    "unavailable": "Aktifkan penyedia AI yang mendukung analisis semantik. Bing atau Google Terjemahan saja tidak dapat menyediakan fitur ini.",
-    "available": "Analisis terjemahan saat ini dengan AI. Terjemahan dari Bing dan Google juga didukung.",
-    "phonetic": "Sorotan semantik pelafalan",
-    "translation": "Sorotan semantik terjemahan"
-  },
   "meta": {
     "language": "Bahasa Indonesia",
     "code": "id",

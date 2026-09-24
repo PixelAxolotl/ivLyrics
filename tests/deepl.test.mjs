@@ -20,7 +20,7 @@ test('DeepL only exposes translation and preserves blanks, instrumental markers 
     assert.equal(h.requests[0].body.target_lang, 'ZH-HANT');
     assert.deepEqual(h.requests[0].body.text, ['one', 'two', 'three']);
     assert.equal(h.requests[0].headers.Authorization, 'DeepL-Auth-Key fake-key:fx');
-    for (const feature of ['pronunciation', 'tmi', 'researchWebSearch', 'lyricsStudy', 'characterPronunciation', 'culturalAnnotations', 'lyricsAlignment']) assert.equal(h.addon.supports[feature], false);
+    for (const feature of ['pronunciation', 'tmi', 'researchWebSearch', 'lyricsStudy', 'characterPronunciation', 'culturalAnnotations']) assert.equal(h.addon.supports[feature], false);
     await assert.rejects(h.addon.translateLyrics({ text: 'one', wantSmartPhonetic: true }), /not supported/);
 });
 test('large sets batch at 50 and retain their order', async () => {

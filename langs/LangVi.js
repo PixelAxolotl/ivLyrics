@@ -1,13 +1,5 @@
 ﻿// Vietnamese language file for ivLyrics
 window.LANG_VI = {
-  "semanticHighlight": {
-    "title": "Tô sáng theo ý nghĩa",
-    "description": "Tô sáng các phần tương ứng của phiên âm và bản dịch đồng bộ với lời gốc, đồng thời giữ nguyên thứ tự từ.",
-    "unavailable": "Bật nhà cung cấp AI hỗ trợ phân tích ngữ nghĩa. Chỉ dùng Bing hoặc Google Dịch thì không thể sử dụng tính năng này.",
-    "available": "Phân tích bản dịch hiện tại bằng AI. Cũng hỗ trợ bản dịch từ Bing và Google.",
-    "phonetic": "Tô sáng phiên âm theo ngữ nghĩa",
-    "translation": "Tô sáng bản dịch theo ngữ nghĩa"
-  },
   "meta": {
     "language": "Tiếng Việt",
     "code": "vi",

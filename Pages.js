@@ -7888,10 +7888,12 @@ const useKaraokeWordStackSupplements = ({ line, timedChars, timedText, wordTimed
 // timed-char pipeline as KaraokeLine, so warmed memory/persistent caches hit
 // on mount. Vocal-row sublines warm on mount instead (row construction needs
 // live render data). Best effort per line: failures stay silent.
-const prefetchWordSupplementsForLyrics = (karaokeLines, { locale = "auto", sourceLang = "auto", trackId = "" } = {}) => {
+const prefetchWordSupplementsForLyrics = (karaokeLines, { locale = "auto", sourceLang = "auto", trackId = "", force = false } = {}) => {
 	const api = window.ivLyricsWordSupplements;
 	if (!api || !Array.isArray(karaokeLines) || karaokeLines.length === 0) return Promise.resolve(false);
-	if (window.CONFIG?.visual?.["prefetch-word-details-enabled"] === false) return Promise.resolve(false);
+	// Explicit user actions (e.g. Regenerate) bypass the prefetch toggle;
+	// automatic prefetch still honors it.
+	if (!force && window.CONFIG?.visual?.["prefetch-word-details-enabled"] === false) return Promise.resolve(false);
 	const lyricsLocale = locale && locale !== "auto"
 		? locale
 		: String(window.Utils?.getDetectedLanguage?.() || "auto");

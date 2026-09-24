@@ -6320,6 +6320,22 @@ class LyricsContainer extends react.Component {
       Toast.error(I18n.t("notifications.noLyricsLoaded"));
       return;
     }
+    // Word details only exist for karaoke lines; without them there is
+    // nothing to resend a request for.
+    const karaokeLines = Array.isArray(this.state.karaoke) && this.state.karaoke.length > 0
+      ? this.state.karaoke
+      : null;
+    if (!karaokeLines) {
+      Toast.error(I18n.t("notifications.noLyricsLoaded"));
+      return;
+    }
+    const prefetch = window.ivLyricsPrefetchWordSupplements;
+    if (typeof prefetch !== "function" || !window.ivLyricsWordSupplements) {
+      Toast.error(
+        `${I18n.t("notifications.wordDetailsRegenerateFailed") || "Word details regeneration failed"}: Word details unavailable.`
+      );
+      return;
+    }
 
     Toast.show(
       I18n.t("notifications.regeneratingWordDetails") || "Regenerating word details...",
@@ -6335,11 +6351,25 @@ class LyricsContainer extends react.Component {
       // Invalidate after the persistent clear so refetching lines cannot
       // re-read stale entries back into memory.
       window.ivLyricsWordSupplements?.invalidate?.();
-      if (this.isCurrentLyricsUri(uri)) {
-        Toast.success(
-          I18n.t("notifications.wordDetailsRegenerated") || "Word details regenerated."
-        );
+      if (!this.isCurrentLyricsUri(uri)) return;
+
+      // Explicitly refetch instead of relying on mounted lines' invalidation
+      // effect: this guarantees a fresh AI request (which also drives the
+      // generation status pill) even when no karaoke line is mounted yet.
+      // force bypasses the prefetch toggle; the track id is explicit so
+      // cache keys match the render path.
+      let sourceLang = "auto";
+      try {
+        sourceLang = window.LyricsService?.detectLanguage?.(karaokeLines) || "auto";
+      } catch { /* fall through to auto */ }
+      const refetched = await prefetch(karaokeLines, { sourceLang, trackId, force: true });
+      if (!this.isCurrentLyricsUri(uri)) return;
+      if (!refetched) {
+        throw new Error("No word details available for this track.");
       }
+      Toast.success(
+        I18n.t("notifications.wordDetailsRegenerated") || "Word details regenerated."
+      );
     } catch (error) {
       if (this.isCurrentLyricsUri(uri)) {
         Toast.error(

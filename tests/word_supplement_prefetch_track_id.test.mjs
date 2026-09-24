@@ -95,7 +95,7 @@ test("index.js and Pages.js thread the target track id into the prefetch calls",
 		/const trackId = Utils\.extractTrackId\(uri\) \|\| \(uri\.includes\(":"\) \? uri\.split\(":"\)\.pop\(\) : uri\);/
 	);
 	assert.match(index, /await prefetch\(karaoke, \{ sourceLang: detected, trackId \}\);/);
-	assert.match(pages, /sourceLang = "auto", trackId = "" \} = \{\}\) => \{/);
+	assert.match(pages, /sourceLang = "auto", trackId = "", force = false \} = \{\}\) => \{/);
 	assert.match(pages, /api\.getWordReadings\(units, lang, readingMode, timedText, supplementOptions\)/);
 	assert.match(pages, /api\.getWordGlosses\(units, timedText, lang, supplementOptions\)/);
 });

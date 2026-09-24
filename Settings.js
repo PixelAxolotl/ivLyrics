@@ -8760,7 +8760,7 @@ const ConfigModal = ({
     {
       id: "appearance",
       icon: "appearance",
-      group: "general",
+      group: "screen",
       label: I18n.t("tabs.appearance"),
       badge: tabMeta.appearance.badge,
       description: tabMeta.appearance.description,
@@ -8768,7 +8768,7 @@ const ConfigModal = ({
     {
       id: "performance",
       icon: "performance",
-      group: "general",
+      group: "screen",
       label: I18n.t("tabs.performance"),
       badge: tabMeta.performance.badge,
       description: tabMeta.performance.description,

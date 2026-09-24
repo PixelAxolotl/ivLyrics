@@ -128,6 +128,18 @@ const normalizeReleasedTree = (tree) => {
       }
     }
   }
+  // Display controls now follow providers on every platform. Normalize only
+  // this intentional navigation move; retain the independent control oracle.
+  const categories = elements(expected).filter(node => node.props.className === "settings-nav-category");
+  const items = key => elements(categories.find(node => node.props.key === key))
+    .find(node => node.props.className === "settings-nav-category-items")?.props.children[0];
+  const general = items("general");
+  const screen = items("screen");
+  if (general && screen) {
+    const moved = general.filter(node => ["appearance", "performance"].includes(node.props.key));
+    general.splice(0, general.length, ...general.filter(node => !moved.includes(node)));
+    screen.unshift(...moved);
+  }
   return expected;
 };
 

@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
+import vm from 'node:vm';
+
+const source = readFileSync(new URL('../SyncDataCreator.js', import.meta.url), 'utf8');
+const section = (start, end) => source.slice(source.indexOf(start), source.indexOf(end, source.indexOf(start)));
+function shift(data, delta) {
+    const context = { useCallback: fn => fn, currentLineStart: 3,
+        claimSessionForLocalEditing() {}, resetCurrentSyncInput() {},
+        roundSyncTime: value => Math.round(value * 1000) / 1000,
+        SYNC_CREATOR_MIN_SEQUENTIAL_STEP_SEC: 0.001,
+        setSyncData: update => { data = update(data); } };
+    vm.runInNewContext(`${section('\tconst getSyncCreatorLineTimes =', '\tconst SYNC_CREATOR_SHORTCUTS =')}
+        ${section('\tconst adjustCurrentLineOffset =', '\tconst resetFromStart =')}
+        globalThis.adjust = adjustCurrentLineOffset;`, context);
+    context.adjust(delta);
+    return JSON.parse(JSON.stringify(data));
+}
+const fixture = () => ({ version: 10, lines: [
+    { start: 0, end: 2, chars: [1, 2, 3] },
+    { start: 3, end: 7, chars: [85, 85.4, 85.8, 86.2, 86.6], parallel: { layout: 'stack', parts: [
+        { id: 'lead', ranges: [{ start: 3, end: 5 }], chars: [85, 85.4, 85.8] },
+        { id: 'backing', ranges: [{ start: 6, end: 7 }], chars: [85.2, 86.6] },
+        { id: 'pending', ranges: [{ start: 6, end: 7 }] },
+    ] } },
+    { start: 8, end: 9, chars: [100, 101] },
+] });
+
+test('line offset preserves independent sub-line times and repeated edits do not flatten them', () => {
+    const original = fixture();
+    let result = shift(original, 100);
+    assert.deepEqual(result.lines[1].chars, [85.1, 85.5, 85.9, 86.3, 86.7]);
+    assert.deepEqual(result.lines[1].parallel.parts[0].chars, [85.1, 85.5, 85.9]);
+    assert.deepEqual(result.lines[1].parallel.parts[1].chars, [85.3, 86.7]);
+    assert.equal(result.lines[1].parallel.parts[2].chars, undefined);
+    result = shift(result, -100);
+    assert.deepEqual(result, original);
+    assert.deepEqual(original, fixture(), 'saved input was not mutated');
+});

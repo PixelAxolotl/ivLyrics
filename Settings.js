@@ -6990,6 +6990,14 @@ const ConfigModal = ({
   const programmaticScrollTimerRef = react.useRef(null);
   const programmaticScrollEndCleanupRef = react.useRef(null);
   const highlightTimeoutRef = react.useRef(null);
+  const highlightedSettingRef = react.useRef(null);
+
+  const clearSettingHighlight = react.useCallback(() => {
+    if (highlightTimeoutRef.current !== null) clearTimeout(highlightTimeoutRef.current);
+    highlightTimeoutRef.current = null;
+    highlightedSettingRef.current?.classList.remove("setting-highlight-flash");
+    highlightedSettingRef.current = null;
+  }, []);
 
   const holdProgrammaticScroll = react.useCallback((delay = 1400) => {
     isProgrammaticScrollRef.current = true;
@@ -7011,6 +7019,7 @@ const ConfigModal = ({
   const scrollToSetting = react.useCallback(
     (settingKey, { behavior = "smooth", highlight = true } = {}) => {
       if (!settingKey) return false;
+      if (behavior === "smooth" && getEffectiveReducedMotionPreference()) behavior = "auto";
 
       const container = settingsContentRef.current;
       if (!container) return false;
@@ -7070,19 +7079,16 @@ const ConfigModal = ({
         behavior,
       });
 
+      clearSettingHighlight();
       if (highlight) {
         targetElement.classList.add("setting-highlight-flash");
-        if (highlightTimeoutRef.current) {
-          clearTimeout(highlightTimeoutRef.current);
-        }
-        highlightTimeoutRef.current = window.setTimeout(() => {
-          targetElement.classList.remove("setting-highlight-flash");
-        }, 1800);
+        highlightedSettingRef.current = targetElement;
+        highlightTimeoutRef.current = window.setTimeout(clearSettingHighlight, 1800);
       }
 
       return true;
     },
-    [holdProgrammaticScroll]
+    [holdProgrammaticScroll, clearSettingHighlight]
   );
 
   // 텍스트 하이라이트 헬퍼 함수
@@ -8273,9 +8279,7 @@ const ConfigModal = ({
         programmaticScrollEndCleanupRef.current();
         programmaticScrollEndCleanupRef.current = null;
       }
-      if (highlightTimeoutRef.current) {
-        clearTimeout(highlightTimeoutRef.current);
-      }
+      clearSettingHighlight();
     };
   }, []);
 

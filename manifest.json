@@ -75,6 +75,7 @@
 		"Addon_AI_NvidiaNim.js",
 		"Addon_AI_Claude.js",
 		"Addon_AI_BingTranslate.js",
+		"Addon_AI_DeepL.js",
 		"Addon_AI_Gemini.js",
 		"Addon_AI_GoogleTranslate.js",
 		"Addon_AI_Groq.js",

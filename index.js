@@ -2783,6 +2783,10 @@ const CONFIG = {
       "ivLyrics:visual:prefetch-video-enabled",
       true
     ),
+    "prefetch-word-details-enabled": StorageManager.get(
+      "ivLyrics:visual:prefetch-word-details-enabled",
+      true
+    ),
     "global-sync-offset":
       Number(StorageManager.getItem("ivLyrics:visual:global-sync-offset")) || 0,
     "quick-sync-controls-enabled": StorageManager.get(

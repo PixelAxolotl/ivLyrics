@@ -1383,6 +1383,10 @@ window.LANG_FR = {
       "videoEnabled": {
         "label": "Précharger vidéo",
         "desc": "Récupère à l'avance les infos de la vidéo d'arrière-plan"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {

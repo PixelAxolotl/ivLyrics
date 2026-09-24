@@ -1383,6 +1383,10 @@ window.LANG_DE = {
       "videoEnabled": {
         "label": "Video-Hintergrund vorladen",
         "desc": "Lädt Video-Hintergrundinformationen für den nächsten Song vor"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {

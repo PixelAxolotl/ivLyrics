@@ -1383,6 +1383,10 @@ window.LANG_HI = {
       "videoEnabled": {
         "label": "वीडियो बैकग्राउंड प्री-लोड",
         "desc": "अगले गीत की वीडियो जानकारी पहले से प्राप्त करें"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {

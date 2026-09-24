@@ -1383,6 +1383,10 @@ window.LANG_AR = {
       "videoEnabled": {
         "label": "تحميل خلفية الفيديو مسبقًا",
         "desc": "جلب معلومات خلفية الفيديو للأغنية التالية مسبقًا"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {

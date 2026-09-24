@@ -1383,6 +1383,10 @@ window.LANG_VI = {
       "videoEnabled": {
         "label": "Tải trước nền video",
         "desc": "Lấy trước thông tin nền video cho bài tiếp theo"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {

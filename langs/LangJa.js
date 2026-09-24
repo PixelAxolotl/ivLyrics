@@ -1383,6 +1383,10 @@ window.LANG_JA = {
       "videoEnabled": {
         "label": "動画背景の先読み",
         "desc": "次の曲の動画背景情報を事前に取得します"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {

@@ -1383,6 +1383,10 @@ window.LANG_CS = {
       "videoEnabled": {
         "label": "Předběžně načíst pozadí videa",
         "desc": "Načtěte si předem informace o pozadí videa pro další skladbu"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {

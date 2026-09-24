@@ -1383,6 +1383,10 @@ window.LANG_ZH_TW = {
       "videoEnabled": {
         "label": "預先載入影片背景",
         "desc": "預先取得下一首歌曲的影片背景資訊"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {

@@ -1383,6 +1383,10 @@ window.LANG_SV = {
       "videoEnabled": {
         "label": "Förladda videobakgrund",
         "desc": "Hämta videobakgrundsinformation för nästa låt i förväg"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {

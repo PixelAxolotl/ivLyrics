@@ -1383,6 +1383,10 @@ window.LANG_RU = {
       "videoEnabled": {
         "label": "Предзагрузка видео-фона",
         "desc": "Заранее получает информацию о видео-фоне для следующего трека"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {

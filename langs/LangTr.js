@@ -1383,6 +1383,10 @@ window.LANG_TR = {
     "videoEnabled": {
       "label": "Video Arka Planını Ön Yükle",
       "desc": "Sonraki şarkı için video arka plan bilgisini önceden getir"
+    },
+    "wordDetailsEnabled": {
+      "label": "Preload Word Details",
+      "desc": "Preload per-word readings and translations for word-level karaoke"
     }
   },
   "communitySync": {

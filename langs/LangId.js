@@ -1383,6 +1383,10 @@ window.LANG_ID = {
       "videoEnabled": {
         "label": "Pra-muat Latar Belakang Video",
         "desc": "Mengambil info latar belakang video lagu berikutnya sebelumnya"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {

@@ -1383,6 +1383,10 @@ window.LANG_TH = {
       "videoEnabled": {
         "label": "โหลดพื้นหลังวิดีโอล่วงหน้า",
         "desc": "ดึงข้อมูลพื้นหลังวิดีโอของเพลงถัดไปล่วงหน้า"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {

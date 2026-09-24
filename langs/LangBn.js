@@ -1383,6 +1383,10 @@ window.LANG_BN = {
       "videoEnabled": {
         "label": "ভিডিও ব্যাকগ্রাউন্ড প্রি-লোড",
         "desc": "পরবর্তী গানের ভিডিও ব্যাকগ্রাউন্ড তথ্য আগেই নিয়ে আসুন"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {

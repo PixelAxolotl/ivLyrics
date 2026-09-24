@@ -1383,6 +1383,10 @@ window.LANG_FA = {
       "videoEnabled": {
         "label": "پیش‌بارگذاری پس‌زمینه ویدیویی",
         "desc": "دریافت اطلاعات پس‌زمینه ویدیویی آهنگ بعدی پیش از موعد"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {

@@ -127,6 +127,16 @@ const treeContract = (before, after) => {
 };
 
 for (const component of ['LyricsProvidersTab', 'AIProvidersTab']) {
+  test(`${component}: leaving before addon registration cancels readiness polling`, () => {
+    const h = createHarness(current, component, { managerReady: false });
+    h.render(); h.flushEffects();
+    assert.equal(h.timeouts.size, 1);
+    h.unmount();
+    assert.equal(h.timeouts.size, 0);
+    h.tickTimeouts();
+    assert.equal(h.timeouts.size, 0, 'a closed provider tab must not keep polling');
+  });
+
   test(`${component}: provider tree, ordering gestures, expansion and persistence`, () => {
     const before = baseline && createHarness(baseline, component), after = createHarness(current, component);
     const pair = [before, after].filter(Boolean);

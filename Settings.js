@@ -1754,7 +1754,10 @@ const LyricsProvidersTab = () => {
     ?? (CONFIG.visual["prefer-lyrics-type-over-provider-order"] !== false);
 
   useEffect(() => {
+    let disposed = false;
+    let retryTimer = null;
     const loadProviders = () => {
+      if (disposed) return;
       if (window.LyricsAddonManager) {
         const providerList = window.LyricsAddonManager.getAddons();
         setProviders(providerList);
@@ -1768,10 +1771,14 @@ const LyricsProvidersTab = () => {
         });
         setEnabledProviders(enabled);
       } else {
-        setTimeout(loadProviders, 100);
+        retryTimer = setTimeout(loadProviders, 100);
       }
     };
     loadProviders();
+    return () => {
+      disposed = true;
+      if (retryTimer !== null) clearTimeout(retryTimer);
+    };
   }, [refreshKey]);
 
   const handleToggleEnabled = (providerId, enabled) => {

@@ -1,8 +1,9 @@
-/** DeepL translation-only provider. Uses the ivLyrics relay because DeepL blocks browser CORS. */
+/** DeepL translation-only provider, using Spicetify's configured CORS proxy. */
 (() => {
     'use strict';
     const ID = 'deepl';
-    const ENDPOINT = 'https://lyrics.api.ivl.is/lyrics/deepl';
+    const DEFAULT_CORS_PROXY_TEMPLATE = 'https://cors-proxy.spicetify.app/{url}';
+    const PROXY_TEMPLATE_STORAGE_KEY = 'spicetify:corsProxyTemplate';
     const getKey = () => String(window.AIAddonManager?.getAddonSetting(ID, 'api-key', '') || '').trim();
     const t = (key, fallback) => {
         const value = window.I18n?.t?.(key);
@@ -12,9 +13,21 @@
         const code = String(lang || 'en').trim().replace(/_/g, '-').toUpperCase();
         return ({ 'ZH-CN': 'ZH-HANS', 'ZH-TW': 'ZH-HANT', EN: 'EN-US', PT: 'PT-PT' })[code] || code;
     }
+    function getProxiedUrl(key) {
+        const host = key.endsWith(':fx') ? 'api-free.deepl.com' : 'api.deepl.com';
+        let template = DEFAULT_CORS_PROXY_TEMPLATE;
+        try {
+            template = window.localStorage?.getItem(PROXY_TEMPLATE_STORAGE_KEY) || template;
+        } catch {
+            // Match the existing Bing provider when local storage is unavailable.
+        }
+        if (!template.includes('{url}')) throw new Error('[DeepL] Invalid Spicetify CORS proxy template');
+        return template.replace('{url}', `https://${host}/v2/translate`);
+    }
     async function translate(text, lang) {
         const key = getKey();
         if (!key) throw new Error('[DeepL] API key is required');
+        const endpoint = getProxiedUrl(key);
         const target = targetLanguage(lang);
         const output = [];
         // Both the API's text-count limit and its UTF-8 request-size limit apply.
@@ -28,10 +41,10 @@
                 if (size + bytes > 120000 && batch.length) break;
                 batch.push(next); start++; size += bytes + 1;
             }
-            const response = await window.ivLyricsFetch(ENDPOINT, {
+            const response = await window.ivLyricsFetch(endpoint, {
                 method: 'POST', credentials: 'omit',
                 headers: { Authorization: `DeepL-Auth-Key ${key}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: batch, target_lang: target })
+                body: JSON.stringify({ text: batch, target_lang: target, preserve_formatting: true })
             }, 35_000);
             if (!response.ok) throw new Error(`[DeepL] Translation request failed (${response.status})`);
             const data = await response.json();
@@ -47,8 +60,8 @@
         id: ID, name: 'DeepL', author: 'default', version: '1.0.0',
         apiKeyUrl: 'https://www.deepl.com/your-account/keys',
         description: {
-            ko: 'DeepL API Free/Pro 번역 전용. API 키와 번역할 텍스트를 ivLyrics 중계 서버를 통해 DeepL로 전송합니다.',
-            en: 'DeepL API Free/Pro translation only. Sends your API key and text to DeepL through the ivLyrics relay.'
+            ko: 'DeepL API Free/Pro를 사용하는 번역 전용 제공자입니다.',
+            en: 'Translation-only provider using DeepL API Free/Pro.'
         },
         supports: {
             translate: true, pronunciation: false, metadata: true, tmi: false,

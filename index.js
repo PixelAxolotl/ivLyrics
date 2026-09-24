@@ -1633,7 +1633,10 @@ const CLOUD_SYNC_EXCLUDED_STORAGE_KEYS = new Set([
   TRACK_SYNC_OFFSETS_STORAGE_KEY,
   `${APP_NAME}:settings-presets`,
   `${APP_NAME}:ai:addon:chatgpt:fallback-providers`,
+  `${APP_NAME}:ai:addon:chatgpt:extra-endpoints`,
+  `${APP_NAME}:ai:addon:nvidia-nim:extra-endpoints`,
 ]);
+const CLOUD_SYNC_EXCLUDED_KEY_SUFFIXES = ['extra-endpoints'];
 const CLOUD_SYNC_FORBIDDEN_KEY_PATTERN = /(apikey|token|password|secret|credential|clientid|userhash)/i;
 const CLOUD_SYNC_SAFE_TOKEN_LIMIT_PATTERN = /max(?:output)?tokens?/gi;
 const isCloudSyncCredentialLikeKey = (key) => {
@@ -1646,6 +1649,7 @@ const isCloudSyncSettingKey = (key) => (
   typeof key === "string" &&
   key.startsWith(CURRENT_STORAGE_PREFIX) &&
   !CLOUD_SYNC_EXCLUDED_STORAGE_KEYS.has(key) &&
+  !CLOUD_SYNC_EXCLUDED_KEY_SUFFIXES.some((suffix) => key === suffix || key.endsWith(`:${suffix}`)) &&
   !OBSOLETE_LEGACY_STORAGE_KEYS.has(key) &&
   !PRIVATE_OR_TRANSIENT_STORAGE_KEYS.has(key) &&
   !isCloudSyncCredentialLikeKey(key)

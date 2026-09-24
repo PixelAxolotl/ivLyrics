@@ -36,6 +36,7 @@ window.LANG_ZH_TW = {
     "inSection": "在 {section} 中"
   },
   "settingsUi": {
+    "aiAutosave": "設定會自動儲存。重新產生以套用至目前歌曲。",
     "groups": {
       "core": "工作區",
       "display": "顯示",

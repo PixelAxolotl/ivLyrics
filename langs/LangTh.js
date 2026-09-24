@@ -36,6 +36,7 @@ window.LANG_TH = {
     "inSection": "ใน {section}"
   },
   "settingsUi": {
+    "aiAutosave": "บันทึกการตั้งค่าอัตโนมัติ สร้างใหม่เพื่อใช้กับเพลงปัจจุบัน",
     "groups": {
       "core": "พื้นฐาน",
       "display": "การแสดงผล",

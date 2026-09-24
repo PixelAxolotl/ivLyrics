@@ -36,6 +36,7 @@ window.LANG_ES = {
     "inSection": "en {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Los ajustes se guardan automáticamente. Regenera para aplicarlos a la canción actual.",
     "groups": {
       "core": "Espacio de trabajo",
       "display": "Visualización",

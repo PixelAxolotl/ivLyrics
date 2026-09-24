@@ -36,6 +36,7 @@ window.LANG_EN = {
     "inSection": "in {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Settings save automatically. Regenerate to apply them to the current song.",
     "groups": {
       "core": "Workspace",
       "display": "Display",

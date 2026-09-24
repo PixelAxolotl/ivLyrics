@@ -36,6 +36,7 @@ window.LANG_FR = {
     "inSection": "dans {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Les réglages sont enregistrés automatiquement. Régénérez pour les appliquer au morceau actuel.",
     "groups": {
       "core": "Espace de travail",
       "display": "Affichage",

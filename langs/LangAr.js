@@ -36,6 +36,7 @@ window.LANG_AR = {
     "inSection": "في {section}"
   },
   "settingsUi": {
+    "aiAutosave": "تُحفظ الإعدادات تلقائيًا. أعد الإنشاء لتطبيقها على الأغنية الحالية.",
     "groups": {
       "core": "الأساس",
       "display": "العرض",

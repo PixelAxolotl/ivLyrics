@@ -36,6 +36,7 @@ window.LANG_ID = {
     "inSection": "Di {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Pengaturan tersimpan otomatis. Buat ulang untuk menerapkannya pada lagu saat ini.",
     "groups": {
       "core": "Inti",
       "display": "Tampilan",

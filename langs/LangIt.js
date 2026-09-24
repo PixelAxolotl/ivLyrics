@@ -36,6 +36,7 @@ window.LANG_IT = {
     "inSection": "In {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Le impostazioni si salvano automaticamente. Rigenera per applicarle al brano attuale.",
     "groups": {
       "core": "Area di lavoro",
       "display": "Visualizzazione",

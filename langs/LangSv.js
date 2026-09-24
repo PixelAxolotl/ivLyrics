@@ -36,6 +36,7 @@ window.LANG_SV = {
     "inSection": "i {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Inställningar sparas automatiskt. Generera på nytt för den aktuella låten.",
     "groups": {
       "core": "Arbetsyta",
       "display": "Display",

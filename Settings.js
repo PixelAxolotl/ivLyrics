@@ -11348,6 +11348,7 @@ const ConfigModal = ({
         react.createElement(
           "div",
           { "data-setting-key": "ai-providers" },
+          react.createElement("p", { className: "setting-description" }, I18n.t("settingsUi.aiAutosave")),
           react.createElement(AIProvidersTab)
         )
       ),

@@ -36,6 +36,7 @@ window.LANG_JA = {
     "inSection": "{section} 内"
   },
   "settingsUi": {
+    "aiAutosave": "設定は自動保存されます。現在の曲に適用するには再生成してください。",
     "groups": {
       "core": "基本",
       "display": "画面構成",

@@ -36,6 +36,7 @@ window.LANG_CS = {
     "inSection": "v {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Nastavení se ukládají automaticky. Pro aktuální skladbu spusťte nové generování.",
     "groups": {
       "core": "Pracovní prostor",
       "display": "Zobrazení",

@@ -36,6 +36,7 @@ window.LANG_TR = {
     "inSection": "{section} içinde"
   },
   "settingsUi": {
+    "aiAutosave": "Ayarlar otomatik kaydedilir. Geçerli şarkıya uygulamak için yeniden oluşturun.",
     "groups": {
       "core": "Çalışma Alanı",
       "display": "Görünüm",

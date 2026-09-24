@@ -36,6 +36,7 @@ window.LANG_BN = {
     "inSection": "{section}-এ"
   },
   "settingsUi": {
+    "aiAutosave": "সেটিংস স্বয়ংক্রিয়ভাবে সংরক্ষিত হয়। বর্তমান গানে প্রয়োগ করতে আবার তৈরি করুন।",
     "groups": {
       "core": "মূল",
       "display": "প্রদর্শন",

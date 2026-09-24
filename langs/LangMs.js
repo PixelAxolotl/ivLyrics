@@ -36,6 +36,7 @@ window.LANG_MS = {
     "inSection": "Dalam {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Tetapan disimpan secara automatik. Jana semula untuk lagu semasa.",
     "groups": {
       "core": "Asas",
       "display": "Konfigurasi Skrin",

@@ -36,6 +36,7 @@ window.LANG_PT = {
     "inSection": "Em {section}"
   },
   "settingsUi": {
+    "aiAutosave": "As configurações são salvas automaticamente. Gere novamente para aplicá-las à música atual.",
     "groups": {
       "core": "Espaço de trabalho",
       "display": "Exibição",

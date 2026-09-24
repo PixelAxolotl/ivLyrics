@@ -36,6 +36,7 @@ window.LANG_HI = {
     "inSection": "{section} में"
   },
   "settingsUi": {
+    "aiAutosave": "सेटिंग अपने आप सहेजी जाती हैं। मौजूदा गीत पर लागू करने के लिए दोबारा बनाएँ।",
     "groups": {
       "core": "मूल",
       "display": "प्रदर्शन",

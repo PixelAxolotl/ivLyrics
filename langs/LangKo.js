@@ -36,6 +36,7 @@ window.LANG_KO = {
     "inSection": "{section}에서"
   },
   "settingsUi": {
+    "aiAutosave": "설정은 자동으로 저장됩니다. 다시 생성하면 현재 곡에 적용됩니다.",
     "groups": {
       "core": "기본",
       "display": "화면 구성",

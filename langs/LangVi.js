@@ -36,6 +36,7 @@ window.LANG_VI = {
     "inSection": "trong {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Cài đặt được lưu tự động. Tạo lại để áp dụng cho bài hát hiện tại.",
     "groups": {
       "core": "Cốt lõi",
       "display": "Hiển thị",

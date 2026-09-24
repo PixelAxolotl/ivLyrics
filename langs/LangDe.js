@@ -36,6 +36,7 @@ window.LANG_DE = {
     "inSection": "In {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Einstellungen werden automatisch gespeichert. Für den aktuellen Titel erneut generieren.",
     "groups": {
       "core": "Arbeitsbereich",
       "display": "Anzeige",

@@ -36,6 +36,7 @@ window.LANG_FA = {
     "inSection": "در {section}"
   },
   "settingsUi": {
+    "aiAutosave": "تنظیمات خودکار ذخیره می‌شوند. برای اعمال روی آهنگ فعلی، دوباره تولید کنید.",
     "groups": {
       "core": "اصلی",
       "display": "نمایش",

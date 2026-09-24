@@ -1,5 +1,13 @@
 // Czech language file for ivLyrics
 window.LANG_CS = {
+  "semanticHighlight": {
+    "title": "Zvýraznit podle významu",
+    "description": "Zvýrazňuje odpovídající části výslovnosti a překladu v rytmu původního textu, aniž by měnilo pořadí slov.",
+    "unavailable": "Zapněte poskytovatele AI s podporou sémantické analýzy. Samotný Bing nebo Překladač Google tuto funkci neumožňují.",
+    "available": "Analyzujte aktuální překlad pomocí AI. Podporovány jsou i překlady z Bingu a Googlu.",
+    "phonetic": "Významové zvýraznění výslovnosti",
+    "translation": "Významové zvýraznění překladu"
+  },
   "meta": {
     "language": "Čeština",
     "code": "cs",
@@ -28,6 +36,7 @@ window.LANG_CS = {
     "inSection": "v {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Nastavení se ukládají automaticky. Pro aktuální skladbu spusťte nové generování.",
     "groups": {
       "core": "Pracovní prostor",
       "display": "Zobrazení",
@@ -471,7 +480,44 @@ window.LANG_CS = {
       "noEnabledProviders": "Nejsou povoleni žádní poskytovatelé AI. Povolte v nastavení alespoň jednoho poskytovatele.",
       "allProvidersFailed": "Všem poskytovatelům AI se nepodařilo požadavek zpracovat.",
       "enabledCapabilities": "Povolené schopnosti",
-      "capabilitiesDesc": "Vyberte funkce, které tento poskytovatel zpracovává"
+      "capabilitiesDesc": "Vyberte funkce, které tento poskytovatel zpracovává",
+      "openaiConnections": "Další poskytovatelé kompatibilní s OpenAI",
+      "openaiConnectionsDesc": "Pokud hlavní připojení selže, postupně se vyzkouší níže zapnutí poskytovatelé.",
+      "addOpenaiConnection": "Přidat vlastního poskytovatele",
+      "connectionName": "Název poskytovatele",
+      "removeConnection": "Odebrat poskytovatele",
+      "testThisConnection": "Otestovat tohoto poskytovatele",
+      "connectionSuccess": "Připojení bylo úspěšné.",
+      "saveConnection": "Uložit",
+      "sonarModelsFallback": "Sonar nemá API pro seznam modelů. Zobrazuje se vestavěný seznam podporovaných modelů.",
+      "pollinationsAllModels": "Požaduje se přístup ke všem modelům. Po připojení vyberte model.",
+      "model": "Model",
+      "modelId": "Model ID",
+      "baseUrl": "Základní URL",
+      "apiKey": "Klíč API",
+      "apiKeyDesc": "Supports a single key, newline list, or JSON array. Uloženo pouze v tomto zařízení.",
+      "refreshModels": "Obnovit",
+      "selectModel": "Vybrat ze seznamu",
+      "loadingModels": "Načítání modelů…",
+      "modelsUnavailable": "Seznam modelů se nepodařilo načíst. ID modelu můžete zadat ručně.",
+      "testingConnection": "Otestovat připojení…",
+      "testConnection": "Otestovat připojení",
+      "getApiKey": "Získejte klíč",
+      "noModels": "Nejsou dostupné žádné modely",
+      "pollinationsAccount": "Účet Pollinations",
+      "pollinationsConnect": "Přihlásit se k Pollinations",
+      "pollinationsReconnect": "Znovu připojit",
+      "pollinationsWaiting": "Čekání na přihlášení",
+      "pollinationsOpenLogin": "Otevřít přihlašovací stránku",
+      "pollinationsDisconnect": "Odpojit",
+      "pollinationsDisconnected": "Účet Pollinations · Zakázáno",
+      "pollinationsRequesting": "Přihlásit se k Pollinations…",
+      "pollinationsConnected": "Účet Pollinations · Povoleno",
+      "pollinationsKeyConfigured": "Účet Pollinations · Nakonfigurováno",
+      "pollinationsKeyStatus": "Účet Pollinations · Povoleno: %s",
+      "pollinationsDescription": "Podporuje ruční klíče API i přihlašovací tokeny účtu. Dostupný přihlašovací token se použije jako první.",
+      "pollinationsInvalid": "Klíč API není platný. Znovu se připojte nebo zadejte nový klíč.",
+      "pollinationsExpires": "Vyprší za %d dnů"
     },
     "lyricsProviders": {
       "title": "Poskytovatelé textů",

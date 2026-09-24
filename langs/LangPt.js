@@ -1,5 +1,13 @@
 ﻿// Portuguese language file for ivLyrics
 window.LANG_PT = {
+  "semanticHighlight": {
+    "title": "Destacar pelo significado",
+    "description": "Destaca os trechos correspondentes da pronúncia e da tradução em sincronia com a letra original, preservando a ordem das palavras.",
+    "unavailable": "Ative um provedor de IA que ofereça análise semântica. Apenas Bing ou Google Tradutor não permitem usar este recurso.",
+    "available": "Analise a tradução atual com IA. Traduções do Bing e do Google também são aceitas.",
+    "phonetic": "Destaque semântico da pronúncia",
+    "translation": "Destaque semântico da tradução"
+  },
   "meta": {
     "language": "Português",
     "code": "pt",
@@ -28,6 +36,7 @@ window.LANG_PT = {
     "inSection": "Em {section}"
   },
   "settingsUi": {
+    "aiAutosave": "As configurações são salvas automaticamente. Gere novamente para aplicá-las à música atual.",
     "groups": {
       "core": "Espaço de trabalho",
       "display": "Exibição",
@@ -471,7 +480,44 @@ window.LANG_PT = {
       "noEnabledProviders": "Nenhum provedor de IA habilitado. Por favor, habilite pelo menos um nas configurações.",
       "allProvidersFailed": "Todos os provedores de IA falharam ao processar a solicitação.",
       "enabledCapabilities": "Recursos Ativados",
-      "capabilitiesDesc": "Selecione quais recursos este provedor gerencia"
+      "capabilitiesDesc": "Selecione quais recursos este provedor gerencia",
+      "openaiConnections": "Provedores adicionais compatíveis com OpenAI",
+      "openaiConnectionsDesc": "Se a conexão principal falhar, os provedores ativados abaixo serão tentados em ordem.",
+      "addOpenaiConnection": "Adicionar provedor personalizado",
+      "connectionName": "Nome do provedor",
+      "removeConnection": "Remover provedor",
+      "testThisConnection": "Testar este provedor",
+      "connectionSuccess": "Conexão bem-sucedida.",
+      "saveConnection": "Salvar",
+      "sonarModelsFallback": "O Sonar não tem uma API de lista de modelos. A lista integrada de modelos compatíveis será exibida.",
+      "pollinationsAllModels": "O acesso a todos os modelos será solicitado. Escolha um modelo após conectar.",
+      "model": "Modelo",
+      "modelId": "Modelo ID",
+      "baseUrl": "BaseURL",
+      "apiKey": "API Chave",
+      "apiKeyDesc": "Suporta uma única chave, lista de nova linha ou matriz JSON. Armazenado apenas neste dispositivo.",
+      "refreshModels": "Atualizar",
+      "selectModel": "Escolher da lista",
+      "loadingModels": "Carregando modelos…",
+      "modelsUnavailable": "Não foi possível carregar a lista de modelos. Você pode inserir um ID de modelo manualmente.",
+      "testingConnection": "Testar conexão…",
+      "testConnection": "Testar conexão",
+      "getApiKey": "Obter chave",
+      "noModels": "Nenhum modelo disponível",
+      "pollinationsAccount": "Conta Pollinations",
+      "pollinationsConnect": "Entrar no Pollinations",
+      "pollinationsReconnect": "Reconectar",
+      "pollinationsWaiting": "Aguardando login",
+      "pollinationsOpenLogin": "Abrir página de login",
+      "pollinationsDisconnect": "Desconectar",
+      "pollinationsDisconnected": "Conta Pollinations · Desativado",
+      "pollinationsRequesting": "Entrar no Pollinations…",
+      "pollinationsConnected": "Conta Pollinations · Ativado",
+      "pollinationsKeyConfigured": "Conta Pollinations · Configurado",
+      "pollinationsKeyStatus": "Conta Pollinations · Ativado: %s",
+      "pollinationsDescription": "Compatível com chaves de API manuais e tokens de login. O token de login é usado primeiro quando disponível.",
+      "pollinationsInvalid": "A chave API é inválida. Reconecte ou insira uma nova chave.",
+      "pollinationsExpires": "Expira em %d dia(s)"
     },
     "lyricsProviders": {
       "title": "Provedores de letras",
@@ -2067,7 +2113,6 @@ window.LANG_PT = {
     "copyrightConfirm": "Concordar e Continuar",
     "settings": {
       "backgroundType": "Estilo de Fundo",
-      "coverBlur": "Desfoque",
       "gradient": "Gradiente",
       "solid": "Sólido",
       "backgroundBlur": "Desfoque do Fundo",

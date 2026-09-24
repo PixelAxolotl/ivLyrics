@@ -16,7 +16,7 @@ const classList = (...initial) => {
   };
 };
 
-const createRow = ({ width = 300, naturalWidth = 600, direction = "ltr" } = {}) => {
+const createRow = ({ width = 300, naturalWidth = 600, direction = "ltr" } = {}, layoutAudit) => {
   const viewport = {
     classList: classList("ivlyrics-vinyl-lyric-scroll-viewport"),
     clientWidth: width,
@@ -38,6 +38,28 @@ const createRow = ({ width = 300, naturalWidth = 600, direction = "ltr" } = {}) 
     get scrollWidth() { return measuredWidth(); },
     getBoundingClientRect: () => ({ width: measuredWidth() }),
   };
+  if (layoutAudit) {
+    for (const method of ["add", "remove"]) {
+      const original = viewport.classList[method];
+      viewport.classList[method] = (...names) => {
+        const changed = names.some(name => viewport.classList.contains(name) !== (method === "add"));
+        original(...names);
+        if (changed) layoutAudit.dirty = true;
+      };
+    }
+    const readLayout = () => {
+      if (layoutAudit.dirty) layoutAudit.flushes++;
+      layoutAudit.dirty = false;
+    };
+    Object.defineProperty(viewport, "clientWidth", {
+      get() { readLayout(); return width; },
+      set(value) { width = value; layoutAudit.dirty = true; },
+    });
+    Object.defineProperty(content, "scrollWidth", {
+      get() { readLayout(); return measuredWidth(); },
+    });
+    content.getBoundingClientRect = () => { readLayout(); return { width: measuredWidth() }; };
+  }
   let transform = "", transformWrites = 0;
   Object.defineProperty(content.style, "transform", {
     get: () => transform,
@@ -47,12 +69,12 @@ const createRow = ({ width = 300, naturalWidth = 600, direction = "ltr" } = {}) 
   return { viewport, content };
 };
 
-const createHarness = ({ rows = [{}], reducedMotion = false, ...initialProps } = {}) => {
+const createHarness = ({ rows = [{}], reducedMotion = false, layoutAudit, ...initialProps } = {}) => {
   const slots = [];
   const frames = new Map();
   const mediaListeners = new Set();
   const observers = new Set();
-  const lyricRows = rows.map(createRow);
+  const lyricRows = rows.map(row => createRow(row, layoutAudit));
   let cursor = 0;
   let nextFrame = 0;
   let effects = [];
@@ -183,6 +205,21 @@ const assertScrolling = (row, offset) => {
   assert.equal(row.viewport.classList.contains(MEASURING), false);
   assert.equal(row.content.style.transform, `translate3d(${offset.toFixed(3)}px, 0, 0)`);
 };
+
+test("original and auxiliary geometry uses two layout batches regardless of row count", () => {
+  for (const count of [1, 3, 8]) {
+    const layoutAudit = { dirty: false, flushes: 0 };
+    const h = createHarness({ rows: Array.from({ length: count }, () => ({ naturalWidth: 600 })), layoutAudit });
+    assert.equal(layoutAudit.flushes, 2, "natural and padded widths each share one layout across rows");
+    h.rows.forEach(row => assertScrolling(row, -170));
+    layoutAudit.flushes = 0;
+    h.render({ positionOverride: 7000 });
+    assert.equal(layoutAudit.flushes, 0, "playback transforms do not measure layout");
+    h.notifyLayoutChange();
+    assert.equal(layoutAudit.flushes, 2, "resize remeasurement also batches all rows");
+    h.unmount();
+  }
+});
 
 test("timed original and auxiliary rows retain hold, traversal, end hold, and RTL direction", () => {
   const h = createHarness({ rows: [

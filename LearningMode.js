@@ -1644,6 +1644,7 @@
             disabled,
             "aria-pressed": isOpen,
             "aria-label": label,
+            title: window.IvLyricsTooltip ? undefined : label,
             onClick: (event) => {
                 event.stopPropagation();
                 if (disabled) return;
@@ -1651,8 +1652,8 @@
             }
         }, BookIcon);
 
-        if (window.Spicetify?.ReactComponent?.TooltipWrapper) {
-            return react.createElement(window.Spicetify.ReactComponent.TooltipWrapper, { label }, button);
+        if (window.IvLyricsTooltip) {
+            return react.createElement(window.IvLyricsTooltip, { label }, button);
         }
 
         return button;

@@ -1,5 +1,13 @@
 ﻿// Italian language file for ivLyrics
 window.LANG_IT = {
+  "semanticHighlight": {
+    "title": "Evidenzia in base al significato",
+    "description": "Evidenzia le parti corrispondenti della pronuncia e della traduzione in sincronia con il testo originale, mantenendo l’ordine delle parole.",
+    "unavailable": "Attiva un provider IA che supporti l’analisi semantica. Bing o Google Traduttore da soli non offrono questa funzione.",
+    "available": "Analizza la traduzione attuale con l’IA. Sono supportate anche le traduzioni di Bing e Google.",
+    "phonetic": "Evidenziazione semantica della pronuncia",
+    "translation": "Evidenziazione semantica della traduzione"
+  },
   "meta": {
     "language": "Italiano",
     "code": "it",
@@ -28,6 +36,7 @@ window.LANG_IT = {
     "inSection": "In {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Le impostazioni si salvano automaticamente. Rigenera per applicarle al brano attuale.",
     "groups": {
       "core": "Area di lavoro",
       "display": "Visualizzazione",
@@ -471,7 +480,44 @@ window.LANG_IT = {
       "noEnabledProviders": "Nessun fornitore AI abilitato. Abilita almeno un fornitore nelle impostazioni.",
       "allProvidersFailed": "Tutti i fornitori AI hanno fallito nell'elaborazione della richiesta.",
       "enabledCapabilities": "Funzionalità abilitate",
-      "capabilitiesDesc": "Seleziona quali funzionalità gestisce questo fornitore"
+      "capabilitiesDesc": "Seleziona quali funzionalità gestisce questo fornitore",
+      "openaiConnections": "Altri provider compatibili con OpenAI",
+      "openaiConnectionsDesc": "Se la connessione principale non riesce, vengono provati in ordine i provider attivati qui sotto.",
+      "addOpenaiConnection": "Aggiungi provider personalizzato",
+      "connectionName": "Nome del provider",
+      "removeConnection": "Rimuovi provider",
+      "testThisConnection": "Prova questo provider",
+      "connectionSuccess": "Connessione riuscita.",
+      "saveConnection": "Salva",
+      "sonarModelsFallback": "Sonar non dispone di un’API per l’elenco dei modelli. Viene mostrato l’elenco integrato dei modelli supportati.",
+      "pollinationsAllModels": "Viene richiesto l’accesso a tutti i modelli. Scegli un modello dopo la connessione.",
+      "model": "Modello",
+      "modelId": "Modello ID",
+      "baseUrl": "Base URL",
+      "apiKey": "API Chiave",
+      "apiKeyDesc": "Supporta una chiave singola, un elenco di nuova riga o un array JSON. Memorizzato solo su questo dispositivo.",
+      "refreshModels": "Aggiorna",
+      "selectModel": "Scegli dall'elenco",
+      "loadingModels": "Caricamento modelli…",
+      "modelsUnavailable": "Impossibile caricare l’elenco dei modelli. Puoi inserire manualmente un ID modello.",
+      "testingConnection": "Verifica connessione…",
+      "testConnection": "Verifica connessione",
+      "getApiKey": "Ottieni chiave",
+      "noModels": "Nessun modello disponibile",
+      "pollinationsAccount": "Account Pollinations",
+      "pollinationsConnect": "Accedi a Pollinations",
+      "pollinationsReconnect": "Riconnetti",
+      "pollinationsWaiting": "In attesa dell'accesso",
+      "pollinationsOpenLogin": "Apri la pagina di accesso",
+      "pollinationsDisconnect": "Disconnetti",
+      "pollinationsDisconnected": "Account Pollinations · Disabilitato",
+      "pollinationsRequesting": "Accedi a Pollinations…",
+      "pollinationsConnected": "Account Pollinations · Abilitato",
+      "pollinationsKeyConfigured": "Account Pollinations · Configurato",
+      "pollinationsKeyStatus": "Account Pollinations · Abilitato: %s",
+      "pollinationsDescription": "Supporta chiavi API manuali e token di accesso dell'account. Se disponibile, il token viene usato per primo.",
+      "pollinationsInvalid": "La chiave API non è valida. Riconnettiti o inserisci una nuova chiave.",
+      "pollinationsExpires": "Scade tra %d giorno/i"
     },
     "lyricsProviders": {
       "title": "Fornitori di testi",
@@ -2067,7 +2113,6 @@ window.LANG_IT = {
     "copyrightConfirm": "Accetto e continuo",
     "settings": {
       "backgroundType": "Stile sfondo",
-      "coverBlur": "Sfocatura",
       "gradient": "Gradiente",
       "solid": "Tinta unita",
       "backgroundBlur": "Sfocatura sfondo",

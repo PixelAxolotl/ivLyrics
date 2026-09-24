@@ -322,13 +322,12 @@ const encodeSyncCreatorCompactTiming = (target, sourceChars, locale = undefined)
 	]));
 	return encoded;
 };
-const normalizeSyncCreatorTimeSequence = (rawChars, previousLineEndTime = -1, granularity = 'character') => {
+const normalizeSyncCreatorTimeSequence = (rawChars, granularity = 'character') => {
 	const sourceChars = Array.isArray(rawChars) ? rawChars : [];
 	const normalizedChars = [];
 	const preserveEqualTimestamps = normalizeSyncCreatorGranularity(granularity) !== 'character';
-	let minimumAllowedTime = isFiniteSyncCreatorTime(previousLineEndTime) && previousLineEndTime >= 0
-		? previousLineEndTime
-		: 0;
+	// Vocal lines may overlap; only enforce ordering inside this timing target.
+	let minimumAllowedTime = 0;
 
 	for (let index = 0; index < sourceChars.length; index++) {
 		const rawTime = isFiniteSyncCreatorTime(sourceChars[index])
@@ -423,7 +422,7 @@ const repairSyncCreatorLineCharsFromParallel = (line) => {
 
 	return {
 		...line,
-		chars: normalizeSyncCreatorTimeSequence(rebuiltChars, -1, line?.granularity)
+		chars: normalizeSyncCreatorTimeSequence(rebuiltChars, line?.granularity)
 	};
 };
 const getSyncCreatorRangesValidationError = (ranges, lineStart, lineEnd, label) => {
@@ -5674,11 +5673,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 	}, [mode, isDragging, dragStartTime, currentLineChars.length, setRecordingProgressIndex, getActiveRecordingLockIndex, getGranularityEndIndex, markScoreTimingInput, syncGranularity]);
 
-	// Commit-time normalization keeps the client aligned with backend validation:
-	// chars must be non-decreasing and a line must not start before the previous line ends.
+	// Keep timestamps ordered within each vocal without shifting overlapping lines.
 	const normalizeCommittedLineChars = useCallback((
 		rawChars,
-		previousLineEndTime = -1,
 		granularity = syncGranularity,
 		sourceChars = currentLineChars
 	) => {
@@ -5691,7 +5688,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		);
 		return normalizeSyncCreatorTimeSequence(
 			collapsedChars,
-			previousLineEndTime,
 			normalizedGranularity
 		);
 	}, [syncGranularity, currentLineChars, lyricsLanguage]);
@@ -5717,11 +5713,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 			const linesByStart = new Map(prev.lines.map(line => [line.start, line]));
 			const currentLineData = linesByStart.get(currentStart);
-			const previousLine = prev.lines.reduce((best, line) => {
-				if (line.start >= currentStart || !Array.isArray(line.chars) || !line.chars.length) return best;
-				return !best || line.start > best.start ? line : best;
-			}, null);
-			const previousLineEndTime = previousLine?.chars?.[previousLine.chars.length - 1] ?? -1;
 
 			const getPartSnapshot = (lineIndex) => {
 				const lineStart = lineCharOffsets[lineIndex];
@@ -5782,7 +5773,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					end: mergedEnd,
 					chars: normalizeSyncCreatorTimeSequence(
 						snapshots.flatMap(snapshot => snapshot.chars),
-						previousLineEndTime,
 						'word'
 					),
 					// Parallel parts carry their own precise timing. Keep only one line-level
@@ -5881,15 +5871,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			: [];
 		const existingIndex = nextLines.findIndex((line) => line.start === lineStart);
 		const existingLine = existingIndex >= 0 ? nextLines[existingIndex] : null;
-		const previousLine = nextLines.reduce((best, line) => {
-			if (line.start >= lineStart) return best;
-			if (!best || line.start > best.start) return line;
-			return best;
-		}, null);
-		const previousLineEndTime = previousLine?.chars?.[previousLine.chars.length - 1] ?? -1;
 		const normalizedRawChars = normalizeCommittedLineChars(
 			rawChars,
-			previousLineEndTime,
 			syncGranularity,
 			currentLineChars
 		);
@@ -5917,7 +5900,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				fullChars[index] = previous ?? next ?? firstKnown ?? 0;
 			}
 
-			return normalizeSyncCreatorTimeSequence(fullChars, previousLineEndTime, 'word');
+			return normalizeSyncCreatorTimeSequence(fullChars, 'word');
 		};
 
 		const fullLineChars = buildFullLineChars();
@@ -6067,17 +6050,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		nextLines.sort((a, b) => a.start - b.start);
 
 		const committedLineIndex = nextLines.findIndex((line) => line.start === lineStart);
-		const previousSortedLine = committedLineIndex > 0 ? nextLines[committedLineIndex - 1] : null;
-		const previousSortedLineEndTime = previousSortedLine?.chars?.[previousSortedLine.chars.length - 1] ?? -1;
 		const normalizedLineData = {
 			...lineData,
 			chars: normalizeSyncCreatorTimeSequence(
 				lineData.chars,
-				previousSortedLineEndTime,
 				lineData.granularity
 			)
 		};
-		const normalizedLastCharTime = normalizedLineData.chars[normalizedLineData.chars.length - 1];
 
 		nextLines[committedLineIndex] = normalizedLineData;
 
@@ -6092,15 +6071,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const candidateLines = mergedLineComplete
 			? nextLines.filter(line => line.start <= lineStart || line.start > lineEnd)
 			: nextLines;
-		const updatedCommittedLineIndex = candidateLines.findIndex((line) => line.start === lineStart);
-
-		const validLines = candidateLines.filter((line, index) => {
-			if (index <= updatedCommittedLineIndex) return true;
-			return !(line.chars && line.chars[0] < normalizedLastCharTime);
-		});
-
-		const nextSyncData = validLines.length > 0
-			? { version: SYNC_CREATOR_SYNC_DATA_VERSION, lines: validLines }
+		const nextSyncData = candidateLines.length > 0
+			? { version: SYNC_CREATOR_SYNC_DATA_VERSION, lines: candidateLines }
 			: null;
 		const scoreInput = scoreInputRef.current;
 		if (scoreInput?.key === `${lineStart}:${activeParallelTargetId}` && scoreInput.inputCount > 0) {
@@ -7826,26 +7798,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			if (targetTimes.length === 0) return prev;
 
 			const firstTime = Math.min(...targetTimes);
-			const lastTime = Math.max(...targetTimes);
-			const previousLine = prev.lines
-				.filter(line => line.start < currentLineStart)
-				.sort((a, b) => b.start - a.start)[0] || null;
-			const nextLine = prev.lines
-				.filter(line => line.start > currentLineStart)
-				.sort((a, b) => a.start - b.start)[0] || null;
-			const previousTimes = getSyncCreatorLineTimes(previousLine);
-			const nextTimes = getSyncCreatorLineTimes(nextLine);
-			const minFirstTime = previousTimes.length > 0
-				? Math.max(...previousTimes) + SYNC_CREATOR_MIN_SEQUENTIAL_STEP_SEC
-				: 0;
-			const maxLastTime = nextTimes.length > 0
-				? Math.min(...nextTimes) - SYNC_CREATOR_MIN_SEQUENTIAL_STEP_SEC
-				: Infinity;
-			const minDeltaSec = minFirstTime - firstTime;
-			const maxDeltaSec = Number.isFinite(maxLastTime) ? maxLastTime - lastTime : Infinity;
-			if (Number.isFinite(maxDeltaSec) && maxDeltaSec < minDeltaSec) return prev;
-
-			const boundedDeltaSec = Math.min(Math.max(requestedDeltaSec, minDeltaSec), maxDeltaSec);
+			// Shift every vocal by one delta, bounded only by the start of the track.
+			const boundedDeltaSec = Math.max(requestedDeltaSec, -firstTime);
 			if ((requestedDeltaSec > 0 && boundedDeltaSec <= 0) || (requestedDeltaSec < 0 && boundedDeltaSec >= 0)) return prev;
 			if (!Number.isFinite(boundedDeltaSec) || Math.abs(boundedDeltaSec) < 0.0005) return prev;
 

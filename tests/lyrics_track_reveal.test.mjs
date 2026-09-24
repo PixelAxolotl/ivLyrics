@@ -280,8 +280,8 @@ test("manual lyric scrolling keeps its native scroll position when compact offse
   const h = createCompactOffsetHarness({ isScrolling: true, scrollTop: 384 });
   h.sync();
   assert.equal(h.container.scrollTop, 384);
-  assert.equal(h.offset, 0, "manual scrolling replaces transform-based centering");
-  assert.deepEqual(h.trace, [["cancel-observer"], ["measure", 384, true], ["offset", 0]]);
+  assert.equal(h.offset, 240, "native scrolling preserves the existing transform origin");
+  assert.deepEqual(h.trace, []);
 });
 
 test("hidden compact pages preserve measured offset until a visible layout can be measured", () => {
@@ -356,3 +356,12 @@ for (const name of ["SyncedLyricsPage", "SyncedExpandedLyricsPage", "UnsyncedLyr
     }
   });
 }
+
+test("a queued auto-follow callback cannot reset the first manual wheel before React commits", () => {
+  const h = createCompactOffsetHarness({ scrollTop: 1200 });
+  h.container.classList = { contains: name => name === "scrolling-active" };
+  h.sync();
+  assert.equal(h.container.scrollTop, 1200);
+  assert.equal(h.offset, 240);
+  assert.deepEqual(h.trace, []);
+});

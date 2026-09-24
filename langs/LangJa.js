@@ -1,5 +1,13 @@
 // Japanese language file for ivLyrics
 window.LANG_JA = {
+  "semanticHighlight": {
+    "title": "意味に合わせて強調",
+    "description": "原文のタイミングに合わせて、発音表記と翻訳の対応する部分を強調します。語順は維持されます。",
+    "unavailable": "意味解析に対応したAIプロバイダーを有効にしてください。Bing・Google翻訳だけでは利用できません。",
+    "available": "現在の翻訳結果をAIで解析します。Bing・Googleによる翻訳にも対応しています。",
+    "phonetic": "発音表記の意味に沿った強調",
+    "translation": "翻訳の意味に沿った強調"
+  },
   "meta": {
     "language": "日本語",
     "code": "ja",
@@ -28,6 +36,7 @@ window.LANG_JA = {
     "inSection": "{section} 内"
   },
   "settingsUi": {
+    "aiAutosave": "設定は自動保存されます。現在の曲に適用するには再生成してください。",
     "groups": {
       "core": "基本",
       "display": "画面構成",
@@ -471,7 +480,44 @@ window.LANG_JA = {
       "noEnabledProviders": "有効なAIプロバイダーがありません。設定で少なくとも1つのプロバイダーを有効にしてください。",
       "allProvidersFailed": "すべてのAIプロバイダーの要求に失败しました。",
       "enabledCapabilities": "有効な機能",
-      "capabilitiesDesc": "このプロバイダーが処理する機能を選択してください"
+      "capabilitiesDesc": "このプロバイダーが処理する機能を選択してください",
+      "openaiConnections": "追加のOpenAI互換プロバイダー",
+      "openaiConnectionsDesc": "基本の接続が失敗すると、以下の有効なプロバイダーを順番に試します。",
+      "addOpenaiConnection": "カスタムプロバイダーを追加",
+      "connectionName": "プロバイダー名",
+      "removeConnection": "プロバイダーを削除",
+      "testThisConnection": "このプロバイダーの接続をテスト",
+      "connectionSuccess": "接続に成功しました。",
+      "saveConnection": "保存",
+      "sonarModelsFallback": "Sonarにはモデル一覧APIがないため、内蔵の対応モデル一覧を表示します。",
+      "pollinationsAllModels": "すべてのモデルへのアクセスを要求します。接続後に使用するモデルを選択してください。",
+      "model": "モデル",
+      "modelId": "モデル ID",
+      "baseUrl": "基本URL",
+      "apiKey": "APIキー",
+      "apiKeyDesc": "単一キー、改行リスト、または JSON 配列をサポートします。このデバイスにのみ保存されます。",
+      "refreshModels": "更新",
+      "selectModel": "モデル一覧から選択",
+      "loadingModels": "モデルを読み込み中…",
+      "modelsUnavailable": "モデル一覧を読み込めませんでした。モデルIDを直接入力できます。",
+      "testingConnection": "接続をテスト…",
+      "testConnection": "接続をテスト",
+      "getApiKey": "キーを取得",
+      "noModels": "利用可能なモデルがありません",
+      "pollinationsAccount": "Pollinations アカウント",
+      "pollinationsConnect": "Pollinations にログイン",
+      "pollinationsReconnect": "再接続",
+      "pollinationsWaiting": "ログイン待機中",
+      "pollinationsOpenLogin": "ログインページを開く",
+      "pollinationsDisconnect": "接続を解除",
+      "pollinationsDisconnected": "Pollinations アカウント · 無効",
+      "pollinationsRequesting": "Pollinations にログイン…",
+      "pollinationsConnected": "Pollinations アカウント · 有効",
+      "pollinationsKeyConfigured": "Pollinations アカウント · 設定済み",
+      "pollinationsKeyStatus": "Pollinations アカウント · 有効: %s",
+      "pollinationsDescription": "手動 API キーとアカウントのログイントークンに対応しています。トークンがある場合は優先して使用します。",
+      "pollinationsInvalid": "APIキーが無効です。再接続するか、新しいキーを入力してください。",
+      "pollinationsExpires": "%d日後に期限切れ"
     },
     "lyricsProviders": {
       "title": "歌詞プロバイダー",
@@ -2067,7 +2113,6 @@ window.LANG_JA = {
     "copyrightConfirm": "同意して続行",
     "settings": {
       "backgroundType": "背景スタイル",
-      "coverBlur": "ブラー",
       "gradient": "グラデーション",
       "solid": "単色",
       "backgroundBlur": "背景ブラー",

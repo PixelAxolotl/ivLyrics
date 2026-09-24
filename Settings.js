@@ -1758,7 +1758,10 @@ const LyricsProvidersTab = () => {
     ?? (CONFIG.visual["prefer-lyrics-type-over-provider-order"] !== false);
 
   useEffect(() => {
+    let disposed = false;
+    let retryTimer = null;
     const loadProviders = () => {
+      if (disposed) return;
       if (window.LyricsAddonManager) {
         const providerList = window.LyricsAddonManager.getAddons();
         setProviders(providerList);
@@ -1772,10 +1775,14 @@ const LyricsProvidersTab = () => {
         });
         setEnabledProviders(enabled);
       } else {
-        setTimeout(loadProviders, 100);
+        retryTimer = setTimeout(loadProviders, 100);
       }
     };
     loadProviders();
+    return () => {
+      disposed = true;
+      if (retryTimer !== null) clearTimeout(retryTimer);
+    };
   }, [refreshKey]);
 
   const handleToggleEnabled = (providerId, enabled) => {
@@ -5817,12 +5824,15 @@ const ConfigKaraokeFillCurveEditor = ({
   const graphRef = useRef(null);
   const [points, setPoints] = useState(() => normalizeKaraokeFillCurvePoints(defaultValue));
   const pendingPointsRef = useRef(points);
+  const dragCleanupRef = useRef(null);
 
   useEffect(() => {
+    dragCleanupRef.current?.();
     const nextPoints = normalizeKaraokeFillCurvePoints(defaultValue);
     pendingPointsRef.current = nextPoints;
     setPoints(nextPoints);
-  }, [defaultValue]);
+    return () => dragCleanupRef.current?.();
+  }, [defaultValue, disabled]);
 
   const viewBox = { width: 320, height: 180, padding: 22 };
   const plotWidth = viewBox.width - viewBox.padding * 2;
@@ -5869,22 +5879,43 @@ const ConfigKaraokeFillCurveEditor = ({
   };
 
   const startDrag = (pointIndex, event) => {
-    if (disabled || pointIndex <= 0 || pointIndex >= points.length - 1) {
+    if (disabled || event.button !== 0 || pointIndex <= 0 || pointIndex >= points.length - 1) {
       return;
     }
 
+    dragCleanupRef.current?.();
+    const originalPoints = pendingPointsRef.current;
+    const pointerId = event.pointerId;
     event.preventDefault();
     updatePointFromPointer(pointIndex, event);
 
-    const handlePointerMove = (moveEvent) => updatePointFromPointer(pointIndex, moveEvent);
-    const handlePointerUp = () => {
+    const handlePointerMove = (moveEvent) => {
+      if (moveEvent.pointerId === pointerId) updatePointFromPointer(pointIndex, moveEvent);
+    };
+    const cleanup = () => {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handleCancel);
+      window.removeEventListener("blur", handleCancel);
+      dragCleanupRef.current = null;
+    };
+    const handlePointerUp = (upEvent) => {
+      if (upEvent.pointerId !== pointerId) return;
+      cleanup();
       commitPoints(pendingPointsRef.current);
     };
+    const handleCancel = (cancelEvent) => {
+      if (cancelEvent.type === "pointercancel" && cancelEvent.pointerId !== pointerId) return;
+      cleanup();
+      pendingPointsRef.current = originalPoints;
+      setPoints(originalPoints);
+    };
 
+    dragCleanupRef.current = cleanup;
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handleCancel);
+    window.addEventListener("blur", handleCancel);
   };
 
   const resetCurve = () => {
@@ -5967,6 +5998,7 @@ const ConfigKaraokeFillCurveEditor = ({
           {
             className: "btn karaoke-fill-curve-reset",
             type: "button",
+            disabled,
             onClick: resetCurve,
           },
           getSettingsText("settings.syncCreatorSettings.fillCurve.reset", "Reset")
@@ -7124,6 +7156,59 @@ const ConfigModal = ({
   const [systemUiTheme, setSystemUiTheme] = react.useState(getSystemSettingsUiTheme);
   const uiTheme = getEffectiveSettingsUiTheme(uiThemePreference, systemUiTheme);
 
+  // This small native card keeps the existing settings tree and search
+  // contract stable while exposing the two optional semantic paint layers.
+  // It is deliberately disabled when only machine-translation providers are
+  // available: Bing/Google can supply text, but cannot analyse its meaning.
+  react.useEffect(() => {
+    if (typeof document === "undefined") return undefined;
+    const root = document.querySelector("#ivLyrics-config-container .settings-content")
+      || document.querySelector("#ivLyrics-config-container");
+    if (!root || root.querySelector("[data-ivlyrics-semantic-settings]")) return undefined;
+    const card = document.createElement("section");
+    card.dataset.ivlyricsSemanticSettings = "true";
+    card.className = "ivlyrics-semantic-settings-card";
+    const title = document.createElement("h3");
+    title.textContent = I18n.t("semanticHighlight.title") || "Meaning-linked highlighting";
+    const description = document.createElement("p");
+    description.textContent = I18n.t("semanticHighlight.description") || "Highlight matching phrases while keeping the original sentence order.";
+    const status = document.createElement("p");
+    card.append(title, description, status);
+    const fields = [
+      ["phonetic-semantic-highlight", I18n.t("semanticHighlight.phonetic") || "Highlight pronunciation by meaning"],
+      ["translation-semantic-highlight", I18n.t("semanticHighlight.translation") || "Highlight translation by meaning"],
+    ];
+    const canAlign = () => Boolean(window.AIAddonManager?.getEnabledProvidersFor?.("lyricsAlignment")?.some(provider => typeof provider?.generateLyricsAlignment === "function"));
+    const inputs = [];
+    fields.forEach(([key, label]) => {
+      const wrapper = document.createElement("label");
+      wrapper.className = "ivlyrics-semantic-settings-row";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.checked = CONFIG.visual[key] === true;
+      input.disabled = !canAlign();
+      inputs.push(input);
+      input.addEventListener("change", () => {
+        CONFIG.visual[key] = input.checked;
+        StorageManager.setItem(`${APP_NAME}:visual:${key}`, input.checked);
+        window.dispatchEvent(new CustomEvent("ivlyrics-alignment-settings-change", { detail: { name: key, value: input.checked } }));
+        window.dispatchEvent(new CustomEvent("ivLyrics", { detail: { type: "config", name: key, value: input.checked } }));
+      });
+      wrapper.append(input, document.createTextNode(label));
+      card.appendChild(wrapper);
+    });
+    const refreshAvailability = () => {
+      const available = canAlign();
+      inputs.forEach(input => { input.disabled = !available; });
+      status.textContent = I18n.t(`semanticHighlight.${available ? "available" : "unavailable"}`)
+        || (available ? "AI will analyse the existing translation." : "An AI alignment provider is required; Bing or Google Translate alone is not sufficient.");
+    };
+    refreshAvailability();
+    const unsubscribe = window.AIAddonManager?.on?.("provider:enabled:changed", refreshAvailability);
+    root.appendChild(card);
+    return () => { unsubscribe?.(); card.remove(); };
+  }, [activeTab]);
+
   // 검색어 변경 시 검색 결과 탭으로 자동 전환
   const handleSearchChange = (e) => {
     const query = e.target.value;
@@ -7176,6 +7261,14 @@ const ConfigModal = ({
   const programmaticScrollTimerRef = react.useRef(null);
   const programmaticScrollEndCleanupRef = react.useRef(null);
   const highlightTimeoutRef = react.useRef(null);
+  const highlightedSettingRef = react.useRef(null);
+
+  const clearSettingHighlight = react.useCallback(() => {
+    if (highlightTimeoutRef.current !== null) clearTimeout(highlightTimeoutRef.current);
+    highlightTimeoutRef.current = null;
+    highlightedSettingRef.current?.classList.remove("setting-highlight-flash");
+    highlightedSettingRef.current = null;
+  }, []);
 
   const holdProgrammaticScroll = react.useCallback((delay = 1400) => {
     isProgrammaticScrollRef.current = true;
@@ -7197,6 +7290,7 @@ const ConfigModal = ({
   const scrollToSetting = react.useCallback(
     (settingKey, { behavior = "smooth", highlight = true } = {}) => {
       if (!settingKey) return false;
+      if (behavior === "smooth" && getEffectiveReducedMotionPreference()) behavior = "auto";
 
       const container = settingsContentRef.current;
       if (!container) return false;
@@ -7256,19 +7350,16 @@ const ConfigModal = ({
         behavior,
       });
 
+      clearSettingHighlight();
       if (highlight) {
         targetElement.classList.add("setting-highlight-flash");
-        if (highlightTimeoutRef.current) {
-          clearTimeout(highlightTimeoutRef.current);
-        }
-        highlightTimeoutRef.current = window.setTimeout(() => {
-          targetElement.classList.remove("setting-highlight-flash");
-        }, 1800);
+        highlightedSettingRef.current = targetElement;
+        highlightTimeoutRef.current = window.setTimeout(clearSettingHighlight, 1800);
       }
 
       return true;
     },
-    [holdProgrammaticScroll]
+    [holdProgrammaticScroll, clearSettingHighlight]
   );
 
   // 텍스트 하이라이트 헬퍼 함수
@@ -8459,9 +8550,7 @@ const ConfigModal = ({
         programmaticScrollEndCleanupRef.current();
         programmaticScrollEndCleanupRef.current = null;
       }
-      if (highlightTimeoutRef.current) {
-        clearTimeout(highlightTimeoutRef.current);
-      }
+      clearSettingHighlight();
     };
   }, []);
 
@@ -8946,7 +9035,7 @@ const ConfigModal = ({
     {
       id: "appearance",
       icon: "appearance",
-      group: "general",
+      group: "screen",
       label: I18n.t("tabs.appearance"),
       badge: tabMeta.appearance.badge,
       description: tabMeta.appearance.description,
@@ -8954,7 +9043,7 @@ const ConfigModal = ({
     {
       id: "performance",
       icon: "performance",
-      group: "general",
+      group: "screen",
       label: I18n.t("tabs.performance"),
       badge: tabMeta.performance.badge,
       description: tabMeta.performance.description,
@@ -11546,6 +11635,7 @@ const ConfigModal = ({
         react.createElement(
           "div",
           { "data-setting-key": "ai-providers" },
+          react.createElement("p", { className: "setting-description" }, I18n.t("settingsUi.aiAutosave")),
           react.createElement(AIProvidersTab)
         )
       ),

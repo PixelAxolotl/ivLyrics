@@ -1,5 +1,13 @@
 ﻿// Bengali language file for ivLyrics
 window.LANG_BN = {
+  "semanticHighlight": {
+    "title": "অর্থ অনুযায়ী হাইলাইট করুন",
+    "description": "মূল গানের সময়ের সঙ্গে মিলিয়ে উচ্চারণ ও অনুবাদের সংশ্লিষ্ট অংশ হাইলাইট করে। শব্দের ক্রম অপরিবর্তিত থাকে।",
+    "unavailable": "অর্থ বিশ্লেষণ সমর্থন করে এমন AI প্রদানকারী চালু করুন। শুধু Bing বা Google অনুবাদ দিয়ে এই সুবিধা ব্যবহার করা যায় না।",
+    "available": "বর্তমান অনুবাদ AI দিয়ে বিশ্লেষণ করুন। Bing ও Google-এর অনুবাদও সমর্থিত।",
+    "phonetic": "উচ্চারণে অর্থভিত্তিক হাইলাইট",
+    "translation": "অনুবাদে অর্থভিত্তিক হাইলাইট"
+  },
   "meta": {
     "language": "বাংলা",
     "code": "bn",
@@ -28,6 +36,7 @@ window.LANG_BN = {
     "inSection": "{section}-এ"
   },
   "settingsUi": {
+    "aiAutosave": "সেটিংস স্বয়ংক্রিয়ভাবে সংরক্ষিত হয়। বর্তমান গানে প্রয়োগ করতে আবার তৈরি করুন।",
     "groups": {
       "core": "মূল",
       "display": "প্রদর্শন",
@@ -471,7 +480,44 @@ window.LANG_BN = {
       "noEnabledProviders": "কোনো AI প্রদানকারী সক্রিয় নেই। দয়া করে সেটিংসে অন্তত একটি প্রদানকারী সক্রিয় করুন।",
       "allProvidersFailed": "সমস্ত AI প্রদানকারী অনুরোধ প্রক্রিয়া করতে ব্যর্থ হয়েছে।",
       "enabledCapabilities": "সক্রিয় সক্ষমতা",
-      "capabilitiesDesc": "এই প্রদানকারী কোন বৈশিষ্ট্যগুলো পরিচালনা করবে তা নির্বাচন করুন"
+      "capabilitiesDesc": "এই প্রদানকারী কোন বৈশিষ্ট্যগুলো পরিচালনা করবে তা নির্বাচন করুন",
+      "openaiConnections": "অতিরিক্ত OpenAI-সামঞ্জস্যপূর্ণ প্রদানকারী",
+      "openaiConnectionsDesc": "মূল সংযোগ ব্যর্থ হলে নিচের সক্রিয় প্রদানকারীদের ক্রমানুসারে চেষ্টা করা হবে।",
+      "addOpenaiConnection": "কাস্টম প্রদানকারী যোগ করুন",
+      "connectionName": "প্রদানকারীর নাম",
+      "removeConnection": "প্রদানকারী সরান",
+      "testThisConnection": "এই প্রদানকারী পরীক্ষা করুন",
+      "connectionSuccess": "সংযোগ সফল হয়েছে।",
+      "saveConnection": "সংরক্ষণ করুন",
+      "sonarModelsFallback": "Sonar-এর মডেল তালিকা API নেই। সমর্থিত মডেলগুলোর অন্তর্নির্মিত তালিকা দেখানো হচ্ছে।",
+      "pollinationsAllModels": "সব মডেলে প্রবেশাধিকারের অনুরোধ করা হবে। সংযোগের পরে একটি মডেল বেছে নিন।",
+      "model": "মডেল",
+      "modelId": "মডেল ID",
+      "baseUrl": "বেস URL",
+      "apiKey": "API কী",
+      "apiKeyDesc": "একটি একক কী, নতুন লাইনের তালিকা বা JSON অ্যারে সমর্থন করে। শুধু এই ডিভাইসে সংরক্ষিত হয়।",
+      "refreshModels": "রিফ্রেশ",
+      "selectModel": "মডেল তালিকা থেকে বাছুন",
+      "loadingModels": "মডেল লোড হচ্ছে…",
+      "modelsUnavailable": "মডেলের তালিকা লোড করা যায়নি। আপনি ম্যানুয়ালি মডেল ID লিখতে পারেন।",
+      "testingConnection": "সংযোগ পরীক্ষা করুন…",
+      "testConnection": "সংযোগ পরীক্ষা করুন",
+      "getApiKey": "পুনরায় তৈরি করুন কী",
+      "noModels": "কোনো মডেল উপলভ্য নেই",
+      "pollinationsAccount": "Pollinations অ্যাকাউন্ট",
+      "pollinationsConnect": "Pollinations-এ সাইন ইন করুন",
+      "pollinationsReconnect": "আবার সংযোগ করুন",
+      "pollinationsWaiting": "লগইনের অপেক্ষায়",
+      "pollinationsOpenLogin": "লগইন পৃষ্ঠা খুলুন",
+      "pollinationsDisconnect": "সংযোগ বিচ্ছিন্ন করুন",
+      "pollinationsDisconnected": "Pollinations অ্যাকাউন্ট · নিষ্ক্রিয়",
+      "pollinationsRequesting": "Pollinations-এ সাইন ইন করুন…",
+      "pollinationsConnected": "Pollinations অ্যাকাউন্ট · সক্রিয়",
+      "pollinationsKeyConfigured": "Pollinations অ্যাকাউন্ট · কনফিগার করা হয়েছে",
+      "pollinationsKeyStatus": "Pollinations অ্যাকাউন্ট · সক্রিয়: %s",
+      "pollinationsDescription": "ম্যানুয়াল API কী ও অ্যাকাউন্ট লগইন টোকেন উভয়ই সমর্থিত। টোকেন থাকলে সেটি আগে ব্যবহার করা হয়।",
+      "pollinationsInvalid": "API কী বৈধ নয়। আবার সংযোগ করুন বা নতুন কী লিখুন।",
+      "pollinationsExpires": "%d দিনের মধ্যে মেয়াদ শেষ"
     },
     "lyricsProviders": {
       "title": "লিরিক্স প্রদানকারী",
@@ -2067,7 +2113,6 @@ window.LANG_BN = {
     "copyrightConfirm": "সম্মত ও চালিয়ে যান",
     "settings": {
       "backgroundType": "ব্যাকগ্রাউন্ড স্টাইল",
-      "coverBlur": "ব্লার",
       "gradient": "গ্রেডিয়েন্ট",
       "solid": "সলিড কালার",
       "backgroundBlur": "ব্যাকগ্রাউন্ড ব্লার",

@@ -1632,6 +1632,7 @@ const PRIVATE_OR_TRANSIENT_STORAGE_KEYS = new Set([
 const CLOUD_SYNC_EXCLUDED_STORAGE_KEYS = new Set([
   TRACK_SYNC_OFFSETS_STORAGE_KEY,
   `${APP_NAME}:settings-presets`,
+  `${APP_NAME}:ai:addon:chatgpt:fallback-providers`,
 ]);
 const CLOUD_SYNC_FORBIDDEN_KEY_PATTERN = /(apikey|token|password|secret|credential|clientid|userhash)/i;
 const CLOUD_SYNC_SAFE_TOKEN_LIMIT_PATTERN = /max(?:output)?tokens?/gi;
@@ -2717,6 +2718,14 @@ const CONFIG = {
     translate: StorageManager.get("ivLyrics:visual:translate", false),
     "furigana-enabled": StorageManager.get(
       "ivLyrics:visual:furigana-enabled",
+      false
+    ),
+    "phonetic-semantic-highlight": StorageManager.get(
+      "ivLyrics:visual:phonetic-semantic-highlight",
+      false
+    ),
+    "translation-semantic-highlight": StorageManager.get(
+      "ivLyrics:visual:translation-semantic-highlight",
       false
     ),
     "ja-detect-threshold":
@@ -4580,7 +4589,13 @@ const GENERATION_REQUEST_PILL_CONFIG = Object.freeze({
 class LyricsContainer extends react.Component {
   constructor() {
     super();
+    this.handleFocusedLyricsChange = (fullscreenFocusedLyricsActive) => {
+      if (this.state.fullscreenFocusedLyricsActive !== fullscreenFocusedLyricsActive) {
+        this.setState({ fullscreenFocusedLyricsActive });
+      }
+    };
     this.state = {
+      fullscreenFocusedLyricsActive: false,
       karaoke: null,
       karaokeGranularity: null,
       synced: null,
@@ -10092,8 +10107,17 @@ class LyricsContainer extends react.Component {
           : react.createElement("div", null, I18n.t("messages.noLyrics"))
       )
       : null;
+    const fullscreenPresentation = this.state.isFullscreen
+      ? normalizeIvLyricsFullscreenPresentation(
+        this.state.fullscreenPresentation
+      )
+      : "standard";
+    const isFocusedFullscreenPresentation =
+      fullscreenPresentation === "vinyl"
+      || fullscreenPresentation === "video";
     const activeLyricsPage = syncCreatorPlainPage || (window.LyricsPageRenderer
       ? react.createElement(window.LyricsPageRenderer, {
+        playbackOnly: isFocusedFullscreenPresentation && this.state.fullscreenFocusedLyricsActive,
         mode,
         karaokeMode: KARAOKE,
         wordMode: WORD_KARAOKE,
@@ -10203,14 +10227,6 @@ class LyricsContainer extends react.Component {
     };
     const renderTrackUri = currentTrackInfo?.uri || this.currentTrackUri || this.state.uri || "";
     const isLocalTrack = !!renderTrackUri && !Utils.extractTrackId(renderTrackUri);
-    const fullscreenPresentation = this.state.isFullscreen
-      ? normalizeIvLyricsFullscreenPresentation(
-        this.state.fullscreenPresentation
-      )
-      : "standard";
-    const isFocusedFullscreenPresentation =
-      fullscreenPresentation === "vinyl"
-      || fullscreenPresentation === "video";
     const isVideoStagePresentation =
       fullscreenPresentation === "video";
     const floatingToolbarStyle = this.state.isFullscreen
@@ -10242,7 +10258,7 @@ class LyricsContainer extends react.Component {
       this.state.karaoke &&
       CONFIG.visual["karaoke-mode-enabled"] &&
       react.createElement(
-        Spicetify.ReactComponent.TooltipWrapper,
+        IvLyricsTooltip,
         { key: "character", label: getModeButtonLabel(KARAOKE, "modes.character"), showDelay: 0 },
         react.createElement(
           "button",
@@ -10261,7 +10277,7 @@ class LyricsContainer extends react.Component {
       this.state.karaoke &&
       CONFIG.visual["karaoke-mode-enabled"] &&
       react.createElement(
-        Spicetify.ReactComponent.TooltipWrapper,
+        IvLyricsTooltip,
         { key: "word", label: getModeButtonLabel(WORD_KARAOKE, "modes.word"), showDelay: 0 },
         react.createElement(
           "button",
@@ -10279,7 +10295,7 @@ class LyricsContainer extends react.Component {
       ),
       this.state.synced &&
       react.createElement(
-        Spicetify.ReactComponent.TooltipWrapper,
+        IvLyricsTooltip,
         { key: "synced", label: getModeButtonLabel(SYNCED, "modes.synced"), showDelay: 0 },
         react.createElement(
           "button",
@@ -10297,7 +10313,7 @@ class LyricsContainer extends react.Component {
       ),
       this.state.unsynced &&
       react.createElement(
-        Spicetify.ReactComponent.TooltipWrapper,
+        IvLyricsTooltip,
         { key: "unsynced", label: getModeButtonLabel(UNSYNCED, "modes.unsynced"), showDelay: 0 },
         react.createElement(
           "button",
@@ -10547,6 +10563,7 @@ class LyricsContainer extends react.Component {
         trackAccent: vinylTrackAccent,
         trackAccentUri: this.state.colorsUri || "",
         presentationMode: fullscreenPresentation,
+        onFocusedLyricsChange: this.handleFocusedLyricsChange,
         onPresentationModeChange: (nextPresentation) => {
           this.setFullscreenPresentation(nextPresentation);
         },
@@ -10632,20 +10649,26 @@ class LyricsContainer extends react.Component {
         },
         // 전체화면에서만 보이는 메뉴 토글 버튼
         this.state.isFullscreen && react.createElement(
-          "button",
-          {
-            className: "lyrics-config-button lyrics-floating-menu-toggle",
-            type: "button",
-            "aria-label": this.state.isFloatingMenuOpen
-              ? (I18n.t("buttons.close") || "Close")
-              : "ivLyrics menu",
-            "aria-expanded": this.state.isFloatingMenuOpen,
-            onClick: (e) => {
-              e.stopPropagation();
-              this.toggleFloatingMenu();
+          IvLyricsTooltip,
+          { label: this.state.isFloatingMenuOpen
+            ? (I18n.t("buttons.close") || "Close")
+            : "ivLyrics menu" },
+          react.createElement(
+            "button",
+            {
+              className: "lyrics-config-button lyrics-floating-menu-toggle",
+              type: "button",
+              "aria-label": this.state.isFloatingMenuOpen
+                ? (I18n.t("buttons.close") || "Close")
+                : "ivLyrics menu",
+              "aria-expanded": this.state.isFloatingMenuOpen,
+              onClick: (e) => {
+                e.stopPropagation();
+                this.toggleFloatingMenu();
+              },
             },
-          },
-          renderFloatingToolbarIcon(this.state.isFloatingMenuOpen ? "close" : "menu")
+            renderFloatingToolbarIcon(this.state.isFloatingMenuOpen ? "close" : "menu")
+          )
         ),
         // 메뉴 내용 (일반 모드: 항상 표시, 전체화면: 열렸을 때만 표시)
         shouldRenderFloatingMenu && react.createElement(
@@ -10748,7 +10771,7 @@ class LyricsContainer extends react.Component {
               },
             }),
             hasLyrics && react.createElement(
-              Spicetify.ReactComponent.TooltipWrapper,
+              IvLyricsTooltip,
               {
                 label: I18n.t("lyricsCacheEditor.button"),
                 showDelay: 0,
@@ -10775,7 +10798,7 @@ class LyricsContainer extends react.Component {
               "data-group": "app",
             },
             react.createElement(
-              Spicetify.ReactComponent.TooltipWrapper,
+              IvLyricsTooltip,
               { label: I18n.t("marketplace.title"), showDelay: 0 },
               react.createElement(
                 "button",
@@ -10797,7 +10820,7 @@ class LyricsContainer extends react.Component {
             ),
             react.createElement(SettingsMenu),
             (() => !document.getElementById("fad-ivLyrics-container"))() && react.createElement(
-              Spicetify.ReactComponent.TooltipWrapper,
+              IvLyricsTooltip,
               {
                 label: this.state.isFullscreen ? I18n.t("menu.exitFullscreen") || "Exit Fullscreen" : I18n.t("menu.fullscreen"),
                 showDelay: 0,

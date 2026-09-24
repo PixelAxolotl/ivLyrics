@@ -1,5 +1,13 @@
 ﻿// Spanish language file for ivLyrics
 window.LANG_ES = {
+  "semanticHighlight": {
+    "title": "Resaltar según el significado",
+    "description": "Resalta las partes correspondientes de la pronunciación y la traducción al ritmo de la letra original, sin cambiar el orden de las palabras.",
+    "unavailable": "Activa un proveedor de IA que admita análisis semántico. Bing o Google Traductor por sí solos no permiten esta función.",
+    "available": "Analiza la traducción actual con IA. También se admiten traducciones de Bing y Google.",
+    "phonetic": "Resaltado semántico de la pronunciación",
+    "translation": "Resaltado semántico de la traducción"
+  },
   "meta": {
     "language": "Español",
     "code": "es",
@@ -28,6 +36,7 @@ window.LANG_ES = {
     "inSection": "en {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Los ajustes se guardan automáticamente. Regenera para aplicarlos a la canción actual.",
     "groups": {
       "core": "Espacio de trabajo",
       "display": "Visualización",
@@ -471,7 +480,44 @@ window.LANG_ES = {
       "noEnabledProviders": "No hay proveedores de IA habilitados. Por favor, habilite al menos uno en la configuración.",
       "allProvidersFailed": "Todos los proveedores de IA fallaron al procesar la solicitud.",
       "enabledCapabilities": "Funciones habilitadas",
-      "capabilitiesDesc": "Seleccione qué funciones maneja este proveedor"
+      "capabilitiesDesc": "Seleccione qué funciones maneja este proveedor",
+      "openaiConnections": "Proveedores adicionales compatibles con OpenAI",
+      "openaiConnectionsDesc": "Si falla la conexión principal, se probarán en orden los proveedores activados de abajo.",
+      "addOpenaiConnection": "Añadir proveedor personalizado",
+      "connectionName": "Nombre del proveedor",
+      "removeConnection": "Eliminar proveedor",
+      "testThisConnection": "Probar este proveedor",
+      "connectionSuccess": "Conexión correcta.",
+      "saveConnection": "Guardar",
+      "sonarModelsFallback": "Sonar no tiene una API de lista de modelos. Se muestra la lista integrada de modelos compatibles.",
+      "pollinationsAllModels": "Se solicita acceso a todos los modelos. Elige un modelo después de conectar.",
+      "model": "Modelo",
+      "modelId": "Modelo ID",
+      "baseUrl": "Base URL",
+      "apiKey": "API Clave",
+      "apiKeyDesc": "Admite una única clave, lista de nueva línea o matriz JSON. Almacenado solo en este dispositivo.",
+      "refreshModels": "Actualizar",
+      "selectModel": "Elegir de la lista",
+      "loadingModels": "Cargando modelos…",
+      "modelsUnavailable": "No se pudo cargar la lista de modelos. Puedes introducir un ID de modelo manualmente.",
+      "testingConnection": "Probar conexión…",
+      "testConnection": "Probar conexión",
+      "getApiKey": "Obtener clave",
+      "noModels": "No hay modelos disponibles",
+      "pollinationsAccount": "Cuenta de Pollinations",
+      "pollinationsConnect": "Iniciar sesión en Pollinations",
+      "pollinationsReconnect": "Volver a conectar",
+      "pollinationsWaiting": "Esperando el inicio de sesión",
+      "pollinationsOpenLogin": "Abrir página de inicio de sesión",
+      "pollinationsDisconnect": "Desconectar",
+      "pollinationsDisconnected": "Cuenta de Pollinations · Deshabilitado",
+      "pollinationsRequesting": "Iniciar sesión en Pollinations…",
+      "pollinationsConnected": "Cuenta de Pollinations · Habilitado",
+      "pollinationsKeyConfigured": "Cuenta de Pollinations · Configurado",
+      "pollinationsKeyStatus": "Cuenta de Pollinations · Habilitado: %s",
+      "pollinationsDescription": "Admite claves API manuales y tokens de inicio de sesión. Si hay un token, se usa primero.",
+      "pollinationsInvalid": "La clave API no es válida. Vuelve a conectarte o introduce una nueva clave.",
+      "pollinationsExpires": "Caduca en %d día(s)"
     },
     "lyricsProviders": {
       "title": "Proveedores de letras",
@@ -2067,7 +2113,6 @@ window.LANG_ES = {
     "copyrightConfirm": "Acepto y continúo",
     "settings": {
       "backgroundType": "Estilo de fondo",
-      "coverBlur": "Desenfoque",
       "gradient": "Degradado",
       "solid": "Sólido",
       "backgroundBlur": "Desenfoque de fondo",

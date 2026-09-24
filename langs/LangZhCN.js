@@ -1,5 +1,13 @@
 ﻿// Simplified Chinese language file for ivLyrics
 window.LANG_ZH_CN = {
+  "semanticHighlight": {
+    "title": "按含义高亮",
+    "description": "根据原歌词的时间同步高亮发音和译文中对应的部分，同时保留原有语序。",
+    "unavailable": "请启用支持语义分析的 AI 提供商。仅使用 Bing 或 Google 翻译无法使用此功能。",
+    "available": "使用 AI 分析当前译文，也支持 Bing 和 Google 生成的译文。",
+    "phonetic": "发音语义高亮",
+    "translation": "译文语义高亮"
+  },
   "meta": {
     "language": "简体中文",
     "code": "zh-CN",
@@ -28,6 +36,7 @@ window.LANG_ZH_CN = {
     "inSection": "在 {section} 中"
   },
   "settingsUi": {
+    "aiAutosave": "设置会自动保存。重新生成以应用到当前歌曲。",
     "groups": {
       "core": "工作区",
       "display": "显示",
@@ -471,7 +480,44 @@ window.LANG_ZH_CN = {
       "noEnabledProviders": "未启用 AI 提供商。请在设置中至少启用一个提供商。",
       "allProvidersFailed": "所有 AI 提供商都无法处理该请求。",
       "enabledCapabilities": "启用的功能",
-      "capabilitiesDesc": "选择该供应商处理的功能"
+      "capabilitiesDesc": "选择该供应商处理的功能",
+      "openaiConnections": "其他兼容 OpenAI 的提供商",
+      "openaiConnectionsDesc": "如果主连接失败，将按顺序尝试下方已启用的提供商。",
+      "addOpenaiConnection": "添加自定义提供商",
+      "connectionName": "提供商名称",
+      "removeConnection": "删除提供商",
+      "testThisConnection": "测试此提供商",
+      "connectionSuccess": "连接成功。",
+      "saveConnection": "保存",
+      "sonarModelsFallback": "Sonar 没有模型列表 API，将显示内置的支持模型列表。",
+      "pollinationsAllModels": "将请求访问所有模型。连接后请选择要使用的模型。",
+      "model": "模型",
+      "modelId": "模型 ID",
+      "baseUrl": "基础 URL",
+      "apiKey": "API 密钥",
+      "apiKeyDesc": "支持单键、换行列表或 JSON 数组。仅存储在此设备上。",
+      "refreshModels": "刷新",
+      "selectModel": "从模型列表中选择",
+      "loadingModels": "正在加载模型…",
+      "modelsUnavailable": "无法加载模型列表。您可以手动输入模型 ID。",
+      "testingConnection": "测试连接…",
+      "testConnection": "测试连接",
+      "getApiKey": "获取密钥",
+      "noModels": "没有可用模型",
+      "pollinationsAccount": "Pollinations 账户",
+      "pollinationsConnect": "登录 Pollinations",
+      "pollinationsReconnect": "重新连接",
+      "pollinationsWaiting": "等待登录",
+      "pollinationsOpenLogin": "打开登录页面",
+      "pollinationsDisconnect": "断开连接",
+      "pollinationsDisconnected": "Pollinations 账户 · 已禁用",
+      "pollinationsRequesting": "登录 Pollinations…",
+      "pollinationsConnected": "Pollinations 账户 · 已启用",
+      "pollinationsKeyConfigured": "Pollinations 账户 · 已配置",
+      "pollinationsKeyStatus": "Pollinations 账户 · 已启用: %s",
+      "pollinationsDescription": "支持手动 API 密钥和账户登录令牌。有登录令牌时会优先使用。",
+      "pollinationsInvalid": "API 密钥无效。请重新连接或输入新密钥。",
+      "pollinationsExpires": "%d 天后过期"
     },
     "lyricsProviders": {
       "title": "歌词提供者",
@@ -2067,7 +2113,6 @@ window.LANG_ZH_CN = {
     "copyrightConfirm": "同意并继续",
     "settings": {
       "backgroundType": "背景样式",
-      "coverBlur": "模糊",
       "gradient": "渐变",
       "solid": "纯色",
       "backgroundBlur": "背景模糊",

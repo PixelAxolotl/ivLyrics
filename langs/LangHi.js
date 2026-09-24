@@ -1,5 +1,13 @@
 // Hindi language file for ivLyrics
 window.LANG_HI = {
+  "semanticHighlight": {
+    "title": "अर्थ के अनुसार हाइलाइट करें",
+    "description": "मूल गीत के समय के अनुसार उच्चारण और अनुवाद के संबंधित हिस्सों को हाइलाइट करता है। शब्दों का क्रम नहीं बदलता।",
+    "unavailable": "अर्थ विश्लेषण का समर्थन करने वाला AI प्रदाता चालू करें। केवल Bing या Google अनुवाद से यह सुविधा नहीं मिलती।",
+    "available": "मौजूदा अनुवाद का AI से विश्लेषण करें। Bing और Google के अनुवाद भी समर्थित हैं।",
+    "phonetic": "उच्चारण में अर्थ के अनुसार हाइलाइट",
+    "translation": "अनुवाद में अर्थ के अनुसार हाइलाइट"
+  },
   "meta": {
     "language": "हिन्दी",
     "code": "hi",
@@ -28,6 +36,7 @@ window.LANG_HI = {
     "inSection": "{section} में"
   },
   "settingsUi": {
+    "aiAutosave": "सेटिंग अपने आप सहेजी जाती हैं। मौजूदा गीत पर लागू करने के लिए दोबारा बनाएँ।",
     "groups": {
       "core": "मूल",
       "display": "प्रदर्शन",
@@ -471,7 +480,44 @@ window.LANG_HI = {
       "noEnabledProviders": "कोई AI प्रदाता सक्षम नहीं है। कृपया सेटिंग्स में कम से कम एक प्रदाता सक्षम करें।",
       "allProvidersFailed": "सभी AI प्रदाता अनुरोध को संसाधित करने में विफल रहेा",
       "enabledCapabilities": "सक्षम क्षमताएँ",
-      "capabilitiesDesc": "चुनें कि यह प्रदाता कौन सी सुविधाएँ संभालता है"
+      "capabilitiesDesc": "चुनें कि यह प्रदाता कौन सी सुविधाएँ संभालता है",
+      "openaiConnections": "अतिरिक्त OpenAI-संगत प्रदाता",
+      "openaiConnectionsDesc": "मुख्य कनेक्शन विफल होने पर नीचे दिए गए सक्रिय प्रदाताओं को क्रम से आज़माया जाएगा।",
+      "addOpenaiConnection": "कस्टम प्रदाता जोड़ें",
+      "connectionName": "प्रदाता का नाम",
+      "removeConnection": "प्रदाता हटाएँ",
+      "testThisConnection": "इस प्रदाता का परीक्षण करें",
+      "connectionSuccess": "कनेक्शन सफल रहा।",
+      "saveConnection": "सहेजें",
+      "sonarModelsFallback": "Sonar में मॉडल सूची API नहीं है। समर्थित मॉडलों की अंतर्निहित सूची दिखाई जा रही है।",
+      "pollinationsAllModels": "सभी मॉडलों की पहुँच माँगी जाएगी। कनेक्ट होने के बाद मॉडल चुनें।",
+      "model": "मॉडल",
+      "modelId": "मॉडल ID",
+      "baseUrl": "बेस URL",
+      "apiKey": "API कुंजी",
+      "apiKeyDesc": "एकल कुंजी, न्यूलाइन सूची या JSON सरणी का समर्थन करता है। केवल इस डिवाइस पर संग्रहीत.",
+      "refreshModels": "ताज़ा करें",
+      "selectModel": "मॉडल सूची से चुनें",
+      "loadingModels": "मॉडल लोड हो रहे हैं…",
+      "modelsUnavailable": "मॉडल सूची लोड नहीं हो सकी। आप मॉडल ID मैन्युअल रूप से दर्ज कर सकते हैं।",
+      "testingConnection": "कनेक्शन जाँचें…",
+      "testConnection": "कनेक्शन जाँचें",
+      "getApiKey": "को पुनर्जीवित करें कुंजी",
+      "noModels": "कोई मॉडल उपलब्ध नहीं है",
+      "pollinationsAccount": "Pollinations खाता",
+      "pollinationsConnect": "Pollinations में साइन इन करें",
+      "pollinationsReconnect": "फिर से कनेक्ट करें",
+      "pollinationsWaiting": "लॉगिन की प्रतीक्षा",
+      "pollinationsOpenLogin": "लॉगिन पेज खोलें",
+      "pollinationsDisconnect": "डिस्कनेक्ट करें",
+      "pollinationsDisconnected": "Pollinations खाता · अक्षम",
+      "pollinationsRequesting": "Pollinations में साइन इन करें…",
+      "pollinationsConnected": "Pollinations खाता · सक्षम",
+      "pollinationsKeyConfigured": "Pollinations खाता · कॉन्फ़िगर किया गया",
+      "pollinationsKeyStatus": "Pollinations खाता · सक्षम: %s",
+      "pollinationsDescription": "मैन्युअल API कुंजी और खाते के लॉगिन टोकन, दोनों समर्थित हैं। उपलब्ध होने पर लॉगिन टोकन पहले उपयोग होता है।",
+      "pollinationsInvalid": "API कुंजी अमान्य है। फिर से कनेक्ट करें या नई कुंजी दर्ज करें।",
+      "pollinationsExpires": "%d दिन में समाप्त"
     },
     "lyricsProviders": {
       "title": "गीत प्रदाता",

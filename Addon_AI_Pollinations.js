@@ -33,7 +33,8 @@
             researchWebSearch: true,
             lyricsStudy: true,
             characterPronunciation: true,
-            culturalAnnotations: true
+            culturalAnnotations: true,
+            lyricsAlignment: true
         },
         models: [] // API에서 동적으로 로드
     };
@@ -46,7 +47,7 @@
     // Keep this empty for marketplace/user-added builds; it can be configured in the addon settings.
     const DEFAULT_CLIENT_ID = 'pk_r7hWynUBrOgSV9SJ';
     const DEFAULT_AUTH_SCOPE = 'generate';
-    const FIXED_MODEL = 'openai';
+    const DEFAULT_MODEL = 'openai';
     const DEFAULT_AUTH_BUDGET = 999;
     const DEFAULT_AUTH_EXPIRY_DAYS = 365;
     const DEVICE_POLL_INTERVAL_MS = 5000;
@@ -67,22 +68,20 @@
 
             const data = await response.json();
 
-            // 오디오 전용 모델 제외
-            const excludePatterns = ['audio', 'midijourney'];
-
+            const seen = new Set();
             const models = (data.data || [])
                 .filter(m => {
-                    if (!m.id) return false;
-                    const id = m.id.toLowerCase();
-                    // 제외 패턴 체크
-                    for (const pattern of excludePatterns) {
-                        if (id.includes(pattern)) return false;
-                    }
+                    if (typeof m.id !== 'string' || !m.id.trim() || seen.has(m.id)) return false;
+                    if (m.category && m.category !== 'text') return false;
+                    if (Array.isArray(m.output_modalities) && !m.output_modalities.includes('text')) return false;
+                    if (Array.isArray(m.supported_endpoints) && !m.supported_endpoints.includes('/v1/chat/completions')) return false;
+                    if (!m.category && !m.output_modalities && /audio|midijourney|embedding|whisper|tts|flux|image|video/i.test(m.id)) return false;
+                    seen.add(m.id);
                     return true;
                 })
                 .map(m => ({
                     id: m.id,
-                    name: m.id,
+                    name: m.title || m.name || m.id,
                 }))
                 // 인기 모델 우선 정렬
                 .sort((a, b) => {
@@ -118,6 +117,12 @@
     // Helper Functions
     // ============================================
 
+    function aiText(key, fallback) {
+        const path = `settings.aiProviders.${key}`;
+        const value = window.I18n?.t?.(path);
+        return value && value !== path ? value : fallback;
+    }
+
     function getLocalizedText(textObj, lang) {
         if (typeof textObj === 'string') return textObj;
         return textObj[lang] || textObj['en'] || Object.values(textObj)[0] || '';
@@ -149,14 +154,14 @@
         if (typeof raw !== 'string') return [];
 
         try {
-            if (raw.startsWith('[')) {
+            if (raw.trim().startsWith('[')) {
                 return JSON.parse(raw)
                     .map(k => typeof k === 'string' ? k.trim() : '')
                     .filter(k => k);
             }
-            return [raw.trim()].filter(k => k);
+            return raw.split(/[\n,]/).map(key => key.trim()).filter(Boolean);
         } catch {
-            return [raw.trim()].filter(k => k);
+            return raw.split(/[\n,]/).map(key => key.trim()).filter(Boolean);
         }
     }
 
@@ -224,7 +229,6 @@
             user_code: userCode,
             app_key: appKey,
             scope: DEFAULT_AUTH_SCOPE,
-            models: FIXED_MODEL,
             budget: String(DEFAULT_AUTH_BUDGET),
             expiry: String(DEFAULT_AUTH_EXPIRY_DAYS)
         });
@@ -287,7 +291,7 @@
     }
 
     function getSelectedModel() {
-        return FIXED_MODEL;
+        return String(getSetting('model', DEFAULT_MODEL)).trim() || DEFAULT_MODEL;
     }
 
 
@@ -747,16 +751,43 @@
                 const [apiKeys, setApiKeys] = useState(
                     Array.isArray(initialApiKeys) ? JSON.stringify(initialApiKeys) : initialApiKeys
                 );
-                const [authStatus, setAuthStatus] = useState(getSetting('auth-status', ''));
+                const [authStatus, setAuthStatus] = useState('');
                 const [testStatus, setTestStatus] = useState('');
                 const [keyInfo, setKeyInfo] = useState(null);
                 const [keyInfoLoading, setKeyInfoLoading] = useState(false);
                 const [deviceAuth, setDeviceAuth] = useState(null);
                 const [isConnecting, setIsConnecting] = useState(false);
                 const [manualExpanded, setManualExpanded] = useState(false);
+                const [selectedModel, setSelectedModel] = useState(getSelectedModel());
+                const [availableModels, setAvailableModels] = useState([]);
+                const [modelsLoading, setModelsLoading] = useState(false);
+                const [modelsError, setModelsError] = useState(false);
+                const [modelsRevision, setModelsRevision] = useState(0);
                 const hasApiKey = getApiKeys().length > 0;
 
-                // 모델 목록 로드
+                useEffect(() => {
+                    let active = true;
+                    setAvailableModels([]);
+                    setModelsLoading(true);
+                    setModelsError(false);
+                    fetchAvailableModels().then(models => {
+                        if (!active) return;
+                        setAvailableModels(models);
+                        setModelsError(models.length === 0);
+                        ADDON_INFO.models = models;
+                        PollinationsAddon.models = models;
+                    }).finally(() => {
+                        if (active) setModelsLoading(false);
+                    });
+                    return () => { active = false; };
+                }, [apiKeys, modelsRevision]);
+
+                const handleModelChange = useCallback(e => {
+                    const value = e.target.value;
+                    setSelectedModel(value);
+                    setSetting('model', value);
+                }, []);
+
                 const loadKeyInfo = useCallback(async () => {
                     const apiKey = getPrimaryApiKey();
                     if (!apiKey) {
@@ -786,7 +817,7 @@
                     setApiKeys(value);
                     setSetting('api-keys', value);
                     setSetting('api-key', '');
-                    setAuthStatus(value ? 'Manual access key configured.' : 'Manual access key cleared.');
+                    setAuthStatus(value ? aiText('pollinationsKeyConfigured', 'Access key configured.') : aiText('pollinationsDisconnected', 'Disconnected.'));
                 }, []);
 
                 const handleConnect = useCallback(async () => {
@@ -794,7 +825,7 @@
                     try {
                         setIsConnecting(true);
                         setDeviceAuth(null);
-                        setAuthStatus('Requesting Pollinations login code...');
+                        setAuthStatus(aiText('pollinationsRequesting', 'Requesting Pollinations login code...'));
 
                         try {
                             authWindow = window.open('about:blank', '_blank');
@@ -808,7 +839,7 @@
                         const expiresAt = Date.now() + (Number(device.expires_in || 600) * 1000);
 
                         setDeviceAuth(device);
-                        setAuthStatus(`Open Pollinations and enter code ${device.user_code}. Only ${FIXED_MODEL} is requested; clear Budget and Expiry there for unlimited access.`);
+                        setAuthStatus(`Pollinations · ${device.user_code}. ${aiText('pollinationsAllModels', 'Access to all models is requested. Choose a model after connecting.')}`);
 
                         if (authWindow) {
                             authWindow.location.href = device.verificationUrl;
@@ -823,7 +854,7 @@
 
                             storePollinationsAccessToken(tokenData.access_token);
                             setApiKeys(tokenData.access_token);
-                            setAuthStatus('Connected through Pollinations login.');
+                            setAuthStatus(aiText('pollinationsConnected', 'Connected through Pollinations login.'));
                             setDeviceAuth(null);
                             await loadKeyInfo();
                             return;
@@ -843,30 +874,30 @@
                 const handleDisconnect = useCallback(() => {
                     disconnectPollinationsAuth();
                     setApiKeys('');
-                    setAuthStatus('Disconnected.');
+                    setAuthStatus(aiText('pollinationsDisconnected', 'Disconnected.'));
                     setKeyInfo(null);
                     setTestStatus('');
                 }, []);
 
                 const handleTest = useCallback(async () => {
-                    setTestStatus('Testing...');
+                    setTestStatus(aiText('testingConnection', 'Testing...'));
                     try {
                         await callPollinationsAPIRaw('Reply with just "OK" if you receive this.');
-                        setTestStatus('Connection successful.');
+                        setTestStatus('✓ ' + aiText('connectionSuccess', 'Connection successful.'));
                         loadKeyInfo();
                     } catch (e) {
-                        setTestStatus(`Error: ${e.message}`);
+                        setTestStatus(`✗ ${e.message}`);
                     }
                 }, [loadKeyInfo]);
 
 
 
                 const keyStatusText = hasApiKey
-                    ? `Connected key: ${maskKey(getPrimaryApiKey())}`
-                    : 'Not connected. Sign in to Pollinations to create a scoped user key.';
+                    ? aiText('pollinationsKeyStatus', 'Connected key: %s').replace('%s', maskKey(getPrimaryApiKey()))
+                    : aiText('pollinationsDescription', 'Sign in to Pollinations to create a user key.');
                 const keyInfoText = keyInfo
-                    ? `${keyInfo.valid ? 'Valid' : 'Invalid'} ${keyInfo.type || 'API'} key${keyInfo.expiresIn ? `, expires in ${Math.ceil(keyInfo.expiresIn / 86400)} day(s)` : ''}`
-                    : keyInfoLoading ? 'Checking key...' : '';
+                    ? `${keyInfo.valid ? aiText('connectionSuccess', 'Connection successful.') : aiText('pollinationsInvalid', 'Invalid key')}${keyInfo.expiresIn ? ' · ' + aiText('pollinationsExpires', 'Expires in %d day(s)').replace('%d', Math.ceil(keyInfo.expiresIn / 86400)) : ''}`
+                    : keyInfoLoading ? '...' : '';
                 const baseButtonStyle = {
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -899,20 +930,20 @@
 
                 return React.createElement('div', { className: 'ai-addon-settings pollinations-settings' },
                     React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('label', null, 'Pollinations Account'),
+                        React.createElement('label', null, aiText('pollinationsAccount', 'Pollinations Account')),
                         React.createElement('div', { className: 'ai-addon-input-group', style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '8px' } },
                             React.createElement('button', {
                                 onClick: handleConnect,
                                 className: 'ai-addon-btn-primary',
                                 disabled: isConnecting,
                                 style: primaryButtonStyle
-                            }, isConnecting ? 'Waiting for Login...' : hasApiKey ? 'Reconnect Pollinations' : 'Connect Pollinations'),
+                            }, isConnecting ? aiText('pollinationsWaiting', 'Waiting for login') : hasApiKey ? aiText('pollinationsReconnect', 'Reconnect') : aiText('pollinationsConnect', 'Connect Pollinations')),
                             hasApiKey && React.createElement('button', {
                                 onClick: handleDisconnect,
                                 className: 'ai-addon-btn-secondary',
                                 disabled: isConnecting,
                                 style: secondaryButtonStyle
-                            }, 'Disconnect')
+                            }, aiText('pollinationsDisconnect', 'Disconnect'))
                         ),
                         React.createElement('small', null, authStatus || keyStatusText),
                         deviceAuth && React.createElement('div', { style: { marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' } },
@@ -921,7 +952,7 @@
                                 onClick: () => window.open(deviceAuth.verificationUrl, '_blank'),
                                 className: 'ai-addon-btn-secondary',
                                 style: secondaryButtonStyle
-                            }, 'Open Login Page')
+                            }, aiText('pollinationsOpenLogin', 'Open Login Page'))
                         ),
                         keyInfoText && React.createElement('small', { style: { display: 'block', opacity: 0.65 } }, keyInfoText)
                     ),
@@ -931,7 +962,7 @@
                             onClick: () => setManualExpanded(!manualExpanded)
                         },
                             React.createElement('span', { style: { fontSize: '10px', transition: 'transform 0.2s', transform: manualExpanded ? 'rotate(90deg)' : 'rotate(0deg)', display: 'inline-block' } }, '>'),
-                            React.createElement('label', { style: { cursor: 'pointer', margin: 0 } }, 'Manual Access Key')
+                            React.createElement('label', { style: { cursor: 'pointer', margin: 0 } }, aiText('apiKey', 'API Key'))
                         ),
                         manualExpanded && React.createElement('div', { style: { marginTop: '8px' } },
                             React.createElement('input', {
@@ -941,14 +972,42 @@
                                 placeholder: 'sk_... or ["sk_...", "sk_..."]',
                                 autoComplete: 'off'
                             }),
-                            React.createElement('small', null, 'Fallback for legacy/manual keys. Pollinations login is preferred.')
+                            React.createElement('small', null, aiText('apiKeyDesc', 'Enter your API key.'))
                         )
+                    ),
+                    React.createElement('div', { className: 'ai-addon-setting' },
+                        React.createElement('label', null, aiText('model', 'Model')),
+                        React.createElement('div', { className: 'ai-addon-input-group' },
+                            React.createElement('select', {
+                                value: selectedModel,
+                                onChange: handleModelChange,
+                                disabled: modelsLoading || availableModels.length === 0
+                            },
+                                !availableModels.some(m => m.id === selectedModel) &&
+                                    React.createElement('option', { value: selectedModel }, selectedModel || DEFAULT_MODEL),
+                                availableModels.map(m => React.createElement('option', { key: m.id, value: m.id },
+                                    m.name === m.id ? m.id : `${m.name} · ${m.id}`))
+                            ),
+                            React.createElement('button', {
+                                onClick: () => setModelsRevision(value => value + 1),
+                                className: 'ai-addon-btn-secondary',
+                                disabled: modelsLoading,
+                                title: aiText('refreshModels', 'Refresh model list')
+                            }, modelsLoading ? '...' : '↻')
+                        ),
+                        modelsError && React.createElement('small', null, aiText('modelsUnavailable', 'Could not load models. Enter a model ID below.')),
+                        React.createElement('input', {
+                            value: selectedModel,
+                            onChange: handleModelChange,
+                            placeholder: aiText('modelId', 'Model ID'),
+                            'aria-label': aiText('modelId', 'Model ID')
+                        })
                     ),
                     React.createElement(AdvancedParamsSection),
                     React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('button', { onClick: handleTest, className: 'ai-addon-btn-primary', style: primaryButtonStyle }, 'Test Connection'),
+                        React.createElement('button', { onClick: handleTest, className: 'ai-addon-btn-primary', style: primaryButtonStyle }, aiText('testConnection', 'Test Connection')),
                         testStatus && React.createElement('span', {
-                            className: `ai-addon-test-status ${testStatus.startsWith('Connection successful') ? 'success' : testStatus.startsWith('Error') ? 'error' : ''}`
+                            className: `ai-addon-test-status ${testStatus.startsWith('✓') ? 'success' : testStatus.startsWith('✗') ? 'error' : ''}`
                         }, testStatus)
                     )
                 );
@@ -1105,6 +1164,17 @@
             const prompt = params.culturalAnnotationsPrompt;
             if (!prompt) {
                 throw new Error('[Pollinations] Central cultural annotations prompt is unavailable.');
+            }
+            return await callPollinationsAPI(prompt);
+        },
+
+        async generateLyricsAlignment(params) {
+            if (!Array.isArray(params?.lines) || params.lines.length === 0) {
+                throw new Error('No lyric alignment lines provided');
+            }
+            const prompt = params.lyricsAlignmentPrompt;
+            if (!prompt) {
+                throw new Error('Central lyrics alignment prompt is unavailable.');
             }
             return await callPollinationsAPI(prompt);
         }

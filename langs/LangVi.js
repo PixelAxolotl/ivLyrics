@@ -1,5 +1,13 @@
 ﻿// Vietnamese language file for ivLyrics
 window.LANG_VI = {
+  "semanticHighlight": {
+    "title": "Tô sáng theo ý nghĩa",
+    "description": "Tô sáng các phần tương ứng của phiên âm và bản dịch đồng bộ với lời gốc, đồng thời giữ nguyên thứ tự từ.",
+    "unavailable": "Bật nhà cung cấp AI hỗ trợ phân tích ngữ nghĩa. Chỉ dùng Bing hoặc Google Dịch thì không thể sử dụng tính năng này.",
+    "available": "Phân tích bản dịch hiện tại bằng AI. Cũng hỗ trợ bản dịch từ Bing và Google.",
+    "phonetic": "Tô sáng phiên âm theo ngữ nghĩa",
+    "translation": "Tô sáng bản dịch theo ngữ nghĩa"
+  },
   "meta": {
     "language": "Tiếng Việt",
     "code": "vi",
@@ -28,6 +36,7 @@ window.LANG_VI = {
     "inSection": "trong {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Cài đặt được lưu tự động. Tạo lại để áp dụng cho bài hát hiện tại.",
     "groups": {
       "core": "Cốt lõi",
       "display": "Hiển thị",
@@ -471,7 +480,44 @@ window.LANG_VI = {
       "noEnabledProviders": "Không có nhà cung cấp AI nào được bật. Vui lòng bật ít nhất một nhà cung cấp trong cài đặt.",
       "allProvidersFailed": "Tất cả các nhà cung cấp AI đã thất bại khi xử lý yêu cầu.",
       "enabledCapabilities": "Khả năng đã kích hoạt",
-      "capabilitiesDesc": "Chọn các tính năng mà nhà cung cấp này xử lý"
+      "capabilitiesDesc": "Chọn các tính năng mà nhà cung cấp này xử lý",
+      "openaiConnections": "Nhà cung cấp tương thích OpenAI bổ sung",
+      "openaiConnectionsDesc": "Nếu kết nối chính thất bại, các nhà cung cấp đã bật bên dưới sẽ được thử lần lượt.",
+      "addOpenaiConnection": "Thêm nhà cung cấp tùy chỉnh",
+      "connectionName": "Tên nhà cung cấp",
+      "removeConnection": "Xóa nhà cung cấp",
+      "testThisConnection": "Kiểm tra nhà cung cấp này",
+      "connectionSuccess": "Kết nối thành công.",
+      "saveConnection": "Lưu",
+      "sonarModelsFallback": "Sonar không có API danh sách mô hình. Danh sách mô hình được hỗ trợ tích hợp sẵn sẽ được hiển thị.",
+      "pollinationsAllModels": "Yêu cầu quyền truy cập tất cả mô hình. Chọn mô hình sau khi kết nối.",
+      "model": "Người mẫu",
+      "modelId": "Người mẫu ID",
+      "baseUrl": "Căn cứ URL",
+      "apiKey": "API Khóa",
+      "apiKeyDesc": "Hỗ trợ một khóa duy nhất, danh sách dòng mới hoặc mảng JSON. Chỉ được lưu trữ trên thiết bị này.",
+      "refreshModels": "Làm mới",
+      "selectModel": "Chọn từ danh sách",
+      "loadingModels": "Đang tải mô hình…",
+      "modelsUnavailable": "Không thể tải danh sách mô hình. Bạn có thể nhập ID mô hình theo cách thủ công.",
+      "testingConnection": "Kiểm tra kết nối…",
+      "testConnection": "Kiểm tra kết nối",
+      "getApiKey": "Nhận khóa",
+      "noModels": "Không có mô hình khả dụng",
+      "pollinationsAccount": "Tài khoản Pollinations",
+      "pollinationsConnect": "Đăng nhập Pollinations",
+      "pollinationsReconnect": "Kết nối lại",
+      "pollinationsWaiting": "Đang chờ đăng nhập",
+      "pollinationsOpenLogin": "Mở trang đăng nhập",
+      "pollinationsDisconnect": "Ngắt kết nối",
+      "pollinationsDisconnected": "Tài khoản Pollinations · Đã tắt",
+      "pollinationsRequesting": "Đăng nhập Pollinations…",
+      "pollinationsConnected": "Tài khoản Pollinations · Đã bật",
+      "pollinationsKeyConfigured": "Tài khoản Pollinations · Đã cấu hình",
+      "pollinationsKeyStatus": "Tài khoản Pollinations · Đã bật: %s",
+      "pollinationsDescription": "Hỗ trợ cả khóa API nhập thủ công và token đăng nhập. Token đăng nhập được ưu tiên khi có.",
+      "pollinationsInvalid": "Khóa API không hợp lệ. Hãy kết nối lại hoặc nhập khóa mới.",
+      "pollinationsExpires": "Hết hạn sau %d ngày"
     },
     "lyricsProviders": {
       "title": "Nhà cung cấp lời bài hát",
@@ -2067,7 +2113,6 @@ window.LANG_VI = {
     "copyrightConfirm": "Đồng ý và tiếp tục",
     "settings": {
       "backgroundType": "Kiểu nền",
-      "coverBlur": "Làm mờ",
       "gradient": "Gradient",
       "solid": "Màu đơn",
       "backgroundBlur": "Làm mờ nền",

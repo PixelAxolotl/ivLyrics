@@ -1,5 +1,13 @@
 ﻿// French language file for ivLyrics
 window.LANG_FR = {
+  "semanticHighlight": {
+    "title": "Surligner selon le sens",
+    "description": "Surligne les passages correspondants de la prononciation et de la traduction au rythme des paroles originales, sans modifier l’ordre des mots.",
+    "unavailable": "Activez un fournisseur d’IA prenant en charge l’analyse sémantique. Bing ou Google Traduction seuls ne permettent pas cette fonction.",
+    "available": "Analysez la traduction actuelle avec l’IA. Les traductions de Bing et Google sont également prises en charge.",
+    "phonetic": "Surlignage sémantique de la prononciation",
+    "translation": "Surlignage sémantique de la traduction"
+  },
   "meta": {
     "language": "Français",
     "code": "fr",
@@ -28,6 +36,7 @@ window.LANG_FR = {
     "inSection": "dans {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Les réglages sont enregistrés automatiquement. Régénérez pour les appliquer au morceau actuel.",
     "groups": {
       "core": "Espace de travail",
       "display": "Affichage",
@@ -471,7 +480,44 @@ window.LANG_FR = {
       "noEnabledProviders": "Aucun fournisseur d'IA activé. Veuillez en activer au moins un dans les paramètres.",
       "allProvidersFailed": "Tous les fournisseurs d'IA ont échoué à traiter la demande.",
       "enabledCapabilities": "Fonctionnalités activées",
-      "capabilitiesDesc": "Sélectionnez les fonctionnalités gérées par ce fournisseur"
+      "capabilitiesDesc": "Sélectionnez les fonctionnalités gérées par ce fournisseur",
+      "openaiConnections": "Fournisseurs compatibles OpenAI supplémentaires",
+      "openaiConnectionsDesc": "Si la connexion principale échoue, les fournisseurs activés ci-dessous sont essayés dans l’ordre.",
+      "addOpenaiConnection": "Ajouter un fournisseur personnalisé",
+      "connectionName": "Nom du fournisseur",
+      "removeConnection": "Supprimer le fournisseur",
+      "testThisConnection": "Tester ce fournisseur",
+      "connectionSuccess": "Connexion réussie.",
+      "saveConnection": "Enregistrer",
+      "sonarModelsFallback": "Sonar ne dispose pas d’API de liste des modèles. La liste intégrée des modèles pris en charge est affichée.",
+      "pollinationsAllModels": "L’accès à tous les modèles est demandé. Choisissez un modèle après la connexion.",
+      "model": "Modèle",
+      "modelId": "Modèle ID",
+      "baseUrl": "Socle URL",
+      "apiKey": "API Clé",
+      "apiKeyDesc": "Prend en charge une clé unique, une liste de nouvelles lignes ou un tableau JSON. Stocké uniquement sur cet appareil.",
+      "refreshModels": "Actualiser",
+      "selectModel": "Choisir dans la liste",
+      "loadingModels": "Chargement des modèles…",
+      "modelsUnavailable": "Impossible de charger la liste des modèles. Vous pouvez saisir un identifiant de modèle manuellement.",
+      "testingConnection": "Tester la connexion…",
+      "testConnection": "Tester la connexion",
+      "getApiKey": "Obtenir la clé",
+      "noModels": "Aucun modèle disponible",
+      "pollinationsAccount": "Compte Pollinations",
+      "pollinationsConnect": "Se connecter à Pollinations",
+      "pollinationsReconnect": "Se reconnecter",
+      "pollinationsWaiting": "En attente de connexion",
+      "pollinationsOpenLogin": "Ouvrir la page de connexion",
+      "pollinationsDisconnect": "Déconnecter",
+      "pollinationsDisconnected": "Compte Pollinations · Désactivé",
+      "pollinationsRequesting": "Se connecter à Pollinations…",
+      "pollinationsConnected": "Compte Pollinations · Activé",
+      "pollinationsKeyConfigured": "Compte Pollinations · Configuré",
+      "pollinationsKeyStatus": "Compte Pollinations · Activé: %s",
+      "pollinationsDescription": "Prend en charge les clés API manuelles et les jetons de connexion. Le jeton est prioritaire lorsqu'il est disponible.",
+      "pollinationsInvalid": "La clé API est invalide. Reconnectez-vous ou saisissez une nouvelle clé.",
+      "pollinationsExpires": "Expire dans %d jour(s)"
     },
     "lyricsProviders": {
       "title": "Fournisseurs de paroles",
@@ -2067,7 +2113,6 @@ window.LANG_FR = {
     "copyrightConfirm": "J'accepte, continuer",
     "settings": {
       "backgroundType": "Style fond",
-      "coverBlur": "Flou",
       "gradient": "Dégradé",
       "solid": "Uni",
       "backgroundBlur": "Flou fond",

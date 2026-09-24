@@ -1,5 +1,13 @@
 // English language file for ivLyrics
 window.LANG_EN = {
+  "semanticHighlight": {
+    "title": "Meaning-linked highlighting",
+    "description": "Highlight corresponding pronunciation and translation phrases using the source timing. The sentence order stays unchanged.",
+    "unavailable": "Enable an AI provider that supports semantic alignment. Bing and Google Translate alone cannot perform this analysis.",
+    "available": "AI analyses the existing text, including translations produced by Bing or Google Translate.",
+    "phonetic": "Highlight pronunciation by meaning",
+    "translation": "Highlight translation by meaning"
+  },
   "meta": {
     "language": "English",
     "code": "en",
@@ -28,6 +36,7 @@ window.LANG_EN = {
     "inSection": "in {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Settings save automatically. Regenerate to apply them to the current song.",
     "groups": {
       "core": "Workspace",
       "display": "Display",
@@ -434,6 +443,10 @@ window.LANG_EN = {
       }
     },
     "aiProviders": {
+      "openaiConnections": "Additional OpenAI-compatible providers",
+      "openaiConnectionsDesc": "If the primary connection fails, try the enabled providers below in order.",
+      "addOpenaiConnection": "Add custom provider",
+      "connectionName": "Provider name",
       "title": "AI Providers",
       "description": "Select and prioritize AI providers. Providers at the top are tried first. On failure, the next provider is automatically used.",
       "translationStyle": {
@@ -471,7 +484,40 @@ window.LANG_EN = {
       "noEnabledProviders": "No AI providers enabled. Please enable at least one provider in settings.",
       "allProvidersFailed": "All AI providers failed to process the request.",
       "enabledCapabilities": "Enabled Capabilities",
-      "capabilitiesDesc": "Select which features this provider handles"
+      "capabilitiesDesc": "Select which features this provider handles",
+      "removeConnection": "Remove provider",
+      "testThisConnection": "Test this provider",
+      "connectionSuccess": "Connection successful.",
+      "saveConnection": "Save",
+      "sonarModelsFallback": "Sonar has no model list API. Showing its built-in supported models.",
+      "pollinationsAllModels": "Access to all models is requested. Choose a model after connecting.",
+      "model": "Model",
+      "modelId": "Model ID",
+      "baseUrl": "Base URL",
+      "apiKey": "API Key",
+      "apiKeyDesc": "Supports a single key, newline list, or JSON array. Stored only on this device.",
+      "refreshModels": "Refresh",
+      "selectModel": "Choose from model list",
+      "loadingModels": "Loading models…",
+      "modelsUnavailable": "Could not load the model list. You can enter a model ID manually.",
+      "testingConnection": "Test Connection…",
+      "testConnection": "Test Connection",
+      "getApiKey": "Get Key",
+      "noModels": "No models are available",
+      "pollinationsAccount": "Pollinations Account",
+      "pollinationsConnect": "Sign in to Pollinations",
+      "pollinationsReconnect": "Reconnect",
+      "pollinationsWaiting": "Waiting for login",
+      "pollinationsOpenLogin": "Open Login Page",
+      "pollinationsDisconnect": "Disconnect",
+      "pollinationsDisconnected": "Pollinations Account · Disabled",
+      "pollinationsRequesting": "Sign in to Pollinations…",
+      "pollinationsConnected": "Pollinations Account · Enabled",
+      "pollinationsKeyConfigured": "Pollinations Account · Configured",
+      "pollinationsKeyStatus": "Pollinations Account · Enabled: %s",
+      "pollinationsDescription": "Supports both manual API keys and account login tokens. Login tokens are used first when available.",
+      "pollinationsInvalid": "The API key is invalid. Reconnect or enter a new key.",
+      "pollinationsExpires": "Expires in %d day(s)"
     },
     "lyricsProviders": {
       "title": "Lyrics Providers",
@@ -2071,7 +2117,6 @@ window.LANG_EN = {
     "copyrightConfirm": "Agree and Continue",
     "settings": {
       "backgroundType": "Background Style",
-      "coverBlur": "Blur",
       "gradient": "Gradient",
       "solid": "Solid Color",
       "backgroundBlur": "Background Blur",

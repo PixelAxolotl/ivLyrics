@@ -9,6 +9,7 @@
 (() => {
     'use strict';
 
+    function createOpenAICompatibleAddon(config = {}) {
     // ============================================
     // Addon Metadata
     // ============================================
@@ -33,7 +34,8 @@
             researchWebSearch: true,
             lyricsStudy: true,  // 학습 모드 생성
             characterPronunciation: true,
-            culturalAnnotations: true
+            culturalAnnotations: true,
+            lyricsAlignment: true
         },
         // Capabilities are toggled per endpoint inside this addon's settings
         // UI, so the provider-level toggle group in Settings stays hidden and
@@ -48,13 +50,16 @@
         models: [] // API에서 동적으로 로드
     };
 
+    Object.assign(ADDON_INFO, config.info || {});
+    const DEFAULT_OPENAI_BASE_URL = config.baseUrl || 'https://api.openai.com/v1';
+
     /**
      * OpenAI API에서 사용 가능한 모델 목록을 가져옴 (채팅/텍스트 생성용 모델만)
      */
     async function fetchAvailableModels(apiKey, baseUrl) {
         if (!apiKey) return [];
 
-        const normalizedBaseUrl = (baseUrl || 'https://api.openai.com/v1').replace(/\/$/, '');
+        const normalizedBaseUrl = (baseUrl || DEFAULT_OPENAI_BASE_URL).replace(/\/$/, '');
         const isOpenAIBaseUrl = normalizedBaseUrl === 'https://api.openai.com/v1';
 
         // 제외할 모델 패턴 (이미지 생성, 음성, 임베딩 등)
@@ -170,7 +175,7 @@
      */
     async function getModels() {
         const apiKeys = getApiKeys();
-        const baseUrl = getSetting('base-url', 'https://api.openai.com/v1');
+        const baseUrl = getSetting('base-url', DEFAULT_OPENAI_BASE_URL);
         if (apiKeys.length === 0) return [];
         return await fetchAvailableModels(apiKeys[0], baseUrl);
     }
@@ -197,46 +202,24 @@
         return value && value !== key ? value : fallback;
     }
 
-    function getApiKeys() {
-        // 새 키 먼저 확인, 없으면 기존 키 fallback
-        let raw = getSetting('api-keys', '');
-        if (!raw) {
-            raw = getSetting('api-key', '');
-        }
-        if (!raw) return [];
+    const aiText = (key, fallback) => t(`settings.aiProviders.${key}`, fallback);
 
-        // 이미 배열인 경우 (getAddonSetting이 JSON 파싱함)
-        if (Array.isArray(raw)) {
-            return raw
-                .map(k => typeof k === 'string' ? k.trim() : '')
-                .filter(k => k);
-        }
-
-        // 문자열이 아닌 경우
-        if (typeof raw !== 'string') return [];
-
-        try {
-            if (raw.startsWith('[')) {
-                return JSON.parse(raw)
-                    .map(k => typeof k === 'string' ? k.trim() : '')
-                    .filter(k => k);
-            }
-            return [raw.trim()].filter(k => k);
-        } catch {
-            return [raw.trim()].filter(k => k);
-        }
+    function getApiKeys(connection = null) {
+        if (connection) return parseConnectionKeys(connection.apiKeys);
+        return parseConnectionKeys(getSetting('api-keys', '') || getSetting('api-key', ''));
     }
 
-    const DEFAULT_OPENAI_BASE_URL = 'https://api.openai.com/v1';
     function normalizeBaseUrl(value) {
         return String(value || '').trim().replace(/\/+$/, '');
     }
 
-    function getBaseUrl() {
+    function getBaseUrl(connection = null) {
+        if (connection) return normalizeBaseUrl(connection.baseUrl) || DEFAULT_OPENAI_BASE_URL;
         return getSetting('base-url', DEFAULT_OPENAI_BASE_URL) || DEFAULT_OPENAI_BASE_URL;
     }
 
-    function getSelectedModel() {
+    function getSelectedModel(connection = null) {
+        if (connection) return String(connection.model || '').trim();
         return getSetting('model', null);
     }
 
@@ -384,8 +367,37 @@
     }
 
 
+    function parseConnectionKeys(raw) {
+        if (Array.isArray(raw)) return raw.filter(key => typeof key === 'string').map(key => key.trim()).filter(Boolean);
+        if (typeof raw !== 'string') return [];
+        try { if (raw.trim().startsWith('[')) return parseConnectionKeys(JSON.parse(raw)); } catch { }
+        return raw.split(/[\n,]/).map(key => key.trim()).filter(Boolean);
+    }
+
+    function getFallbackProviders() {
+        let value = getSetting('fallback-providers', []);
+        if (typeof value === 'string') { try { value = JSON.parse(value); } catch { return []; } }
+        return Array.isArray(value) ? value.filter(item => item && typeof item === 'object' && !Array.isArray(item)) : [];
+    }
+
+    function getProviderConnections() {
+        return [{ id: 'primary', name: 'Primary', apiKeys: getApiKeys(), baseUrl: getBaseUrl(), model: getSelectedModel() },
+            ...getFallbackProviders().filter(connection => connection.enabled !== false).map(connection => ({ ...connection }))];
+    }
+
+    async function withProviderConnections(request) {
+        let lastError;
+        for (const connection of getProviderConnections()) {
+            try { return await request(connection); }
+            catch (error) {
+                lastError = error;
+            }
+        }
+        throw lastError || new Error('[ChatGPT] No OpenAI-compatible provider is configured.');
+    }
+
     function getDefaultRequestBodyMergePatch() {
-        return {
+        return config.requestDefaults ? { ...config.requestDefaults } : {
             max_completion_tokens: 16000,
             temperature: 0.3
         };
@@ -1320,7 +1332,7 @@
                 const [apiKeys, setApiKeys] = useState(
                     Array.isArray(initialApiKeys) ? JSON.stringify(initialApiKeys) : initialApiKeys
                 );
-                const [baseUrl, setBaseUrl] = useState(getSetting('base-url', 'https://api.openai.com/v1'));
+                const [baseUrl, setBaseUrl] = useState(getSetting('base-url', DEFAULT_OPENAI_BASE_URL));
                 const [model, setModel] = useState(getSelectedModel());
                 const [customModel, setCustomModel] = useState(getSetting('custom-model', ''));
                 const [testStatus, setTestStatus] = useState('');
@@ -1392,10 +1404,10 @@
                 }, [loadModels]);
 
                 const handleTest = useCallback(async () => {
-                    setTestStatus('Testing...');
+                    setTestStatus(aiText('testingConnection', 'Testing...'));
                     try {
                         await callChatGPTAPIRaw('Reply with just "OK" if you receive this.');
-                        setTestStatus('✓ Connection successful!');
+                        setTestStatus('✓ ' + aiText('connectionSuccess', 'Connection successful.'));
                     } catch (e) {
                         setTestStatus(`✗ Error: ${e.message}`);
                     }
@@ -1665,20 +1677,20 @@
 
                 return React.createElement('div', { className: 'ai-addon-settings chatgpt-settings' },
                     React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('label', null, 'API Key(s)'),
+                        React.createElement('label', null, aiText('apiKey', 'API Key(s)')),
                         React.createElement('div', { className: 'ai-addon-input-group' },
                             React.createElement('input', { type: 'text', value: apiKeys, onChange: handleApiKeyChange, placeholder: 'sk-... (multiple: ["key1", "key2"])' }),
-                            React.createElement('button', { onClick: () => window.open(ADDON_INFO.apiKeyUrl, '_blank'), className: 'ai-addon-btn-secondary' }, 'Get API Key')
+                            React.createElement('button', { onClick: () => window.open(ADDON_INFO.apiKeyUrl, '_blank'), className: 'ai-addon-btn-secondary' }, aiText('getApiKey', 'Get API Key'))
                         ),
-                        React.createElement('small', null, 'Enter a single key or JSON array for rotation')
+                        React.createElement('small', null, aiText('apiKeyDesc', 'Enter an API key or JSON array.'))
                     ),
                     React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('label', null, 'Base URL'),
-                        React.createElement('input', { type: 'text', value: baseUrl, onChange: handleBaseUrlChange, placeholder: 'https://api.openai.com/v1' }),
+                        React.createElement('label', null, aiText('baseUrl', 'Base URL')),
+                        React.createElement('input', { type: 'text', value: baseUrl, onChange: handleBaseUrlChange, placeholder: DEFAULT_OPENAI_BASE_URL }),
                         React.createElement('small', null, 'Change this to use OpenAI-compatible APIs')
                     ),
                     React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('label', null, 'Model'),
+                        React.createElement('label', null, aiText('model', 'Model')),
                         React.createElement('div', { className: 'ai-addon-input-group' },
                             React.createElement('select', {
                                 value: isModelInList ? model : '',
@@ -1686,30 +1698,30 @@
                                 disabled: modelsLoading
                             },
                                 modelsLoading
-                                    ? React.createElement('option', { value: '' }, 'Loading models...')
+                                    ? React.createElement('option', { value: '' }, aiText('loadingModels', 'Loading models...'))
                                     : availableModels.length > 0
                                         ? [
-                                            !model && React.createElement('option', { key: '__placeholder__', value: '' }, '-- Select a model --'),
+                                            !model && React.createElement('option', { key: '__placeholder__', value: '' }, aiText('selectModel', 'Select a model')),
                                             ...availableModels.map(m => React.createElement('option', { key: m.id, value: m.id }, m.name)),
-                                            React.createElement('option', { key: 'custom', value: '' }, 'Custom...')
+                                            React.createElement('option', { key: 'custom', value: '' }, aiText('modelId', 'Model ID'))
                                         ].filter(Boolean)
                                         : [
-                                            React.createElement('option', { key: 'empty', value: '' }, hasApiKey ? 'No models found' : 'Enter API key first'),
-                                            React.createElement('option', { key: 'custom', value: '' }, 'Custom...')
+                                            React.createElement('option', { key: 'empty', value: '' }, hasApiKey ? aiText('noModels', 'No models found') : aiText('apiKey', 'API Key')),
+                                            React.createElement('option', { key: 'custom', value: '' }, aiText('modelId', 'Model ID'))
                                         ]
                             ),
                             React.createElement('button', {
                                 onClick: handleRefreshModels,
                                 className: 'ai-addon-btn-secondary',
                                 disabled: modelsLoading || !hasApiKey,
-                                title: 'Refresh model list'
+                                title: aiText('refreshModels', 'Refresh model list')
                             }, modelsLoading ? '...' : '↻')
                         ),
-                        availableModels.length > 0 && React.createElement('small', null, `${availableModels.length} models available`)
+                        availableModels.length > 0 && React.createElement('small', null, `${aiText('model', 'Model')}: ${availableModels.length}`)
                     ),
                     (!isModelInList || customModel) &&
                     React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('label', null, 'Custom Model ID'),
+                        React.createElement('label', null, aiText('modelId', 'Custom Model ID')),
                         React.createElement('input', { type: 'text', value: customModel, onChange: handleCustomModelChange, placeholder: 'e.g., gpt-4-turbo' })
                     ),
                     renderCapabilityChips(
@@ -1736,6 +1748,79 @@
                     )
                 );
             };
+
+            function FallbackProvidersSection() {
+                const [connections, setConnections] = useState(getFallbackProviders);
+                const save = next => { setConnections(next); setSetting('fallback-providers', next); };
+                const move = (index, delta) => {
+                    const next = [...connections];
+                    [next[index], next[index + delta]] = [next[index + delta], next[index]];
+                    save(next);
+                };
+                return React.createElement('div', { className: 'ai-addon-setting' },
+                    React.createElement('label', null, t('settings.aiProviders.openaiConnections', 'Additional OpenAI-compatible providers')),
+                    React.createElement('small', null, t('settings.aiProviders.openaiConnectionsDesc', 'Try the primary connection first, then enabled connections below in order when a request fails.')),
+                    connections.map((connection, index) => React.createElement(ConnectionEditor, {
+                        key: connection.id,
+                        connection, index, count: connections.length,
+                        onChange: patch => save(connections.map(item => item.id === connection.id ? { ...item, ...patch } : item)),
+                        onRemove: () => save(connections.filter(item => item.id !== connection.id)),
+                        onMove: delta => move(index, delta)
+                    })),
+                    React.createElement('button', {
+                        className: 'ai-addon-btn-secondary',
+                        onClick: () => save([...connections, { id: `custom-${Date.now()}-${Math.random().toString(36).slice(2)}`, name: `API ${connections.length + 1}`, baseUrl: DEFAULT_OPENAI_BASE_URL, apiKeys: '', model: '', enabled: true }])
+                    }, t('settings.aiProviders.addOpenaiConnection', 'Add provider'))
+                );
+            }
+
+            function ConnectionEditor({ connection, index, count, onChange, onRemove, onMove }) {
+                const [models, setModels] = useState([]);
+                const [loading, setLoading] = useState(false);
+                const [revision, setRevision] = useState(0);
+                const [status, setStatus] = useState('');
+                useEffect(() => {
+                    let active = true;
+                    setModels([]);
+                    const keys = parseConnectionKeys(connection.apiKeys);
+                    if (!keys.length) { setLoading(false); return; }
+                    setLoading(true);
+                    const timer = setTimeout(() => {
+                        fetchAvailableModels(keys[0], connection.baseUrl).then(values => {
+                            if (active) setModels(values);
+                        }).finally(() => { if (active) setLoading(false); });
+                    }, 350);
+                    return () => { active = false; clearTimeout(timer); };
+                }, [connection.apiKeys, connection.baseUrl, revision]);
+                const field = (label, key, type = 'text') => React.createElement('label', null, label,
+                    React.createElement('input', { type, value: connection[key] || '', onChange: event => onChange({ [key]: event.target.value }), autoComplete: 'off' }));
+                return React.createElement('div', { style: { padding: '12px', margin: '10px 0', border: '1px solid rgba(255,255,255,.15)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px' } },
+                    React.createElement('div', { className: 'ai-addon-input-group' },
+                        React.createElement('label', null,
+                            React.createElement('input', { type: 'checkbox', checked: connection.enabled !== false, onChange: event => onChange({ enabled: event.target.checked }) }),
+                            `${index + 2}. ${connection.name || 'API'}`),
+                        React.createElement('button', { onClick: () => onMove(-1), disabled: index === 0, 'aria-label': aiText('moveUp', 'Move up') }, '↑'),
+                        React.createElement('button', { onClick: () => onMove(1), disabled: index === count - 1, 'aria-label': aiText('moveDown', 'Move down') }, '↓'),
+                        React.createElement('button', { onClick: onRemove, 'aria-label': aiText('removeConnection', 'Remove provider') }, '×')
+                    ),
+                    field(t('settings.aiProviders.connectionName', 'Name'), 'name'),
+                    field(aiText('baseUrl', 'Base URL'), 'baseUrl'),
+                    field(aiText('apiKey', 'API Key(s)'), 'apiKeys', 'password'),
+                    React.createElement('div', { className: 'ai-addon-input-group' },
+                        React.createElement('select', { value: connection.model || '', disabled: loading || !models.length, onChange: event => onChange({ model: event.target.value }) },
+                            !models.some(model => model.id === connection.model) && React.createElement('option', { value: connection.model || '' }, connection.model || aiText('selectModel', 'Select a model')),
+                            models.map(model => React.createElement('option', { key: model.id, value: model.id }, model.name))),
+                        React.createElement('button', { onClick: () => setRevision(value => value + 1), disabled: loading, title: aiText('refreshModels', 'Refresh model list') }, loading ? '...' : '↻')
+                    ),
+                    field(aiText('modelId', 'Model ID'), 'model'),
+                    React.createElement('button', { className: 'ai-addon-btn-secondary', onClick: async () => {
+                        setStatus(aiText('testingConnection', 'Testing...'));
+                        try { await callChatGPTAPIRaw('Reply with just "OK".', 1, null, undefined, { ...connection }); setStatus('✓ ' + aiText('connectionSuccess', 'Connection successful.')); }
+                        catch (error) { setStatus(`✗ ${error.message}`); }
+                    } }, aiText('testThisConnection', 'Test this provider')),
+                    status && React.createElement('small', null, status)
+                );
+            }
 
             function AdvancedParamsSection() {
                 const [expanded, setExpanded] = useState(getSetting('adv-expanded', false));
@@ -1877,7 +1962,7 @@
                     onResearchProgress(null, { ...details, reset: true });
                 }
                 : null;
-            const request = webSearch !== false
+            const request = ADDON_INFO.supports.researchWebSearch && webSearch !== false
                 ? callResponsesAPIStream
                 : callChatGPTAPIStream;
             const onRawChunk = progressParser ? chunk => progressParser.push(chunk) : null;
@@ -1992,5 +2077,10 @@
 
     registerAddon();
 
-    window.__ivLyricsDebugLog?.('[ChatGPT Addon] Module loaded');
+    return ChatGPTAddon;
+    }
+
+    // Share request validation, streaming and settings without sharing credentials.
+    window.createOpenAICompatibleAddon = createOpenAICompatibleAddon;
+    createOpenAICompatibleAddon();
 })();

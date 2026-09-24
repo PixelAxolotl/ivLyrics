@@ -7,7 +7,7 @@ const source = readFileSync(new URL("../FullscreenOverlay.js", import.meta.url),
 
 // Run the actual overlay with persistent hooks, effects and event subscriptions.
 // Child components stay as elements so only work scheduled by the root is counted.
-const createHarness = ({ mode = "standard", visual = {} } = {}) => {
+const createHarness = ({ mode = "standard", visual = {}, windowOverrides = {} } = {}) => {
   const slots = [];
   const intervals = new Map();
   const listeners = new Map();
@@ -82,7 +82,7 @@ const createHarness = ({ mode = "standard", visual = {} } = {}) => {
     Spicetify: { React: react, Player: player },
     CONFIG: config,
     I18n: { t: (key) => key },
-    window: { ivLyricsVinylPlayerMode: vinyl },
+    window: { ivLyricsVinylPlayerMode: vinyl, ...windowOverrides },
     document: { documentElement: { classList: { remove() {} } } },
     setInterval(callback, delay) { intervals.set(++timerId, { callback, delay }); return timerId; },
     clearInterval(id) { intervals.delete(id); },
@@ -185,6 +185,33 @@ for (const mode of ["standard", "compact-vinyl"]) {
 }
 
 for (const mode of ["vinyl", "video"]) {
+  test(`${mode} reports the actual focused lyric surface and restores TV/research/standard pages`, () => {
+    const changes = [];
+    const h = createHarness({ mode, windowOverrides: {
+      localStorage: { getItem: () => "true" },
+      AIAddonManager: { getEnabledProvidersFor: () => [{}] },
+      SongInfoTMI: { fetchSongInfo: () => new Promise(() => {}) },
+      setTimeout: () => 1, clearTimeout() {},
+    } });
+    h.update({ onFocusedLyricsChange: active => changes.push(active), trackUri: "spotify:track:one" });
+    assert.deepEqual(changes, [true]);
+    h.tick();
+    assert.deepEqual(changes, [true], "clock updates must not notify unchanged visibility");
+    h.config.visual["fullscreen-tv-mode"] = true;
+    h.update();
+    assert.equal(changes.at(-1), false);
+    h.config.visual["fullscreen-tv-mode"] = false;
+    h.update();
+    assert.equal(changes.at(-1), true);
+    const stage = elements(h.tree).find(node => node.type === h.vinyl);
+    stage.props.interactionProps.onContextMenu({ preventDefault() {}, stopPropagation() {} });
+    h.update();
+    assert.equal(changes.at(-1), false, "research shows the regular lyrics beside its panel");
+    h.update({ isFullscreen: false });
+    assert.equal(changes.at(-1), false);
+    h.unmount();
+  });
+
   test(`${mode} keeps 500 ms playback updates and seeks against the current duration`, () => {
     const h = createHarness({ mode });
     const initialRenders = h.renders;

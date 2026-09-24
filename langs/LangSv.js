@@ -1,5 +1,13 @@
 // Swedish language file for ivLyrics
 window.LANG_SV = {
+  "semanticHighlight": {
+    "title": "Markera efter betydelse",
+    "description": "Markerar motsvarande delar av uttalet och översättningen i takt med originaltexten, utan att ändra ordföljden.",
+    "unavailable": "Aktivera en AI-leverantör som stöder semantisk analys. Enbart Bing eller Google Översätt räcker inte för den här funktionen.",
+    "available": "Analysera den aktuella översättningen med AI. Översättningar från Bing och Google stöds också.",
+    "phonetic": "Semantisk markering av uttal",
+    "translation": "Semantisk markering av översättning"
+  },
   "meta": {
     "language": "Svenska",
     "code": "sv",
@@ -28,6 +36,7 @@ window.LANG_SV = {
     "inSection": "i {section}"
   },
   "settingsUi": {
+    "aiAutosave": "Inställningar sparas automatiskt. Generera på nytt för den aktuella låten.",
     "groups": {
       "core": "Arbetsyta",
       "display": "Display",
@@ -471,7 +480,44 @@ window.LANG_SV = {
       "noEnabledProviders": "Inga AI-leverantörer aktiverade. Aktivera minst en leverantör i inställningarna.",
       "allProvidersFailed": "Alla AI-leverantörer kunde inte behandla begäran.",
       "enabledCapabilities": "Aktiverade funktioner",
-      "capabilitiesDesc": "Välj vilka funktioner den här leverantören hanterar"
+      "capabilitiesDesc": "Välj vilka funktioner den här leverantören hanterar",
+      "openaiConnections": "Ytterligare OpenAI-kompatibla leverantörer",
+      "openaiConnectionsDesc": "Om den primära anslutningen misslyckas provas de aktiverade leverantörerna nedan i ordning.",
+      "addOpenaiConnection": "Lägg till egen leverantör",
+      "connectionName": "Leverantörens namn",
+      "removeConnection": "Ta bort leverantör",
+      "testThisConnection": "Testa den här leverantören",
+      "connectionSuccess": "Anslutningen lyckades.",
+      "saveConnection": "Spara",
+      "sonarModelsFallback": "Sonar saknar ett API för modellistor. Den inbyggda listan över modeller som stöds visas.",
+      "pollinationsAllModels": "Åtkomst till alla modeller begärs. Välj en modell efter anslutningen.",
+      "model": "Modell",
+      "modelId": "Modell ID",
+      "baseUrl": "Bas URL",
+      "apiKey": "API Nyckel",
+      "apiKeyDesc": "Stöder en enda nyckel, nyradslista eller JSON-array. Lagras endast på den här enheten.",
+      "refreshModels": "Uppdatera",
+      "selectModel": "Välj från modellistan",
+      "loadingModels": "Läser in modeller…",
+      "modelsUnavailable": "Det gick inte att läsa in modellistan. Du kan ange ett modell-ID manuellt.",
+      "testingConnection": "Testa anslutningen…",
+      "testConnection": "Testa anslutningen",
+      "getApiKey": "Hämta nyckel",
+      "noModels": "Inga modeller är tillgängliga",
+      "pollinationsAccount": "Pollinations-konto",
+      "pollinationsConnect": "Logga in på Pollinations",
+      "pollinationsReconnect": "Anslut igen",
+      "pollinationsWaiting": "Väntar på inloggning",
+      "pollinationsOpenLogin": "Öppna inloggningssidan",
+      "pollinationsDisconnect": "Koppla från",
+      "pollinationsDisconnected": "Pollinations-konto · Inaktiverad",
+      "pollinationsRequesting": "Logga in på Pollinations…",
+      "pollinationsConnected": "Pollinations-konto · Aktiverad",
+      "pollinationsKeyConfigured": "Pollinations-konto · Konfigurerat",
+      "pollinationsKeyStatus": "Pollinations-konto · Aktiverad: %s",
+      "pollinationsDescription": "Stöder både manuella API-nycklar och inloggningstoken. Ett tillgängligt inloggningstoken används först.",
+      "pollinationsInvalid": "API-nyckeln är ogiltig. Anslut igen eller ange en ny nyckel.",
+      "pollinationsExpires": "Går ut om %d dag(ar)"
     },
     "lyricsProviders": {
       "title": "Textleverantörer",

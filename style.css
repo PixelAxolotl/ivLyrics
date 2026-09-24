@@ -593,6 +593,24 @@ body.ivlyrics-settings-open .lyrics-lyricsContainer-LyricsContainer * {
   }
 }
 
+/* AI semantic alignment paints the existing target string in place. The
+   target's reading order and whitespace remain untouched, including when a
+   translation maps back to a non-monotonic source phrase. */
+.ivlyrics-semantic-text { display: inline; }
+.ivlyrics-semantic-unit { transition: color 120ms ease, text-shadow 120ms ease, opacity 120ms ease; }
+.ivlyrics-semantic-unit-active {
+  color: var(--lyrics-color-active, var(--spice-text));
+  text-shadow: 0 0 0.55em color-mix(in srgb, currentColor 42%, transparent);
+}
+.ivlyrics-semantic-settings-card { margin: 20px 0; padding: 16px; border: 1px solid rgba(var(--spice-rgb-subtext), .22); border-radius: 10px; }
+.ivlyrics-semantic-settings-card h3 { margin: 0 0 6px; font-size: 15px; }
+.ivlyrics-semantic-settings-card p { margin: 0 0 12px; color: var(--spice-subtext); font-size: 12px; line-height: 1.45; }
+.ivlyrics-semantic-settings-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
+.ivlyrics-semantic-settings-row input { accent-color: var(--spice-button); }
+@media (prefers-reduced-motion: reduce) {
+  .ivlyrics-semantic-unit { transition: none; }
+}
+
 .motion-reduced .lyrics-translation-loading-indicator,
 .motion-reduced .lyrics-translation-loading-indicator::before,
 .motion-reduced .lyrics-translation-loading-spinner,
@@ -1937,7 +1955,7 @@ body.ivlyrics-page-active .main-topBar-container {
   pointer-events: none;
 }
 
-.lyrics-lyricsContainer-SyncedLyricsPage:not(.scrolling-active) .lyrics-lyricsContainer-SyncedLyrics>.lyrics-lyricsContainer-LyricsLine-paddingBefore {
+.lyrics-lyricsContainer-SyncedLyricsPage .lyrics-lyricsContainer-SyncedLyrics>.lyrics-lyricsContainer-LyricsLine-paddingBefore {
   min-height: 0 !important;
   margin-top: 0 !important;
   margin-bottom: 0 !important;
@@ -2404,7 +2422,7 @@ div.lyrics-tabBar-headerItemLink {
     var(--lyrics-detail-exit-delay, 0ms), var(--lyrics-detail-exit-delay, 0ms) !important;
 }
 
-.lyrics-lyricsContainer-SyncedLyricsPage:not(.scrolling-active)
+.lyrics-lyricsContainer-SyncedLyricsPage
   .lyrics-lyricsContainer-SyncedLyrics
   > .lyrics-lyricsContainer-LyricsLine-paddingLine {
   transition-property: transform, color, opacity !important;
@@ -5427,118 +5445,49 @@ ruby rt {
   display: block;
 }
 
-/* Scrolling mode styles */
-.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active {
-  overflow-y: overlay !important;
-  scrollbar-gutter: stable both-edges;
-  /* scroll-behavior: smooth; 제거 - JS로 제어 */
-}
-
 #lyrics-fullscreen-container,
 #lyrics-fullscreen-container .lyrics-lyricsContainer-LyricsContainer {
   overflow-x: hidden;
 }
 
-#lyrics-fullscreen-container .lyrics-lyricsContainer-LyricsContainer:has(.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active) {
-  overflow: hidden;
+/* Hover 효과는 기존 스타일(.lyrics-lyricsContainer-SyncedLyrics .lyrics-lyricsContainer-LyricsLine:hover)을 따름 */
+/* Active 효과도 기존 스타일(.lyrics-lyricsContainer-LyricsLine-active)을 따름 */
+
+/* A focused lyric must never scroll the fullscreen stage along with its
+   own viewport. `clip` also blocks programmatic ancestor scrolling. */
+@supports (overflow: clip) {
+  #lyrics-fullscreen-container:has(.lyrics-lyricsContainer-SyncedLyricsPage),
+  #lyrics-fullscreen-container .lyrics-lyricsContainer-LyricsContainer:has(.lyrics-lyricsContainer-SyncedLyricsPage),
+  .lyrics-lyricsContainer-LyricsContainer.fullscreen-page-ui:has(.lyrics-lyricsContainer-SyncedLyricsPage) {
+    overflow: clip;
+  }
 }
 
-#lyrics-fullscreen-container .lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active {
-  width: 100%;
-  max-width: min(1200px, 85vw);
-  margin: 0 auto;
+/* Browsing uses the same grid, row transforms, and typography as playback.
+   Hide the native gutter so entering scroll mode never changes line wrapping. */
+.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
+  scroll-behavior: auto;
 }
 
 .lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active::-webkit-scrollbar {
-  width: 4px;
-}
-
-.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active::-webkit-scrollbar-thumb {
-  background-color: var(--spice-button-disabled);
-  border-radius: 2px;
-}
-
-.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active::-webkit-scrollbar-thumb:hover {
-  background-color: var(--spice-text);
-}
-
-.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active .lyrics-lyricsContainer-SyncedLyrics {
-  box-sizing: border-box;
-  min-height: 100%;
-  width: 100%;
-  height: auto;
-  padding: 46vh 0 46vh;
-  --scroll-line-gap: clamp(10px, calc(var(--lyrics-font-size, 26px) * 0.26), 22px);
-  --scroll-line-gap-karaoke: clamp(16px, calc(var(--lyrics-font-size, 26px) * 0.42), 32px);
-}
-
-.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active .lyrics-lyricsContainer-SyncedLyrics:has(.lyrics-karaoke-line) {
-  --scroll-line-gap: var(--scroll-line-gap-karaoke);
-}
-
-.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active .lyrics-lyricsContainer-SyncedLyrics>.lyrics-lyricsContainer-LyricsLine-scrollView {
-  color: var(--lyrics-color-inactive);
-  transform: none !important;
-  cursor: pointer;
-  margin-bottom: var(--scroll-line-gap);
-  padding: 0;
-  position: relative;
-  filter: none !important;
-  opacity: 0.72;
-  transition:
-    color var(--iv-motion-duration-fast) var(--iv-motion-ease-standard),
-    opacity var(--iv-motion-duration-medium) var(--iv-motion-ease-standard),
-    text-shadow var(--iv-motion-duration-medium) var(--iv-motion-ease-standard),
-    background-color var(--iv-motion-duration-medium) var(--iv-motion-ease-standard),
-    transform var(--iv-motion-duration-fast) var(--iv-motion-ease-emphasis),
-    padding-inline var(--iv-motion-duration-medium) var(--iv-motion-ease-standard),
-    box-shadow var(--iv-motion-duration-medium) var(--iv-motion-ease-standard);
-}
-
-.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active .lyrics-lyricsContainer-SyncedLyrics>.lyrics-lyricsContainer-LyricsLine-scrollView:hover {
-  transform: translateX(4px);
-}
-
-.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active .lyrics-lyricsContainer-SyncedLyrics>.lyrics-lyricsContainer-LyricsLine-scrollView:last-child {
-  margin-bottom: 0;
-}
-
-.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active .lyrics-lyricsContainer-SyncedLyrics>.lyrics-lyricsContainer-LyricsLine-scrollView.lyrics-lyricsContainer-LyricsLine-hasSubLine {
-  margin-bottom: calc(var(--scroll-line-gap) + clamp(4px, 0.5vw, 10px));
-}
-
-.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active .lyrics-lyricsContainer-SyncedLyrics>.lyrics-lyricsContainer-LyricsLine-scrollView.lyrics-lyricsContainer-LyricsLine-active {
-  transform: none !important;
-  opacity: 1;
-  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0));
-  border-radius: 14px;
-  padding-inline: clamp(10px, 1.2vw, 18px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 12px 30px rgba(0, 0, 0, 0.12);
-}
-
-.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active .lyrics-lyricsContainer-SyncedLyrics>.lyrics-lyricsContainer-LyricsLine-scrollCurrent::before {
-  content: "";
-  position: absolute;
-  top: 0.5em;
-  inset-inline-start: calc(clamp(10px, 1.2vw, 18px) * -1 - 12px);
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: var(--lyrics-color-active);
-  box-shadow: 0 0 10px var(--lyrics-color-active);
-  animation: ivlyricsPulseDot 1.6s ease-in-out infinite;
-}
-
-.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active .lyrics-lyricsContainer-Provider {
   display: none;
 }
 
-/* Hover 효과는 기존 스타일(.lyrics-lyricsContainer-SyncedLyrics .lyrics-lyricsContainer-LyricsLine:hover)을 따름 */
-/* Active 효과도 기존 스타일(.lyrics-lyricsContainer-LyricsLine-active)을 따름 */
+.lyrics-native-scroll-spacer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  pointer-events: none;
+}
+
+.lyrics-lyricsContainer-LyricsContainer.blur-enabled .lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active .lyrics-lyricsContainer-LyricsLine {
+  filter: blur(calc(var(--manual-blur-index, var(--blur-index)) * 1.5px));
+}
 
 /* Fullscreen Mode Styles */
 .lyrics-lyricsContainer-LyricsContainer.fullscreen-active {
@@ -5783,25 +5732,6 @@ ruby rt {
   transform-origin: var(--lyrics-align-text) center;
 }
 
-
-
-/* Fullscreen scrolling mode fixes */
-.lyrics-lyricsContainer-LyricsContainer.fullscreen-active .lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active {
-  overflow-y: auto !important;
-  overflow-x: hidden;
-  padding: 0 40px;
-  margin: 0;
-  width: 100%;
-  max-width: none;
-  display: block;
-  box-sizing: border-box;
-}
-
-.lyrics-lyricsContainer-LyricsContainer.fullscreen-active .lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active .lyrics-lyricsContainer-SyncedScrollView {
-  width: 100%;
-  padding: 50vh 0 50vh;
-}
-
 /* Give standard fullscreen lyrics equal breathing room on both sides. */
 .lyrics-lyricsContainer-LyricsContainer.fullscreen-active:not(:is(.tv-mode-active, .portrait-mode, .fullscreen-single-column, .fullscreen-focus-active, .fullscreen-no-lyrics, .marketplace-active)) > :is(.lyrics-lyricsContainer-SyncedLyricsPage, .lyrics-lyricsContainer-UnsyncedLyricsPage) {
   padding-inline: 64px;
@@ -5814,7 +5744,6 @@ ruby rt {
   top: 0;
   left: var(--lyrics-fullscreen-region-left, 50%);
   right: var(--lyrics-fullscreen-region-right, 0px);
-  /* Also override the fullscreen scrolling page's ID-scoped width cap. */
   width: auto !important;
   max-width: none !important;
   min-width: 0;
@@ -5828,10 +5757,6 @@ ruby rt {
   height: 100% !important;
   min-height: 0;
   max-height: 100%;
-}
-
-.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui:has(.lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active) {
-  overflow: hidden;
 }
 
 .lyrics-lyricsContainer-LyricsContainer.fullscreen-active.fullscreen-page-ui .lyrics-lyricsContainer-SyncedLyricsPage,
@@ -6891,14 +6816,6 @@ ruby rt {
   -webkit-mask-image: none !important;
 }
 
-.portrait-mode .lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active {
-  padding: clamp(100px, 18svh, 180px) 5vw clamp(80px, 14svh, 150px) 5vw !important;
-}
-
-.portrait-mode .lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active .lyrics-lyricsContainer-SyncedScrollView {
-  padding: 0 !important;
-}
-
 /* UI 숨김 시 가사 패딩 최소화 → 풀스크린 효과 */
 .portrait-mode.ui-hidden .lyrics-lyricsContainer-SyncedLyricsPage,
 .portrait-mode.ui-hidden .lyrics-lyricsContainer-UnsyncedLyricsPage {
@@ -6906,19 +6823,9 @@ ruby rt {
   padding-bottom: clamp(80px, 14svh, 150px) !important;
 }
 
-.portrait-mode.ui-hidden .lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active {
-  padding-top: clamp(100px, 18svh, 180px) !important;
-  padding-bottom: clamp(80px, 14svh, 150px) !important;
-}
-
 /* layout-reversed: 가사 패딩 반전 */
 .portrait-mode.layout-reversed .lyrics-lyricsContainer-SyncedLyricsPage,
 .portrait-mode.layout-reversed .lyrics-lyricsContainer-UnsyncedLyricsPage {
-  padding-top: clamp(80px, 14svh, 150px) !important;
-  padding-bottom: clamp(100px, 18svh, 180px) !important;
-}
-
-.portrait-mode.layout-reversed .lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active {
   padding-top: clamp(80px, 14svh, 150px) !important;
   padding-bottom: clamp(100px, 18svh, 180px) !important;
 }
@@ -9504,7 +9411,7 @@ html.is-lp-view-exit::view-transition-new(root) {
   z-index: 3;
   bottom: clamp(22px, 4svh, 42px);
   left: 50%;
-  width: min(90vw, 1160px);
+  width: 90%;
   min-height: clamp(94px, 13svh, 146px);
   margin: 0;
   overflow: visible;
@@ -10787,7 +10694,7 @@ html.is-lp-view-exit::view-transition-new(root) {
 
 .fullscreen-vinyl-overlay.is-portrait-layout .fullscreen-vinyl-lyric-stage {
   bottom: clamp(18px, 3.5svh, 38px);
-  width: min(92vw, 760px);
+  width: 92%;
   min-height: clamp(112px, 17svh, 188px);
 }
 
@@ -12635,30 +12542,6 @@ html.is-lp-view-exit::view-transition-new(root) {
   padding-bottom: 200px;
 }
 
-/* TV Mode - Scrolling mode fixes (no left/right padding, full width) */
-.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.tv-mode-active .lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active,
-#lyrics-fullscreen-container .lyrics-lyricsContainer-LyricsContainer.tv-mode-active .lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active {
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-  margin: 0 !important;
-  max-width: 100% !important;
-  width: 100% !important;
-}
-
-/* TV Mode - SyncedLyrics inner container full width */
-.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.tv-mode-active .lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active .lyrics-lyricsContainer-SyncedScrollView,
-#lyrics-fullscreen-container .lyrics-lyricsContainer-LyricsContainer.tv-mode-active .lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active .lyrics-lyricsContainer-SyncedScrollView {
-  padding-left: clamp(24px, 4vw, 64px) !important;
-  padding-right: clamp(24px, 4vw, 64px) !important;
-}
-
-/* TV Mode - 가사 라인에 사용자 정렬 설정 적용 */
-.lyrics-lyricsContainer-LyricsContainer.fullscreen-active.tv-mode-active .lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active .lyrics-lyricsContainer-LyricsLine,
-#lyrics-fullscreen-container .lyrics-lyricsContainer-LyricsContainer.tv-mode-active .lyrics-lyricsContainer-SyncedLyricsPage.scrolling-active .lyrics-lyricsContainer-LyricsLine {
-  text-align: var(--lyrics-align-text, center);
-  width: 100%;
-}
-
 /* TV Mode - Responsive adjustments */
 @media (max-width: 1200px) {
   .fullscreen-tv-song-info,
@@ -13259,6 +13142,32 @@ html.is-lp-view-exit::view-transition-new(root) {
 
 .lyrics-fluent-floating-toolbar::before {
   display: none;
+}
+
+.ivlyrics-tooltip-disabled-trigger {
+  display: inline-flex;
+}
+
+.ivlyrics-tooltip-disabled-trigger > button:disabled {
+  pointer-events: none;
+}
+
+.ivlyrics-toolbar-tooltip {
+  position: fixed;
+  box-sizing: border-box;
+  width: max-content;
+  z-index: var(--iv-layer-modal, 2147483647);
+  transform: translateY(-50%);
+  max-width: min(320px, calc(100vw - 80px));
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: #282828;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
 }
 
 .lyrics-fluent-floating-toolbar:hover {

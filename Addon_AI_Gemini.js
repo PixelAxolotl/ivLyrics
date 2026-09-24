@@ -213,14 +213,23 @@
             config.maxOutputTokens = parseInt(getSetting('adv-maxOutputTokens-value', DEFAULT_MAX_OUTPUT_TOKENS)) || DEFAULT_MAX_OUTPUT_TOKENS;
         }
 
-        // thinking config
+        // Gemini 3 uses levels; zero token budgets are not supported by every
+        // model. Older/non-thinking models must not receive thinking fields.
         const useThinking = getSetting('adv-thinking-enabled', false);
-        if (useThinking) {
-            const budget = parseInt(getSetting('adv-thinking-budget', 1024)) || 1024;
-            config.thinkingConfig = { thinkingBudget: budget };
-        } else {
-            // Disable thinking to enable true streaming
-            config.thinkingConfig = { thinkingBudget: 0 };
+        const model = String(getSelectedModel() || '').replace(/^models\//, '').toLowerCase();
+        if (/^gemini-3(?:[.-])/.test(model)) {
+            const supportsMinimal = /^gemini-3\.(?:1|5)-flash-lite(?:-|$)/.test(model);
+            config.thinkingConfig = { thinkingLevel: useThinking ? 'high' : supportsMinimal ? 'minimal' : 'low' };
+        } else if (/^gemini-2\.5-(?:flash|pro)(?:-|$)/.test(model)) {
+            const isPro = model.startsWith('gemini-2.5-pro');
+            if (useThinking) {
+                const budget = parseInt(getSetting('adv-thinking-budget', 1024)) || 1024;
+                const minimum = isPro ? 128 : model.startsWith('gemini-2.5-flash-lite') ? 512 : 0;
+                const maximum = isPro ? 32768 : 24576;
+                config.thinkingConfig = { thinkingBudget: Math.max(minimum, Math.min(maximum, budget)) };
+            } else if (!isPro) {
+                config.thinkingConfig = { thinkingBudget: 0 };
+            }
         }
 
         return config;

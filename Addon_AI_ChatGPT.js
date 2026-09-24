@@ -193,7 +193,9 @@
     }
 
     function setSetting(key, value) {
-        window.AIAddonManager?.setAddonSetting(ADDON_INFO.id, key, value);
+        if (typeof window.AIAddonManager?.setAddonSetting === 'function') {
+            window.AIAddonManager.setAddonSetting(ADDON_INFO.id, key, value);
+        }
     }
 
     function t(key, fallback) {
@@ -348,6 +350,22 @@
                 model: ep.model || primaryModel,
                 researchWebSearch: isEndpointCapabilityEnabled(ep.capabilities, 'researchWebSearch')
             });
+        }
+        // Released `fallback-providers` entries (kept editable through the
+        // retained FallbackProvidersSection UI) are bridged here so saved
+        // connections keep working: enabled state, order, models and keys
+        // are preserved. Legacy entries carry no per-capability flags, so
+        // they serve every capability like the primary default.
+        for (const connection of getFallbackProviders()) {
+            if (!connection || connection.enabled === false) continue;
+            const keys = parseConnectionKeys(connection.apiKeys ?? connection.apiKey);
+            if (!keys.length) continue;
+            const baseUrl = normalizeBaseUrl(connection.baseUrl) || primaryBaseUrl;
+            const model = String(connection.model || '').trim();
+            const label = String(connection.name || 'Fallback').trim() || 'Fallback';
+            for (const apiKey of keys) {
+                targets.push({ label, baseUrl, apiKey, model, researchWebSearch: true });
+            }
         }
         return targets;
     }
@@ -715,7 +733,12 @@
                     }
 
                     if (response.status === 401) {
-                        throw new Error(`[ChatGPT] ${await buildHttpErrorDetail(response)}`);
+                        // An invalid key on one target must not abort the
+                        // remaining targets: record it and fail over, matching
+                        // the released withProviderConnections behavior. When
+                        // no target succeeds, lastError still surfaces it.
+                        lastError = new Error(`[ChatGPT] ${await buildHttpErrorDetail(response)}`);
+                        break; // Try next target
                     }
 
                     if (!response.ok) {
@@ -737,8 +760,10 @@
                     lastError = e;
                     window.__ivLyricsDebugLog?.(`[ChatGPT Addon] Attempt ${attempt + 1} failed:`, e.message);
 
+                    // Credential errors skip retries on this target and fail
+                    // over to the next one instead of aborting the chain.
                     if (e.message.includes('Invalid API key') || e.message.includes('permission denied')) {
-                        throw e;
+                        break; // Try next target
                     }
 
                     if (attempt < maxRetries - 1) {
@@ -974,7 +999,9 @@
                     lastError = error;
                     window.__ivLyricsDebugLog?.(`[ChatGPT Addon] Responses API attempt ${attempt + 1} failed:`, error.message);
                     resetProvisionalOutput(attempt < maxRetries - 1 ? 'retry' : 'failed', error);
-                    if (/invalid api key|permission denied/i.test(error.message)) throw error;
+                    // Credential errors skip retries on this target and fail
+                    // over to the next one instead of aborting the chain.
+                    if (/invalid api key|permission denied/i.test(error.message)) break; // Try next target
                     if (attempt < maxRetries - 1) await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
                 }
             }
@@ -1052,7 +1079,12 @@
                     }
 
                     if (response.status === 401) {
-                        throw new Error(`[ChatGPT] ${await buildHttpErrorDetail(response)}`);
+                        // An invalid key on one target must not abort the
+                        // remaining targets: record it and fail over, matching
+                        // the released withProviderConnections behavior. When
+                        // no target succeeds, lastError still surfaces it.
+                        lastError = new Error(`[ChatGPT] ${await buildHttpErrorDetail(response)}`);
+                        break; // Try next target
                     }
 
                     if (!response.ok) {
@@ -1167,7 +1199,9 @@
                     lastError = e;
                     window.__ivLyricsDebugLog?.(`[ChatGPT Addon] Stream attempt ${attempt + 1} failed:`, e.message);
                     resetProvisionalOutput(attempt < maxRetries - 1 ? 'retry' : 'failed', e);
-                    if (e.message.includes('Invalid API key') || e.message.includes('permission denied')) throw e;
+                    // Credential errors skip retries on this target and fail
+                    // over to the next one instead of aborting the chain.
+                    if (e.message.includes('Invalid API key') || e.message.includes('permission denied')) break; // Try next target
                     if (attempt < maxRetries - 1) await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
                 }
             }
@@ -1198,16 +1232,22 @@
         if (!apiKey) throw new Error('[ChatGPT] API key is required.');
         if (!model) throw new Error('[ChatGPT] Model is required.');
         const endpoint = `${baseUrl.replace(/\/$/, '')}/chat/completions`;
+        let patch = null;
+        try {
+            patch = getRequestBodyMergePatch();
+        } catch {
+            patch = null;
+        }
+        const body = patch && typeof patch === 'object'
+            ? mergeRequestBody({ model, messages: [{ role: 'user', content: 'Reply with just "OK" if you receive this.' }] }, patch)
+            : { model, messages: [{ role: 'user', content: 'Reply with just "OK" if you receive this.' }] };
         const response = await window.ivLyricsFetch(endpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${apiKey}`
             },
-            body: JSON.stringify({
-                model,
-                messages: [{ role: 'user', content: 'Reply with just "OK" if you receive this.' }]
-            })
+            body: JSON.stringify(body)
         });
         if (!response.ok) {
             throw new Error(`[ChatGPT] ${await buildHttpErrorDetail(response)}`);
@@ -1312,14 +1352,20 @@
          */
         async testConnection() {
             const targets = ensureRequestTargets(getRequestTargets());
+            let lastError = null;
             for (const target of targets) {
                 if (!target.model) continue;
                 try {
                     await testSingleTarget(target);
+                    return;
                 } catch (e) {
-                    throw new Error(`[${target.label}] ${e.message}`);
+                    // Fail over to the next saved connection like the
+                    // released withProviderConnections path did; the final
+                    // error keeps the failing target's label for diagnosis.
+                    lastError = new Error(`[${target.label}] ${e.message}`);
                 }
             }
+            if (lastError) throw lastError;
         },
 
         getSettingsUI() {
@@ -1814,7 +1860,18 @@
                     field(aiText('modelId', 'Model ID'), 'model'),
                     React.createElement('button', { className: 'ai-addon-btn-secondary', onClick: async () => {
                         setStatus(aiText('testingConnection', 'Testing...'));
-                        try { await callChatGPTAPIRaw('Reply with just "OK".', 1, null, undefined, { ...connection }); setStatus('✓ ' + aiText('connectionSuccess', 'Connection successful.')); }
+                        // The trailing callChatGPTAPIRaw argument is now a
+                        // capability filter, so legacy connections are tested
+                        // directly against their own URL/key/model instead.
+                        try {
+                            const keys = parseConnectionKeys(connection.apiKeys ?? connection.apiKey);
+                            await testSingleTarget({
+                                baseUrl: getBaseUrl(connection),
+                                apiKey: keys[0] || '',
+                                model: getSelectedModel(connection)
+                            });
+                            setStatus('✓ ' + aiText('connectionSuccess', 'Connection successful.'));
+                        }
                         catch (error) { setStatus(`✗ ${error.message}`); }
                     } }, aiText('testThisConnection', 'Test this provider')),
                     status && React.createElement('small', null, status)

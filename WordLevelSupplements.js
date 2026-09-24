@@ -153,6 +153,30 @@
 		});
 		return { active, activeIndexes };
 	};
+	// Lyric word units can carry surrounding punctuation: a quoted
+	// “日々” arrives as one unit. Converters and AI prompts need the
+	// bare core — quotes break exact-match prefix stripping and same-text
+	// filtering, which empties both the gloss and the reading for the word.
+	const stripEdgePunctuation = (value) => String(value ?? "")
+		.replace(/^[^\p{L}\p{N}]+/u, "")
+		.replace(/[^\p{L}\p{N}]+$/u, "");
+	// Map a partition to its query cores, dropping punctuation-only units
+	// (e.g. a lone quote char) whose core is empty.
+	const coreActiveWords = (partition) => {
+		const coreIndexes = [];
+		const cores = [];
+		partition.active.forEach((surface, position) => {
+			const core = stripEdgePunctuation(surface);
+			if (!core) return;
+			coreIndexes.push(partition.activeIndexes[position]);
+			cores.push(core);
+		});
+		return { coreIndexes, cores };
+	};
+	// Hide echoes of the queried word, whether the backend echoed the raw
+	// unit (“日々”) or its core (日々).
+	const isEchoOf = (value, surface, core) =>
+		sameText(value, core) || sameText(value, surface);
 	const reinsertSkipped = (unitCount, activeIndexes, activeValues) => {
 		const output = new Array(unitCount).fill("");
 		activeIndexes.forEach((unitIndex, activePosition) => {
@@ -452,17 +476,22 @@
 				readingCache.set(cacheKey, skipped);
 				return skipped;
 			}
-			const wordList = active;
+			const { coreIndexes, cores } = coreActiveWords({ active, activeIndexes });
+			if (cores.length === 0) {
+				const skipped = units.map(() => "");
+				readingCache.set(cacheKey, skipped);
+				return skipped;
+			}
 			return sharePending(pendingReadings, cacheKey, async () => {
 				const persisted = await persistentGet("reading", {
 					targetLang: notation,
 					sourceLang: language,
-					words: wordList,
+					words: cores,
 					extra: `${mode}${zhToneCacheFlag(language)}`,
 					trackId,
 				});
 				if (persisted) {
-					const restored = reinsertSkipped(units.length, activeIndexes, persisted.values);
+					const restored = reinsertSkipped(units.length, coreIndexes, persisted.values);
 					readingCache.set(cacheKey, restored);
 					return restored;
 				}
@@ -470,7 +499,7 @@
 				const slice = await enqueueWordBatch({
 					kind: "pronunciation",
 					batchKey,
-					words: wordList,
+					words: cores,
 					lineText: String(lineText || ""),
 					run: (allWords, allLineTexts) => manager.generateWordPronunciation({
 						words: allWords,
@@ -481,11 +510,12 @@
 					}),
 				});
 				if (!slice) return units.map(() => "");
-				const activeReadings = active.map((surface, activePosition) => {
-					const reading = String(slice[activePosition] ?? "").trim();
-					return reading && !sameText(reading, surface) ? reading : "";
+				const activeReadings = cores.map((core, corePosition) => {
+					const reading = String(slice[corePosition] ?? "").trim();
+					const surface = units[coreIndexes[corePosition]]?.surface;
+					return reading && !isEchoOf(reading, surface, core) ? reading : "";
 				});
-				const normalized = reinsertSkipped(units.length, activeIndexes, activeReadings);
+				const normalized = reinsertSkipped(units.length, coreIndexes, activeReadings);
 				readingCache.set(cacheKey, normalized);
 				if (readingCache.size > 400) {
 					const firstKey = readingCache.keys().next().value;
@@ -496,7 +526,7 @@
 				persistentSet("reading", {
 					targetLang: getPronunciationNotation(),
 					sourceLang: language,
-					words: wordList,
+					words: cores,
 					extra: `${mode}${zhToneCacheFlag(language)}`,
 					values: activeReadings,
 					trackId,
@@ -519,17 +549,22 @@
 			readingCache.set(cacheKey, skippedLocal);
 			return skippedLocal;
 		}
-		const localWords = localPartition.active;
+		const { coreIndexes: localCoreIndexes, cores: localCores } = coreActiveWords(localPartition);
+		if (localCores.length === 0) {
+			const skippedLocal = units.map(() => "");
+			readingCache.set(cacheKey, skippedLocal);
+			return skippedLocal;
+		}
 		return sharePending(pendingReadings, cacheKey, async () => {
 			const persistedLocal = await persistentGet("reading", {
 				targetLang: localNotation,
 				sourceLang: language,
-				words: localWords,
+				words: localCores,
 				extra: mode,
 				trackId,
 			});
 			if (persistedLocal) {
-				const restoredLocal = reinsertSkipped(units.length, localPartition.activeIndexes, persistedLocal.values);
+				const restoredLocal = reinsertSkipped(units.length, localCoreIndexes, persistedLocal.values);
 				readingCache.set(cacheKey, restoredLocal);
 				return restoredLocal;
 			}
@@ -537,15 +572,16 @@
 				const converted = await helper.convertTraditional({
 					language,
 					mode,
-					texts: localWords,
+					texts: localCores,
 				});
-				const activeReadings = localWords.map((surface, activePosition) => {
-					const reading = String(converted?.[activePosition] ?? "").trim();
+				const activeReadings = localCores.map((core, corePosition) => {
+					const reading = String(converted?.[corePosition] ?? "").trim();
 					// A no-op conversion (e.g. kana in -> kana out unchanged for a
 					// symbol) carries no information; hide it to reduce noise.
-					return reading && !sameText(reading, surface) ? reading : "";
+					const surface = units[localCoreIndexes[corePosition]]?.surface;
+					return reading && !isEchoOf(reading, surface, core) ? reading : "";
 				});
-				const readings = reinsertSkipped(units.length, localPartition.activeIndexes, activeReadings);
+				const readings = reinsertSkipped(units.length, localCoreIndexes, activeReadings);
 				readingCache.set(cacheKey, readings);
 				if (readingCache.size > 400) {
 					const firstKey = readingCache.keys().next().value;
@@ -554,7 +590,7 @@
 				persistentSet("reading", {
 					targetLang: getPronunciationNotation(),
 					sourceLang: language,
-					words: localWords,
+					words: localCores,
 					extra: mode,
 					values: activeReadings,
 					trackId,
@@ -609,17 +645,21 @@
 			glossCache.set(cacheKey, empty);
 			return empty;
 		}
-		const wordList = glossPartition.active;
+		const { coreIndexes: glossCoreIndexes, cores: glossCores } = coreActiveWords(glossPartition);
+		if (glossCores.length === 0) {
+			glossCache.set(cacheKey, empty);
+			return empty;
+		}
 		return sharePending(pendingGlosses, cacheKey, async () => {
 			const persisted = await persistentGet("gloss", {
 				targetLang,
 				sourceLang: sourceLangKey,
-				words: wordList,
+				words: glossCores,
 				extra: String(lineText || ""),
 				trackId,
 			});
 			if (persisted) {
-				const restored = reinsertSkipped(units.length, glossPartition.activeIndexes, persisted.values);
+				const restored = reinsertSkipped(units.length, glossCoreIndexes, persisted.values);
 				glossCache.set(cacheKey, restored);
 				return restored;
 			}
@@ -627,7 +667,7 @@
 			const slice = await enqueueWordBatch({
 				kind: "gloss",
 				batchKey,
-				words: wordList,
+				words: glossCores,
 				lineText: String(lineText || ""),
 				run: (allWords, allLineTexts) => manager.generateWordGloss({
 					words: allWords,
@@ -637,11 +677,12 @@
 				}),
 			});
 			if (!slice) return empty;
-			const activeGlosses = wordList.map((surface, activePosition) => {
-				const gloss = String(slice[activePosition] ?? "").trim();
-				return gloss && !sameText(gloss, surface) ? gloss : "";
+			const activeGlosses = glossCores.map((core, corePosition) => {
+				const gloss = String(slice[corePosition] ?? "").trim();
+				const surface = units[glossCoreIndexes[corePosition]]?.surface;
+				return gloss && !isEchoOf(gloss, surface, core) ? gloss : "";
 			});
-			const normalized = reinsertSkipped(units.length, glossPartition.activeIndexes, activeGlosses);
+			const normalized = reinsertSkipped(units.length, glossCoreIndexes, activeGlosses);
 			glossCache.set(cacheKey, normalized);
 			if (glossCache.size > 200) {
 				const firstKey = glossCache.keys().next().value;
@@ -650,7 +691,7 @@
 			persistentSet("gloss", {
 				targetLang,
 				sourceLang: sourceLangKey,
-				words: wordList,
+				words: glossCores,
 				extra: String(lineText || ""),
 				values: activeGlosses,
 				trackId,

@@ -10136,7 +10136,7 @@ class LyricsContainer extends react.Component {
       this.state.karaoke &&
       CONFIG.visual["karaoke-mode-enabled"] &&
       react.createElement(
-        Spicetify.ReactComponent.TooltipWrapper,
+        IvLyricsTooltip,
         { key: "character", label: getModeButtonLabel(KARAOKE, "modes.character"), showDelay: 0 },
         react.createElement(
           "button",
@@ -10155,7 +10155,7 @@ class LyricsContainer extends react.Component {
       this.state.karaoke &&
       CONFIG.visual["karaoke-mode-enabled"] &&
       react.createElement(
-        Spicetify.ReactComponent.TooltipWrapper,
+        IvLyricsTooltip,
         { key: "word", label: getModeButtonLabel(WORD_KARAOKE, "modes.word"), showDelay: 0 },
         react.createElement(
           "button",
@@ -10173,7 +10173,7 @@ class LyricsContainer extends react.Component {
       ),
       this.state.synced &&
       react.createElement(
-        Spicetify.ReactComponent.TooltipWrapper,
+        IvLyricsTooltip,
         { key: "synced", label: getModeButtonLabel(SYNCED, "modes.synced"), showDelay: 0 },
         react.createElement(
           "button",
@@ -10191,7 +10191,7 @@ class LyricsContainer extends react.Component {
       ),
       this.state.unsynced &&
       react.createElement(
-        Spicetify.ReactComponent.TooltipWrapper,
+        IvLyricsTooltip,
         { key: "unsynced", label: getModeButtonLabel(UNSYNCED, "modes.unsynced"), showDelay: 0 },
         react.createElement(
           "button",
@@ -10638,7 +10638,7 @@ class LyricsContainer extends react.Component {
               },
             }),
             hasLyrics && react.createElement(
-              Spicetify.ReactComponent.TooltipWrapper,
+              IvLyricsTooltip,
               {
                 label: I18n.t("lyricsCacheEditor.button"),
                 showDelay: 0,
@@ -10665,7 +10665,7 @@ class LyricsContainer extends react.Component {
               "data-group": "app",
             },
             react.createElement(
-              Spicetify.ReactComponent.TooltipWrapper,
+              IvLyricsTooltip,
               { label: I18n.t("marketplace.title"), showDelay: 0 },
               react.createElement(
                 "button",
@@ -10687,7 +10687,7 @@ class LyricsContainer extends react.Component {
             ),
             react.createElement(SettingsMenu),
             (() => !document.getElementById("fad-ivLyrics-container"))() && react.createElement(
-              Spicetify.ReactComponent.TooltipWrapper,
+              IvLyricsTooltip,
               {
                 label: this.state.isFullscreen ? I18n.t("menu.exitFullscreen") || "Exit Fullscreen" : I18n.t("menu.fullscreen"),
                 showDelay: 0,

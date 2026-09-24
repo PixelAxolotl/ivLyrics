@@ -11,6 +11,49 @@ const OptionsMenuItemIcon = react.createElement(
   })
 );
 
+// Keep toolbar tooltips outside the scrollable toolbar and independent of
+// Spotify's private menu context. Cloning without a ref preserves button refs.
+const IvLyricsTooltip = ({ label, children }) => {
+  const [anchor, setAnchor] = useState(null);
+  const reactDom = window.Spicetify?.ReactDOM ?? window.ReactDOM;
+  useEffect(() => {
+    if (!anchor) return undefined;
+    const hide = () => setAnchor(null);
+    const onKeyDown = (event) => { if (event.key === "Escape") hide(); };
+    window.addEventListener("resize", hide);
+    document.addEventListener("scroll", hide, true);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("resize", hide);
+      document.removeEventListener("scroll", hide, true);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [anchor]);
+  const show = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setAnchor({ right: Math.max(8, window.innerWidth - rect.left + 8), top: Math.max(20, Math.min(window.innerHeight - 20, rect.top + rect.height / 2)) });
+  };
+  const handlers = {};
+  for (const name of ["onMouseEnter", "onFocus", "onMouseLeave", "onBlur", "onClick"]) {
+    handlers[name] = (event) => {
+      children.props[name]?.(event);
+      if (name === "onMouseEnter" || name === "onFocus") show(event);
+      else setAnchor(null);
+    };
+  }
+  const button = react.cloneElement(children, {
+    ...handlers,
+    title: reactDom?.createPortal ? undefined : label,
+  });
+  return react.createElement(react.Fragment, null, button,
+    anchor && label && reactDom?.createPortal
+      ? reactDom.createPortal(react.createElement("div", {
+          className: "ivlyrics-toolbar-tooltip", role: "tooltip",
+          style: { right: `${anchor.right}px`, top: `${anchor.top}px` },
+        }, label), document.body)
+      : null);
+};
+
 function getSettingsSurfaceTheme() {
   const storedTheme = window.ivLyricsStoragePersistence?.getItem("ivLyrics:settings-ui-theme")
     ?? localStorage.getItem("ivLyrics:settings-ui-theme");
@@ -3323,7 +3366,7 @@ const TranslationMenu = react.memo(({ friendlyLanguage, hasTranslation }) => {
   };
 
   return react.createElement(
-    Spicetify.ReactComponent.TooltipWrapper,
+    IvLyricsTooltip,
     { label: I18n.t("menu.translation"), showDelay: 0 },
     react.createElement(
       "button",
@@ -3479,7 +3522,7 @@ const LyricsProviderSelectButton = react.memo(
     };
 
     return react.createElement(
-      Spicetify.ReactComponent.TooltipWrapper,
+      IvLyricsTooltip,
       { label: isLocalTrack ? getOptionsText("menu.localLyricsTools", "로컬 가사") : I18n.t("menu.lyricsProviderSelect"), showDelay: 0 },
       react.createElement(
         "button",
@@ -3575,7 +3618,7 @@ function openRegenerateTranslationChoiceModal({
 const RegenerateTranslationButton = react.memo(
   ({ onRegenerate, isEnabled, isLoading }) => {
     return react.createElement(
-      Spicetify.ReactComponent.TooltipWrapper,
+      IvLyricsTooltip,
       { label: I18n.t("menu.regenerateTranslation"), showDelay: 0 },
       react.createElement(
         "button",
@@ -3654,7 +3697,7 @@ const TrackBackgroundButton = react.memo(
     };
 
     return react.createElement(
-      Spicetify.ReactComponent.TooltipWrapper,
+      IvLyricsTooltip,
       { label: getOptionsText("menu.trackBackground", "개별 배경"), showDelay: 0 },
       react.createElement(
         "button",
@@ -4232,7 +4275,7 @@ const SyncAdjustButtonFluent = react.memo(({
           className: "lyrics-sync-adjust-floating",
           style: panelPosition
             ? { left: `${panelPosition.left}px`, top: `${panelPosition.top}px`, right: "auto", bottom: "auto" }
-            : (window.innerWidth > 840 ? { visibility: "hidden" } : undefined),
+            : undefined,
           onMouseDown: (event) => event.stopPropagation(),
           onClick: (event) => event.stopPropagation(),
         },
@@ -4303,7 +4346,7 @@ const SyncAdjustButtonFluent = react.memo(({
     react.Fragment,
     null,
     react.createElement(
-      Spicetify.ReactComponent.TooltipWrapper,
+      IvLyricsTooltip,
       { label: modalTitle, showDelay: 0 },
       react.createElement(
         "button",
@@ -4311,7 +4354,10 @@ const SyncAdjustButtonFluent = react.memo(({
           ref: triggerRef,
           type: "button",
           className: "lyrics-config-button lyrics-global-sync-button",
-          onClick: () => setIsOpen((prev) => !prev),
+          onClick: (event) => {
+            triggerRef.current = event.currentTarget;
+            setIsOpen((prev) => !prev);
+          },
           "aria-label": modalTitle,
           "aria-expanded": isOpen,
         },
@@ -4380,7 +4426,7 @@ const CommunityVideoButton = react.memo(({ trackUri, videoInfo, onVideoSelect, d
   };
 
   return react.createElement(
-    Spicetify.ReactComponent.TooltipWrapper,
+    IvLyricsTooltip,
     { label: I18n.t("communityVideo.selectVideo"), showDelay: 0 },
     react.createElement(
       "button",
@@ -4400,7 +4446,7 @@ const SettingsMenu = react.memo(() => {
   };
 
   return react.createElement(
-    Spicetify.ReactComponent.TooltipWrapper,
+    IvLyricsTooltip,
     { label: I18n.t("menu.settings"), showDelay: 0 },
     react.createElement(
       "button",
@@ -5200,7 +5246,7 @@ const ShareImageButton = react.memo(({ lyrics, trackInfo }) => {
   };
 
   return react.createElement(
-    Spicetify.ReactComponent.TooltipWrapper,
+    IvLyricsTooltip,
     { label: I18n.t("menu.shareImage"), showDelay: 0 },
     react.createElement(
       "button",
@@ -5381,7 +5427,7 @@ const SyncDataCreatorButton = react.memo(({ trackInfo, showHint, isFullscreen = 
       },
       inlineHint,
     react.createElement(
-      Spicetify.ReactComponent.TooltipWrapper,
+      IvLyricsTooltip,
       { label: hasTrackId ? (I18n.t("syncCreator.buttonTooltip") || "Create Karaoke Sync") : disabledTooltip, showDelay: 0 },
       react.createElement(
         "button",

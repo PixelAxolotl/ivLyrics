@@ -13279,6 +13279,22 @@ html.is-lp-view-exit::view-transition-new(root) {
   display: none;
 }
 
+.ivlyrics-toolbar-tooltip {
+  position: fixed;
+  z-index: var(--iv-layer-modal, 2147483647);
+  transform: translateY(-50%);
+  max-width: min(320px, calc(100vw - 80px));
+  padding: 7px 10px;
+  border-radius: 6px;
+  background: #282828;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+
 .lyrics-fluent-floating-toolbar:hover {
   box-shadow: none;
 }

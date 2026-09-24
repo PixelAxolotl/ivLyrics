@@ -23,7 +23,8 @@ function setup(responder) {
     };
     const context = vm.createContext({ window, console, setTimeout, clearTimeout, TextDecoder });
     for (const file of ['Addon_AI_ChatGPT.js', 'Addon_AI_NvidiaNim.js']) {
-        vm.runInContext(readFileSync(new URL(`../${file}`, import.meta.url), 'utf8'), context);
+        const source = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8').replace('    return ChatGPTAddon;', '    ChatGPTAddon.fetchModelsForTest = getModels; return ChatGPTAddon;');
+        vm.runInContext(source, context);
     }
     return { addons, requests };
 }
@@ -49,4 +50,13 @@ test('NIM translation preserves line count and rejects incomplete model response
     assert.deepEqual(Array.from(output.translation), ['첫 줄', '둘째 줄']);
     const bad = setup(() => reply('only one'));
     await assert.rejects(bad.addons['nvidia-nim'].translateLyrics({ text: 'one\ntwo', translationPrompt: 'translate' }), /line count/);
+});
+
+
+test('NIM model discovery preserves vendor model IDs and uses NIM credentials', async () => {
+    const h = setup(() => Response.json({ data: [{ id: 'z-ai/glm-5.2' }, { id: 'meta/llama-3.3-70b-instruct' }] }));
+    const models = await h.addons['nvidia-nim'].fetchModelsForTest();
+    assert.deepEqual(Array.from(models, model => model.id), ['meta/llama-3.3-70b-instruct', 'z-ai/glm-5.2']);
+    assert.equal(h.requests[0].url, 'https://integrate.api.nvidia.com/v1/models');
+    assert.equal(h.requests[0].headers.Authorization, 'Bearer nim-secret');
 });

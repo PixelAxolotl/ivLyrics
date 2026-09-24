@@ -593,24 +593,6 @@ body.ivlyrics-settings-open .lyrics-lyricsContainer-LyricsContainer * {
   }
 }
 
-/* AI semantic alignment paints the existing target string in place. The
-   target's reading order and whitespace remain untouched, including when a
-   translation maps back to a non-monotonic source phrase. */
-.ivlyrics-semantic-text { display: inline; }
-.ivlyrics-semantic-unit { transition: color 120ms ease, text-shadow 120ms ease, opacity 120ms ease; }
-.ivlyrics-semantic-unit-active {
-  color: var(--lyrics-color-active, var(--spice-text));
-  text-shadow: 0 0 0.55em color-mix(in srgb, currentColor 42%, transparent);
-}
-.ivlyrics-semantic-settings-card { margin: 20px 0; padding: 16px; border: 1px solid rgba(var(--spice-rgb-subtext), .22); border-radius: 10px; }
-.ivlyrics-semantic-settings-card h3 { margin: 0 0 6px; font-size: 15px; }
-.ivlyrics-semantic-settings-card p { margin: 0 0 12px; color: var(--spice-subtext); font-size: 12px; line-height: 1.45; }
-.ivlyrics-semantic-settings-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; }
-.ivlyrics-semantic-settings-row input { accent-color: var(--spice-button); }
-@media (prefers-reduced-motion: reduce) {
-  .ivlyrics-semantic-unit { transition: none; }
-}
-
 .motion-reduced .lyrics-translation-loading-indicator,
 .motion-reduced .lyrics-translation-loading-indicator::before,
 .motion-reduced .lyrics-translation-loading-spinner,

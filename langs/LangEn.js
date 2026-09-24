@@ -1,13 +1,5 @@
 // English language file for ivLyrics
 window.LANG_EN = {
-  "semanticHighlight": {
-    "title": "Meaning-linked highlighting",
-    "description": "Highlight corresponding pronunciation and translation phrases using the source timing. The sentence order stays unchanged.",
-    "unavailable": "Enable an AI provider that supports semantic alignment. Bing and Google Translate alone cannot perform this analysis.",
-    "available": "AI analyses the existing text, including translations produced by Bing or Google Translate.",
-    "phonetic": "Highlight pronunciation by meaning",
-    "translation": "Highlight translation by meaning"
-  },
   "meta": {
     "language": "English",
     "code": "en",

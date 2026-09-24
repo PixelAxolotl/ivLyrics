@@ -2720,14 +2720,6 @@ const CONFIG = {
       "ivLyrics:visual:furigana-enabled",
       false
     ),
-    "phonetic-semantic-highlight": StorageManager.get(
-      "ivLyrics:visual:phonetic-semantic-highlight",
-      false
-    ),
-    "translation-semantic-highlight": StorageManager.get(
-      "ivLyrics:visual:translation-semantic-highlight",
-      false
-    ),
     "ja-detect-threshold":
       StorageManager.getItem("ivLyrics:visual:ja-detect-threshold") || "40",
     "hans-detect-threshold":

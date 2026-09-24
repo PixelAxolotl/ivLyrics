@@ -1,13 +1,5 @@
 // Swedish language file for ivLyrics
 window.LANG_SV = {
-  "semanticHighlight": {
-    "title": "Markera efter betydelse",
-    "description": "Markerar motsvarande delar av uttalet och översättningen i takt med originaltexten, utan att ändra ordföljden.",
-    "unavailable": "Aktivera en AI-leverantör som stöder semantisk analys. Enbart Bing eller Google Översätt räcker inte för den här funktionen.",
-    "available": "Analysera den aktuella översättningen med AI. Översättningar från Bing och Google stöds också.",
-    "phonetic": "Semantisk markering av uttal",
-    "translation": "Semantisk markering av översättning"
-  },
   "meta": {
     "language": "Svenska",
     "code": "sv",

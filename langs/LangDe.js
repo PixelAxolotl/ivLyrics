@@ -1,13 +1,5 @@
 ﻿// German language file for ivLyrics
 window.LANG_DE = {
-  "semanticHighlight": {
-    "title": "Nach Bedeutung hervorheben",
-    "description": "Passende Teile der Aussprache und Übersetzung werden synchron zum Originaltext hervorgehoben. Die Wortreihenfolge bleibt erhalten.",
-    "unavailable": "Aktiviere einen KI-Anbieter mit semantischer Analyse. Bing oder Google Übersetzer allein unterstützen diese Funktion nicht.",
-    "available": "Analysiere die aktuelle Übersetzung mit KI. Übersetzungen von Bing und Google werden ebenfalls unterstützt.",
-    "phonetic": "Aussprache nach Bedeutung hervorheben",
-    "translation": "Übersetzung nach Bedeutung hervorheben"
-  },
   "meta": {
     "language": "Deutsch",
     "code": "de",

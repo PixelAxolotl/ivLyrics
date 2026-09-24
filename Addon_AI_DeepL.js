@@ -66,7 +66,7 @@
         supports: {
             translate: true, pronunciation: false, metadata: true, tmi: false,
             researchWebSearch: false, lyricsStudy: false, characterPronunciation: false,
-            culturalAnnotations: false, lyricsAlignment: false
+            culturalAnnotations: false
         },
         getSettingsUI() {
             const React = Spicetify.React;

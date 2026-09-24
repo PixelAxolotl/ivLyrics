@@ -1,13 +1,5 @@
 // ivLyrics için Türkçe dil dosyası
 window.LANG_TR = {
-  "semanticHighlight": {
-    "title": "Anlama göre vurgula",
-    "description": "Özgün sözlerle eşzamanlı olarak telaffuz ve çevirinin karşılık gelen bölümlerini vurgular; sözcük sırası korunur.",
-    "unavailable": "Anlamsal analizi destekleyen bir AI sağlayıcısını etkinleştirin. Yalnızca Bing veya Google Çeviri bu özelliği sunamaz.",
-    "available": "Mevcut çeviriyi AI ile analiz edin. Bing ve Google çevirileri de desteklenir.",
-    "phonetic": "Telaffuzda anlamsal vurgulama",
-    "translation": "Çeviride anlamsal vurgulama"
-  },
   "meta": {
     "language": "Türkçe",
     "code": "tr",

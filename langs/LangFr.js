@@ -1,13 +1,5 @@
 ﻿// French language file for ivLyrics
 window.LANG_FR = {
-  "semanticHighlight": {
-    "title": "Surligner selon le sens",
-    "description": "Surligne les passages correspondants de la prononciation et de la traduction au rythme des paroles originales, sans modifier l’ordre des mots.",
-    "unavailable": "Activez un fournisseur d’IA prenant en charge l’analyse sémantique. Bing ou Google Traduction seuls ne permettent pas cette fonction.",
-    "available": "Analysez la traduction actuelle avec l’IA. Les traductions de Bing et Google sont également prises en charge.",
-    "phonetic": "Surlignage sémantique de la prononciation",
-    "translation": "Surlignage sémantique de la traduction"
-  },
   "meta": {
     "language": "Français",
     "code": "fr",

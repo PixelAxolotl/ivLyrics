@@ -22,8 +22,7 @@
                 supports: {
                     translate: true, metadata: true, tmi: true,
                     researchWebSearch: false, lyricsStudy: true,
-                    characterPronunciation: true, culturalAnnotations: true,
-                    lyricsAlignment: true
+                    characterPronunciation: true, culturalAnnotations: true
                 },
                 models: []
             }

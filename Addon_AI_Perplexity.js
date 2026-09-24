@@ -32,8 +32,7 @@
             researchWebSearch: true,
             lyricsStudy: true,
             characterPronunciation: true,
-            culturalAnnotations: true,
-            lyricsAlignment: true
+            culturalAnnotations: true
         },
         models: [] // Dynamic from API
     };
@@ -826,17 +825,6 @@
             const prompt = params.culturalAnnotationsPrompt;
             if (!prompt) {
                 throw new Error('[Perplexity] Central cultural annotations prompt is unavailable.');
-            }
-            return await callPerplexityAPI(prompt);
-        },
-
-        async generateLyricsAlignment(params) {
-            if (!Array.isArray(params?.lines) || params.lines.length === 0) {
-                throw new Error('No lyric alignment lines provided');
-            }
-            const prompt = params.lyricsAlignmentPrompt;
-            if (!prompt) {
-                throw new Error('Central lyrics alignment prompt is unavailable.');
             }
             return await callPerplexityAPI(prompt);
         }

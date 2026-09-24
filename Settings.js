@@ -6902,59 +6902,6 @@ const ConfigModal = ({
   const [systemUiTheme, setSystemUiTheme] = react.useState(getSystemSettingsUiTheme);
   const uiTheme = getEffectiveSettingsUiTheme(uiThemePreference, systemUiTheme);
 
-  // This small native card keeps the existing settings tree and search
-  // contract stable while exposing the two optional semantic paint layers.
-  // It is deliberately disabled when only machine-translation providers are
-  // available: Bing/Google can supply text, but cannot analyse its meaning.
-  react.useEffect(() => {
-    if (typeof document === "undefined") return undefined;
-    const root = document.querySelector("#ivLyrics-config-container .settings-content")
-      || document.querySelector("#ivLyrics-config-container");
-    if (!root || root.querySelector("[data-ivlyrics-semantic-settings]")) return undefined;
-    const card = document.createElement("section");
-    card.dataset.ivlyricsSemanticSettings = "true";
-    card.className = "ivlyrics-semantic-settings-card";
-    const title = document.createElement("h3");
-    title.textContent = I18n.t("semanticHighlight.title") || "Meaning-linked highlighting";
-    const description = document.createElement("p");
-    description.textContent = I18n.t("semanticHighlight.description") || "Highlight matching phrases while keeping the original sentence order.";
-    const status = document.createElement("p");
-    card.append(title, description, status);
-    const fields = [
-      ["phonetic-semantic-highlight", I18n.t("semanticHighlight.phonetic") || "Highlight pronunciation by meaning"],
-      ["translation-semantic-highlight", I18n.t("semanticHighlight.translation") || "Highlight translation by meaning"],
-    ];
-    const canAlign = () => Boolean(window.AIAddonManager?.getEnabledProvidersFor?.("lyricsAlignment")?.some(provider => typeof provider?.generateLyricsAlignment === "function"));
-    const inputs = [];
-    fields.forEach(([key, label]) => {
-      const wrapper = document.createElement("label");
-      wrapper.className = "ivlyrics-semantic-settings-row";
-      const input = document.createElement("input");
-      input.type = "checkbox";
-      input.checked = CONFIG.visual[key] === true;
-      input.disabled = !canAlign();
-      inputs.push(input);
-      input.addEventListener("change", () => {
-        CONFIG.visual[key] = input.checked;
-        StorageManager.setItem(`${APP_NAME}:visual:${key}`, input.checked);
-        window.dispatchEvent(new CustomEvent("ivlyrics-alignment-settings-change", { detail: { name: key, value: input.checked } }));
-        window.dispatchEvent(new CustomEvent("ivLyrics", { detail: { type: "config", name: key, value: input.checked } }));
-      });
-      wrapper.append(input, document.createTextNode(label));
-      card.appendChild(wrapper);
-    });
-    const refreshAvailability = () => {
-      const available = canAlign();
-      inputs.forEach(input => { input.disabled = !available; });
-      status.textContent = I18n.t(`semanticHighlight.${available ? "available" : "unavailable"}`)
-        || (available ? "AI will analyse the existing translation." : "An AI alignment provider is required; Bing or Google Translate alone is not sufficient.");
-    };
-    refreshAvailability();
-    const unsubscribe = window.AIAddonManager?.on?.("provider:enabled:changed", refreshAvailability);
-    root.appendChild(card);
-    return () => { unsubscribe?.(); card.remove(); };
-  }, [activeTab]);
-
   // 검색어 변경 시 검색 결과 탭으로 자동 전환
   const handleSearchChange = (e) => {
     const query = e.target.value;

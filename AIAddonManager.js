@@ -1013,14 +1013,35 @@ ${isWordMode ? '- In word mode, return each spoken word as one u item, never as 
     // Word-list prefix stripping for `word: value` responses (Image-3 shape).
     // Keeps the line count intact for provider parsers while removing the
     // echoed word before display. Lines without a matching prefix pass through.
+    // Strip surrounding punctuation (quotes, brackets) for word-echo
+    // comparison. Quoted lyric words (e.g. a "\u65e5\u3005" unit) are
+    // often echoed back with normalized or dropped punctuation.
+    const stripWordListEdgePunctuation = (value) => String(value ?? '')
+        .replace(/^[^\p{L}\p{N}]+/u, '')
+        .replace(/[^\p{L}\p{N}]+$/u, '');
     const stripWordListPrefix = (line, word) => {
         const text = String(line ?? '').trim();
         const surface = String(word ?? '').trim();
         if (!surface) return text;
-        for (const separator of [':', '：']) {
-            if (text.startsWith(surface + separator)
-                || text.toLowerCase().startsWith(surface.toLowerCase() + separator)) {
-                return text.slice(surface.length + 1).trim();
+        const core = stripWordListEdgePunctuation(surface);
+        const candidates = core && core !== surface ? [surface, core] : [surface];
+        for (const candidate of candidates) {
+            for (const separator of [':', '：']) {
+                if (text.startsWith(candidate + separator)
+                    || text.toLowerCase().startsWith(candidate.toLowerCase() + separator)) {
+                    return text.slice(candidate.length + 1).trim();
+                }
+            }
+        }
+        // The model sometimes echoes the word with normalized or dropped
+        // surrounding punctuation (straight vs curly quotes, brackets).
+        // Compare punctuation-stripped cores around the first colon instead.
+        const match = text.match(/^\s*([\s\S]+?)\s*[：:]\s*([\s\S]*?)\s*$/);
+        if (match) {
+            const echoedCore = stripWordListEdgePunctuation(match[1]).toLowerCase();
+            if (echoedCore && candidates.some((candidate) =>
+                stripWordListEdgePunctuation(candidate).toLowerCase() === echoedCore)) {
+                return match[2].trim();
             }
         }
         return text;

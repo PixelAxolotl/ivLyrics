@@ -112,7 +112,11 @@ const FuriganaConverter = (() => {
   };
 
   const containsKanji = (text) => {
-    const kanjiRegex = /[\u4E00-\u9FAF\u3400-\u4DBF]/;
+    // 々 (U+3005), 〻 (U+303B) and the kana iteration marks repeat the
+    // previous character's reading, so they ride along with the kanji
+    // sequence. Without this, 日々 splits into 日 + 々 and the whole
+    // ひび reading lands on 日 while 々 gets no furigana.
+    const kanjiRegex = /[\u4E00-\u9FAF\u3400-\u4DBF\u3005\u303B\u309D\u309E\u30FD\u30FE]/;
     return kanjiRegex.test(text);
   };
 

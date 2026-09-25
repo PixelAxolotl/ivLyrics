@@ -6680,11 +6680,18 @@ const useSyncedLyricsEngine = ({
 			}
 			const isOutsideVisibleRange = !isHighlightedLine
 				&& lineNumber !== visualAnchorLineNumber
-				&& shouldHideSyncedLine({
+				&& (shouldHideSyncedLine({
 					compact,
 					isScrolling,
 					animationIndex: visibilityAnimationIndex,
-				});
+				}) || (
+					visibilityAnimationIndex < 0
+					&& !(compact && isScrolling)
+					&& (
+						!!paddedLyrics[layoutActiveLineIndex]?.interludeInfo?.isInterlude
+						|| isTrailingInterludeActive
+					)
+				));
 			if (isOutsideVisibleRange) {
 				className += " lyrics-lyricsContainer-LyricsLine-paddingLine";
 				className += visibilityAnimationIndex < 0

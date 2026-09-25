@@ -12580,7 +12580,7 @@ html.is-lp-view-exit::view-transition-new(root) {
 /* TV Mode Controls Wrapper (right side) */
 .fullscreen-tv-controls-wrapper {
   position: fixed;
-  right: var(--fullscreen-tv-edge-offset);
+  right: max(var(--fullscreen-tv-edge-offset), 70px);
   bottom: var(--fullscreen-tv-edge-offset);
   z-index: 100;
   display: flex;

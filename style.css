@@ -12431,6 +12431,11 @@ html.is-lp-view-exit::view-transition-new(root) {
 
 .fullscreen-tv-title-container {
   gap: 2px;
+  /* Soft halo for the TV titles. A filter on the container (which has no
+     overflow clipping) paints the same halo text-shadow would, without being
+     cut into a rectangle by the titles' overflow:hidden clamp box. */
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.6))
+    drop-shadow(0 4px 16px rgba(0, 0, 0, 0.4));
 }
 
 .fullscreen-tv-artist-container {
@@ -12441,8 +12446,10 @@ html.is-lp-view-exit::view-transition-new(root) {
 .fullscreen-tv-title {
   font-weight: 700;
   color: var(--spice-text, #fff);
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6),
-    0 4px 16px rgba(0, 0, 0, 0.4);
+  /* Outline only: the soft halo lives on .fullscreen-tv-title-container as a
+     filter, so this element's overflow:hidden (required for
+     -webkit-line-clamp) has no halo to cut into a box. */
+  text-shadow: var(--fullscreen-title-outline-shadow, 0 0 0 transparent);
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -12490,6 +12497,16 @@ html.is-lp-view-exit::view-transition-new(root) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Single-line ellipsis keeps working with overflow:clip (verified), so let
+   the shadow halo paint past the box instead of being cut into a rectangle.
+   overflow:hidden above remains the fallback for engines without clip. */
+@supports (overflow: clip) {
+  .fullscreen-tv-artist-secondary {
+    overflow: clip;
+    overflow-clip-margin: 16px;
+  }
 }
 
 /* TV Mode Album Name */
@@ -18317,10 +18334,9 @@ html.is-lp-view-exit::view-transition-new(root) {
 }
 
 .fullscreen-tv-title {
-  text-shadow:
-    var(--fullscreen-title-outline-shadow, 0 0 0 transparent),
-    0 2px 8px rgba(0, 0, 0, 0.6),
-    0 4px 16px rgba(0, 0, 0, 0.4);
+  /* Soft halo moved to .fullscreen-tv-title-container (drop-shadow filter);
+     keep only the crisp outline here so the clamp box has nothing to box. */
+  text-shadow: var(--fullscreen-title-outline-shadow, 0 0 0 transparent);
 }
 
 .lyrics-fullscreen-artist,

@@ -10321,7 +10321,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		charJoinSeparator: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: usePrimaryCharacterPronunciation ? '12px' : '16px', minWidth: usePrimaryCharacterPronunciation ? '12px' : '16px', padding: 0, flexShrink: 0, color: 'transparent', pointerEvents: 'none' },
 		charSpanPronunciationPrimary: { display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: '2px' },
 		charWordGroup: { display: 'inline-flex', position: 'relative', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', flexShrink: 0, borderRadius: 0, padding: '0 0 3px', boxSizing: 'border-box', color: currentSpeakerTextColor },
-		charWordGroupPrimary: { flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', minHeight: '68px', padding: '2px 3px 6px', boxSizing: 'border-box' },
+		// No horizontal padding: it would sit between adjacent unit bubbles as a
+		// transparent slit (the group's box is not painted, only the chars are).
+		charWordGroupPrimary: { flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', minHeight: '68px', padding: '2px 0 6px', boxSizing: 'border-box' },
 		charWordOriginalRow: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: usePrimaryCharacterPronunciation ? '30px' : 'auto', whiteSpace: 'nowrap' },
 		charWordSpace: { display: 'inline-flex', width: usePrimaryCharacterPronunciation ? '10px' : '12px', minWidth: usePrimaryCharacterPronunciation ? '10px' : '12px', padding: 0, margin: 0, flexShrink: 0, color: 'transparent', background: 'transparent', pointerEvents: mode === 'record' ? 'auto' : 'none', boxSizing: 'border-box' },
 		charSpanInWord: { padding: `${hasCurrentLineFurigana ? 18 : 10}px 1px ${activeParallelPart ? 28 : 27}px`, minWidth: '6px', minHeight: undefined },
@@ -10331,8 +10333,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		// character bubble; the per-mode cell padding carries the visual offset
 		// (27px normal, 28px selected box and preview), so text-to-reading
 		// matches reading-to-time spacing (~11px) everywhere.
-		charWordPronunciation: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '13px', marginTop: '-18px', fontSize: '10px', fontWeight: '700', color: currentSpeakerTextColor, opacity: 0.76, lineHeight: 1, whiteSpace: 'nowrap', letterSpacing: 0, pointerEvents: 'none' },
-		charWordPronunciationPrimary: { display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '28px', fontSize: '24px', fontWeight: '700', color: currentSpeakerTextColor, lineHeight: 1.05, whiteSpace: 'nowrap', letterSpacing: 0, pointerEvents: 'none' },
+		// width: 0 keeps the reading out of the group's cross-axis sizing: the
+		// group box must stay exactly as wide as the character row, otherwise a
+		// reading wider than its row (e.g. "aim" over a single "I") widens the
+		// group and leaves transparent slivers between adjacent bubbles. The
+		// nowrap text still renders centered, overflowing evenly on both sides.
+		charWordPronunciation: { display: 'flex', width: '0', alignItems: 'center', justifyContent: 'center', minHeight: '13px', marginTop: '-18px', fontSize: '10px', fontWeight: '700', color: currentSpeakerTextColor, opacity: 0.76, lineHeight: 1, whiteSpace: 'nowrap', letterSpacing: 0, pointerEvents: 'none' },
+		charWordPronunciationPrimary: { display: 'flex', width: '0', alignItems: 'center', justifyContent: 'center', minHeight: '28px', fontSize: '24px', fontWeight: '700', color: currentSpeakerTextColor, lineHeight: 1.05, whiteSpace: 'nowrap', letterSpacing: 0, pointerEvents: 'none' },
 		charFixedPrimaryCell: { width: '28px', minWidth: '28px', maxWidth: '28px', padding: '4px 0 6px', overflow: 'visible' },
 		charFuriganaWrap: { position: 'relative', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '1em', lineHeight: 'inherit' },
 		charFuriganaText: { position: 'absolute', left: '50%', bottom: '100%', transform: 'translateX(-50%)', marginBottom: '1px', fontSize: `${Number(window.CONFIG?.visual?.["furigana-font-size"]) || 11}px`, fontWeight: window.CONFIG?.visual?.["furigana-font-weight"] || '500', color: 'inherit', opacity: (Number(window.CONFIG?.visual?.["furigana-opacity"]) || 80) / 100, lineHeight: 1, letterSpacing: 0, whiteSpace: 'nowrap', pointerEvents: 'none' },

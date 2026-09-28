@@ -199,6 +199,11 @@
 		const output = [];
 		let lexical = "";
 		let pendingPrefix = "";
+		// Whitespace seen since the last emitted token. Trailing punctuation may
+		// only be appended to the previous token while this is false: across a
+		// gap the concatenation would not be a substring of the source, which
+		// breaks range lookup downstream and leaves those characters unmapped.
+		let pendingGap = false;
 		const isLatinNum = (value) => /^[\p{Script=Latin}\p{N}]$/u.test(value);
 		const isLatinJoiner = (value, previous, next) => ["'", "’", "-", "‐"].includes(value)
 			&& !!previous && !!next && isLatinNum(previous) && isLatinNum(next);
@@ -211,6 +216,15 @@
 			}
 			output.push(...tokens.filter(Boolean));
 			lexical = "";
+			pendingGap = false;
+		};
+		// A pending prefix followed by whitespace can no longer travel with the
+		// next word, so it becomes its own token (still contiguous with the
+		// source, so it stays a literal substring).
+		const flushPrefix = () => {
+			if (!pendingPrefix) return;
+			output.push(pendingPrefix);
+			pendingPrefix = "";
 		};
 		chars.forEach((char, index) => {
 			const previous = chars[index - 1];
@@ -219,24 +233,32 @@
 				lexical += char;
 			} else if (/^\s+$/u.test(char)) {
 				flush();
+				flushPrefix();
+				pendingGap = true;
 			} else if (/^[\p{Ps}\p{Pi}]$/u.test(char)) {
 				flush();
 				pendingPrefix += char;
 			} else if (/^\p{P}$/u.test(char)) {
 				flush();
-				if (output.length) output[output.length - 1] += char;
-				else pendingPrefix += char;
+				if (output.length && !pendingGap) {
+					// The previous token and this character are adjacent in the
+					// source, but a pending prefix may sit between other
+					// characters, so it has to leave the token first.
+					flushPrefix();
+					output[output.length - 1] += char;
+				} else pendingPrefix += char;
 			} else if (/^\p{S}$/u.test(char)) {
 				flush();
 				output.push(pendingPrefix ? pendingPrefix + char : char);
 				pendingPrefix = "";
+				pendingGap = false;
 			} else {
 				lexical += char;
 			}
 		});
 		flush();
 		if (pendingPrefix) {
-			if (output.length) output[output.length - 1] += pendingPrefix;
+			if (output.length && !pendingGap) output[output.length - 1] += pendingPrefix;
 			else output.push(pendingPrefix);
 		}
 		return output;
@@ -247,12 +269,48 @@
 		if (!source) return [];
 		const ranges = [];
 		let cursor = 0;
+		// Every character of the line needs a word index. A character without one
+		// is treated as "no unit" downstream, which merges it into the previous
+		// word run and silently drops that word's annotations, so uncovered
+		// stretches are mapped one grapheme at a time instead of being skipped.
+		// Only reached when a token could not be located, so the common path
+		// keeps its previous cost.
+		let resolvedLocale = null;
+		const getResolvedLocale = () => {
+			if (resolvedLocale === null) resolvedLocale = normalizeLocale(locale, source);
+			return resolvedLocale;
+		};
+		const pushFillerRanges = (from, to) => {
+			if (to <= from) return;
+			let offset = from;
+			const fillerChars = graphemes(source.slice(from, to), getResolvedLocale());
+			for (const char of fillerChars) {
+				if (char && !/^\s+$/u.test(char)) {
+					ranges.push({ start: offset, end: offset + char.length, text: char });
+				}
+				offset += char.length;
+			}
+		};
 		for (const token of segmentLyricsWithTokenizer(source, locale, tokenizer)) {
+			if (!token) continue;
 			const start = source.indexOf(token, cursor);
-			if (start < 0) continue;
+			if (start < 0) {
+				// Unlocatable token: keep making progress so the rest of the line
+				// is still mapped, and give the next unmapped grapheme its own unit.
+				if (cursor >= source.length) break;
+				const [head] = graphemes(source.slice(cursor), getResolvedLocale());
+				if (!head) break;
+				if (!/^\s+$/u.test(head)) {
+					ranges.push({ start: cursor, end: cursor + head.length, text: head });
+				}
+				cursor += head.length;
+				continue;
+			}
+			if (start > cursor) pushFillerRanges(cursor, start);
 			ranges.push({ start, end: start + token.length, text: token });
 			cursor = start + token.length;
 		}
+		if (cursor < source.length) pushFillerRanges(cursor, source.length);
 		return ranges;
 	};
 

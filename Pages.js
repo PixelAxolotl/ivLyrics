@@ -7734,6 +7734,15 @@ const WORD_SUPPLEMENT_RETRY_MAX = 1;
 const WORD_SUPPLEMENT_RETRY_DELAY_MS = 8000;
 const useKaraokeWordStackSupplements = ({ line, timedChars, timedText, wordTimed, settingsRevision }) => {
 	const supplementsApi = window.ivLyricsWordSupplements || null;
+	// Read live each render: song detection lands after early lines mount
+	// (auto -> ja). Without this in the deps, those lines keep a stale
+	// per-line vote (e.g. "en" for a kanji+English hook) forever.
+	let globalLangTick = "auto";
+	try {
+		globalLangTick = String(
+			supplementsApi?.getSourceLanguage?.() ?? window.Utils?.getDetectedLanguage?.() ?? "auto"
+		);
+	} catch { globalLangTick = "auto"; }
 	const sourceLang = useMemo(() => {
 		if (!supplementsApi) {
 			try {
@@ -7747,7 +7756,7 @@ const useKaraokeWordStackSupplements = ({ line, timedChars, timedText, wordTimed
 		} catch {
 			return "auto";
 		}
-	}, [supplementsApi, timedText]);
+	}, [supplementsApi, timedText, globalLangTick, settingsRevision]);
 	const suitable = !!supplementsApi && !!wordTimed && supplementsApi.isSuitableSourceLanguage(sourceLang);
 	const units = useMemo(() => {
 		if (!suitable || !supplementsApi) return [];

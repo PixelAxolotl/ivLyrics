@@ -312,13 +312,37 @@
 		if (!value.trim()) return "auto";
 		if (/[\u3040-\u30ff]/u.test(value)) return "ja";
 		if (/[\uac00-\ud7af]/u.test(value)) return "ko";
+		const hasHan = /\p{Script=Han}/u.test(value);
 		try {
 			const detected = window.LyricsService?.detectLanguage?.([{ text: value }]);
 			if (detected && String(detected).toLowerCase() !== "auto") {
-				return String(detected);
+				const normalized = String(detected);
+				// A line containing Han is CJK no matter how much Latin
+				// surrounds it: single-line detection votes by per-character
+				// majority, so a kanji hook with an English tail (e.g.
+				// "限界突破 I'm goin' nonstop") resolves to "en" and the line
+				// is filtered before any word request is ever sent. Ignore
+				// Latin votes for Han lines and fall through below.
+				if (!(hasHan && LATIN_SCRIPT_LANGS.has(baseLanguage(normalized)))) {
+					return normalized;
+				}
 			}
 		} catch { /* fall through to script inference */ }
-		if (/\p{Script=Han}/u.test(value)) return "zh";
+		if (hasHan) {
+			// Kanji alone cannot tell Japanese from Chinese. Prefer the
+			// song's language when it is CJK, else the CJK language the
+			// user actually configured supplements for, else the legacy
+			// default.
+			try {
+				const global = getSourceLanguage();
+				if (isSuitableSourceLanguage(global)) return String(global);
+			} catch { /* ignore */ }
+			try {
+				const configured = preferredConfiguredCjkLanguage();
+				if (configured) return configured;
+			} catch { /* ignore */ }
+			return "zh";
+		}
 		return "auto";
 	};
 
@@ -336,6 +360,32 @@
 	const isSuitableSourceLanguage = (language) => {
 		const normalized = normalizeLanguage(language ?? getSourceLanguage());
 		return SUITABLE_BASE_LANGS.has(baseLanguage(normalized));
+	};
+
+	// For Han-only lines (no kana/Hangul) the script alone cannot tell
+	// Japanese from Chinese. Pick the CJK language the user configured
+	// word supplements for so the line uses the right mode slots instead
+	// of the legacy hardcoded default. Returns null when zero or more
+	// than one CJK language is configured (ambiguous).
+	const preferredConfiguredCjkLanguage = () => {
+		const candidates = [
+			{ code: "ja", key: "japanese" },
+			{ code: "ko", key: "korean" },
+			{ code: "zh", key: "chinese" },
+		];
+		let found = null;
+		try {
+			const visual = window.CONFIG?.visual || {};
+			for (const { code, key } of candidates) {
+				const modes = [visual[`translation-mode:${key}`], visual[`translation-mode-2:${key}`]];
+				const wanted = modes.some((mode) => mode && String(mode).trim().toLowerCase() !== "none");
+				if (wanted) {
+					if (found) return null;
+					found = code;
+				}
+			}
+		} catch { return null; }
+		return found;
 	};
 
 	const getFriendlyModeKey = (sourceLang) => {
@@ -516,6 +566,9 @@
 					return reading && !isEchoOf(reading, surface, core) ? reading : "";
 				});
 				const normalized = reinsertSkipped(units.length, coreIndexes, activeReadings);
+				// An all-empty reply (echoes, blanks) is not worth caching:
+				// keep the retry path effective for this line.
+				if (!normalized.some((value) => String(value ?? "").trim())) return normalized;
 				readingCache.set(cacheKey, normalized);
 				if (readingCache.size > 400) {
 					const firstKey = readingCache.keys().next().value;
@@ -582,6 +635,8 @@
 					return reading && !isEchoOf(reading, surface, core) ? reading : "";
 				});
 				const readings = reinsertSkipped(units.length, localCoreIndexes, activeReadings);
+				// Same no-cache rule as the AI branch above.
+				if (!readings.some((value) => String(value ?? "").trim())) return readings;
 				readingCache.set(cacheKey, readings);
 				if (readingCache.size > 400) {
 					const firstKey = readingCache.keys().next().value;
@@ -683,6 +738,8 @@
 				return gloss && !isEchoOf(gloss, surface, core) ? gloss : "";
 			});
 			const normalized = reinsertSkipped(units.length, glossCoreIndexes, activeGlosses);
+			// Same no-cache rule as the reading branches above.
+			if (!normalized.some((value) => String(value ?? "").trim())) return normalized;
 			glossCache.set(cacheKey, normalized);
 			if (glossCache.size > 200) {
 				const firstKey = glossCache.keys().next().value;

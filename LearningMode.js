@@ -2332,6 +2332,171 @@
                 )
         );
 
+        const renderExplainTab = () => react.createElement("div", { className: "ivlyrics-study-section" },
+                currentLineStudy && react.createElement("section", { className: "ivlyrics-study-card ivlyrics-study-current" },
+                    react.createElement("h3", null, t("currentLine", "지금 가사")),
+                    currentLineStudy.sourceText && react.createElement("div", { className: "ivlyrics-study-source-card" },
+                        react.createElement("div", { className: "ivlyrics-study-source-head" },
+                            react.createElement("span", null, t("sourceLine", "가사 원문")),
+                            Number.isFinite(Number(currentLineStudy.startTime)) && react.createElement(LyricPlayButton, {
+                                onClick: () => playLyricAt({
+                                    trackUri,
+                                    startTime: currentLineStudy.startTime,
+                                    endTime: currentLineStudy.endTime,
+                                    sourceText: currentLineStudy.sourceText
+                                })
+                            })
+                        ),
+                        react.createElement("blockquote", null, currentLineStudy.sourceText),
+                        react.createElement(ReadingHints, {
+                            reading: currentLineStudy.reading,
+                            pronunciation: currentLineStudy.pronunciation
+                        })
+                    ),
+                    currentLineStudy.translation && react.createElement("p", { className: "ivlyrics-study-translation" }, currentLineStudy.translation),
+                    currentLineStudy.explanation && react.createElement("p", null, currentLineStudy.explanation),
+                    currentLineStudy.grammar?.length > 0 && react.createElement("div", { className: "ivlyrics-study-grammar-stack" },
+                        currentLineStudy.grammar.map((item, index) => react.createElement(GrammarNote, {
+                            key: index,
+                            item
+                        }))
+                    ),
+                    currentLineStudy.vocabulary?.length > 0 && react.createElement("div", { className: "ivlyrics-study-vocab-list" },
+                        currentLineStudy.vocabulary.map((word, index) => {
+                            const wordId = getWordIdForEntry(word);
+                            const saved = savedWordIds.has(wordId);
+                            const feedback = savedWordFeedback[wordId];
+                            return react.createElement("button", {
+                                key: `${word.term}-${index}`,
+                                type: "button",
+                                className: [
+                                    "ivlyrics-study-word-chip",
+                                    saved ? "saved" : "",
+                                    feedback ? "feedback" : ""
+                                ].filter(Boolean).join(" "),
+                                onClick: () => toggleWord({
+                                    ...word,
+                                    lineIndex: currentLineStudy.index,
+                                    sourceText: currentLineStudy.sourceText,
+                                    startTime: currentLineStudy.startTime,
+                                    endTime: currentLineStudy.endTime,
+                                    grammar: currentLineStudy.grammar
+                                })
+                            },
+                                feedback === "removed" ? `− ${t("removedWord", "삭제됨")}` : feedback ? `✓ ${t("savedWord", "저장됨")}` : saved ? `✓ ${word.term}` : word.term,
+                                !feedback && (word.reading ? ` (${word.reading})` : word.pronunciation ? ` (${word.pronunciation})` : ""),
+                                !feedback && word.meaning ? ` - ${word.meaning}` : ""
+                            );
+                        })
+                    )
+                ),
+                !currentLineStudy && pack.lines?.length > 0 && react.createElement("div", { className: "ivlyrics-study-note" },
+                    status === "loading"
+                        ? t("linePending", "지금 가사 카드는 아직 만드는 중입니다.")
+                        : t("lineOutOfRange", "지금 가사는 분석 범위 밖입니다.")
+                ),
+                pack.summary && react.createElement("section", { className: "ivlyrics-study-card" },
+                    react.createElement("h3", null, t("summary", "곡 요약")),
+                    react.createElement("p", null, pack.summary)
+                ),
+                pack.omittedCount > 0 && react.createElement("div", { className: "ivlyrics-study-note" },
+                    t("omitted", "{count}개의 가사 조각은 분석 범위 밖입니다.").replace("{count}", pack.omittedCount)
+                ),
+                grammarItems.length > 0 && react.createElement("section", { className: "ivlyrics-study-card ivlyrics-study-grammar-card" },
+                    react.createElement("div", { className: "ivlyrics-study-section-head" },
+                        react.createElement("div", null,
+                            react.createElement("h3", null, t("grammarPatterns", "문법 포인트")),
+                            react.createElement("p", null, t("grammarPatternsHint", "가사에서 바로 써먹을 수 있는 구조만 골랐습니다."))
+                        ),
+                        react.createElement("span", null, grammarItems.length)
+                    ),
+                    react.createElement("div", { className: "ivlyrics-study-grammar-lessons" },
+                        grammarItems.map((item, index) => react.createElement("article", {
+                            key: `${item.pattern}-${index}`,
+                            className: "ivlyrics-study-grammar-lesson"
+                        },
+                            react.createElement("div", { className: "ivlyrics-study-grammar-index" }, String(index + 1).padStart(2, "0")),
+                            react.createElement("div", { className: "ivlyrics-study-grammar-body" },
+                                react.createElement("div", { className: "ivlyrics-study-grammar-title-row" },
+                                    react.createElement(GrammarNote, { item }),
+                                    Number.isFinite(Number(item.startTime)) && react.createElement(LyricPlayButton, {
+                                        onClick: () => playLyricAt({
+                                            trackUri,
+                                            startTime: item.startTime,
+                                            endTime: item.endTime,
+                                            sourceText: item.sourceText
+                                        })
+                                    })
+                                ),
+                                item.sourceText && react.createElement("blockquote", null, item.sourceText),
+                                item.translation && react.createElement("p", { className: "ivlyrics-study-grammar-translation" }, item.translation),
+                                item.lineExplanation && react.createElement("p", { className: "ivlyrics-study-grammar-context" }, item.lineExplanation)
+                            )
+                        ))
+                    )
+                ),
+                pack.keyExpressions?.length > 0 && react.createElement("section", { className: "ivlyrics-study-card ivlyrics-study-expansion-card" },
+                    react.createElement("div", { className: "ivlyrics-study-section-head" },
+                        react.createElement("div", null,
+                            react.createElement("h3", null, t("keyExpressions", "표현 확장")),
+                            react.createElement("p", null, t("expressionExpansionHint", "가사 속 단어를 다른 상황에서도 쓰게 만드는 확장 노트입니다."))
+                        ),
+                        react.createElement("span", null, pack.keyExpressions.length)
+                    ),
+                    pack.keyExpressions.map((item, index) => react.createElement("article", {
+                        key: `${item.expression}-${index}`,
+                        className: "ivlyrics-study-expression"
+                    },
+                        react.createElement("div", { className: "ivlyrics-study-expression-main" },
+                            react.createElement("div", null,
+                                react.createElement("strong", null, item.expression),
+                                item.meaning && react.createElement("span", null, item.meaning)
+                            ),
+                            Number.isFinite(Number(item.startTime)) && react.createElement(LyricPlayButton, {
+                                onClick: () => playLyricAt({ ...item, trackUri: item.trackUri || trackUri })
+                            })
+                        ),
+                        item.sourceText && react.createElement("p", { className: "ivlyrics-study-source-inline" }, item.sourceText),
+                        react.createElement(ReadingHints, {
+                            reading: item.reading,
+                            pronunciation: item.pronunciation
+                        }),
+                        item.note && react.createElement("p", null, item.note),
+                        (item.alternatives?.length > 0 || item.forms?.length > 0 || item.relatedWords?.length > 0) && react.createElement("div", { className: "ivlyrics-study-expression-groups" },
+                            item.alternatives?.length > 0 && react.createElement("div", null,
+                                react.createElement("span", null, t("alternatives", "대체 표현")),
+                                react.createElement("div", null, item.alternatives.map((value) => react.createElement("em", { key: value }, value)))
+                            ),
+                            item.forms?.length > 0 && react.createElement("div", null,
+                                react.createElement("span", null, t("forms", "활용형")),
+                                react.createElement("div", null, item.forms.map((value) => react.createElement("em", { key: value }, value)))
+                            ),
+                            item.relatedWords?.length > 0 && react.createElement("div", null,
+                                react.createElement("span", null, t("relatedWords", "비슷한 단어")),
+                                react.createElement("div", null, item.relatedWords.map((value) => react.createElement("em", { key: value }, value)))
+                            )
+                        ),
+                        react.createElement("div", { className: "ivlyrics-study-expression-actions" },
+                            react.createElement("button", {
+                                type: "button",
+                                className: [
+                                    "ivlyrics-study-mini",
+                                    savedWordIds.has(getWordIdForEntry(item)) ? "saved" : "",
+                                    savedWordFeedback[getWordIdForEntry(item)] ? "feedback" : ""
+                                ].filter(Boolean).join(" "),
+                                onClick: () => toggleWord({ ...item, lineIndex: item.lineIndexes?.[0] ?? null })
+                            }, savedWordFeedback[getWordIdForEntry(item)] === "removed"
+                                ? t("removedWord", "삭제됨")
+                                : savedWordFeedback[getWordIdForEntry(item)]
+                                ? t("savedWord", "저장됨")
+                                : savedWordIds.has(getWordIdForEntry(item))
+                                    ? t("savedWord", "저장됨")
+                                    : t("saveWord", "저장"))
+                        )
+                    ))
+                )
+        );
+
         return react.createElement("aside", {
             className: `ivlyrics-study-panel theme-${studyTheme}`,
             role: "dialog",
@@ -2451,170 +2616,7 @@
                         react.createElement("p", null, loadingText || t("loading", "가사를 분석하는 중..."))
                     ),
                     activeTab === "history" && renderHistoryTab(),
-                    pack && activeTab === "explain" && react.createElement("div", { className: "ivlyrics-study-section" },
-                        currentLineStudy && react.createElement("section", { className: "ivlyrics-study-card ivlyrics-study-current" },
-                            react.createElement("h3", null, t("currentLine", "지금 가사")),
-                            currentLineStudy.sourceText && react.createElement("div", { className: "ivlyrics-study-source-card" },
-                                react.createElement("div", { className: "ivlyrics-study-source-head" },
-                                    react.createElement("span", null, t("sourceLine", "가사 원문")),
-                                    Number.isFinite(Number(currentLineStudy.startTime)) && react.createElement(LyricPlayButton, {
-                                        onClick: () => playLyricAt({
-                                            trackUri,
-                                            startTime: currentLineStudy.startTime,
-                                            endTime: currentLineStudy.endTime,
-                                            sourceText: currentLineStudy.sourceText
-                                        })
-                                    })
-                                ),
-                                react.createElement("blockquote", null, currentLineStudy.sourceText),
-                                react.createElement(ReadingHints, {
-                                    reading: currentLineStudy.reading,
-                                    pronunciation: currentLineStudy.pronunciation
-                                })
-                            ),
-                            currentLineStudy.translation && react.createElement("p", { className: "ivlyrics-study-translation" }, currentLineStudy.translation),
-                            currentLineStudy.explanation && react.createElement("p", null, currentLineStudy.explanation),
-                            currentLineStudy.grammar?.length > 0 && react.createElement("div", { className: "ivlyrics-study-grammar-stack" },
-                                currentLineStudy.grammar.map((item, index) => react.createElement(GrammarNote, {
-                                    key: index,
-                                    item
-                                }))
-                            ),
-                            currentLineStudy.vocabulary?.length > 0 && react.createElement("div", { className: "ivlyrics-study-vocab-list" },
-                                currentLineStudy.vocabulary.map((word, index) => {
-                                    const wordId = getWordIdForEntry(word);
-                                    const saved = savedWordIds.has(wordId);
-                                    const feedback = savedWordFeedback[wordId];
-                                    return react.createElement("button", {
-                                        key: `${word.term}-${index}`,
-                                        type: "button",
-                                        className: [
-                                            "ivlyrics-study-word-chip",
-                                            saved ? "saved" : "",
-                                            feedback ? "feedback" : ""
-                                        ].filter(Boolean).join(" "),
-                                        onClick: () => toggleWord({
-                                            ...word,
-                                            lineIndex: currentLineStudy.index,
-                                            sourceText: currentLineStudy.sourceText,
-                                            startTime: currentLineStudy.startTime,
-                                            endTime: currentLineStudy.endTime,
-                                            grammar: currentLineStudy.grammar
-                                        })
-                                    },
-                                        feedback === "removed" ? `− ${t("removedWord", "삭제됨")}` : feedback ? `✓ ${t("savedWord", "저장됨")}` : saved ? `✓ ${word.term}` : word.term,
-                                        !feedback && (word.reading ? ` (${word.reading})` : word.pronunciation ? ` (${word.pronunciation})` : ""),
-                                        !feedback && word.meaning ? ` - ${word.meaning}` : ""
-                                    );
-                                })
-                            )
-                        ),
-                        !currentLineStudy && pack.lines?.length > 0 && react.createElement("div", { className: "ivlyrics-study-note" },
-                            status === "loading"
-                                ? t("linePending", "지금 가사 카드는 아직 만드는 중입니다.")
-                                : t("lineOutOfRange", "지금 가사는 분석 범위 밖입니다.")
-                        ),
-                        pack.summary && react.createElement("section", { className: "ivlyrics-study-card" },
-                            react.createElement("h3", null, t("summary", "곡 요약")),
-                            react.createElement("p", null, pack.summary)
-                        ),
-                        pack.omittedCount > 0 && react.createElement("div", { className: "ivlyrics-study-note" },
-                            t("omitted", "{count}개의 가사 조각은 분석 범위 밖입니다.").replace("{count}", pack.omittedCount)
-                        ),
-                        grammarItems.length > 0 && react.createElement("section", { className: "ivlyrics-study-card ivlyrics-study-grammar-card" },
-                            react.createElement("div", { className: "ivlyrics-study-section-head" },
-                                react.createElement("div", null,
-                                    react.createElement("h3", null, t("grammarPatterns", "문법 포인트")),
-                                    react.createElement("p", null, t("grammarPatternsHint", "가사에서 바로 써먹을 수 있는 구조만 골랐습니다."))
-                                ),
-                                react.createElement("span", null, grammarItems.length)
-                            ),
-                            react.createElement("div", { className: "ivlyrics-study-grammar-lessons" },
-                                grammarItems.map((item, index) => react.createElement("article", {
-                                    key: `${item.pattern}-${index}`,
-                                    className: "ivlyrics-study-grammar-lesson"
-                                },
-                                    react.createElement("div", { className: "ivlyrics-study-grammar-index" }, String(index + 1).padStart(2, "0")),
-                                    react.createElement("div", { className: "ivlyrics-study-grammar-body" },
-                                        react.createElement("div", { className: "ivlyrics-study-grammar-title-row" },
-                                            react.createElement(GrammarNote, { item }),
-                                            Number.isFinite(Number(item.startTime)) && react.createElement(LyricPlayButton, {
-                                                onClick: () => playLyricAt({
-                                                    trackUri,
-                                                    startTime: item.startTime,
-                                                    endTime: item.endTime,
-                                                    sourceText: item.sourceText
-                                                })
-                                            })
-                                        ),
-                                        item.sourceText && react.createElement("blockquote", null, item.sourceText),
-                                        item.translation && react.createElement("p", { className: "ivlyrics-study-grammar-translation" }, item.translation),
-                                        item.lineExplanation && react.createElement("p", { className: "ivlyrics-study-grammar-context" }, item.lineExplanation)
-                                    )
-                                ))
-                            )
-                        ),
-                        pack.keyExpressions?.length > 0 && react.createElement("section", { className: "ivlyrics-study-card ivlyrics-study-expansion-card" },
-                            react.createElement("div", { className: "ivlyrics-study-section-head" },
-                                react.createElement("div", null,
-                                    react.createElement("h3", null, t("keyExpressions", "표현 확장")),
-                                    react.createElement("p", null, t("expressionExpansionHint", "가사 속 단어를 다른 상황에서도 쓰게 만드는 확장 노트입니다."))
-                                ),
-                                react.createElement("span", null, pack.keyExpressions.length)
-                            ),
-                            pack.keyExpressions.map((item, index) => react.createElement("article", {
-                                key: `${item.expression}-${index}`,
-                                className: "ivlyrics-study-expression"
-                            },
-                                react.createElement("div", { className: "ivlyrics-study-expression-main" },
-                                    react.createElement("div", null,
-                                        react.createElement("strong", null, item.expression),
-                                        item.meaning && react.createElement("span", null, item.meaning)
-                                    ),
-                                    Number.isFinite(Number(item.startTime)) && react.createElement(LyricPlayButton, {
-                                        onClick: () => playLyricAt({ ...item, trackUri: item.trackUri || trackUri })
-                                    })
-                                ),
-                                item.sourceText && react.createElement("p", { className: "ivlyrics-study-source-inline" }, item.sourceText),
-                                react.createElement(ReadingHints, {
-                                    reading: item.reading,
-                                    pronunciation: item.pronunciation
-                                }),
-                                item.note && react.createElement("p", null, item.note),
-                                (item.alternatives?.length > 0 || item.forms?.length > 0 || item.relatedWords?.length > 0) && react.createElement("div", { className: "ivlyrics-study-expression-groups" },
-                                    item.alternatives?.length > 0 && react.createElement("div", null,
-                                        react.createElement("span", null, t("alternatives", "대체 표현")),
-                                        react.createElement("div", null, item.alternatives.map((value) => react.createElement("em", { key: value }, value)))
-                                    ),
-                                    item.forms?.length > 0 && react.createElement("div", null,
-                                        react.createElement("span", null, t("forms", "활용형")),
-                                        react.createElement("div", null, item.forms.map((value) => react.createElement("em", { key: value }, value)))
-                                    ),
-                                    item.relatedWords?.length > 0 && react.createElement("div", null,
-                                        react.createElement("span", null, t("relatedWords", "비슷한 단어")),
-                                        react.createElement("div", null, item.relatedWords.map((value) => react.createElement("em", { key: value }, value)))
-                                    )
-                                ),
-                                react.createElement("div", { className: "ivlyrics-study-expression-actions" },
-                                    react.createElement("button", {
-                                        type: "button",
-                                        className: [
-                                            "ivlyrics-study-mini",
-                                            savedWordIds.has(getWordIdForEntry(item)) ? "saved" : "",
-                                            savedWordFeedback[getWordIdForEntry(item)] ? "feedback" : ""
-                                        ].filter(Boolean).join(" "),
-                                        onClick: () => toggleWord({ ...item, lineIndex: item.lineIndexes?.[0] ?? null })
-                                    }, savedWordFeedback[getWordIdForEntry(item)] === "removed"
-                                        ? t("removedWord", "삭제됨")
-                                        : savedWordFeedback[getWordIdForEntry(item)]
-                                        ? t("savedWord", "저장됨")
-                                        : savedWordIds.has(getWordIdForEntry(item))
-                                            ? t("savedWord", "저장됨")
-                                            : t("saveWord", "저장"))
-                                )
-                            ))
-                        )
-                    ),
+                    pack && activeTab === "explain" && renderExplainTab(),
                     pack && activeTab === "quiz" && react.createElement("div", { className: "ivlyrics-study-section ivlyrics-study-quiz-stage" },
                         react.createElement("div", { className: "ivlyrics-study-quiz-tools" },
                             react.createElement("div", { className: "ivlyrics-study-quiz-difficulty" },

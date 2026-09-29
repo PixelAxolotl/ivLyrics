@@ -3588,6 +3588,26 @@ const FullscreenOverlay = (() => {
             )
         ;
 
+        const renderTopRightOverlay = () =>
+            react.createElement("div", {
+                className: `fullscreen-top-right ${!uiVisible ? 'hidden' : ''}`
+            },
+                react.createElement("div", {
+                    className: "fullscreen-clock-wrapper"
+                },
+                    react.createElement(Clock, {
+                        show: showClockInOverlay,
+                        showSeconds: clockShowSeconds,
+                        size: clockSizeInOverlay
+                    })
+                ),
+                react.createElement(NextTrackPreview, {
+                    show: showNextTrackInOverlay,
+                    secondsBeforeEnd: nextTrackSeconds
+                })
+            )
+        ;
+
         return react.createElement(react.Fragment, null,
             renderResearchConsentDialog(),
             !tvModeEnabled && !tmiMode && PresentationSwitcher && react.createElement(PresentationSwitcher, {
@@ -3609,23 +3629,7 @@ const FullscreenOverlay = (() => {
                 react.createElement(ContextInfo, { show: showContextInOverlay, showImage: showContextImage })
             ),
             // Top-right: Clock & Next track
-            react.createElement("div", {
-                className: `fullscreen-top-right ${!uiVisible ? 'hidden' : ''}`
-            },
-                react.createElement("div", {
-                    className: "fullscreen-clock-wrapper"
-                },
-                    react.createElement(Clock, {
-                        show: showClockInOverlay,
-                        showSeconds: clockShowSeconds,
-                        size: clockSizeInOverlay
-                    })
-                ),
-                react.createElement(NextTrackPreview, {
-                    show: showNextTrackInOverlay,
-                    secondsBeforeEnd: nextTrackSeconds
-                })
-            ),
+            renderTopRightOverlay(),
             // Portrait mode overlays (세로모드 전용 오버레이)
             isPortraitFullscreen && renderPortraitOverlays(),
             // Left panel (Album, Info & Controls) OR TMI View - Hidden in TV Mode & Portrait Mode

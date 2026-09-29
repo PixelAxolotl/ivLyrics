@@ -1132,36 +1132,7 @@ const NowPlayingTipStep = ({ nowPlayingEnabled, onNowPlayingChange, onNext, onBa
     return () => clearInterval(interval);
   }, []);
 
-  return react.createElement(
-    "div",
-    {
-      className: "wizard-step nowplaying-tip-step",
-      style: wizardStepStyle,
-    },
-    react.createElement(
-      "h2",
-      { style: wizardTitleStyle },
-      I18n.t("setupWizard.nowPlayingTip.title")
-    ),
-    react.createElement(
-      "p",
-      { style: wizardSubtitleStyle },
-      I18n.t("setupWizard.nowPlayingTip.subtitle")
-    ),
-    // Animation container
-    react.createElement(
-      "div",
-      {
-        style: {
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "20px",
-        },
-      },
-      // Spotify-like panel mockup
+  const renderNowPlayingTipMockup = () =>
       react.createElement(
         "div",
         {
@@ -1264,7 +1235,39 @@ const NowPlayingTipStep = ({ nowPlayingEnabled, onNowPlayingChange, onNext, onBa
             )
           )
         )
-      ),
+      );
+
+  return react.createElement(
+    "div",
+    {
+      className: "wizard-step nowplaying-tip-step",
+      style: wizardStepStyle,
+    },
+    react.createElement(
+      "h2",
+      { style: wizardTitleStyle },
+      I18n.t("setupWizard.nowPlayingTip.title")
+    ),
+    react.createElement(
+      "p",
+      { style: wizardSubtitleStyle },
+      I18n.t("setupWizard.nowPlayingTip.subtitle")
+    ),
+    // Animation container
+    react.createElement(
+      "div",
+      {
+        style: {
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "20px",
+        },
+      },
+      // Spotify-like panel mockup
+      renderNowPlayingTipMockup(),
       // Interactive Toggle
       renderWizardInteractiveToggle(
         nowPlayingEnabled,

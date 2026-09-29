@@ -8878,22 +8878,25 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				album: albumName,
 				...(trackDurationMs > 0 ? { durationMs: trackDurationMs } : {})
 			};
+			const handleSubmitSuccess = async () => {
+				Toast.success(I18n.t('syncCreator.submitSuccess'));
+				// 캐시 무효화
+				await clearLyricsCachesAfterSyncSubmit(resolvedTrackIsrc);
+				await deleteActiveSyncCreatorDraft();
+				// 가사 페이지 새로고침
+				setTimeout(() => {
+					if (typeof window.reloadLyrics === 'function') {
+						window.reloadLyrics(true);
+					} else if (typeof window.lyricContainer?.reloadLyrics === 'function') {
+						window.lyricContainer.reloadLyrics(true);
+					}
+				}, 500);
+				if (onClose) onClose();
+			};
 			if (typeof SyncDataService !== 'undefined' && SyncDataService.submitSyncData) {
 				const result = await SyncDataService.submitSyncData(trackId, provider, compactSyncDataToSubmit, submitMetadata, { authOperation });
 				if (result) {
-					Toast.success(I18n.t('syncCreator.submitSuccess'));
-					// 캐시 무효화
-					await clearLyricsCachesAfterSyncSubmit(resolvedTrackIsrc);
-					await deleteActiveSyncCreatorDraft();
-					// 가사 페이지 새로고침
-					setTimeout(() => {
-						if (typeof window.reloadLyrics === 'function') {
-							window.reloadLyrics(true);
-						} else if (typeof window.lyricContainer?.reloadLyrics === 'function') {
-							window.lyricContainer.reloadLyrics(true);
-						}
-					}, 500);
-					if (onClose) onClose();
+					await handleSubmitSuccess();
 				} else {
 					Toast.error(I18n.t('syncCreator.submitError'));
 				}
@@ -8913,19 +8916,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				});
 
 				if (response.ok) {
-					Toast.success(I18n.t('syncCreator.submitSuccess'));
-					// 캐시 무효화
-					await clearLyricsCachesAfterSyncSubmit(resolvedTrackIsrc);
-					await deleteActiveSyncCreatorDraft();
-					// 가사 페이지 새로고침
-					setTimeout(() => {
-						if (typeof window.reloadLyrics === 'function') {
-							window.reloadLyrics(true);
-						} else if (typeof window.lyricContainer?.reloadLyrics === 'function') {
-							window.lyricContainer.reloadLyrics(true);
-						}
-					}, 500);
-					if (onClose) onClose();
+					await handleSubmitSuccess();
 				} else {
 					Toast.error((await response.json()).error || I18n.t('syncCreator.submitError'));
 				}

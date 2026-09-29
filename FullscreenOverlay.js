@@ -1191,18 +1191,21 @@ const FullscreenOverlay = (() => {
 
             setAddingPlaylistId(playlist.id);
             let attemptedPlaylistRemoval = false;
+            const markPlaylistTrackRemoved = () => {
+                setPlaylistTrackStatus((previousStatus) => ({
+                    ...previousStatus,
+                    [playlist.id]: { status: "missing", uids: [] }
+                }));
+                Toast.success(
+                    (I18n.t("fullscreen.controls.playlistRemoved") || "Removed from {playlist}.")
+                        .replace("{playlist}", playlist.name || "playlist")
+                );
+            };
             try {
                 if (getPlaylistStatusValue(playlistTrackStatus[playlist.id]) === "contains") {
                     attemptedPlaylistRemoval = true;
                     await removeTrackFromSpotifyPlaylist(playlist, trackUri, getPlaylistStatusUids(playlistTrackStatus[playlist.id]));
-                    setPlaylistTrackStatus((previousStatus) => ({
-                        ...previousStatus,
-                        [playlist.id]: { status: "missing", uids: [] }
-                    }));
-                    Toast.success(
-                        (I18n.t("fullscreen.controls.playlistRemoved") || "Removed from {playlist}.")
-                            .replace("{playlist}", playlist.name || "playlist")
-                    );
+                    markPlaylistTrackRemoved();
                     return;
                 }
 
@@ -1214,14 +1217,7 @@ const FullscreenOverlay = (() => {
                     }));
                     attemptedPlaylistRemoval = true;
                     await removeTrackFromSpotifyPlaylist(playlist, trackUri, trackMatch.uids);
-                    setPlaylistTrackStatus((previousStatus) => ({
-                        ...previousStatus,
-                        [playlist.id]: { status: "missing", uids: [] }
-                    }));
-                    Toast.success(
-                        (I18n.t("fullscreen.controls.playlistRemoved") || "Removed from {playlist}.")
-                            .replace("{playlist}", playlist.name || "playlist")
-                    );
+                    markPlaylistTrackRemoved();
                     return;
                 }
 

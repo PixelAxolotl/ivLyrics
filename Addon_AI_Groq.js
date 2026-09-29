@@ -476,6 +476,7 @@
                         try { const d = await response.json(); if (d.error?.message) msg = d.error.message; } catch (e) { }
                         throw new Error(`[Groq] ${msg}`);
                     }
+                    const consumeGroqStream = async () => {
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let sseBuffer = '', accumulated = '';
@@ -555,6 +556,9 @@
                     }
 
                     return transformed;
+                    };
+
+                    return await consumeGroqStream();
                 } catch (e) {
                     lastError = e;
                     resetProvisionalOutput(attempt < maxRetries - 1 ? 'retry' : 'failed', e);

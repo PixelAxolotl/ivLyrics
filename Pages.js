@@ -608,44 +608,6 @@ const CreatorProfileTrackCover = react.memo(({ title, artist }) => {
 	);
 });
 
-function createCreatorProfileShell(contributor, options = {}) {
-	const artist = typeof options.artist === "string" && options.artist.trim() ? options.artist.trim() : null;
-	const displayName = contributor?.name || "Anonymous";
-
-	return {
-		userHash: contributor?.userHash || null,
-		displayName,
-		account: contributor?.avatarUrl
-			? {
-				profileImage: contributor.avatarUrl,
-				displayName
-			}
-			: null,
-		stats: null,
-		viewer: {
-			authenticated: false,
-			isOwnProfile: false,
-			canLike: false,
-			liked: false
-		},
-		artistStats: {
-			items: []
-		},
-		filters: {
-			artist
-		},
-		contributions: [],
-		pagination: {
-			offset: 0,
-			limit: CREATOR_PROFILE_PAGE_SIZE,
-			returnedCount: 0,
-			totalCount: 0,
-			hasMore: false,
-			nextOffset: null
-		}
-	};
-}
-
 const CreatorDecorationEditor = react.memo(({
 	displayName,
 	tier,
@@ -4020,7 +3982,6 @@ const LYRICS_CENTERING_MAX_STAGGER_MS = 180;
 const LYRICS_CENTERING_SETTLE_RESERVE_MS = 24;
 const LYRICS_CENTERING_MIN_TOTAL_MS = 80;
 const LYRICS_CENTERING_BEZIER = [0.22, 1, 0.36, 1];
-const LYRICS_CENTERING_EASING_CSS = "cubic-bezier(0.22, 1, 0.36, 1)";
 const KARAOKE_RELEASE_WINDOW_MS = 820;
 const KARAOKE_COMPLETION_POSITION_OFFSET_MS = 900;
 const syncedLyricsScrollAnimations = new WeakMap();
@@ -8799,42 +8760,6 @@ const NoLyricsAnimation = () => react.createElement(
 
 window.ivLyricsNoLyricsAnimation = NoLyricsAnimation;
 
-
-const LyricsPage = ({ lyricsContainer }) => {
-	const modes = CONFIG.modes;
-	const activeMode = lyricsContainer.getCurrentMode();
-
-	const topBarProps = {
-		links: modes,
-		activeLink: modes[activeMode] || modes[0],
-		switchCallback: (mode) => {
-			const modeIndex = modes.indexOf(mode);
-			if (modeIndex !== -1) {
-				lyricsContainer.switchTo(modeIndex);
-			}
-		}
-	};
-
-	const topBarContent = typeof TopBarContent === "function"
-		? react.createElement(TopBarContent, topBarProps)
-		: null;
-
-	return react.createElement(
-		"div",
-		{
-			className: "lyrics-page-wrapper",
-			style: { width: "100%", height: "100%", position: "relative" }
-		},
-		topBarContent,
-		lyricsContainer.render(),
-		react.createElement(CreditFooter, {
-			provider: lyricsContainer.state.provider,
-			contributors: lyricsContainer.state.contributors,
-			syncType: lyricsContainer.state.syncType,
-			syncPoints: lyricsContainer.state.syncPoints
-		})
-	);
-};
 
 const LyricsUnavailableView = react.memo(({ isLoading }) =>
 	isLoading

@@ -65,7 +65,6 @@ if (!window.ApiTracker) {
 
 // 하위 호환성을 위해 LyricsCache 별칭 생성 (기존 코드에서 LyricsCache 직접 참조하는 경우)
 const LyricsCache = window.LyricsCache;
-const ApiTracker = window.ApiTracker;
 const HAN_CHARACTER_REGEX = /\p{Script=Han}/u;
 const KANJI_CHARACTER_REGEX = /[\u4E00-\u9FAF\u3400-\u4DBF]/;
 const CLEAN_HTML_RT_REGEX = /<rt[^>]*>.*?<\/rt>/gi;

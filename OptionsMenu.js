@@ -1,16 +1,3 @@
-const OptionsMenuItemIcon = react.createElement(
-  "svg",
-  {
-    width: 16,
-    height: 16,
-    viewBox: "0 0 16 16",
-    fill: "currentColor",
-  },
-  react.createElement("path", {
-    d: "M13.985 2.383L5.127 12.754 1.388 8.375l-.658.77 4.397 5.149 9.618-11.262z",
-  })
-);
-
 // Keep toolbar tooltips outside the scrollable toolbar and independent of
 // Spotify's private menu context. Cloning without a ref preserves button refs.
 const IvLyricsTooltip = ({ label, children }) => {
@@ -1998,28 +1985,6 @@ function ensureFluentModalStyles() {
 `;
   document.head.appendChild(style);
 }
-
-// Optimized OptionsMenuItem with better performance
-const OptionsMenuItem = react.memo(({ onSelect, value, isSelected }) => {
-  // React 130 방지: Hook 순서 일관성 유지
-  const menuItemProps = useMemo(
-    () => ({
-      onClick: onSelect,
-      icon: isSelected ? OptionsMenuItemIcon : null,
-      trailingIcon: isSelected ? OptionsMenuItemIcon : null,
-    }),
-    [onSelect, isSelected]
-  );
-
-  // React 31 방지: value가 유효한지 확인
-  const safeValue = value || "";
-
-  return react.createElement(
-    Spicetify.ReactComponent.MenuItem,
-    menuItemProps,
-    safeValue
-  );
-});
 
 const OptionsMenu = react.memo(
   ({ options, onSelect, selected, defaultValue, bold = false }) => {

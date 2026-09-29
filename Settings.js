@@ -24,26 +24,6 @@ const ButtonSVG = react.memo(
   }
 );
 
-const SwapButton = ({ icon, disabled, onClick }) => {
-  return react.createElement(
-    "button",
-    {
-      className: "swap-button",
-      onClick,
-      disabled,
-    },
-    react.createElement("svg", {
-      width: 12,
-      height: 12,
-      viewBox: "0 0 16 16",
-      fill: "currentColor",
-      dangerouslySetInnerHTML: {
-        __html: icon,
-      },
-    })
-  );
-};
-
 function buildOrderedProviderList(providers, providerOrder) {
   const safeProviders = Array.isArray(providers) ? providers : [];
   const safeProviderOrder = Array.isArray(providerOrder) ? providerOrder : [];
@@ -5653,57 +5633,6 @@ const NowPlayingPanelPreview = () => {
   );
 };
 
-const ConfigAdjust = ({
-  name,
-  defaultValue,
-  step,
-  min,
-  max,
-  onChange = () => { },
-}) => {
-  const [value, setValue] = useState(defaultValue);
-
-  useEffect(() => {
-    setValue(defaultValue);
-  }, [defaultValue]);
-
-  function adjust(dir) {
-    let temp = value + dir * step;
-    if (temp < min) {
-      temp = min;
-    } else if (temp > max) {
-      temp = max;
-    }
-    setValue(temp);
-    onChange(temp);
-  }
-  return react.createElement(
-    "div",
-    { className: "adjust-container" },
-    react.createElement(
-      "button",
-      {
-        className: "adjust-button",
-        onClick: () => adjust(-1),
-        disabled: value === min,
-        "aria-label": "Decrease",
-      },
-      "-"
-    ),
-    react.createElement("span", { className: "adjust-value" }, value),
-    react.createElement(
-      "button",
-      {
-        className: "adjust-button",
-        onClick: () => adjust(1),
-        disabled: value === max,
-        "aria-label": "Increase",
-      },
-      "+"
-    )
-  );
-};
-
 const KARAOKE_FILL_CURVE_DEFAULT_POINTS = [
   { x: 0, y: 0 },
   { x: 0.25, y: 0.25 },
@@ -6412,12 +6341,6 @@ const OptionList = ({ type, items, onChange }) => {
     { className: "option-list-wrapper" },
     ...renderedItems
   );
-};
-
-// Pre-defined styles to avoid recreation on each render
-const MODAL_STYLES = {
-  header: { margin: 0, fontSize: "18px", fontWeight: "600" },
-  previewTitle: { marginTop: 0, marginBottom: "10px" },
 };
 
 const getEffectiveReducedMotionPreference = () =>

@@ -435,6 +435,13 @@
         moduleState.fullscreenClosedHandler = () => {
             goBackToPreviousPage();
         };
+        registerGlobalEventListeners();
+
+        console.debug("[ivLyrics] Global shortcuts initialized");
+    };
+
+    // init()에서 등록하는 전역 이벤트 리스너 묶음 (등록 순서는 기존과 동일)
+    const registerGlobalEventListeners = () => {
         window.addEventListener("ivLyrics:fullscreen-closed", moduleState.fullscreenClosedHandler);
 
         // 설정 변경 감지
@@ -470,8 +477,6 @@
             }
         };
         document.addEventListener("visibilitychange", moduleState.visibilityHandler);
-
-        console.debug("[ivLyrics] Global shortcuts initialized");
     };
 
     // Spicetify가 준비되면 초기화

@@ -307,6 +307,27 @@
         return { text, finishReason };
     }
 
+    // Shared 401 / non-OK handling for the request loop. On 401 it throws the
+    // permission message; otherwise it reports the HTTP status. Either branch
+    // reads the JSON body at most once, matching the inline versions.
+    async function throwGroqApiResponseError(response) {
+        if (response.status === 401) {
+            let errorMessage = 'Invalid API key or permission denied.';
+            try {
+                const errorData = await response.json();
+                if (errorData.error?.message) errorMessage = errorData.error.message;
+            } catch (parseError) { }
+            throw new Error(`[Groq] ${errorMessage}`);
+        }
+
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+            const errorData = await response.json();
+            if (errorData.error?.message) errorMessage = errorData.error.message;
+        } catch (parseError) { }
+        throw new Error(`[Groq] ${errorMessage}`);
+    }
+
     async function callGroqAPIRaw(prompt, maxRetries = window.AIAddonManager?.getProviderRequestAttempts?.() ?? 3, transformResult = null) {
         const apiKeys = getApiKeys();
         if (apiKeys.length === 0) {
@@ -339,26 +360,8 @@
                         break; // Try next key
                     }
 
-                    if (response.status === 401) {
-                        let errorMessage = 'Invalid API key or permission denied.';
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error?.message) {
-                                errorMessage = errorData.error.message;
-                            }
-                        } catch (parseError) { }
-                        throw new Error(`[Groq] ${errorMessage}`);
-                    }
-
-                    if (!response.ok) {
-                        let errorMessage = `HTTP ${response.status}`;
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error?.message) {
-                                errorMessage = errorData.error.message;
-                            }
-                        } catch (parseError) { }
-                        throw new Error(`[Groq] ${errorMessage}`);
+                    if (response.status === 401 || !response.ok) {
+                        await throwGroqApiResponseError(response);
                     }
 
                     const data = await response.json();

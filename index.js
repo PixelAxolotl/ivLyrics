@@ -4792,6 +4792,33 @@ const createInitialLyricsContainerState = () => ({
   isSyncCreatorActive: false,
 });
 
+// note/placeholder-only line (e.g., ♪, …). Pure helper hoisted out of
+// optimizeTranslations so it is defined once instead of per invocation.
+const isTranslationNoteLine = (text) => {
+  const t = String(text || "").trim();
+  if (!t) return true;
+  return /^[\s♪♩♫♬·•・。.、…~-]+$/.test(t);
+};
+
+// Returns true when two translation strings are similar (>85% shared long-word
+// overlap, or normalized-equivalent). Pure helper hoisted out of
+// optimizeTranslations; reads only window.ivLyricsTextComparison.
+const areTranslationTextsSimilar = (text1, text2) => {
+  if (!text1 || !text2) return false;
+  const norm1 = window.ivLyricsTextComparison.normalize(text1);
+  const norm2 = window.ivLyricsTextComparison.normalize(text2);
+  if (!norm1 || !norm2) return false;
+  if (window.ivLyricsTextComparison.areEquivalent(text1, text2)) return true;
+  const words1 = norm1.split(" ").filter((w) => w.length > 2);
+  const words2 = norm2.split(" ").filter((w) => w.length > 2);
+  if (words1.length === 0 || words2.length === 0) return false;
+  const words2Set = new Set(words2);
+  const commonWords = words1.filter((word) => words2Set.has(word));
+  const similarity =
+    commonWords.length / Math.max(words1.length, words2.length);
+  return similarity > 0.85;
+};
+
 class LyricsContainer extends react.Component {
   constructor() {
     super();
@@ -7962,35 +7989,11 @@ class LyricsContainer extends react.Component {
       (displayMode2 && displayMode2 !== "none" && !mode2IsPhonetic)
     );
 
-    // Helper: note/placeholder-only line (e.g., ♪, …)
-    const isNoteLine = (text) => {
-      const t = String(text || "").trim();
-      if (!t) return true;
-      return /^[\s♪♩♫♬·•・。.、…~-]+$/.test(t);
-    };
-
     // Helper function to normalize text for comparison
     const normalizeForComparison = (text) =>
       window.ivLyricsTextComparison.normalize(text);
     const areTextsEquivalent = (text1, text2) =>
       window.ivLyricsTextComparison.areEquivalent(text1, text2);
-
-    // Helper function to check if two translations are similar (>85% similarity)
-    const areTranslationsSimilar = (text1, text2) => {
-      if (!text1 || !text2) return false;
-      const norm1 = normalizeForComparison(text1);
-      const norm2 = normalizeForComparison(text2);
-      if (!norm1 || !norm2) return false;
-      if (areTextsEquivalent(text1, text2)) return true;
-      const words1 = norm1.split(" ").filter((w) => w.length > 2);
-      const words2 = norm2.split(" ").filter((w) => w.length > 2);
-      if (words1.length === 0 || words2.length === 0) return false;
-	      const words2Set = new Set(words2);
-	      const commonWords = words1.filter((word) => words2Set.has(word));
-      const similarity =
-        commonWords.length / Math.max(words1.length, words2.length);
-      return similarity > 0.85;
-    };
 
     // Process each line to determine what to display
     const processedLyrics = originalLyrics.map((line, i) => {
@@ -8020,7 +8023,7 @@ class LyricsContainer extends react.Component {
       }
 
       // If original is a note/placeholder line, never show sub-lines
-      if (isNoteLine(originalText)) {
+      if (isTranslationNoteLine(originalText)) {
         let vocals = withoutVocalSupplementField(line?.vocals, "phonetic");
         vocals = withoutVocalSupplementField(vocals, "translation");
         const noteLine = {
@@ -8041,8 +8044,8 @@ class LyricsContainer extends react.Component {
       }
 
       // Ignore translations that are notes-only
-      if (isNoteLine(translation1)) translation1 = "";
-      if (isNoteLine(translation2)) translation2 = "";
+      if (isTranslationNoteLine(translation1)) translation1 = "";
+      if (isTranslationNoteLine(translation2)) translation2 = "";
 
       const normalizedTrans1 = normalizeForComparison(translation1);
       const normalizedTrans2 = normalizeForComparison(translation2);
@@ -8055,7 +8058,7 @@ class LyricsContainer extends react.Component {
         normalizedTrans1 &&
         normalizedTrans2 &&
         (areTextsEquivalent(translation1, translation2) ||
-          areTranslationsSimilar(translation1, translation2));
+          areTranslationTextsSimilar(translation1, translation2));
 
       let finalText = null; // This will be phonetic (romaji/발음)
       let finalText2 = null; // This will be translation (번역)
@@ -8134,7 +8137,7 @@ class LyricsContainer extends react.Component {
               ? processPhoneticHyphen(value)
               : value;
             const text = String(processedValue || "").trim();
-            return isNoteLine(text)
+            return isTranslationNoteLine(text)
               || areTextsEquivalent(text, getTranslationPartText(originalPart))
               ? ""
               : text;

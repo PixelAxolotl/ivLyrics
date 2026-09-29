@@ -2299,58 +2299,83 @@ const FullscreenOverlay = (() => {
             uiVisibleRef.current = uiVisible;
         }, [uiVisible]);
 
-        // Get settings from CONFIG
-        const showAlbum = CONFIG?.visual?.["fullscreen-show-album"] !== false;
-        const showInfo = CONFIG?.visual?.["fullscreen-show-info"] !== false;
-        const albumSize = Number(CONFIG?.visual?.["fullscreen-album-size"]) || 400;
-        const albumRadiusValue = Number(CONFIG?.visual?.["fullscreen-album-radius"]);
-        const albumRadius = isNaN(albumRadiusValue) ? 12 : albumRadiusValue;
-        const vinylAnimationsEnabled = CONFIG?.visual?.["fullscreen-vinyl-animations"] !== false;
-        const titleSize = Number(CONFIG?.visual?.["fullscreen-title-size"]) || 48;
-        const artistSize = Number(CONFIG?.visual?.["fullscreen-artist-size"]) || 24;
+        const computeOverlaySettings = () => {
+            // Get settings from CONFIG
+            const showAlbum = CONFIG?.visual?.["fullscreen-show-album"] !== false;
+            const showInfo = CONFIG?.visual?.["fullscreen-show-info"] !== false;
+            const albumSize = Number(CONFIG?.visual?.["fullscreen-album-size"]) || 400;
+            const albumRadiusValue = Number(CONFIG?.visual?.["fullscreen-album-radius"]);
+            const albumRadius = isNaN(albumRadiusValue) ? 12 : albumRadiusValue;
+            const vinylAnimationsEnabled = CONFIG?.visual?.["fullscreen-vinyl-animations"] !== false;
+            const titleSize = Number(CONFIG?.visual?.["fullscreen-title-size"]) || 48;
+            const artistSize = Number(CONFIG?.visual?.["fullscreen-artist-size"]) || 24;
 
-        // UI element settings
-        const showClock = CONFIG?.visual?.["fullscreen-show-clock"] !== false;
-        const clockShowSeconds = CONFIG?.visual?.["fullscreen-clock-show-seconds"] === true;
-        const clockSize = Number(CONFIG?.visual?.["fullscreen-clock-size"]) || 48;
-        const showContext = CONFIG?.visual?.["fullscreen-show-context"] !== false;
-        const showContextImage = CONFIG?.visual?.["fullscreen-show-context-image"] !== false;
-        const showNextTrack = CONFIG?.visual?.["fullscreen-show-next-track"] !== false;
-        const nextTrackSeconds = Number(CONFIG?.visual?.["fullscreen-next-track-seconds"]) || 15;
-        const showControls = CONFIG?.visual?.["fullscreen-show-controls"] !== false;
-        const showVolume = CONFIG?.visual?.["fullscreen-show-volume"] !== false;
-        const showProgress = CONFIG?.visual?.["fullscreen-show-progress"] !== false;
-        const showLyricsProgress = CONFIG?.visual?.["fullscreen-show-lyrics-progress"] === true;
-        const showQueue = CONFIG?.visual?.["fullscreen-show-queue"] !== false;
-        const autoHideUI = CONFIG?.visual?.["fullscreen-auto-hide-ui"] !== false;
-        const autoHideDelay = (Number(CONFIG?.visual?.["fullscreen-auto-hide-delay"]) || 3) * 1000;
+            // UI element settings
+            const showClock = CONFIG?.visual?.["fullscreen-show-clock"] !== false;
+            const clockShowSeconds = CONFIG?.visual?.["fullscreen-clock-show-seconds"] === true;
+            const clockSize = Number(CONFIG?.visual?.["fullscreen-clock-size"]) || 48;
+            const showContext = CONFIG?.visual?.["fullscreen-show-context"] !== false;
+            const showContextImage = CONFIG?.visual?.["fullscreen-show-context-image"] !== false;
+            const showNextTrack = CONFIG?.visual?.["fullscreen-show-next-track"] !== false;
+            const nextTrackSeconds = Number(CONFIG?.visual?.["fullscreen-next-track-seconds"]) || 15;
+            const showControls = CONFIG?.visual?.["fullscreen-show-controls"] !== false;
+            const showVolume = CONFIG?.visual?.["fullscreen-show-volume"] !== false;
+            const showProgress = CONFIG?.visual?.["fullscreen-show-progress"] !== false;
+            const showLyricsProgress = CONFIG?.visual?.["fullscreen-show-lyrics-progress"] === true;
+            const showQueue = CONFIG?.visual?.["fullscreen-show-queue"] !== false;
+            const autoHideUI = CONFIG?.visual?.["fullscreen-auto-hide-ui"] !== false;
+            const autoHideDelay = (Number(CONFIG?.visual?.["fullscreen-auto-hide-delay"]) || 3) * 1000;
 
-        // TMI Font size settings
-        const tmiScale = (Number(CONFIG?.visual?.["fullscreen-tmi-font-size"]) || 100) / 100;
+            // TMI Font size settings
+            const tmiScale = (Number(CONFIG?.visual?.["fullscreen-tmi-font-size"]) || 100) / 100;
 
-        // Control style settings
-        const controlButtonSize = Number(CONFIG?.visual?.["fullscreen-control-button-size"]) || 36;
-        const controlsBackground = CONFIG?.visual?.["fullscreen-controls-background"] === true;
+            // Control style settings
+            const controlButtonSize = Number(CONFIG?.visual?.["fullscreen-control-button-size"]) || 36;
+            const controlsBackground = CONFIG?.visual?.["fullscreen-controls-background"] === true;
 
-        // Layout settings
-        const controlsPosition = CONFIG?.visual?.["fullscreen-controls-position"] || "left-panel";
-        const albumShadow = CONFIG?.visual?.["fullscreen-album-shadow"] !== false;
-        const infoGapVal = CONFIG?.visual?.["fullscreen-info-gap"];
-        const infoGap = (infoGapVal !== undefined && infoGapVal !== null) ? Number(infoGapVal) : 24;
+            // Layout settings
+            const controlsPosition = CONFIG?.visual?.["fullscreen-controls-position"] || "left-panel";
+            const albumShadow = CONFIG?.visual?.["fullscreen-album-shadow"] !== false;
+            const infoGapVal = CONFIG?.visual?.["fullscreen-info-gap"];
+            const infoGap = (infoGapVal !== undefined && infoGapVal !== null) ? Number(infoGapVal) : 24;
 
-        // TV Mode settings
-        const tvModeEnabled = CONFIG?.visual?.["fullscreen-tv-mode"] === true;
-        const tvAlbumSize = Number(CONFIG?.visual?.["fullscreen-tv-album-size"]) || 140;
-        const trimTitleEnabled = CONFIG?.visual?.["fullscreen-trim-title"] === true;
+            // TV Mode settings
+            const tvModeEnabled = CONFIG?.visual?.["fullscreen-tv-mode"] === true;
+            const tvAlbumSize = Number(CONFIG?.visual?.["fullscreen-tv-album-size"]) || 140;
+            const trimTitleEnabled = CONFIG?.visual?.["fullscreen-trim-title"] === true;
 
-        // Normal mode settings
-        const normalShowAlbumName = CONFIG?.visual?.["fullscreen-show-album-name"] !== false;
+            // Normal mode settings
+            const normalShowAlbumName = CONFIG?.visual?.["fullscreen-show-album-name"] !== false;
 
-        // TV Mode specific settings
-        const tvShowAlbumName = CONFIG?.visual?.["fullscreen-tv-show-album-name"] !== false;
-        const tvShowControls = CONFIG?.visual?.["fullscreen-tv-show-controls"] !== false;
-        const tvShowProgress = CONFIG?.visual?.["fullscreen-tv-show-progress"] !== false;
-        const isLayoutReversed = CONFIG?.visual?.["fullscreen-layout-reverse"] === true;
+            // TV Mode specific settings
+            const tvShowAlbumName = CONFIG?.visual?.["fullscreen-tv-show-album-name"] !== false;
+            const tvShowControls = CONFIG?.visual?.["fullscreen-tv-show-controls"] !== false;
+            const tvShowProgress = CONFIG?.visual?.["fullscreen-tv-show-progress"] !== false;
+            const isLayoutReversed = CONFIG?.visual?.["fullscreen-layout-reverse"] === true;
+
+            return {
+                showAlbum, showInfo, albumSize, albumRadiusValue, albumRadius,
+                vinylAnimationsEnabled, titleSize, artistSize,
+                showClock, clockShowSeconds, clockSize, showContext, showContextImage,
+                showNextTrack, nextTrackSeconds, showControls, showVolume, showProgress,
+                showLyricsProgress, showQueue, autoHideUI, autoHideDelay,
+                tmiScale, controlButtonSize, controlsBackground,
+                controlsPosition, albumShadow, infoGapVal, infoGap,
+                tvModeEnabled, tvAlbumSize, trimTitleEnabled, normalShowAlbumName,
+                tvShowAlbumName, tvShowControls, tvShowProgress, isLayoutReversed
+            };
+        };
+        const {
+            showAlbum, showInfo, albumSize, albumRadiusValue, albumRadius,
+            vinylAnimationsEnabled, titleSize, artistSize,
+            showClock, clockShowSeconds, clockSize, showContext, showContextImage,
+            showNextTrack, nextTrackSeconds, showControls, showVolume, showProgress,
+            showLyricsProgress, showQueue, autoHideUI, autoHideDelay,
+            tmiScale, controlButtonSize, controlsBackground,
+            controlsPosition, albumShadow, infoGapVal, infoGap,
+            tvModeEnabled, tvAlbumSize, trimTitleEnabled, normalShowAlbumName,
+            tvShowAlbumName, tvShowControls, tvShowProgress, isLayoutReversed
+        } = computeOverlaySettings();
 
         useEffect(() => {
             if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;

@@ -9985,7 +9985,7 @@ class LyricsContainer extends react.Component {
     const isFocusedFullscreenPresentation =
       fullscreenPresentation === "vinyl"
       || fullscreenPresentation === "video";
-    const activeLyricsPage = syncCreatorPlainPage || (window.LyricsPageRenderer
+    const computeActiveLyricsPage = () => syncCreatorPlainPage || (window.LyricsPageRenderer
       ? react.createElement(window.LyricsPageRenderer, {
         playbackOnly: isFocusedFullscreenPresentation && this.state.fullscreenFocusedLyricsActive,
         mode,
@@ -10041,6 +10041,7 @@ class LyricsContainer extends react.Component {
           )
         );
       })());
+    const activeLyricsPage = computeActiveLyricsPage();
     // Reject an inconsistent display identity even after a failed request.
     const suppressStaleLyricsPage = !!this.state.lyricsDisplayUri &&
       this.state.lyricsDisplayUri !== this.state.uri;

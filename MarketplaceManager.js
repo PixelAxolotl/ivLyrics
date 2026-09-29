@@ -323,27 +323,30 @@
                         return;
                     }
 
-                    const blob = new Blob([addon.code], { type: 'text/javascript' });
-                    const url = URL.createObjectURL(blob);
-                    const script = document.createElement('script');
+                    const loadScriptAddon = () => {
+                        const blob = new Blob([addon.code], { type: 'text/javascript' });
+                        const url = URL.createObjectURL(blob);
+                        const script = document.createElement('script');
 
-                    script.src = url;
-                    script.dataset.marketplaceAddon = addon.id;
+                        script.src = url;
+                        script.dataset.marketplaceAddon = addon.id;
 
-                    script.onload = () => {
-                        URL.revokeObjectURL(url);
-                        this._loadedScripts.set(addon.id, script);
-                        marketplaceDebug(`[MarketplaceManager] Loaded addon: ${addon.id}`);
-                        resolve();
+                        script.onload = () => {
+                            URL.revokeObjectURL(url);
+                            this._loadedScripts.set(addon.id, script);
+                            marketplaceDebug(`[MarketplaceManager] Loaded addon: ${addon.id}`);
+                            resolve();
+                        };
+
+                        script.onerror = (e) => {
+                            URL.revokeObjectURL(url);
+                            script.remove();
+                            reject(new Error(`Script load failed for ${addon.id}`));
+                        };
+
+                        document.head.appendChild(script);
                     };
-
-                    script.onerror = (e) => {
-                        URL.revokeObjectURL(url);
-                        script.remove();
-                        reject(new Error(`Script load failed for ${addon.id}`));
-                    };
-
-                    document.head.appendChild(script);
+                    loadScriptAddon();
                 } catch (e) {
                     reject(e);
                 }

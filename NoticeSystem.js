@@ -440,6 +440,129 @@ const NoticeModal = ({ notices, onClose }) => {
     const react = getNoticeReact();
     const closeLabel = window.I18n?.t("settingsUi.close") || "Close";
 
+    const renderNoticeHeader = () => react.createElement(
+        "div",
+        { className: "notice-modal__header" },
+        react.createElement(
+            "div",
+            { className: "notice-modal__icon" },
+            createNoticeIcon(currentNotice.icon, 22)
+        ),
+        react.createElement(
+            "div",
+            { className: "notice-modal__heading" },
+            react.createElement(
+                "h2",
+                { id: "ivlyrics-notice-title" },
+                currentNotice.title
+            ),
+            react.createElement(
+                "div",
+                { className: "notice-modal__meta" },
+                react.createElement("time", { dateTime: currentNotice.date }, currentNotice.date),
+                notices.length > 1 &&
+                react.createElement(
+                    "span",
+                    { className: "notice-modal__counter" },
+                    `${currentIndex + 1} / ${notices.length}`
+                )
+            )
+        ),
+        isDismissible &&
+        react.createElement(
+            "button",
+            {
+                type: "button",
+                className: "notice-modal__close",
+                onClick: handleClose,
+                title: closeLabel,
+                "aria-label": closeLabel,
+            },
+            createNoticeIcon("close", 18)
+        )
+    );
+
+    const renderNoticeBody = () => react.createElement(
+        "div",
+        { className: "notice-modal__body" },
+        react.createElement(
+            "div",
+            {
+                id: "ivlyrics-notice-content",
+                className: "notice-modal__content",
+            },
+            currentNotice.content
+        ),
+        safeButtons.length > 0 &&
+        react.createElement(
+            "div",
+            {
+                className: "notice-modal__links",
+                "aria-label": currentNotice.title,
+            },
+            safeButtons.map((button, index) =>
+                react.createElement(
+                    "a",
+                    {
+                        key: `${button.href}-${index}`,
+                        href: button.href,
+                        target: "_blank",
+                        rel: "noopener noreferrer",
+                        className: `notice-modal__link${index === 0 ? " is-primary" : ""}`,
+                    },
+                    react.createElement("span", null, button.label),
+                    createNoticeIcon("external", 15)
+                )
+            )
+        )
+    );
+
+    const renderNoticeFooter = () => react.createElement(
+        "div",
+        { className: "notice-modal__footer" },
+        canDismissAll &&
+        react.createElement(
+            "button",
+            {
+                type: "button",
+                className: "notice-modal__button notice-modal__button--secondary",
+                onClick: handleDismissAll,
+            },
+            createNoticeIcon("dismissAll", 16),
+            react.createElement(
+                "span",
+                null,
+                window.I18n?.t("notice.dismissAll") || "Dismiss All"
+            )
+        ),
+        react.createElement("span", { className: "notice-modal__footer-spacer" }),
+        react.createElement(
+            "button",
+            {
+                type: "button",
+                className: "notice-modal__button notice-modal__button--primary",
+                onClick: handleClose,
+                disabled: !isDismissible,
+                "data-notice-primary": "true",
+            },
+            react.createElement(
+                "span",
+                null,
+                currentIndex < notices.length - 1
+                    ? (window.I18n?.t("notice.next") || "Next")
+                    : (window.I18n?.t("notice.confirm") || "OK")
+            ),
+            createNoticeIcon(
+                !isDismissible
+                    ? "lock"
+                    : currentIndex < notices.length - 1
+                        ? "next"
+                        : "confirm",
+                16
+            )
+        )
+    );
+
     return getNoticeReact().createElement(
         "div",
         {
@@ -463,126 +586,9 @@ const NoticeModal = ({ notices, onClose }) => {
                 "data-priority": priority,
                 tabIndex: -1,
             },
-            react.createElement(
-                "div",
-                { className: "notice-modal__header" },
-                react.createElement(
-                    "div",
-                    { className: "notice-modal__icon" },
-                    createNoticeIcon(currentNotice.icon, 22)
-                ),
-                react.createElement(
-                    "div",
-                    { className: "notice-modal__heading" },
-                    react.createElement(
-                        "h2",
-                        { id: "ivlyrics-notice-title" },
-                        currentNotice.title
-                    ),
-                    react.createElement(
-                        "div",
-                        { className: "notice-modal__meta" },
-                        react.createElement("time", { dateTime: currentNotice.date }, currentNotice.date),
-                        notices.length > 1 &&
-                        react.createElement(
-                            "span",
-                            { className: "notice-modal__counter" },
-                            `${currentIndex + 1} / ${notices.length}`
-                        )
-                    )
-                ),
-                isDismissible &&
-                react.createElement(
-                    "button",
-                    {
-                        type: "button",
-                        className: "notice-modal__close",
-                        onClick: handleClose,
-                        title: closeLabel,
-                        "aria-label": closeLabel,
-                    },
-                    createNoticeIcon("close", 18)
-                )
-            ),
-            react.createElement(
-                "div",
-                { className: "notice-modal__body" },
-                react.createElement(
-                    "div",
-                    {
-                        id: "ivlyrics-notice-content",
-                        className: "notice-modal__content",
-                    },
-                    currentNotice.content
-                ),
-                safeButtons.length > 0 &&
-                react.createElement(
-                    "div",
-                    {
-                        className: "notice-modal__links",
-                        "aria-label": currentNotice.title,
-                    },
-                    safeButtons.map((button, index) =>
-                        react.createElement(
-                            "a",
-                            {
-                                key: `${button.href}-${index}`,
-                                href: button.href,
-                                target: "_blank",
-                                rel: "noopener noreferrer",
-                                className: `notice-modal__link${index === 0 ? " is-primary" : ""}`,
-                            },
-                            react.createElement("span", null, button.label),
-                            createNoticeIcon("external", 15)
-                        )
-                    )
-                )
-            ),
-            react.createElement(
-                "div",
-                { className: "notice-modal__footer" },
-                canDismissAll &&
-                react.createElement(
-                    "button",
-                    {
-                        type: "button",
-                        className: "notice-modal__button notice-modal__button--secondary",
-                        onClick: handleDismissAll,
-                    },
-                    createNoticeIcon("dismissAll", 16),
-                    react.createElement(
-                        "span",
-                        null,
-                        window.I18n?.t("notice.dismissAll") || "Dismiss All"
-                    )
-                ),
-                react.createElement("span", { className: "notice-modal__footer-spacer" }),
-                react.createElement(
-                    "button",
-                    {
-                        type: "button",
-                        className: "notice-modal__button notice-modal__button--primary",
-                        onClick: handleClose,
-                        disabled: !isDismissible,
-                        "data-notice-primary": "true",
-                    },
-                    react.createElement(
-                        "span",
-                        null,
-                        currentIndex < notices.length - 1
-                            ? (window.I18n?.t("notice.next") || "Next")
-                            : (window.I18n?.t("notice.confirm") || "OK")
-                    ),
-                    createNoticeIcon(
-                        !isDismissible
-                            ? "lock"
-                            : currentIndex < notices.length - 1
-                                ? "next"
-                                : "confirm",
-                        16
-                    )
-                )
-            )
+            renderNoticeHeader(),
+            renderNoticeBody(),
+            renderNoticeFooter()
         )
     );
 };

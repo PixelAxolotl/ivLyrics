@@ -1982,12 +1982,7 @@ const AIProvidersTab = () => {
     }));
   };
 
-  // 정렬된 provider 목록
-  const sortedProviders = buildOrderedProviderList(providers, providerOrder);
-
-  return react.createElement("div", { className: "settings-section lyrics-providers-section" },
-    // 통합 컨테이너
-    react.createElement("div", { className: "lyrics-providers-container" },
+  const renderAiTranslationStylePanel = () =>
       react.createElement("section", {
         className: "ai-translation-style-panel",
         "aria-labelledby": "ai-translation-style-title"
@@ -2032,7 +2027,15 @@ const AIProvidersTab = () => {
             );
           })
         )
-      ),
+      );
+
+  // 정렬된 provider 목록
+  const sortedProviders = buildOrderedProviderList(providers, providerOrder);
+
+  return react.createElement("div", { className: "settings-section lyrics-providers-section" },
+    // 통합 컨테이너
+    react.createElement("div", { className: "lyrics-providers-container" },
+      renderAiTranslationStylePanel(),
       react.createElement(OptionList, {
         items: [
           {

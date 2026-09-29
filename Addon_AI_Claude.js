@@ -441,6 +441,7 @@
                         await throwClaudeApiResponseError(response);
                     }
 
+                    const consumeClaudeStream = async () => {
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let sseBuffer = '';
@@ -563,6 +564,9 @@
                     }
 
                     return transformed;
+                    };
+
+                    return await consumeClaudeStream();
 
                 } catch (e) {
                     lastError = e;

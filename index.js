@@ -8340,6 +8340,19 @@ class LyricsContainer extends react.Component {
       }
       return converted;
     };
+    // zh-hans and zh-hant also share the convertChinese mapping call; only the
+    // from/target map differs, so pass it in.
+    const convertLyricsChinese = async (map) =>
+      await Promise.all(
+        lyrics.map(
+          async (lyric) =>
+            await this.translator.convertChinese(
+              lyric?.text || "",
+              map[targetConvert].from,
+              map[targetConvert].target
+            )
+        )
+      );
     try {
       if (language === "ja") {
         // Japanese
@@ -8391,16 +8404,7 @@ class LyricsContainer extends react.Component {
             return lyrics;
           }
 
-          result = await Promise.all(
-            lyrics.map(
-              async (lyric) =>
-                await this.translator.convertChinese(
-                  lyric?.text || "",
-                  map[targetConvert].from,
-                  map[targetConvert].target
-                )
-            )
-          );
+          result = await convertLyricsChinese(map);
         }
       } else if (language === "zh-hant") {
         // Chinese (Traditional)
@@ -8416,16 +8420,7 @@ class LyricsContainer extends react.Component {
           if (!map[targetConvert]) return lyrics;
 
           // Allow conversion from Traditional Chinese to different variants/simplified
-          result = await Promise.all(
-            lyrics.map(
-              async (lyric) =>
-                await this.translator.convertChinese(
-                  lyric?.text || "",
-                  map[targetConvert].from,
-                  map[targetConvert].target
-                )
-            )
-          );
+          result = await convertLyricsChinese(map);
         }
       }
 

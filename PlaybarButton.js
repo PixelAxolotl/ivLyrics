@@ -115,13 +115,17 @@
 		}
 	}
 
-	function removePlaybarButton() {
-		style.remove();
-		if (button) {
+	function deregisterPlaybarWidget(styleEl, widget) {
+		styleEl.remove();
+		if (widget) {
 			try {
-				button.deregister();
+				widget.deregister();
 			} catch (e) { /* ignore */ }
 		}
+	}
+
+	function removePlaybarButton() {
+		deregisterPlaybarWidget(style, button);
 	}
 
 	// ===== 전체화면 버튼 교체 (새 기능) =====
@@ -229,11 +233,6 @@
 	}
 
 	function removeFullscreenButton() {
-		fullscreenStyle.remove();
-		if (fullscreenButton) {
-			try {
-				fullscreenButton.deregister();
-			} catch (e) { /* ignore */ }
-		}
+		deregisterPlaybarWidget(fullscreenStyle, fullscreenButton);
 	}
 })();

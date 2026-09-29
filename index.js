@@ -6524,17 +6524,19 @@ class LyricsContainer extends react.Component {
       const currentMode = this.getCurrentMode();
 
       // 원본 가사를 가져오기 위해 synced, karaoke, unsynced 중 현재 모드에 해당하는 것 사용
-      let originalLyrics = [];
-      if (isKaraokeRenderMode(currentMode) && this.state.karaoke) {
-        originalLyrics = this.state.karaoke;
-      } else if (currentMode === SYNCED && this.state.synced) {
-        originalLyrics = this.state.synced;
-      } else if (currentMode === UNSYNCED && this.state.unsynced) {
-        originalLyrics = this.state.unsynced;
-      } else {
-        // fallback: currentLyrics에서 originalText 사용
-        originalLyrics = this.state.currentLyrics || [];
-      }
+      const selectOriginalLyrics = () => {
+        if (isKaraokeRenderMode(currentMode) && this.state.karaoke) {
+          return this.state.karaoke;
+        } else if (currentMode === SYNCED && this.state.synced) {
+          return this.state.synced;
+        } else if (currentMode === UNSYNCED && this.state.unsynced) {
+          return this.state.unsynced;
+        } else {
+          // fallback: currentLyrics에서 originalText 사용
+          return this.state.currentLyrics || [];
+        }
+      };
+      const originalLyrics = selectOriginalLyrics();
 
       // Section line 제거하고 원문 텍스트만 추출 (getGeminiTranslation과 동일)
       const text = getNonSectionLyricsText(originalLyrics);

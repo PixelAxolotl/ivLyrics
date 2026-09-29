@@ -188,6 +188,17 @@
         return { systemPrompt: '', userPrompt: String(prompt ?? '') };
     }
 
+    function resolveClaudeRequestPreamble(prompt) {
+        const apiKeys = getApiKeys();
+        if (apiKeys.length === 0) {
+            throw new Error('[Claude] API key is required. Please configure your API key in settings.');
+        }
+
+        const model = getSelectedModel();
+        const { systemPrompt, userPrompt } = normalizePromptRequest(prompt);
+        return { apiKeys, model, systemPrompt, userPrompt };
+    }
+
     function getClaudeWebSearchTool(model) {
         const normalizedModel = String(model || '').toLowerCase();
         const supportsLatestSearch = /(?:claude-)?(?:opus-(?:4[-.]?[678]|5)|sonnet-(?:4[-.]?6|5)|fable-5|mythos(?:-preview|-5))/.test(normalizedModel);
@@ -266,13 +277,7 @@
     }
 
     async function callClaudeAPIRaw(prompt, maxRetries = window.AIAddonManager?.getProviderRequestAttempts?.() ?? 3, transformResult = null) {
-        const apiKeys = getApiKeys();
-        if (apiKeys.length === 0) {
-            throw new Error('[Claude] API key is required. Please configure your API key in settings.');
-        }
-
-        const model = getSelectedModel();
-        const { systemPrompt, userPrompt } = normalizePromptRequest(prompt);
+        const { apiKeys, model, systemPrompt, userPrompt } = resolveClaudeRequestPreamble(prompt);
         let lastError = null;
 
         for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
@@ -376,13 +381,7 @@
         onRawChunk = null,
         requestOverrides = {}
     ) {
-        const apiKeys = getApiKeys();
-        if (apiKeys.length === 0) {
-            throw new Error('[Claude] API key is required. Please configure your API key in settings.');
-        }
-
-        const model = getSelectedModel();
-        const { systemPrompt, userPrompt } = normalizePromptRequest(prompt);
+        const { apiKeys, model, systemPrompt, userPrompt } = resolveClaudeRequestPreamble(prompt);
         let lastError = null;
 
         for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {

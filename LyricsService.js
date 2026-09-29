@@ -7149,10 +7149,17 @@
             return merged.filter((unit) => unit.length > 0);
         }
 
-        function buildPseudoKaraokeLine(line, analysis) {
+        function normalizePseudoKaraokeLineBounds(line) {
             const text = line?.text || '';
             const startTime = Number.isFinite(line?.startTime) ? line.startTime : 0;
-            const endTime = Number.isFinite(line?.endTime) && line.endTime > startTime ? line.endTime : startTime + 2500;
+            const endTime = Number.isFinite(line?.endTime) && line.endTime > startTime
+                ? line.endTime
+                : startTime + 2500;
+            return { text, startTime, endTime };
+        }
+
+        function buildPseudoKaraokeLine(line, analysis) {
+            const { text, startTime, endTime } = normalizePseudoKaraokeLineBounds(line);
 
             if (!text.trim()) {
                 return { startTime, endTime, text, syllables: [] };
@@ -7242,11 +7249,7 @@
         }
 
         function buildLineTimingPseudoKaraokeLine(line) {
-            const text = line?.text || '';
-            const startTime = Number.isFinite(line?.startTime) ? line.startTime : 0;
-            const endTime = Number.isFinite(line?.endTime) && line.endTime > startTime
-                ? line.endTime
-                : startTime + 2500;
+            const { text, startTime, endTime } = normalizePseudoKaraokeLineBounds(line);
 
             if (!text.trim()) {
                 return { startTime, endTime, text, syllables: [] };

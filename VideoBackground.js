@@ -93,6 +93,25 @@ const wrapVideoSyncTime = (targetVideoTime, duration) => {
     return safeTarget;
 };
 
+// 두 동기화 effect(HTML5 helper 모드, YouTube 모드)에서 동일하게 반복되던
+// "현재 Spotify 위치 + 오프셋 → resolveVideoSyncState" 계산을 모은다.
+// videoDuration은 재생 소스마다 다르게 얻으므로(video.duration vs player.getDuration())
+// 호출부에서 wrapVideoSyncTime과 함께 별도로 처리한다.
+const computeVideoSyncState = ({ firstLyricTime, videoInfo, trackOffsetMs }) => {
+    const spotifyTime = Spicetify.Player.getProgress() / 1000;
+    const lyricsStartTime = getLyricsStartTimeSeconds(firstLyricTime);
+    const globalDelayMs = typeof CONFIG !== "undefined" && CONFIG.visual ? Number(CONFIG.visual.delay || 0) : 0;
+    const globalSyncOffsetMs = Number(window.Utils?.getGlobalSyncOffset?.() ?? CONFIG?.visual?.["global-sync-offset"] ?? 0) || 0;
+    const additionalDelaySeconds = (trackOffsetMs + globalDelayMs + globalSyncOffsetMs) / 1000;
+    return resolveVideoSyncState({
+        spotifyTime,
+        lyricsStartTime,
+        videoInfo,
+        additionalDelaySeconds,
+        mapVideoTime: Utils.mapVideoTimeWithSkipSegments.bind(Utils),
+    });
+};
+
 const syncYouTubePlayerTimeline = ({
     player,
     targetVideoTime,
@@ -1219,18 +1238,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
         const video = videoRef.current;
 
         const syncVideo = () => {
-            const spotifyTime = Spicetify.Player.getProgress() / 1000;
-            const lyricsStartTime = getLyricsStartTimeSeconds(firstLyricTime);
-            const globalDelayMs = typeof CONFIG !== "undefined" && CONFIG.visual ? Number(CONFIG.visual.delay || 0) : 0;
-            const globalSyncOffsetMs = Number(window.Utils?.getGlobalSyncOffset?.() ?? CONFIG?.visual?.["global-sync-offset"] ?? 0) || 0;
-            const additionalDelaySeconds = (trackOffsetMs + globalDelayMs + globalSyncOffsetMs) / 1000;
-            const syncState = resolveVideoSyncState({
-                spotifyTime,
-                lyricsStartTime,
-                videoInfo,
-                additionalDelaySeconds,
-                mapVideoTime: Utils.mapVideoTimeWithSkipSegments.bind(Utils),
-            });
+            const syncState = computeVideoSyncState({ firstLyricTime, videoInfo, trackOffsetMs });
             const targetVideoTime = wrapVideoSyncTime(syncState.targetVideoTime, video.duration);
             const currentVideoTime = video.currentTime;
 
@@ -1458,18 +1466,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                 }
             } catch (e) {}
 
-            const spotifyTime = Spicetify.Player.getProgress() / 1000;
-            const lyricsStartTime = getLyricsStartTimeSeconds(firstLyricTime);
-            const globalDelayMs = typeof CONFIG !== "undefined" && CONFIG.visual ? Number(CONFIG.visual.delay || 0) : 0;
-            const globalSyncOffsetMs = Number(window.Utils?.getGlobalSyncOffset?.() ?? CONFIG?.visual?.["global-sync-offset"] ?? 0) || 0;
-            const additionalDelaySeconds = (trackOffsetMs + globalDelayMs + globalSyncOffsetMs) / 1000;
-            const syncState = resolveVideoSyncState({
-                spotifyTime,
-                lyricsStartTime,
-                videoInfo,
-                additionalDelaySeconds,
-                mapVideoTime: Utils.mapVideoTimeWithSkipSegments.bind(Utils),
-            });
+            const syncState = computeVideoSyncState({ firstLyricTime, videoInfo, trackOffsetMs });
             const videoDuration = typeof player.getDuration === 'function'
                 ? player.getDuration()
                 : 0;

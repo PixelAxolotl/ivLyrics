@@ -7518,6 +7518,28 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		setGlobalOffset(prev => prev + deltaMs);
 	}, [claimSessionForLocalEditing]);
 
+	// Suspend autosave and reset every session/draft tracking ref and status
+	// state slot for the active draft. All referenced refs and state setters have
+	// stable identities, so this closes over nothing that changes between renders.
+	const resetSyncCreatorSessionTracking = () => {
+		sessionAutosaveSuppressedRef.current = true;
+		if (sessionAutosaveTimerRef.current) {
+			clearTimeout(sessionAutosaveTimerRef.current);
+			sessionAutosaveTimerRef.current = null;
+		}
+		sessionRecoveryRequestRef.current += 1;
+		sessionCheckpointRestoreRequestRef.current += 1;
+		sessionWriteGenerationRef.current += 1;
+		latestSessionRecordRef.current = null;
+		sessionAppliedDraftKeyRef.current = '';
+		sessionBaselineDraftRef.current = null;
+		setIsRestoringCheckpoint(false);
+		setSessionReadyDraftKey('');
+		setSessionHistory([]);
+		setSessionHistoryCursorId('');
+		setSessionSaveState(sessionAutosaveEnabledRef.current ? 'idle' : 'disabled');
+	};
+
 	const adjustCurrentLineOffset = useCallback((deltaMs) => {
 		claimSessionForLocalEditing();
 		const requestedDeltaSec = deltaMs / 1000;
@@ -7588,22 +7610,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		setGlobalOffset(0);
 		setMode('idle');
 		const draftKey = activeSessionDraftKeyRef.current;
-		sessionAutosaveSuppressedRef.current = true;
-		if (sessionAutosaveTimerRef.current) {
-			clearTimeout(sessionAutosaveTimerRef.current);
-			sessionAutosaveTimerRef.current = null;
-		}
-		sessionRecoveryRequestRef.current += 1;
-		sessionCheckpointRestoreRequestRef.current += 1;
-		sessionWriteGenerationRef.current += 1;
-		latestSessionRecordRef.current = null;
-		sessionAppliedDraftKeyRef.current = '';
-		sessionBaselineDraftRef.current = null;
-		setIsRestoringCheckpoint(false);
-		setSessionReadyDraftKey('');
-		setSessionHistory([]);
-		setSessionHistoryCursorId('');
-		setSessionSaveState(sessionAutosaveEnabledRef.current ? 'idle' : 'disabled');
+		resetSyncCreatorSessionTracking();
 		if (syncCreatorDraftStore && draftKey) {
 			try {
 				await syncCreatorDraftStore.flush();
@@ -8598,22 +8605,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 	const deleteActiveSyncCreatorDraft = useCallback(async ({ resumeAutosave = false } = {}) => {
 		const draftKey = activeSessionDraftKeyRef.current;
-		sessionAutosaveSuppressedRef.current = true;
-		if (sessionAutosaveTimerRef.current) {
-			clearTimeout(sessionAutosaveTimerRef.current);
-			sessionAutosaveTimerRef.current = null;
-		}
-		sessionRecoveryRequestRef.current += 1;
-		sessionCheckpointRestoreRequestRef.current += 1;
-		sessionWriteGenerationRef.current += 1;
-		latestSessionRecordRef.current = null;
-		sessionAppliedDraftKeyRef.current = '';
-		sessionBaselineDraftRef.current = null;
-		setIsRestoringCheckpoint(false);
-		setSessionReadyDraftKey('');
-		setSessionHistory([]);
-		setSessionHistoryCursorId('');
-		setSessionSaveState(sessionAutosaveEnabledRef.current ? 'idle' : 'disabled');
+		resetSyncCreatorSessionTracking();
 		if (!syncCreatorDraftStore || !draftKey) return;
 		try {
 			await syncCreatorDraftStore.flush();

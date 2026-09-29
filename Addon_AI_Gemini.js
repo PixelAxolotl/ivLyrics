@@ -772,12 +772,6 @@
                     }
                 }, []);
 
-
-
-                // ... (existing code for models)
-
-                // ... (existing code for test)
-
                 const hasApiKey = getApiKeys().length > 0;
 
                 return React.createElement('div', { className: 'ai-addon-settings gemini-settings' },

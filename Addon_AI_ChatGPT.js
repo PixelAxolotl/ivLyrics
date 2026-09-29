@@ -1178,12 +1178,6 @@
                     }
                 }, []);
 
-
-
-                // ... (existing code for models)
-
-                // ... (existing code for test)
-
                 const isModelInList = availableModels.find(m => m.id === model);
                 const hasApiKey = getApiKeys().length > 0;
 

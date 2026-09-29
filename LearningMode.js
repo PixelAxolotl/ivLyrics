@@ -2735,6 +2735,103 @@
                 )
         );
 
+        const renderWordsTab = () => react.createElement("div", { className: "ivlyrics-study-section ivlyrics-study-wordbook" },
+                react.createElement("section", { className: "ivlyrics-study-wordbook-hero" },
+                    react.createElement("div", null,
+                        react.createElement("span", null, t("tabWords", "단어장")),
+                        react.createElement("h3", null, t("wordbookTitle", "저장한 표현"))
+                    ),
+                    react.createElement("strong", null,
+                        t("wordCount", "{count}개").replace("{count}", wordbook.length)
+                    )
+                ),
+                react.createElement("div", { className: "ivlyrics-study-word-tools" },
+                    react.createElement("label", { className: "ivlyrics-study-word-search" },
+                        react.createElement("span", null, "⌕"),
+                        react.createElement("input", {
+                            type: "search",
+                            value: wordQuery,
+                            placeholder: t("wordSearch", "표현, 뜻, 가사 검색"),
+                            onChange: (event) => setWordQuery(event.target.value)
+                        })
+                    ),
+                    react.createElement("div", { className: "ivlyrics-study-word-stat-row" },
+                        react.createElement("span", null, t("wordStatAll", "전체 {count}").replace("{count}", wordbookStats.total)),
+                        react.createElement("span", null, t("wordStatCurrent", "현재 곡 {count}").replace("{count}", wordbookStats.current)),
+                        react.createElement("span", null, t("wordStatReading", "읽기 {count}").replace("{count}", wordbookStats.withReading)),
+                        react.createElement("span", null, t("wordStatSource", "가사 {count}").replace("{count}", wordbookStats.withSource)),
+                        react.createElement("span", null, t("wordStatSynced", "싱크 {count}").replace("{count}", wordbookStats.withSync))
+                    ),
+                    react.createElement("div", { className: "ivlyrics-study-word-scope", role: "tablist" },
+                        [
+                            { id: "all", label: t("wordScopeAll", "전체") },
+                            { id: "current", label: t("wordScopeCurrent", "현재 곡") },
+                            { id: "synced", label: t("wordScopeSynced", "싱크 있음") }
+                        ].map((item) => react.createElement("button", {
+                            key: item.id,
+                            type: "button",
+                            className: wordScope === item.id ? "active" : "",
+                            onClick: () => setWordScope(item.id),
+                            role: "tab",
+                            "aria-selected": wordScope === item.id
+                        }, item.label))
+                    )
+                ),
+                wordbook.length === 0 && react.createElement(EmptyState, null, t("noWords", "저장된 단어가 없습니다.")),
+                wordbook.length > 0 && filteredWordbook.length === 0 && react.createElement(EmptyState, null, t("noWordResults", "검색 결과가 없습니다.")),
+                filteredWordbook.length > 0 && react.createElement("div", { className: "ivlyrics-study-word-grid" },
+                    filteredWordbook.map((word) => react.createElement("article", {
+                        key: word.id,
+                        className: "ivlyrics-study-word-card"
+                    },
+                        react.createElement("div", { className: "ivlyrics-study-word-head" },
+                            react.createElement("div", null,
+                                react.createElement("strong", null, word.expression),
+                                word.meaning && react.createElement("span", null, word.meaning),
+                                (word.title || word.artist) && react.createElement("em", null,
+                                    [word.title, word.artist].filter(Boolean).join(" - ")
+                                )
+                            ),
+                            react.createElement("button", {
+                                type: "button",
+                                className: "ivlyrics-study-word-remove",
+                                onClick: () => removeWord(word.id),
+                                "aria-label": t("removeWord", "삭제")
+                            }, "×")
+                        ),
+                        react.createElement("div", { className: "ivlyrics-study-word-actions" },
+                            react.createElement("button", {
+                                type: "button",
+                                className: "ivlyrics-study-lyric-play ivlyrics-study-speech-play",
+                                onClick: () => speakText(word.expression, word.sourceLang || detectSpeechLang([
+                                    word.expression,
+                                    word.reading,
+                                    word.sourceText
+                                ].filter(Boolean).join(" "), word.targetLang || targetLang))
+                            },
+                                react.createElement("span", { "aria-hidden": "true" }, "▶"),
+                                react.createElement("span", null, t("speak", "발음 듣기"))
+                            ),
+                            word.trackUri && Number.isFinite(Number(word.startTime)) && react.createElement(LyricPlayButton, {
+                                onClick: () => playLyricAt(word)
+                            })
+                        ),
+                        react.createElement(ReadingHints, {
+                            reading: word.reading,
+                            pronunciation: word.pronunciation
+                        }),
+                        word.grammar?.length > 0 && react.createElement("div", { className: "ivlyrics-study-word-grammar" },
+                            word.grammar.map((item, index) => react.createElement(GrammarNote, {
+                                key: index,
+                                item
+                            }))
+                        ),
+                        word.sourceText && react.createElement("p", { className: "ivlyrics-study-word-source" }, word.sourceText),
+                        word.note && react.createElement("p", { className: "ivlyrics-study-word-note" }, word.note)
+                    ))
+                )
+        );
+
         return react.createElement("aside", {
             className: `ivlyrics-study-panel theme-${studyTheme}`,
             role: "dialog",
@@ -2856,102 +2953,7 @@
                     activeTab === "history" && renderHistoryTab(),
                     pack && activeTab === "explain" && renderExplainTab(),
                     pack && activeTab === "quiz" && renderQuizTab(),
-                    pack && activeTab === "words" && react.createElement("div", { className: "ivlyrics-study-section ivlyrics-study-wordbook" },
-                        react.createElement("section", { className: "ivlyrics-study-wordbook-hero" },
-                            react.createElement("div", null,
-                                react.createElement("span", null, t("tabWords", "단어장")),
-                                react.createElement("h3", null, t("wordbookTitle", "저장한 표현"))
-                            ),
-                            react.createElement("strong", null,
-                                t("wordCount", "{count}개").replace("{count}", wordbook.length)
-                            )
-                        ),
-                        react.createElement("div", { className: "ivlyrics-study-word-tools" },
-                            react.createElement("label", { className: "ivlyrics-study-word-search" },
-                                react.createElement("span", null, "⌕"),
-                                react.createElement("input", {
-                                    type: "search",
-                                    value: wordQuery,
-                                    placeholder: t("wordSearch", "표현, 뜻, 가사 검색"),
-                                    onChange: (event) => setWordQuery(event.target.value)
-                                })
-                            ),
-                            react.createElement("div", { className: "ivlyrics-study-word-stat-row" },
-                                react.createElement("span", null, t("wordStatAll", "전체 {count}").replace("{count}", wordbookStats.total)),
-                                react.createElement("span", null, t("wordStatCurrent", "현재 곡 {count}").replace("{count}", wordbookStats.current)),
-                                react.createElement("span", null, t("wordStatReading", "읽기 {count}").replace("{count}", wordbookStats.withReading)),
-                                react.createElement("span", null, t("wordStatSource", "가사 {count}").replace("{count}", wordbookStats.withSource)),
-                                react.createElement("span", null, t("wordStatSynced", "싱크 {count}").replace("{count}", wordbookStats.withSync))
-                            ),
-                            react.createElement("div", { className: "ivlyrics-study-word-scope", role: "tablist" },
-                                [
-                                    { id: "all", label: t("wordScopeAll", "전체") },
-                                    { id: "current", label: t("wordScopeCurrent", "현재 곡") },
-                                    { id: "synced", label: t("wordScopeSynced", "싱크 있음") }
-                                ].map((item) => react.createElement("button", {
-                                    key: item.id,
-                                    type: "button",
-                                    className: wordScope === item.id ? "active" : "",
-                                    onClick: () => setWordScope(item.id),
-                                    role: "tab",
-                                    "aria-selected": wordScope === item.id
-                                }, item.label))
-                            )
-                        ),
-                        wordbook.length === 0 && react.createElement(EmptyState, null, t("noWords", "저장된 단어가 없습니다.")),
-                        wordbook.length > 0 && filteredWordbook.length === 0 && react.createElement(EmptyState, null, t("noWordResults", "검색 결과가 없습니다.")),
-                        filteredWordbook.length > 0 && react.createElement("div", { className: "ivlyrics-study-word-grid" },
-                            filteredWordbook.map((word) => react.createElement("article", {
-                                key: word.id,
-                                className: "ivlyrics-study-word-card"
-                            },
-                                react.createElement("div", { className: "ivlyrics-study-word-head" },
-                                    react.createElement("div", null,
-                                        react.createElement("strong", null, word.expression),
-                                        word.meaning && react.createElement("span", null, word.meaning),
-                                        (word.title || word.artist) && react.createElement("em", null,
-                                            [word.title, word.artist].filter(Boolean).join(" - ")
-                                        )
-                                    ),
-                                    react.createElement("button", {
-                                        type: "button",
-                                        className: "ivlyrics-study-word-remove",
-                                        onClick: () => removeWord(word.id),
-                                        "aria-label": t("removeWord", "삭제")
-                                    }, "×")
-                                ),
-                                react.createElement("div", { className: "ivlyrics-study-word-actions" },
-                                    react.createElement("button", {
-                                        type: "button",
-                                        className: "ivlyrics-study-lyric-play ivlyrics-study-speech-play",
-                                        onClick: () => speakText(word.expression, word.sourceLang || detectSpeechLang([
-                                            word.expression,
-                                            word.reading,
-                                            word.sourceText
-                                        ].filter(Boolean).join(" "), word.targetLang || targetLang))
-                                    },
-                                        react.createElement("span", { "aria-hidden": "true" }, "▶"),
-                                        react.createElement("span", null, t("speak", "발음 듣기"))
-                                    ),
-                                    word.trackUri && Number.isFinite(Number(word.startTime)) && react.createElement(LyricPlayButton, {
-                                        onClick: () => playLyricAt(word)
-                                    })
-                                ),
-                                react.createElement(ReadingHints, {
-                                    reading: word.reading,
-                                    pronunciation: word.pronunciation
-                                }),
-                                word.grammar?.length > 0 && react.createElement("div", { className: "ivlyrics-study-word-grammar" },
-                                    word.grammar.map((item, index) => react.createElement(GrammarNote, {
-                                        key: index,
-                                        item
-                                    }))
-                                ),
-                                word.sourceText && react.createElement("p", { className: "ivlyrics-study-word-source" }, word.sourceText),
-                                word.note && react.createElement("p", { className: "ivlyrics-study-word-note" }, word.note)
-                            ))
-                        )
-                    )
+                    pack && activeTab === "words" && renderWordsTab()
                 )
             )
         );

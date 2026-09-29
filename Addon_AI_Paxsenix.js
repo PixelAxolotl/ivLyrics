@@ -457,6 +457,7 @@
                     if (!response.ok) {
                         throw await createPaxsenixAPIError(response);
                     }
+                    const consumePaxsenixStream = async () => {
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let sseBuffer = '', accumulated = '';
@@ -530,6 +531,9 @@
                     }
 
                     return transformed;
+                    };
+
+                    return await consumePaxsenixStream();
                 } catch (e) {
                     lastError = e;
                     const isPermanentError = (e.status >= 400 && e.status < 500 && e.status !== 429)

@@ -4771,54 +4771,6 @@ const ConfigSelection = ({
   );
 };
 
-const createInstrumentalBreakPreviewChildren = (icon) => {
-  const span = (key, props = {}) => react.createElement("span", { key, ...props });
-
-  switch (icon) {
-    case "dotWave":
-      return [0, 1, 2, 3, 4].map((index) => span(index));
-    case "ripples":
-    case "orbit":
-    case "vinyl":
-      return span("main");
-    case "diamonds":
-    case "stack":
-      return [0, 1, 2].map((index) => span(index));
-    case "signal":
-      return react.createElement(
-        "svg",
-        { viewBox: "0 0 112 32", "aria-hidden": "true" },
-        react.createElement("path", {
-          d: "M2 18 H20 L26 9 L34 25 L43 14 L50 18 H68 L74 9 L82 25 L91 14 L98 18 H110",
-        })
-      );
-    case "spark":
-      return [0, 1, 2, 3, 4, 5, 6, 7].map((index) => span(index, { style: { "--i": index } }));
-    case "splitBars":
-    case "strings":
-      return [0, 1, 2, 3].map((index) => span(index));
-    case "reels":
-      return [0, 1].map((index) => span(index));
-    case "piano":
-      return [0, 1, 2, 3, 4].map((index) => span(index));
-    case "bloom":
-      return [0, 1, 2, 3].map((index) => span(index));
-    case "scan":
-    case "arcs":
-    case "pulseDot":
-    case "metronome":
-    case "beat":
-    case "triangle":
-    case "morph":
-    case "speaker":
-    case "crossfade":
-      return null;
-    case "equalizer":
-    default:
-      return [0, 1, 2, 3].map((index) => span(index));
-  }
-};
-
 const getInstrumentalBreakPreviewStyle = () => {
   const speed = Number(CONFIG?.visual?.["instrumental-break-animation-speed"] ?? 100);
   const safeSpeed = Number.isFinite(speed) ? Math.max(50, Math.min(200, speed)) : 100;
@@ -4852,7 +4804,8 @@ const InstrumentalBreakIconPreview = ({ icon }) => {
       style: getInstrumentalBreakPreviewStyle(),
       "aria-hidden": "true",
     },
-    createInstrumentalBreakPreviewChildren(icon)
+    // Same markup as the in-lyrics break indicator (Pages.js, shared bundle scope).
+    createBreakIconChildren(icon)
   );
 };
 

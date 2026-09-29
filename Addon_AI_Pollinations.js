@@ -916,8 +916,7 @@
                     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)'
                 };
 
-                return React.createElement('div', { className: 'ai-addon-settings pollinations-settings' },
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                const renderAccountRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, aiText('pollinationsAccount', 'Pollinations Account')),
                         React.createElement('div', { className: 'ai-addon-input-group', style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '8px' } },
                             React.createElement('button', {
@@ -943,8 +942,8 @@
                             }, aiText('pollinationsOpenLogin', 'Open Login Page'))
                         ),
                         keyInfoText && React.createElement('small', { style: { display: 'block', opacity: 0.65 } }, keyInfoText)
-                    ),
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderManualKeyRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('div', {
                             style: { cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', userSelect: 'none' },
                             onClick: () => setManualExpanded(!manualExpanded)
@@ -962,8 +961,8 @@
                             }),
                             React.createElement('small', null, aiText('apiKeyDesc', 'Enter your API key.'))
                         )
-                    ),
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderModelRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, aiText('model', 'Model')),
                         React.createElement('div', { className: 'ai-addon-input-group' },
                             React.createElement('select', {
@@ -990,14 +989,20 @@
                             placeholder: aiText('modelId', 'Model ID'),
                             'aria-label': aiText('modelId', 'Model ID')
                         })
-                    ),
-                    React.createElement(AdvancedParamsSection),
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderTestRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('button', { onClick: handleTest, className: 'ai-addon-btn-primary', style: primaryButtonStyle }, aiText('testConnection', 'Test Connection')),
                         testStatus && React.createElement('span', {
                             className: `ai-addon-test-status ${testStatus.startsWith('✓') ? 'success' : testStatus.startsWith('✗') ? 'error' : ''}`
                         }, testStatus)
-                    )
+                    );
+
+                return React.createElement('div', { className: 'ai-addon-settings pollinations-settings' },
+                    renderAccountRow(),
+                    renderManualKeyRow(),
+                    renderModelRow(),
+                    React.createElement(AdvancedParamsSection),
+                    renderTestRow()
                 );
             };
 

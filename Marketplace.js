@@ -835,8 +835,7 @@ const MarketplacePage = (() => {
                 )
         );
 
-        return react.createElement('div', { className: 'ivlyrics-marketplace-detail' },
-            // Header with back button + action buttons
+        const renderDetailHeader = () => (
             react.createElement('div', { className: 'ivlyrics-marketplace-detail-header' },
                 createMarketplaceBackButton(onBack),
                 // Action Buttons in header
@@ -859,7 +858,12 @@ const MarketplacePage = (() => {
                             disabled: actionLoading
                         }, actionLoading ? I18n.t('marketplace.installing') : I18n.t('marketplace.install'))
                 )
-            ),
+            )
+        );
+
+        return react.createElement('div', { className: 'ivlyrics-marketplace-detail' },
+            // Header with back button + action buttons
+            renderDetailHeader(),
             // Two-column layout: main content + sidebar
             react.createElement('div', { className: 'ivlyrics-marketplace-detail-layout' },
                 // Left: main content (scrollable)

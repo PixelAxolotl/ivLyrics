@@ -4703,7 +4703,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const observer = new IntersectionObserver(([entry]) => {
 			isVisibleRef.current = entry.isIntersecting;
 			preventNextTrackRef.current = entry.isIntersecting;
-			// console.log("[SyncDataCreator] Visibility changed:", entry.isIntersecting);
 		}, { threshold: 0 });
 
 		observer.observe(containerRef.current);

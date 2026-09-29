@@ -382,6 +382,7 @@
                         try { const d = await response.json(); if (d.error?.message) msg = d.error.message; } catch (e) { }
                         throw new Error(`[Perplexity] ${msg}`);
                     }
+                    const consumePerplexityStream = async () => {
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let sseBuffer = '', accumulated = '';
@@ -450,6 +451,9 @@
                     }
 
                     return transformed;
+                    };
+
+                    return await consumePerplexityStream();
                 } catch (e) {
                     lastError = e;
                     const isPermanentError = /invalid api key|permission denied/i.test(e.message);

@@ -1280,14 +1280,7 @@ const SongResearch = (() => {
             );
         }
 
-        return react.createElement("div", {
-            className: "research-view",
-            style: { "--research-scale": researchScale },
-            lang: normalized.language || undefined,
-            role: "document",
-            "aria-labelledby": "research-document-title",
-            "aria-busy": isGenerating
-        },
+        const renderResearchHero = () =>
             react.createElement("header", { className: "research-hero" },
                 coverUrl && react.createElement("img", { src: coverUrl, className: "research-hero-cover", alt: "" }),
                 react.createElement("div", { className: "research-hero-scrim", "aria-hidden": "true" }),
@@ -1328,8 +1321,11 @@ const SongResearch = (() => {
                         )
                     )
                 )
-            ),
-            sectionDefinitions.length > 0 && react.createElement("nav", {
+            )
+        ;
+
+        const renderResearchNav = () =>
+            react.createElement("nav", {
                 className: "research-nav",
                 ref: navRef,
                 "aria-label": t("research.contents", "Contents"),
@@ -1352,7 +1348,10 @@ const SongResearch = (() => {
                         scrollTo(id);
                     }
                 }, react.createElement(Icon, { name: icon, size: 14 }), react.createElement("span", null, label)))
-            ),
+            )
+        ;
+
+        const renderResearchContent = () =>
             react.createElement("main", { className: "research-content", ref: contentRef },
                 isGenerating && webSearchFallback && react.createElement(ResearchWebSearchFallbackNotice),
                 // Language changes must refresh labels even when article data is unchanged.
@@ -1374,6 +1373,19 @@ const SongResearch = (() => {
                     react.createElement("span", null, t("research.disclaimer", "AI-generated research may contain inaccuracies. Check the linked sources before relying on factual claims"))
                 )
             )
+        ;
+
+        return react.createElement("div", {
+            className: "research-view",
+            style: { "--research-scale": researchScale },
+            lang: normalized.language || undefined,
+            role: "document",
+            "aria-labelledby": "research-document-title",
+            "aria-busy": isGenerating
+        },
+            renderResearchHero(),
+            sectionDefinitions.length > 0 && renderResearchNav(),
+            renderResearchContent()
         );
     });
 

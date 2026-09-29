@@ -194,6 +194,44 @@ const WizardToggleVisual = ({ enabled, accentColor = WIZARD_COLORS.accent }) =>
     })
   );
 
+// Interactive enable/disable toggle button shared by the overlay/now-playing/pseudo-karaoke tip steps
+const renderWizardInteractiveToggle = (enabled, onToggle, labelKey) =>
+  react.createElement(
+    "button",
+    {
+      onClick: onToggle,
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+        padding: "14px 24px",
+        background: enabled
+          ? WIZARD_COLORS.surfaceSelected
+          : WIZARD_COLORS.surfaceRaised,
+        borderRadius: 0,
+        border: enabled
+          ? `1px solid ${WIZARD_COLORS.borderStrong}`
+          : `1px solid ${WIZARD_COLORS.border}`,
+        cursor: "pointer",
+        transition: "all 0.2s ease",
+      },
+    },
+    react.createElement(
+      "span",
+      {
+        style: {
+          fontSize: "14px",
+          fontWeight: "500",
+          color: enabled ? WIZARD_COLORS.accent : WIZARD_COLORS.muted,
+        },
+      },
+      I18n.t(labelKey)
+    ),
+    react.createElement(WizardToggleVisual, {
+      enabled: enabled,
+    })
+  );
+
 const WizardNavigation = ({ onBack, onNext, nextLabel, extraActions, hideBack = false, nextDisabled = false }) =>
   react.createElement(
     "div",
@@ -973,40 +1011,10 @@ const OverlayTipStep = ({ overlayEnabled, onOverlayChange, onNext, onBack }) => 
         })
       ),
       // Interactive Toggle
-      react.createElement(
-        "button",
-        {
-          onClick: () => onOverlayChange(!overlayEnabled),
-          style: {
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            padding: "14px 24px",
-            background: overlayEnabled
-              ? WIZARD_COLORS.surfaceSelected
-              : WIZARD_COLORS.surfaceRaised,
-            borderRadius: 0,
-            border: overlayEnabled
-              ? `1px solid ${WIZARD_COLORS.borderStrong}`
-              : `1px solid ${WIZARD_COLORS.border}`,
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-          },
-        },
-        react.createElement(
-          "span",
-          {
-            style: {
-              fontSize: "14px",
-              fontWeight: "500",
-              color: overlayEnabled ? WIZARD_COLORS.accent : WIZARD_COLORS.muted,
-            },
-          },
-          I18n.t("setupWizard.overlayTip.enabled")
-        ),
-        react.createElement(WizardToggleVisual, {
-          enabled: overlayEnabled,
-        })
+      renderWizardInteractiveToggle(
+        overlayEnabled,
+        () => onOverlayChange(!overlayEnabled),
+        "setupWizard.overlayTip.enabled"
       ),
       // Description and install notice
       react.createElement(
@@ -1249,40 +1257,10 @@ const NowPlayingTipStep = ({ nowPlayingEnabled, onNowPlayingChange, onNext, onBa
         )
       ),
       // Interactive Toggle
-      react.createElement(
-        "button",
-        {
-          onClick: () => onNowPlayingChange(!nowPlayingEnabled),
-          style: {
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            padding: "14px 24px",
-            background: nowPlayingEnabled
-              ? WIZARD_COLORS.surfaceSelected
-              : WIZARD_COLORS.surfaceRaised,
-            borderRadius: 0,
-            border: nowPlayingEnabled
-              ? `1px solid ${WIZARD_COLORS.borderStrong}`
-              : `1px solid ${WIZARD_COLORS.border}`,
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-          },
-        },
-        react.createElement(
-          "span",
-          {
-            style: {
-              fontSize: "14px",
-              fontWeight: "500",
-              color: nowPlayingEnabled ? WIZARD_COLORS.accent : WIZARD_COLORS.muted,
-            },
-          },
-          I18n.t("setupWizard.nowPlayingTip.enabled")
-        ),
-        react.createElement(WizardToggleVisual, {
-          enabled: nowPlayingEnabled,
-        })
+      renderWizardInteractiveToggle(
+        nowPlayingEnabled,
+        () => onNowPlayingChange(!nowPlayingEnabled),
+        "setupWizard.nowPlayingTip.enabled"
       ),
       // Description text
       react.createElement(

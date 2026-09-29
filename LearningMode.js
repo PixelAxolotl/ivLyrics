@@ -1265,6 +1265,21 @@
             promise: null
         });
 
+        const buildStudyPack = (raw) => normalizeStudyPack({
+            raw,
+            sourceLines: limited.lines,
+            trackId,
+            trackUri,
+            title,
+            artist,
+            provider,
+            targetLang,
+            difficulty,
+            lyricsHash,
+            cacheKey,
+            omittedCount: limited.omittedCount
+        });
+
         const promise = (async () => {
             try {
                 const isCurrentJob = () => getGenerationSnapshot().jobId === jobId;
@@ -1308,20 +1323,7 @@
                 const publishPartialPack = () => {
                     if (!isCurrentJob()) return;
                     const partialRaw = mergeStudyResponses(rawParts);
-                    const partialPack = normalizeStudyPack({
-                        raw: partialRaw,
-                        sourceLines: limited.lines,
-                        trackId,
-                        trackUri,
-                        title,
-                        artist,
-                        provider,
-                        targetLang,
-                        difficulty,
-                        lyricsHash,
-                        cacheKey,
-                        omittedCount: limited.omittedCount
-                    });
+                    const partialPack = buildStudyPack(partialRaw);
                     setGenerationState({
                         status: "loading",
                         pack: partialPack,
@@ -1375,20 +1377,7 @@
                 if (!isCurrentJob()) return null;
 
                 const raw = mergeStudyResponses(rawParts);
-                const nextPack = normalizeStudyPack({
-                    raw,
-                    sourceLines: limited.lines,
-                    trackId,
-                    trackUri,
-                    title,
-                    artist,
-                    provider,
-                    targetLang,
-                    difficulty,
-                    lyricsHash,
-                    cacheKey,
-                    omittedCount: limited.omittedCount
-                });
+                const nextPack = buildStudyPack(raw);
 
                 await dbPut("studyPacks", nextPack);
                 await dbPut("progress", {

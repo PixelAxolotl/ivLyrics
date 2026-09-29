@@ -2029,35 +2029,7 @@ const AIProvidersTab = () => {
         )
       );
 
-  // 정렬된 provider 목록
-  const sortedProviders = buildOrderedProviderList(providers, providerOrder);
-
-  return react.createElement("div", { className: "settings-section lyrics-providers-section" },
-    // 통합 컨테이너
-    react.createElement("div", { className: "lyrics-providers-container" },
-      renderAiTranslationStylePanel(),
-      react.createElement(OptionList, {
-        items: [
-          {
-            desc: I18n.t("settings.aiProviders.retryCount.label") || "Retries per provider",
-            key: "ai-provider-retry-count",
-            info: I18n.t("settings.aiProviders.retryCount.description")
-              || "Number of additional attempts after a failed request. Set to 0 to switch to the next provider immediately.",
-            type: ConfigSliderRange,
-            defaultValue: providerRetryCount,
-            min: 0,
-            max: 5,
-            step: 1,
-            showStepMarkers: true,
-          },
-        ],
-        onChange: (_name, value) => {
-          const numericValue = Number(value);
-          const nextValue = window.AIAddonManager?.setProviderRetryCount?.(value)
-            ?? (Number.isFinite(numericValue) ? numericValue : 2);
-          setProviderRetryCount(nextValue);
-        },
-      }),
+  const renderCulturalAnnotationGroup = () =>
       react.createElement("div", {
         className: `cultural-annotation-group${culturalAnnotationsEnabled ? " is-enabled" : ""}${culturalDetailsExpanded ? " is-expanded" : ""}`,
         "data-setting-key": "cultural-annotations-group",
@@ -2173,7 +2145,38 @@ const AIProvidersTab = () => {
         ],
           onChange: handleCulturalSettingChange,
         }))
-      ),
+      );
+
+  // 정렬된 provider 목록
+  const sortedProviders = buildOrderedProviderList(providers, providerOrder);
+
+  return react.createElement("div", { className: "settings-section lyrics-providers-section" },
+    // 통합 컨테이너
+    react.createElement("div", { className: "lyrics-providers-container" },
+      renderAiTranslationStylePanel(),
+      react.createElement(OptionList, {
+        items: [
+          {
+            desc: I18n.t("settings.aiProviders.retryCount.label") || "Retries per provider",
+            key: "ai-provider-retry-count",
+            info: I18n.t("settings.aiProviders.retryCount.description")
+              || "Number of additional attempts after a failed request. Set to 0 to switch to the next provider immediately.",
+            type: ConfigSliderRange,
+            defaultValue: providerRetryCount,
+            min: 0,
+            max: 5,
+            step: 1,
+            showStepMarkers: true,
+          },
+        ],
+        onChange: (_name, value) => {
+          const numericValue = Number(value);
+          const nextValue = window.AIAddonManager?.setProviderRetryCount?.(value)
+            ?? (Number.isFinite(numericValue) ? numericValue : 2);
+          setProviderRetryCount(nextValue);
+        },
+      }),
+      renderCulturalAnnotationGroup(),
       // Provider 목록
       providers.length > 0 && react.createElement("div", { className: "lyrics-providers-list", role: "list" },
         renderSettingsProviderItems({

@@ -969,6 +969,7 @@ const VinylPlayerMode = (() => {
             commitSeek(nextPosition);
         }, [canScrub, commitSeek, onTogglePlayback, safeDuration, safePosition]);
 
+        const computeVinylPlayerPresentation = () => {
         const playLabel = I18n.t(isPlaying ? "fullscreen.controls.pause" : "fullscreen.controls.play");
         const vinylModeLabel = I18n.t("vinyl.mode") || "LP";
         const albumLabel = I18n.t("vinyl.closeHint")
@@ -991,6 +992,9 @@ const VinylPlayerMode = (() => {
             `tonearm-finish-${tonearmFinish}`,
             className
         ].filter(Boolean).join(" ");
+        return { playLabel, vinylModeLabel, albumLabel, tonearmLabel, isDraggingTonearm, isCueingTonearm, isEjectingTonearm, rootClassName };
+        };
+        const { playLabel, vinylModeLabel, albumLabel, tonearmLabel, isDraggingTonearm, isCueingTonearm, isEjectingTonearm, rootClassName } = computeVinylPlayerPresentation();
 
         const renderVinylVisualGroup = () => (
             react.createElement("div", { className: "ivlyrics-vinyl-visual-group" },

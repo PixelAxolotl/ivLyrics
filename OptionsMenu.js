@@ -2834,38 +2834,40 @@ const LocalLyricsLrclibSearchModal = ({ trackInfo = {}, onApplyLocalLyrics, onCl
     }
   };
 
+  const renderSearchHeader = () => react.createElement(
+    "div",
+    { className: "ivlyrics-fluent-header" },
+    react.createElement(
+      "div",
+      { className: "ivlyrics-fluent-title-wrap" },
+      react.createElement("h2", { className: "ivlyrics-fluent-title" }, getOptionsText("menu.localLyricsLrclibSearch", "LRCLIB 가사 검색")),
+      react.createElement(
+        "p",
+        { className: "ivlyrics-fluent-subtitle" },
+        getOptionsText("menu.localLyricsLrclibSearchSubtitle", "로컬 곡에는 ivLyrics 서버를 사용하지 않고 선택한 가사만 이 기기에 저장합니다.")
+      )
+    ),
+    react.createElement(
+      "button",
+      {
+        className: "ivlyrics-fluent-close",
+        type: "button",
+        onClick: onClose,
+      },
+      react.createElement("svg", {
+        viewBox: "0 0 16 16",
+        fill: "currentColor",
+        dangerouslySetInnerHTML: {
+          __html: '<path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>',
+        },
+      })
+    )
+  );
+
   return react.createElement(
     react.Fragment,
     null,
-    react.createElement(
-      "div",
-      { className: "ivlyrics-fluent-header" },
-      react.createElement(
-        "div",
-        { className: "ivlyrics-fluent-title-wrap" },
-        react.createElement("h2", { className: "ivlyrics-fluent-title" }, getOptionsText("menu.localLyricsLrclibSearch", "LRCLIB 가사 검색")),
-        react.createElement(
-          "p",
-          { className: "ivlyrics-fluent-subtitle" },
-          getOptionsText("menu.localLyricsLrclibSearchSubtitle", "로컬 곡에는 ivLyrics 서버를 사용하지 않고 선택한 가사만 이 기기에 저장합니다.")
-        )
-      ),
-      react.createElement(
-        "button",
-        {
-          className: "ivlyrics-fluent-close",
-          type: "button",
-          onClick: onClose,
-        },
-        react.createElement("svg", {
-          viewBox: "0 0 16 16",
-          fill: "currentColor",
-          dangerouslySetInnerHTML: {
-            __html: '<path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>',
-          },
-        })
-      )
-    ),
+    renderSearchHeader(),
     react.createElement(
       "div",
       { className: "ivlyrics-fluent-body ivlyrics-options-modal-body" },

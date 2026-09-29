@@ -5534,6 +5534,70 @@ const NowPlayingPanelPreview = () => {
     } : { r: 99, g: 102, b: 241 };
   };
 
+  const renderPreviewLine = (line, idx) =>
+          react.createElement(
+            "div",
+            {
+              key: idx,
+              style: {
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                flex: `0 0 ${previewLineSlotHeight}px`,
+                minHeight: `${previewLineSlotHeight}px`,
+                gap: "2px",
+                padding: "4px 0",
+                opacity: line.active ? 1 : 0.5,
+                transition: "opacity 0.3s ease",
+              }
+            },
+            // 원문 (가장 먼저)
+            react.createElement(
+              "div",
+              {
+                style: {
+                  fontSize: `${originalSize * scale}px`,
+                  fontWeight: line.active ? 800 : 700,
+                  color: line.active ? "#ffffff" : "rgba(255, 255, 255, 0.7)",
+                  lineHeight: 1.4,
+                  fontFamily: originalFontFamily,
+                  textShadow: createOutsideTextOutlineShadow(originalOutlineWidth, originalOutlineColor),
+                }
+              },
+              line.original
+            ),
+            // 발음 (두 번째)
+            react.createElement(
+              "div",
+              {
+                style: {
+                  fontSize: `${phoneticSize * scale}px`,
+                  fontWeight: 400,
+                  color: line.active ? "rgba(255, 255, 255, 0.75)" : "rgba(255, 255, 255, 0.55)",
+                  lineHeight: 1.35,
+                  fontFamily: phoneticFontFamily,
+                  textShadow: createOutsideTextOutlineShadow(phoneticOutlineWidth, phoneticOutlineColor),
+                }
+              },
+              line.phonetic
+            ),
+            // 번역 (마지막)
+            react.createElement(
+              "div",
+              {
+                style: {
+                  fontSize: `${translationSize * scale}px`,
+                  fontWeight: 500,
+                  color: line.active ? "rgba(255, 255, 255, 0.8)" : "rgba(255, 255, 255, 0.5)",
+                  lineHeight: 1.35,
+                  fontFamily: translationFontFamily,
+                  textShadow: createOutsideTextOutlineShadow(translationOutlineWidth, translationOutlineColor),
+                }
+              },
+              line.translation
+            )
+          );
+
   const previewBackgroundStyle = bgType === "transparent"
     ? "transparent"
     : `linear-gradient(rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.38)), ${getBackgroundStyle()}`;
@@ -5596,70 +5660,7 @@ const NowPlayingPanelPreview = () => {
             zIndex: 1,
           }
         },
-        ...sampleLyrics.map((line, idx) =>
-          react.createElement(
-            "div",
-            {
-              key: idx,
-              style: {
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                flex: `0 0 ${previewLineSlotHeight}px`,
-                minHeight: `${previewLineSlotHeight}px`,
-                gap: "2px",
-                padding: "4px 0",
-                opacity: line.active ? 1 : 0.5,
-                transition: "opacity 0.3s ease",
-              }
-            },
-            // 원문 (가장 먼저)
-            react.createElement(
-              "div",
-              {
-                style: {
-                  fontSize: `${originalSize * scale}px`,
-                  fontWeight: line.active ? 800 : 700,
-                  color: line.active ? "#ffffff" : "rgba(255, 255, 255, 0.7)",
-                  lineHeight: 1.4,
-                  fontFamily: originalFontFamily,
-                  textShadow: createOutsideTextOutlineShadow(originalOutlineWidth, originalOutlineColor),
-                }
-              },
-              line.original
-            ),
-            // 발음 (두 번째)
-            react.createElement(
-              "div",
-              {
-                style: {
-                  fontSize: `${phoneticSize * scale}px`,
-                  fontWeight: 400,
-                  color: line.active ? "rgba(255, 255, 255, 0.75)" : "rgba(255, 255, 255, 0.55)",
-                  lineHeight: 1.35,
-                  fontFamily: phoneticFontFamily,
-                  textShadow: createOutsideTextOutlineShadow(phoneticOutlineWidth, phoneticOutlineColor),
-                }
-              },
-              line.phonetic
-            ),
-            // 번역 (마지막)
-            react.createElement(
-              "div",
-              {
-                style: {
-                  fontSize: `${translationSize * scale}px`,
-                  fontWeight: 500,
-                  color: line.active ? "rgba(255, 255, 255, 0.8)" : "rgba(255, 255, 255, 0.5)",
-                  lineHeight: 1.35,
-                  fontFamily: translationFontFamily,
-                  textShadow: createOutsideTextOutlineShadow(translationOutlineWidth, translationOutlineColor),
-                }
-              },
-              line.translation
-            )
-          )
-        )
+        ...sampleLyrics.map((line, idx) => renderPreviewLine(line, idx))
       )
     )
   );

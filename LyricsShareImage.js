@@ -476,12 +476,15 @@ const LyricsShareImage = (() => {
     drawLyricsBlocks(ctx, cfg, processedLyrics, fontFamily, originalFontSize, pronFontSize, transFontSize, textX, currentY);
 
     // ========== 워터마크 ==========
-    if (cfg.showWatermark) {
+    const drawWatermark = () => {
       ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
       ctx.font = `500 13px ${fontFamily}`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
       ctx.fillText('Spotify', width / 2, calculatedHeight - cfg.padding + 10);
+    };
+    if (cfg.showWatermark) {
+      drawWatermark();
     }
 
     // Blob 생성

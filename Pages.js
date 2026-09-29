@@ -4759,9 +4759,7 @@ const assignKaraokeWordIndexes = (timedChars, preferSourceUnits = false, locale 
 		});
 	};
 
-	if (preferSourceUnits) {
-		assignFromSourceUnits();
-	} else if (window.LyricsWordSegmenter?.segmentRanges) {
+	const buildCharTextAndOffsets = () => {
 		const text = timedChars.map((charInfo) => String(charInfo?.char || "")).join("");
 		const charUtf16Offsets = [];
 		let utf16Offset = 0;
@@ -4769,6 +4767,13 @@ const assignKaraokeWordIndexes = (timedChars, preferSourceUnits = false, locale 
 			charUtf16Offsets.push(utf16Offset);
 			utf16Offset += String(charInfo?.char || "").length;
 		});
+		return { text, charUtf16Offsets };
+	};
+
+	if (preferSourceUnits) {
+		assignFromSourceUnits();
+	} else if (window.LyricsWordSegmenter?.segmentRanges) {
+		const { text, charUtf16Offsets } = buildCharTextAndOffsets();
 
 		window.LyricsWordSegmenter.segmentRanges(text, locale).forEach((segment, nextWordIndex) => {
 			for (let index = 0; index < charUtf16Offsets.length; index += 1) {
@@ -4779,13 +4784,7 @@ const assignKaraokeWordIndexes = (timedChars, preferSourceUnits = false, locale 
 			}
 		});
 	} else if (typeof Intl !== "undefined" && typeof Intl.Segmenter === "function") {
-		const text = timedChars.map((charInfo) => String(charInfo?.char || "")).join("");
-		const charUtf16Offsets = [];
-		let utf16Offset = 0;
-		timedChars.forEach((charInfo) => {
-			charUtf16Offsets.push(utf16Offset);
-			utf16Offset += String(charInfo?.char || "").length;
-		});
+		const { text, charUtf16Offsets } = buildCharTextAndOffsets();
 
 		let nextWordIndex = 0;
 		for (const segment of new Intl.Segmenter(locale === "auto" ? undefined : locale, { granularity: "word" }).segment(text)) {

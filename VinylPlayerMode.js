@@ -992,22 +992,7 @@ const VinylPlayerMode = (() => {
             className
         ].filter(Boolean).join(" ");
 
-        return react.createElement("div", {
-            className: rootClassName,
-            style: {
-                ...style,
-                "--iv-vinyl-tonearm-angle": `${tonearmAngle.toFixed(3)}deg`,
-                "--iv-vinyl-tonearm-linear-x": `${(-VINYL_TONEARM_LINEAR_TRAVEL * tonearmProgress).toFixed(3)}px`,
-                "--iv-vinyl-tonearm-linear-rest-x": `${(-VINYL_TONEARM_LINEAR_TRAVEL * VINYL_TONEARM_LINEAR_REST_PROGRESS).toFixed(3)}px`,
-                "--iv-vinyl-tonearm-scale": (Number(style["--iv-vinyl-record-scale"]) || 1) * safeTonearmScale,
-                "--iv-vinyl-tonearm-housing-fill": tonearmAppearance.housing,
-                "--iv-vinyl-tonearm-housing-edge": tonearmAppearance.housingEdge,
-                "--iv-vinyl-tonearm-highlight-color": tonearmAppearance.highlight,
-                "--iv-vinyl-tonearm-needle-color": tonearmAppearance.needle
-            },
-            role: "group",
-            "aria-label": vinylModeLabel
-        },
+        const renderVinylVisualGroup = () => (
             react.createElement("div", { className: "ivlyrics-vinyl-visual-group" },
                 react.createElement("div", { className: "ivlyrics-vinyl-outgoing-pair" },
                     react.createElement("button", {
@@ -1065,7 +1050,9 @@ const VinylPlayerMode = (() => {
                         idPrefix: "ivlyrics-vinyl-incoming"
                     })
                 )
-            ),
+            )
+        );
+        const renderVinylTonearm = () => (
             react.createElement("svg", {
                 ref: tonearmRef,
                 className: "ivlyrics-vinyl-tonearm",
@@ -1136,6 +1123,25 @@ const VinylPlayerMode = (() => {
                         )
                     )
             )
+        );
+        return react.createElement("div", {
+            className: rootClassName,
+            style: {
+                ...style,
+                "--iv-vinyl-tonearm-angle": `${tonearmAngle.toFixed(3)}deg`,
+                "--iv-vinyl-tonearm-linear-x": `${(-VINYL_TONEARM_LINEAR_TRAVEL * tonearmProgress).toFixed(3)}px`,
+                "--iv-vinyl-tonearm-linear-rest-x": `${(-VINYL_TONEARM_LINEAR_TRAVEL * VINYL_TONEARM_LINEAR_REST_PROGRESS).toFixed(3)}px`,
+                "--iv-vinyl-tonearm-scale": (Number(style["--iv-vinyl-record-scale"]) || 1) * safeTonearmScale,
+                "--iv-vinyl-tonearm-housing-fill": tonearmAppearance.housing,
+                "--iv-vinyl-tonearm-housing-edge": tonearmAppearance.housingEdge,
+                "--iv-vinyl-tonearm-highlight-color": tonearmAppearance.highlight,
+                "--iv-vinyl-tonearm-needle-color": tonearmAppearance.needle
+            },
+            role: "group",
+            "aria-label": vinylModeLabel
+        },
+            renderVinylVisualGroup(),
+            renderVinylTonearm()
         );
     });
 

@@ -9803,253 +9803,273 @@ react.createElement(
         })
       );
 
-  const renderLyricsTab = () =>
-react.createElement(
-        "div",
+  const renderLyricsTab = () => {
+    const renderLyricsPlaybackSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.playback.title"),
+            subtitle: I18n.t("settingsAdvanced.playback.subtitle"),
+            sectionKey: "playback",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.playback.replaceButton.label"),
+                key: "playbar-button",
+                info: I18n.t("settingsAdvanced.playback.replaceButton.info") || "Replaces Spotify's default lyrics button with ivLyrics",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.playback.replaceFullscreenButton.label"),
+                key: "fullscreen-button",
+                info: I18n.t("settingsAdvanced.playback.replaceFullscreenButton.info") || "Replaces Spotify's default fullscreen button with ivLyrics fullscreen",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.playback.quickSyncControls.label"),
+                key: "quick-sync-controls-enabled",
+                info: I18n.t("settingsAdvanced.playback.quickSyncControls.info"),
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["quick-sync-controls-enabled"] ?? true,
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+    ];
+    const renderLyricsSyncControlsSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: getSettingsText("settings.syncCreatorSettings.title", "Sync Creator Settings"),
+            subtitle: getSettingsText("settings.syncCreatorSettings.subtitle", "Configure Sync Creator keyboard behavior and recording shortcuts."),
+            sectionKey: "sync-creator-settings",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: getSettingsText("settings.syncCreatorSettings.autoBoundaryChars.label", "Auto-handle spaces and punctuation"),
+                info: getSettingsText("settings.syncCreatorSettings.autoBoundaryChars.desc", "When using keyboard sync, automatically include nearby spaces and punctuation. Turn this off to time those characters manually."),
+                key: "sync-creator-auto-boundary-chars",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["sync-creator-auto-boundary-chars"] ?? true,
+              },
+              {
+                desc: getSettingsText("settings.syncCreatorSettings.fillCurve.label", "Karaoke fill correction curve"),
+                info: getSettingsText("settings.syncCreatorSettings.fillCurve.desc", "Drag the three middle points to adjust how word and character fill progresses during karaoke playback. The default diagonal line keeps the current timing."),
+                key: "karaoke-fill-correction-curve",
+                type: ConfigKaraokeFillCurveEditor,
+                defaultValue: CONFIG.visual["karaoke-fill-correction-curve"],
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.charForward", "Advance one character")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
+                key: "sync-creator-char-forward-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-char-forward-key"] ?? "right",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.charForward", "Advance one character")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+                key: "sync-creator-char-forward-alt-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-char-forward-alt-key"] ?? "",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.charBack", "Revert one character")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
+                key: "sync-creator-char-back-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-char-back-key"] ?? "left",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.charBack", "Revert one character")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+                key: "sync-creator-char-back-alt-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-char-back-alt-key"] ?? "",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.wordForward", "Advance one word")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
+                key: "sync-creator-word-forward-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-word-forward-key"] ?? ".",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.wordForward", "Advance one word")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+                key: "sync-creator-word-forward-alt-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-word-forward-alt-key"] ?? "",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.wordBack", "Revert one word")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
+                key: "sync-creator-word-back-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-word-back-key"] ?? ",",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.wordBack", "Revert one word")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+                key: "sync-creator-word-back-alt-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-word-back-alt-key"] ?? "",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.syllable", "Advance one syllable")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
+                key: "sync-creator-syllable-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-syllable-key"] ?? ";",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.syllable", "Advance one syllable")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+                key: "sync-creator-syllable-alt-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-syllable-alt-key"] ?? "",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.drag", "Hold to drag")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
+                key: "sync-creator-drag-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-drag-key"] ?? "/",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.drag", "Hold to drag")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+                key: "sync-creator-drag-alt-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-drag-alt-key"] ?? "numpaddivide",
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+    ];
+    const renderLyricsLanguageSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.karaokeMode.title"),
+            subtitle: I18n.t("settingsAdvanced.karaokeMode.subtitle"),
+            sectionKey: "karaoke-mode",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.karaokeMode.enabled.label"),
+                info: I18n.t("settingsAdvanced.karaokeMode.enabled.desc"),
+                key: "karaoke-mode-enabled",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.karaokeMode.bounce.label"),
+                info: I18n.t("settingsAdvanced.karaokeMode.bounce.desc"),
+                key: "karaoke-bounce",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.karaokeMode.lineTransition.label"),
+                info: I18n.t("settingsAdvanced.karaokeMode.lineTransition.desc"),
+                key: "karaoke-line-transition",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.karaokeMode.spotifyFakeKaraoke.label"),
+                info: I18n.t("settingsAdvanced.karaokeMode.spotifyFakeKaraoke.desc"),
+                key: "spotify-fake-karaoke-enabled",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.karaokeMode.pseudoKaraokeRenderAdvance.label"),
+                info: I18n.t("settingsAdvanced.karaokeMode.pseudoKaraokeRenderAdvance.desc"),
+                key: "pseudo-karaoke-render-advance",
+                type: ConfigSliderRange,
+                min: 0,
+                max: 500,
+                step: 10,
+                unit: "ms",
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+    ];
+    const renderLyricsProviderPrioritySection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.prefetch.title"),
+            subtitle: I18n.t("settingsAdvanced.prefetch.subtitle"),
+            sectionKey: "prefetch",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.prefetch.enabled.label"),
+                info: I18n.t("settingsAdvanced.prefetch.enabled.desc"),
+                key: "prefetch-enabled",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.prefetch.videoEnabled.label"),
+                info: I18n.t("settingsAdvanced.prefetch.videoEnabled.desc"),
+                key: "prefetch-video-enabled",
+                type: ConfigSlider,
+              },
+            ],
+            onChange: (name, value) => {
+              CONFIG.visual[name] = value;
+              StorageManager.saveConfig(name, value);
+            },
+          }),
+    ];
+    const renderLyricsCacheSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.cacheManagement.title"),
+            subtitle: I18n.t("settingsAdvanced.cacheManagement.subtitle"),
+            sectionKey: "cache-management",
+          }),
+          // 로컬 캐시 관리 (IndexedDB) - 메모리 캐시와 통합됨
+          react.createElement(LocalCacheManager),
+    ];
+    const renderLyricsHelperSection = () => [
+          // 헬퍼 연동 섹션
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settings.lyricsHelper.sectionTitle") || "Helper Integration",
+            subtitle: I18n.t("settings.lyricsHelper.sectionSubtitle") || "Send lyrics to external helper applications",
+            sectionKey: "lyrics-helper",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settings.lyricsHelper.label"),
+                info: I18n.t("settings.lyricsHelper.desc"),
+                key: "lyrics-helper-enabled",
+                type: LyricsHelperToggle,
+                disabled: isFadActive,
+              },
+              {
+                desc: "",
+                key: "lyrics-helper-info",
+                type: ConfigInfo,
+                message: I18n.t("settings.lyricsHelper.info") || "Helper app allows external applications to display synced lyrics",
+                buttonText: I18n.t("settings.lyricsHelper.download") || "Download Helper",
+                onButtonClick: () => {
+                  window.open("https://ivlis.kr/ivLyrics/extensions/#helper", "_blank");
+                },
+                when: () => !CONFIG.visual["lyrics-helper-enabled"],
+              },
+            ],
+            onChange: (name, value) => {
+              CONFIG.visual[name] = value;
+              StorageManager.saveConfig(name, value);
+              // lyricsHelperSender 활성/비활성
+              if (name === "lyrics-helper-enabled") {
+                if (window.lyricsHelperSender) {
+                  window.lyricsHelperSender.enabled = value;
+                }
+              }
+            },
+          })
+    ];
+
+    return react.createElement(
+      "div",
         {
           className: `tab-content ${activeTab === "lyrics" ? "active" : ""}`,
           "data-tab-id": "lyrics",
         },
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.playback.title"),
-          subtitle: I18n.t("settingsAdvanced.playback.subtitle"),
-          sectionKey: "playback",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.playback.replaceButton.label"),
-              key: "playbar-button",
-              info: I18n.t("settingsAdvanced.playback.replaceButton.info") || "Replaces Spotify's default lyrics button with ivLyrics",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.playback.replaceFullscreenButton.label"),
-              key: "fullscreen-button",
-              info: I18n.t("settingsAdvanced.playback.replaceFullscreenButton.info") || "Replaces Spotify's default fullscreen button with ivLyrics fullscreen",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.playback.quickSyncControls.label"),
-              key: "quick-sync-controls-enabled",
-              info: I18n.t("settingsAdvanced.playback.quickSyncControls.info"),
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["quick-sync-controls-enabled"] ?? true,
-            },
-          ],
-          onChange: handleVisualConfigChange,
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: getSettingsText("settings.syncCreatorSettings.title", "Sync Creator Settings"),
-          subtitle: getSettingsText("settings.syncCreatorSettings.subtitle", "Configure Sync Creator keyboard behavior and recording shortcuts."),
-          sectionKey: "sync-creator-settings",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: getSettingsText("settings.syncCreatorSettings.autoBoundaryChars.label", "Auto-handle spaces and punctuation"),
-              info: getSettingsText("settings.syncCreatorSettings.autoBoundaryChars.desc", "When using keyboard sync, automatically include nearby spaces and punctuation. Turn this off to time those characters manually."),
-              key: "sync-creator-auto-boundary-chars",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["sync-creator-auto-boundary-chars"] ?? true,
-            },
-            {
-              desc: getSettingsText("settings.syncCreatorSettings.fillCurve.label", "Karaoke fill correction curve"),
-              info: getSettingsText("settings.syncCreatorSettings.fillCurve.desc", "Drag the three middle points to adjust how word and character fill progresses during karaoke playback. The default diagonal line keeps the current timing."),
-              key: "karaoke-fill-correction-curve",
-              type: ConfigKaraokeFillCurveEditor,
-              defaultValue: CONFIG.visual["karaoke-fill-correction-curve"],
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.charForward", "Advance one character")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
-              key: "sync-creator-char-forward-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-char-forward-key"] ?? "right",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.charForward", "Advance one character")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
-              key: "sync-creator-char-forward-alt-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-char-forward-alt-key"] ?? "",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.charBack", "Revert one character")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
-              key: "sync-creator-char-back-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-char-back-key"] ?? "left",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.charBack", "Revert one character")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
-              key: "sync-creator-char-back-alt-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-char-back-alt-key"] ?? "",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.wordForward", "Advance one word")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
-              key: "sync-creator-word-forward-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-word-forward-key"] ?? ".",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.wordForward", "Advance one word")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
-              key: "sync-creator-word-forward-alt-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-word-forward-alt-key"] ?? "",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.wordBack", "Revert one word")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
-              key: "sync-creator-word-back-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-word-back-key"] ?? ",",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.wordBack", "Revert one word")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
-              key: "sync-creator-word-back-alt-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-word-back-alt-key"] ?? "",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.syllable", "Advance one syllable")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
-              key: "sync-creator-syllable-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-syllable-key"] ?? ";",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.syllable", "Advance one syllable")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
-              key: "sync-creator-syllable-alt-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-syllable-alt-key"] ?? "",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.drag", "Hold to drag")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
-              key: "sync-creator-drag-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-drag-key"] ?? "/",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.drag", "Hold to drag")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
-              key: "sync-creator-drag-alt-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-drag-alt-key"] ?? "numpaddivide",
-            },
-          ],
-          onChange: handleVisualConfigChange,
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.karaokeMode.title"),
-          subtitle: I18n.t("settingsAdvanced.karaokeMode.subtitle"),
-          sectionKey: "karaoke-mode",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.karaokeMode.enabled.label"),
-              info: I18n.t("settingsAdvanced.karaokeMode.enabled.desc"),
-              key: "karaoke-mode-enabled",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.karaokeMode.bounce.label"),
-              info: I18n.t("settingsAdvanced.karaokeMode.bounce.desc"),
-              key: "karaoke-bounce",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.karaokeMode.lineTransition.label"),
-              info: I18n.t("settingsAdvanced.karaokeMode.lineTransition.desc"),
-              key: "karaoke-line-transition",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.karaokeMode.spotifyFakeKaraoke.label"),
-              info: I18n.t("settingsAdvanced.karaokeMode.spotifyFakeKaraoke.desc"),
-              key: "spotify-fake-karaoke-enabled",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.karaokeMode.pseudoKaraokeRenderAdvance.label"),
-              info: I18n.t("settingsAdvanced.karaokeMode.pseudoKaraokeRenderAdvance.desc"),
-              key: "pseudo-karaoke-render-advance",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 500,
-              step: 10,
-              unit: "ms",
-            },
-          ],
-          onChange: handleVisualConfigChange,
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.prefetch.title"),
-          subtitle: I18n.t("settingsAdvanced.prefetch.subtitle"),
-          sectionKey: "prefetch",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.prefetch.enabled.label"),
-              info: I18n.t("settingsAdvanced.prefetch.enabled.desc"),
-              key: "prefetch-enabled",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.prefetch.videoEnabled.label"),
-              info: I18n.t("settingsAdvanced.prefetch.videoEnabled.desc"),
-              key: "prefetch-video-enabled",
-              type: ConfigSlider,
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-          },
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.cacheManagement.title"),
-          subtitle: I18n.t("settingsAdvanced.cacheManagement.subtitle"),
-          sectionKey: "cache-management",
-        }),
-        // 로컬 캐시 관리 (IndexedDB) - 메모리 캐시와 통합됨
-        react.createElement(LocalCacheManager),
-        // 헬퍼 연동 섹션
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settings.lyricsHelper.sectionTitle") || "Helper Integration",
-          subtitle: I18n.t("settings.lyricsHelper.sectionSubtitle") || "Send lyrics to external helper applications",
-          sectionKey: "lyrics-helper",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settings.lyricsHelper.label"),
-              info: I18n.t("settings.lyricsHelper.desc"),
-              key: "lyrics-helper-enabled",
-              type: LyricsHelperToggle,
-              disabled: isFadActive,
-            },
-            {
-              desc: "",
-              key: "lyrics-helper-info",
-              type: ConfigInfo,
-              message: I18n.t("settings.lyricsHelper.info") || "Helper app allows external applications to display synced lyrics",
-              buttonText: I18n.t("settings.lyricsHelper.download") || "Download Helper",
-              onButtonClick: () => {
-                window.open("https://ivlis.kr/ivLyrics/extensions/#helper", "_blank");
-              },
-              when: () => !CONFIG.visual["lyrics-helper-enabled"],
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            // lyricsHelperSender 활성/비활성
-            if (name === "lyrics-helper-enabled") {
-              if (window.lyricsHelperSender) {
-                window.lyricsHelperSender.enabled = value;
-              }
-            }
-          },
-        })
-      );
+      ...renderLyricsPlaybackSection(),
+      ...renderLyricsSyncControlsSection(),
+      ...renderLyricsLanguageSection(),
+      ...renderLyricsProviderPrioritySection(),
+      ...renderLyricsCacheSection(),
+      ...renderLyricsHelperSection(),
+    );
+  };
 
   const renderLyricsProvidersTab = () =>
 react.createElement(

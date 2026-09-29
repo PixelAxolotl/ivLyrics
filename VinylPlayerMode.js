@@ -1516,31 +1516,7 @@ const VinylPlayerMode = (() => {
                 : snapshot.plainText);
         };
 
-        return react.createElement("div", {
-            className: [
-                "fullscreen-vinyl-overlay",
-                isClosing ? "is-closing" : "is-open",
-                isPortraitLayout ? "is-portrait-layout" : "is-landscape-layout",
-                `is-presentation-${normalizedPresentationMode}`,
-                isFullVinylPresentation ? "has-full-vinyl-stage" : "",
-                isCompactVinylPresentation ? "has-compact-vinyl-stage" : "",
-                isVideoPresentation ? "has-video-stage" : "",
-                animationsEnabled ? "" : "is-motion-disabled",
-                transitionClass,
-                lyricsEnabled ? "has-lyric-slot" : "",
-                hasVisibleLyric ? "has-active-lyric" : "",
-                hasVisibleCulturalAnnotation ? "has-cultural-annotation" : ""
-            ].filter(Boolean).join(" "),
-            role: "dialog",
-            "aria-modal": "true",
-            "aria-label": I18n.t(
-                normalizedPresentationMode === "compact-vinyl"
-                    ? "vinyl.presentation.compactLabel"
-                    : normalizedPresentationMode === "video"
-                        ? "vinyl.presentation.videoLabel"
-                        : "vinyl.presentation.vinylLabel"
-            ) || I18n.t("vinyl.mode") || "LP",
-            style: {
+        const vinylOverlayStyle = {
                 "--iv-vinyl-original-font-family": `'${String(vinylSettings.originalFontFamily || "Pretendard Variable").replace(/'/g, "\\'")}'`,
                 "--iv-vinyl-original-font-size": `${Number(vinylSettings.originalFontSize) || 31}px`,
                 "--iv-vinyl-original-font-weight": Number(vinylSettings.originalFontWeight) || 600,
@@ -1587,7 +1563,32 @@ const VinylPlayerMode = (() => {
                 "--iv-video-stage-lyric-background-color": String(vinylSettings.videoStageLyricBackgroundColor || "#000000"),
                 "--iv-video-stage-lyric-background-opacity": `${Math.min(100, Math.max(0, Number(vinylSettings.videoStageLyricBackgroundOpacity) || 0))}%`,
                 "--iv-vinyl-background-blur": `${backgroundBlur}px`
-            }
+        };
+        return react.createElement("div", {
+            className: [
+                "fullscreen-vinyl-overlay",
+                isClosing ? "is-closing" : "is-open",
+                isPortraitLayout ? "is-portrait-layout" : "is-landscape-layout",
+                `is-presentation-${normalizedPresentationMode}`,
+                isFullVinylPresentation ? "has-full-vinyl-stage" : "",
+                isCompactVinylPresentation ? "has-compact-vinyl-stage" : "",
+                isVideoPresentation ? "has-video-stage" : "",
+                animationsEnabled ? "" : "is-motion-disabled",
+                transitionClass,
+                lyricsEnabled ? "has-lyric-slot" : "",
+                hasVisibleLyric ? "has-active-lyric" : "",
+                hasVisibleCulturalAnnotation ? "has-cultural-annotation" : ""
+            ].filter(Boolean).join(" "),
+            role: "dialog",
+            "aria-modal": "true",
+            "aria-label": I18n.t(
+                normalizedPresentationMode === "compact-vinyl"
+                    ? "vinyl.presentation.compactLabel"
+                    : normalizedPresentationMode === "video"
+                        ? "vinyl.presentation.videoLabel"
+                        : "vinyl.presentation.vinylLabel"
+            ) || I18n.t("vinyl.mode") || "LP",
+            style: vinylOverlayStyle
         },
             isFullVinylPresentation ? react.createElement(VinylPlayer, {
                 className: [

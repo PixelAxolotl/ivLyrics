@@ -10193,44 +10193,48 @@ class LyricsContainer extends react.Component {
     const modeButtons = computeModeButtons();
 
     // Build fullscreen class names
-    let fullscreenClasses = "";
-    if (this.state.isFullscreen) {
-      fullscreenClasses = " fullscreen-active";
-      if (!isTwoColumn) {
-        fullscreenClasses += " fullscreen-single-column";
+    const computeFullscreenClasses = () => {
+      let fullscreenClasses = "";
+      if (this.state.isFullscreen) {
+        fullscreenClasses = " fullscreen-active";
+        if (!isTwoColumn) {
+          fullscreenClasses += " fullscreen-single-column";
+        }
+        if (isLayoutReversed && isTwoColumn) {
+          fullscreenClasses += " layout-reversed";
+        }
+        if (shouldUseFullscreenNoLyricsLayout) {
+          fullscreenClasses += " fullscreen-no-lyrics";
+        }
+        if (this.state.isLoading && this.state.lyricsStatus === "loading") {
+          fullscreenClasses += " fullscreen-lyrics-loading";
+        }
+        // Portrait mode class (not in TV mode)
+        if (this._isPortraitViewport && CONFIG.visual["fullscreen-tv-mode"] !== true) {
+          fullscreenClasses += " portrait-mode";
+        }
+        // TV Mode class
+        if (CONFIG.visual["fullscreen-tv-mode"] === true) {
+          fullscreenClasses += " tv-mode-active";
+        }
+        if (this.state.showMarketplace) {
+          fullscreenClasses += " marketplace-active";
+        }
+        if (isFullscreenPageUi) {
+          fullscreenClasses += " fullscreen-page-ui";
+        }
+        if (isFocusedFullscreenPresentation) {
+          fullscreenClasses += ` fullscreen-focus-active focus-presentation-${fullscreenPresentation}`;
+        }
+        // TMI 폰트 크기 CSS 변수 업데이트
+        if (this.fullscreenContainer) {
+          const tmiScale = (CONFIG.visual["fullscreen-tmi-font-size"] || 100) / 100;
+          this.fullscreenContainer.style.setProperty("--fullscreen-tmi-font-size", tmiScale);
+        }
       }
-      if (isLayoutReversed && isTwoColumn) {
-        fullscreenClasses += " layout-reversed";
-      }
-      if (shouldUseFullscreenNoLyricsLayout) {
-        fullscreenClasses += " fullscreen-no-lyrics";
-      }
-      if (this.state.isLoading && this.state.lyricsStatus === "loading") {
-        fullscreenClasses += " fullscreen-lyrics-loading";
-      }
-      // Portrait mode class (not in TV mode)
-      if (this._isPortraitViewport && CONFIG.visual["fullscreen-tv-mode"] !== true) {
-        fullscreenClasses += " portrait-mode";
-      }
-      // TV Mode class
-      if (CONFIG.visual["fullscreen-tv-mode"] === true) {
-        fullscreenClasses += " tv-mode-active";
-      }
-      if (this.state.showMarketplace) {
-        fullscreenClasses += " marketplace-active";
-      }
-      if (isFullscreenPageUi) {
-        fullscreenClasses += " fullscreen-page-ui";
-      }
-      if (isFocusedFullscreenPresentation) {
-        fullscreenClasses += ` fullscreen-focus-active focus-presentation-${fullscreenPresentation}`;
-      }
-      // TMI 폰트 크기 CSS 변수 업데이트
-      if (this.fullscreenContainer) {
-        const tmiScale = (CONFIG.visual["fullscreen-tmi-font-size"] || 100) / 100;
-        this.fullscreenContainer.style.setProperty("--fullscreen-tmi-font-size", tmiScale);
-      }
-    }
+      return fullscreenClasses;
+    };
+    const fullscreenClasses = computeFullscreenClasses();
 
     const generationCompleteLabel = I18n.t("generationStatus.complete") || "완료!";
     const generationStatusDefinitions = [

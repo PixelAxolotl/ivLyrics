@@ -10104,89 +10104,93 @@ class LyricsContainer extends react.Component {
           className: "ivlyrics-toolbar-icon-fallback",
           "aria-hidden": "true",
         });
-    const getModeButtonLabel = (modeId, labelKey) => {
-      const modeLabel = I18n.t(labelKey);
-      const lockHint = this.state.lockedMode === modeId
-        ? I18n.t("modes.rightClickToUnlock")
-        : I18n.t("modes.rightClickToLock");
-      return `${modeLabel} · ${lockHint}`;
+    const computeModeButtons = () => {
+      const getModeButtonLabel = (modeId, labelKey) => {
+        const modeLabel = I18n.t(labelKey);
+        const lockHint = this.state.lockedMode === modeId
+          ? I18n.t("modes.rightClickToUnlock")
+          : I18n.t("modes.rightClickToLock");
+        return `${modeLabel} · ${lockHint}`;
+      };
+      const modeButtons = [
+        this.state.karaoke &&
+        CONFIG.visual["karaoke-mode-enabled"] &&
+        react.createElement(
+          IvLyricsTooltip,
+          { key: "character", label: getModeButtonLabel(KARAOKE, "modes.character"), showDelay: 0 },
+          react.createElement(
+            "button",
+            {
+              type: "button",
+              className: `lyrics-config-button lyrics-mode-button ${mode === KARAOKE ? "active" : ""}${this.state.lockedMode === KARAOKE ? " mode-locked" : ""}`,
+              onClick: () => this.switchTo(KARAOKE),
+              onContextMenu: (event) => this.toggleModeLock(KARAOKE, event),
+              "aria-pressed": mode === KARAOKE,
+              "aria-label": getModeButtonLabel(KARAOKE, "modes.character"),
+              "data-mode-locked": this.state.lockedMode === KARAOKE,
+            },
+            renderFloatingToolbarIcon("character")
+          )
+        ),
+        this.state.karaoke &&
+        CONFIG.visual["karaoke-mode-enabled"] &&
+        react.createElement(
+          IvLyricsTooltip,
+          { key: "word", label: getModeButtonLabel(WORD_KARAOKE, "modes.word"), showDelay: 0 },
+          react.createElement(
+            "button",
+            {
+              type: "button",
+              className: `lyrics-config-button lyrics-mode-button ${mode === WORD_KARAOKE ? "active" : ""}${this.state.lockedMode === WORD_KARAOKE ? " mode-locked" : ""}`,
+              onClick: () => this.switchTo(WORD_KARAOKE),
+              onContextMenu: (event) => this.toggleModeLock(WORD_KARAOKE, event),
+              "aria-pressed": mode === WORD_KARAOKE,
+              "aria-label": getModeButtonLabel(WORD_KARAOKE, "modes.word"),
+              "data-mode-locked": this.state.lockedMode === WORD_KARAOKE,
+            },
+            renderFloatingToolbarIcon("word")
+          )
+        ),
+        this.state.synced &&
+        react.createElement(
+          IvLyricsTooltip,
+          { key: "synced", label: getModeButtonLabel(SYNCED, "modes.synced"), showDelay: 0 },
+          react.createElement(
+            "button",
+            {
+              type: "button",
+              className: `lyrics-config-button lyrics-mode-button ${mode === SYNCED ? "active" : ""}${this.state.lockedMode === SYNCED ? " mode-locked" : ""}`,
+              onClick: () => this.switchTo(SYNCED),
+              onContextMenu: (event) => this.toggleModeLock(SYNCED, event),
+              "aria-pressed": mode === SYNCED,
+              "aria-label": getModeButtonLabel(SYNCED, "modes.synced"),
+              "data-mode-locked": this.state.lockedMode === SYNCED,
+            },
+            renderFloatingToolbarIcon("synced")
+          )
+        ),
+        this.state.unsynced &&
+        react.createElement(
+          IvLyricsTooltip,
+          { key: "unsynced", label: getModeButtonLabel(UNSYNCED, "modes.unsynced"), showDelay: 0 },
+          react.createElement(
+            "button",
+            {
+              type: "button",
+              className: `lyrics-config-button lyrics-mode-button ${mode === UNSYNCED ? "active" : ""}${this.state.lockedMode === UNSYNCED ? " mode-locked" : ""}`,
+              onClick: () => this.switchTo(UNSYNCED),
+              onContextMenu: (event) => this.toggleModeLock(UNSYNCED, event),
+              "aria-pressed": mode === UNSYNCED,
+              "aria-label": getModeButtonLabel(UNSYNCED, "modes.unsynced"),
+              "data-mode-locked": this.state.lockedMode === UNSYNCED,
+            },
+            renderFloatingToolbarIcon("unsynced")
+          )
+        ),
+      ].filter(Boolean);
+      return modeButtons;
     };
-    const modeButtons = [
-      this.state.karaoke &&
-      CONFIG.visual["karaoke-mode-enabled"] &&
-      react.createElement(
-        IvLyricsTooltip,
-        { key: "character", label: getModeButtonLabel(KARAOKE, "modes.character"), showDelay: 0 },
-        react.createElement(
-          "button",
-          {
-            type: "button",
-            className: `lyrics-config-button lyrics-mode-button ${mode === KARAOKE ? "active" : ""}${this.state.lockedMode === KARAOKE ? " mode-locked" : ""}`,
-            onClick: () => this.switchTo(KARAOKE),
-            onContextMenu: (event) => this.toggleModeLock(KARAOKE, event),
-            "aria-pressed": mode === KARAOKE,
-            "aria-label": getModeButtonLabel(KARAOKE, "modes.character"),
-            "data-mode-locked": this.state.lockedMode === KARAOKE,
-          },
-          renderFloatingToolbarIcon("character")
-        )
-      ),
-      this.state.karaoke &&
-      CONFIG.visual["karaoke-mode-enabled"] &&
-      react.createElement(
-        IvLyricsTooltip,
-        { key: "word", label: getModeButtonLabel(WORD_KARAOKE, "modes.word"), showDelay: 0 },
-        react.createElement(
-          "button",
-          {
-            type: "button",
-            className: `lyrics-config-button lyrics-mode-button ${mode === WORD_KARAOKE ? "active" : ""}${this.state.lockedMode === WORD_KARAOKE ? " mode-locked" : ""}`,
-            onClick: () => this.switchTo(WORD_KARAOKE),
-            onContextMenu: (event) => this.toggleModeLock(WORD_KARAOKE, event),
-            "aria-pressed": mode === WORD_KARAOKE,
-            "aria-label": getModeButtonLabel(WORD_KARAOKE, "modes.word"),
-            "data-mode-locked": this.state.lockedMode === WORD_KARAOKE,
-          },
-          renderFloatingToolbarIcon("word")
-        )
-      ),
-      this.state.synced &&
-      react.createElement(
-        IvLyricsTooltip,
-        { key: "synced", label: getModeButtonLabel(SYNCED, "modes.synced"), showDelay: 0 },
-        react.createElement(
-          "button",
-          {
-            type: "button",
-            className: `lyrics-config-button lyrics-mode-button ${mode === SYNCED ? "active" : ""}${this.state.lockedMode === SYNCED ? " mode-locked" : ""}`,
-            onClick: () => this.switchTo(SYNCED),
-            onContextMenu: (event) => this.toggleModeLock(SYNCED, event),
-            "aria-pressed": mode === SYNCED,
-            "aria-label": getModeButtonLabel(SYNCED, "modes.synced"),
-            "data-mode-locked": this.state.lockedMode === SYNCED,
-          },
-          renderFloatingToolbarIcon("synced")
-        )
-      ),
-      this.state.unsynced &&
-      react.createElement(
-        IvLyricsTooltip,
-        { key: "unsynced", label: getModeButtonLabel(UNSYNCED, "modes.unsynced"), showDelay: 0 },
-        react.createElement(
-          "button",
-          {
-            type: "button",
-            className: `lyrics-config-button lyrics-mode-button ${mode === UNSYNCED ? "active" : ""}${this.state.lockedMode === UNSYNCED ? " mode-locked" : ""}`,
-            onClick: () => this.switchTo(UNSYNCED),
-            onContextMenu: (event) => this.toggleModeLock(UNSYNCED, event),
-            "aria-pressed": mode === UNSYNCED,
-            "aria-label": getModeButtonLabel(UNSYNCED, "modes.unsynced"),
-            "data-mode-locked": this.state.lockedMode === UNSYNCED,
-          },
-          renderFloatingToolbarIcon("unsynced")
-        )
-      ),
-    ].filter(Boolean);
+    const modeButtons = computeModeButtons();
 
     // Build fullscreen class names
     let fullscreenClasses = "";

@@ -9541,6 +9541,18 @@ const ConfigModal = ({
     );
   };
 
+  // 시각 설정 변경: 설정을 저장하고 가사 컨테이너를 갱신한 뒤 config 이벤트를 발생
+  const handleVisualConfigChange = (name, value) => {
+    CONFIG.visual[name] = value;
+    StorageManager.saveConfig(name, value);
+    lyricContainerUpdate?.();
+    window.dispatchEvent(
+      new CustomEvent("ivLyrics", {
+        detail: { type: "config", name, value },
+      })
+    );
+  };
+
   // 나우플레잉 패널 설정 변경: 설정 저장 후 config 이벤트와 미리보기 이벤트를 함께 발생
   const handleNowPlayingPanelChange = (name, value) => {
     CONFIG.visual[name] = value;
@@ -10337,16 +10349,7 @@ const ConfigModal = ({
               defaultValue: CONFIG.visual["quick-sync-controls-enabled"] ?? true,
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
+          onChange: handleVisualConfigChange,
         }),
         react.createElement(SettingsSectionTitle, {
           title: getSettingsText("settings.syncCreatorSettings.title", "Sync Creator Settings"),
@@ -10442,16 +10445,7 @@ const ConfigModal = ({
               defaultValue: CONFIG.visual["sync-creator-drag-alt-key"] ?? "numpaddivide",
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
+          onChange: handleVisualConfigChange,
         }),
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.karaokeMode.title"),
@@ -10495,16 +10489,7 @@ const ConfigModal = ({
               unit: "ms",
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
+          onChange: handleVisualConfigChange,
         }),
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.prefetch.title"),
@@ -10613,16 +10598,7 @@ const ConfigModal = ({
               unit: "%",
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
+          onChange: handleVisualConfigChange,
         }),
 
         react.createElement(SettingsSectionTitle, {
@@ -11311,16 +11287,7 @@ const ConfigModal = ({
               defaultValue: "t",
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
+          onChange: handleVisualConfigChange,
         }),
 
         // ===== LP 모드 섹션 =====
@@ -11576,16 +11543,7 @@ const ConfigModal = ({
               defaultValue: CONFIG.visual["fullscreen-center-when-no-lyrics"] ?? true,
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
+          onChange: handleVisualConfigChange,
         }),
 
         // ===== TV 모드 섹션 =====
@@ -11629,16 +11587,7 @@ const ConfigModal = ({
               defaultValue: CONFIG.visual["fullscreen-tv-show-progress"] ?? false,
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
+          onChange: handleVisualConfigChange,
         }),
 
         // ===== 제목/아티스트 설정 섹션 =====
@@ -11679,16 +11628,7 @@ const ConfigModal = ({
               when: () => CONFIG.visual["translate-metadata"] === true,
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
+          onChange: handleVisualConfigChange,
         }),
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.fullscreenStyle.title"),
@@ -11755,16 +11695,7 @@ const ConfigModal = ({
             },
             ...createTextOutlineSettingItems("fullscreen-artist"),
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
+          onChange: handleVisualConfigChange,
         }),
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.fullscreenUI.title"),
@@ -11867,16 +11798,7 @@ const ConfigModal = ({
               defaultValue: CONFIG.visual["fullscreen-show-queue"] ?? true,
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
+          onChange: handleVisualConfigChange,
         }),
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.controllerStyle.title"),
@@ -11904,16 +11826,7 @@ const ConfigModal = ({
               defaultValue: CONFIG.visual["fullscreen-controls-background"] ?? false,
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
+          onChange: handleVisualConfigChange,
         }),
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.autoHide.title"),
@@ -11942,16 +11855,7 @@ const ConfigModal = ({
               when: () => CONFIG.visual["fullscreen-auto-hide-ui"] !== false,
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
+          onChange: handleVisualConfigChange,
         }),
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.tmiStyle.title"),
@@ -11973,16 +11877,7 @@ const ConfigModal = ({
             },
             ...createTextOutlineSettingItems("fullscreen-tmi"),
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
+          onChange: handleVisualConfigChange,
         })
       ),
       // NowPlaying 패널 가사 탭

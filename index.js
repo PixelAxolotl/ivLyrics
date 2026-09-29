@@ -4230,6 +4230,46 @@ const LyricsCacheEditModal = ({
     onChange(nextLines.join("\n"));
   };
 
+  // The pronunciation and translation columns render the identical editable
+  // field (header label + shift-down button + textarea); only the label,
+  // backing line array, change handler, spellCheck flag and placeholder differ.
+  const renderCacheEditField = (index, { label, lines, onChange, spellCheck, placeholder }) =>
+    react.createElement(
+      "div",
+      { className: "ivlyrics-cache-edit-field" },
+      react.createElement(
+        "div",
+        { className: "ivlyrics-cache-edit-field-header" },
+        react.createElement("span", null, label),
+        react.createElement(
+          "button",
+          {
+            type: "button",
+            className: "ivlyrics-cache-edit-shift-button",
+            onClick: () => shiftLinesDownFrom(lines, index, onChange),
+            disabled: isSaving || index >= expectedLineCount - 1,
+            title: I18n.t("lyricsCacheEditor.shiftDown"),
+            "aria-label": I18n.t("lyricsCacheEditor.shiftDown"),
+          },
+          "↓"
+        )
+      ),
+      react.createElement("textarea", {
+        className: "ivlyrics-cache-edit-line-input",
+        rows: 2,
+        value: lines[index] ?? "",
+        onChange: (event) =>
+          updateLine(lines, index, event.target.value, onChange),
+        onKeyDown: (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+          }
+        },
+        spellCheck,
+        placeholder,
+      })
+    );
+
   const handleOverlayClick = (event) => {
     if (event.target === event.currentTarget && !isSaving) {
       onClose();
@@ -4373,108 +4413,24 @@ const LyricsCacheEditModal = ({
                         originalLine || " "
                       )
                     ),
-                    react.createElement(
-                      "div",
-                      { className: "ivlyrics-cache-edit-field" },
-                      react.createElement(
-                        "div",
-                        { className: "ivlyrics-cache-edit-field-header" },
-                        react.createElement(
-                          "span",
-                          null,
-                          I18n.t("menu.pronunciation")
-                        ),
-                        react.createElement(
-                          "button",
-                          {
-                            type: "button",
-                            className: "ivlyrics-cache-edit-shift-button",
-                            onClick: () =>
-                              shiftLinesDownFrom(
-                                pronunciationLines,
-                                index,
-                                onPronunciationChange
-                              ),
-                            disabled: isSaving || index >= expectedLineCount - 1,
-                            title: I18n.t("lyricsCacheEditor.shiftDown"),
-                            "aria-label": I18n.t("lyricsCacheEditor.shiftDown"),
-                          },
-                          "↓"
-                        )
+                    renderCacheEditField(index, {
+                      label: I18n.t("menu.pronunciation"),
+                      lines: pronunciationLines,
+                      onChange: onPronunciationChange,
+                      spellCheck: false,
+                      placeholder: I18n.t(
+                        "lyricsCacheEditor.pronunciationPlaceholder"
                       ),
-                      react.createElement("textarea", {
-                        className: "ivlyrics-cache-edit-line-input",
-                        rows: 2,
-                        value: pronunciationLines[index] ?? "",
-                        onChange: (event) =>
-                          updateLine(
-                            pronunciationLines,
-                            index,
-                            event.target.value,
-                            onPronunciationChange
-                          ),
-                        onKeyDown: (event) => {
-                          if (event.key === "Enter") {
-                            event.preventDefault();
-                          }
-                        },
-                        spellCheck: false,
-                        placeholder: I18n.t(
-                          "lyricsCacheEditor.pronunciationPlaceholder"
-                        ),
-                      })
-                    ),
-                    react.createElement(
-                      "div",
-                      { className: "ivlyrics-cache-edit-field" },
-                      react.createElement(
-                        "div",
-                        { className: "ivlyrics-cache-edit-field-header" },
-                        react.createElement(
-                          "span",
-                          null,
-                          I18n.t("menu.translationLabel")
-                        ),
-                        react.createElement(
-                          "button",
-                          {
-                            type: "button",
-                            className: "ivlyrics-cache-edit-shift-button",
-                            onClick: () =>
-                              shiftLinesDownFrom(
-                                translationLines,
-                                index,
-                                onTranslationChange
-                              ),
-                            disabled: isSaving || index >= expectedLineCount - 1,
-                            title: I18n.t("lyricsCacheEditor.shiftDown"),
-                            "aria-label": I18n.t("lyricsCacheEditor.shiftDown"),
-                          },
-                          "↓"
-                        )
+                    }),
+                    renderCacheEditField(index, {
+                      label: I18n.t("menu.translationLabel"),
+                      lines: translationLines,
+                      onChange: onTranslationChange,
+                      spellCheck: true,
+                      placeholder: I18n.t(
+                        "lyricsCacheEditor.translationPlaceholder"
                       ),
-                      react.createElement("textarea", {
-                        className: "ivlyrics-cache-edit-line-input",
-                        rows: 2,
-                        value: translationLines[index] ?? "",
-                        onChange: (event) =>
-                          updateLine(
-                            translationLines,
-                            index,
-                            event.target.value,
-                            onTranslationChange
-                          ),
-                        onKeyDown: (event) => {
-                          if (event.key === "Enter") {
-                            event.preventDefault();
-                          }
-                        },
-                        spellCheck: true,
-                        placeholder: I18n.t(
-                          "lyricsCacheEditor.translationPlaceholder"
-                        ),
-                      })
-                    )
+                    })
                   )
                 )
               )

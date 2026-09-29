@@ -2602,19 +2602,22 @@ function openFirstLanguagePrompt({ sourceLang, modeKey }) {
 
     const header = document.createElement("div");
     header.className = "ivlyrics-first-language-header";
-    const icon = document.createElement("span");
-    icon.className = "ivlyrics-first-language-icon";
-    icon.setAttribute("aria-hidden", "true");
-    icon.textContent = "文A";
-    const title = document.createElement("h2");
-    title.id = titleId;
-    title.className = "ivlyrics-first-language-title";
-    title.textContent = I18n.t("firstLanguagePrompt.title", { language: languageName });
-    const description = document.createElement("p");
-    description.id = descriptionId;
-    description.className = "ivlyrics-first-language-description";
-    description.textContent = I18n.t("firstLanguagePrompt.description");
-    header.append(icon, title, description);
+    const buildFirstLanguageHeader = () => {
+      const icon = document.createElement("span");
+      icon.className = "ivlyrics-first-language-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = "文A";
+      const title = document.createElement("h2");
+      title.id = titleId;
+      title.className = "ivlyrics-first-language-title";
+      title.textContent = I18n.t("firstLanguagePrompt.title", { language: languageName });
+      const description = document.createElement("p");
+      description.id = descriptionId;
+      description.className = "ivlyrics-first-language-description";
+      description.textContent = I18n.t("firstLanguagePrompt.description");
+      header.append(icon, title, description);
+    };
+    buildFirstLanguageHeader();
 
     const body = document.createElement("div");
     body.className = "ivlyrics-first-language-body";

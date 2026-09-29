@@ -244,6 +244,27 @@
             .join('');
     }
 
+    // Shared 401 / non-OK handling for both the raw and streaming request loops.
+    // On 401 it throws the permission message; otherwise it reports the HTTP status.
+    // Either branch reads the JSON body at most once, matching the inline versions.
+    async function throwClaudeApiResponseError(response) {
+        if (response.status === 401) {
+            let errorMessage = 'Invalid API key or permission denied.';
+            try {
+                const errorData = await response.json();
+                if (errorData.error?.message) errorMessage = errorData.error.message;
+            } catch (parseError) { }
+            throw new Error(`[Claude] ${errorMessage}`);
+        }
+
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+            const errorData = await response.json();
+            if (errorData.error?.message) errorMessage = errorData.error.message;
+        } catch (parseError) { }
+        throw new Error(`[Claude] ${errorMessage}`);
+    }
+
     async function callClaudeAPIRaw(prompt, maxRetries = window.AIAddonManager?.getProviderRequestAttempts?.() ?? 3, transformResult = null) {
         const apiKeys = getApiKeys();
         if (apiKeys.length === 0) {
@@ -282,26 +303,8 @@
                         break; // Try next key
                     }
 
-                    if (response.status === 401) {
-                        let errorMessage = 'Invalid API key or permission denied.';
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error?.message) {
-                                errorMessage = errorData.error.message;
-                            }
-                        } catch (parseError) { }
-                        throw new Error(`[Claude] ${errorMessage}`);
-                    }
-
-                    if (!response.ok) {
-                        let errorMessage = `HTTP ${response.status}`;
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error?.message) {
-                                errorMessage = errorData.error.message;
-                            }
-                        } catch (parseError) { }
-                        throw new Error(`[Claude] ${errorMessage}`);
+                    if (response.status === 401 || !response.ok) {
+                        await throwClaudeApiResponseError(response);
                     }
 
                     const data = await response.json();
@@ -435,22 +438,8 @@
                         break;
                     }
 
-                    if (response.status === 401) {
-                        let errorMessage = 'Invalid API key or permission denied.';
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error?.message) errorMessage = errorData.error.message;
-                        } catch (parseError) { }
-                        throw new Error(`[Claude] ${errorMessage}`);
-                    }
-
-                    if (!response.ok) {
-                        let errorMessage = `HTTP ${response.status}`;
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error?.message) errorMessage = errorData.error.message;
-                        } catch (parseError) { }
-                        throw new Error(`[Claude] ${errorMessage}`);
+                    if (response.status === 401 || !response.ok) {
+                        await throwClaudeApiResponseError(response);
                     }
 
                     const reader = response.body.getReader();

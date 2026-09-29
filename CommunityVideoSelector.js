@@ -1263,6 +1263,79 @@ const CommunityVideoSelector = ({
     ? videos.filter((video) => video.userVote !== -1)
     : videos;
 
+  const renderVideoInfo = (video) =>
+                      react.createElement(
+                        "div",
+                        {
+                          className: "community-video-info",
+                        },
+                        react.createElement(
+                          "a",
+                          {
+                            className: "community-video-title",
+                            title: `${video.youtubeTitle || video.youtubeVideoId} — ${I18n.t("communityVideo.openOnYouTube")}`,
+                            "aria-label": `${video.youtubeTitle || video.youtubeVideoId} — ${I18n.t("communityVideo.openOnYouTube")}`,
+                            href: getCommunityVideoWatchUrl(video.youtubeVideoId, video.startTime),
+                            target: "_blank",
+                            rel: "noopener noreferrer",
+                            onClick: (event) => event.stopPropagation(),
+                          },
+                          react.createElement(
+                            "span",
+                            { className: "community-video-title-text" },
+                            video.youtubeTitle || video.youtubeVideoId
+                          ),
+                          react.createElement(
+                            "svg",
+                            {
+                              className: "community-video-external-icon",
+                              width: 12,
+                              height: 12,
+                              viewBox: "0 0 16 16",
+                              fill: "currentColor",
+                              "aria-hidden": true,
+                            },
+                            react.createElement("path", {
+                              d: "M9 2a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V3.207L7.354 8.854a.5.5 0 1 1-.708-.708L12.293 2.5H9.5A.5.5 0 0 1 9 2Z",
+                            }),
+                            react.createElement("path", {
+                              d: "M3.5 3A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8a1.5 1.5 0 0 0 1.5-1.5V9a.5.5 0 0 0-1 0v3.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-8a.5.5 0 0 1 .5-.5H7a.5.5 0 0 0 0-1H3.5Z",
+                            })
+                          )
+                        ),
+                        react.createElement(
+                          "div",
+                          {
+                            className: "community-video-meta",
+                          },
+                          react.createElement(
+                            "span",
+                            null,
+                            I18n.t("communityVideo.startTime") +
+                            ": " +
+                            formatTime(video.startTime)
+                          ),
+                          Array.isArray(video.skipSegments) && video.skipSegments.length > 0 &&
+                          react.createElement(
+                            "span",
+                            { className: "community-video-skip-summary" },
+                            I18n.t("communityVideo.skipSegmentCount", {
+                              count: video.skipSegments.length,
+                              max: COMMUNITY_VIDEO_MAX_SKIP_SEGMENTS,
+                            })
+                          ),
+                          video.submitterId === "system" &&
+                          react.createElement(
+                            "span",
+                            {
+                              className: "auto-badge",
+                            },
+                            I18n.t("communityVideo.autoDetected")
+                          )
+                        )
+                      )
+  ;
+
   const renderVideoActions = (video) =>
                       react.createElement(
                         "div",
@@ -1431,76 +1504,7 @@ const CommunityVideoSelector = ({
                       ),
 
                       // Video info
-                      react.createElement(
-                        "div",
-                        {
-                          className: "community-video-info",
-                        },
-                        react.createElement(
-                          "a",
-                          {
-                            className: "community-video-title",
-                            title: `${video.youtubeTitle || video.youtubeVideoId} — ${I18n.t("communityVideo.openOnYouTube")}`,
-                            "aria-label": `${video.youtubeTitle || video.youtubeVideoId} — ${I18n.t("communityVideo.openOnYouTube")}`,
-                            href: getCommunityVideoWatchUrl(video.youtubeVideoId, video.startTime),
-                            target: "_blank",
-                            rel: "noopener noreferrer",
-                            onClick: (event) => event.stopPropagation(),
-                          },
-                          react.createElement(
-                            "span",
-                            { className: "community-video-title-text" },
-                            video.youtubeTitle || video.youtubeVideoId
-                          ),
-                          react.createElement(
-                            "svg",
-                            {
-                              className: "community-video-external-icon",
-                              width: 12,
-                              height: 12,
-                              viewBox: "0 0 16 16",
-                              fill: "currentColor",
-                              "aria-hidden": true,
-                            },
-                            react.createElement("path", {
-                              d: "M9 2a.5.5 0 0 1 .5-.5h4a.5.5 0 0 1 .5.5v4a.5.5 0 0 1-1 0V3.207L7.354 8.854a.5.5 0 1 1-.708-.708L12.293 2.5H9.5A.5.5 0 0 1 9 2Z",
-                            }),
-                            react.createElement("path", {
-                              d: "M3.5 3A1.5 1.5 0 0 0 2 4.5v8A1.5 1.5 0 0 0 3.5 14h8a1.5 1.5 0 0 0 1.5-1.5V9a.5.5 0 0 0-1 0v3.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-8a.5.5 0 0 1 .5-.5H7a.5.5 0 0 0 0-1H3.5Z",
-                            })
-                          )
-                        ),
-                        react.createElement(
-                          "div",
-                          {
-                            className: "community-video-meta",
-                          },
-                          react.createElement(
-                            "span",
-                            null,
-                            I18n.t("communityVideo.startTime") +
-                            ": " +
-                            formatTime(video.startTime)
-                          ),
-                          Array.isArray(video.skipSegments) && video.skipSegments.length > 0 &&
-                          react.createElement(
-                            "span",
-                            { className: "community-video-skip-summary" },
-                            I18n.t("communityVideo.skipSegmentCount", {
-                              count: video.skipSegments.length,
-                              max: COMMUNITY_VIDEO_MAX_SKIP_SEGMENTS,
-                            })
-                          ),
-                          video.submitterId === "system" &&
-                          react.createElement(
-                            "span",
-                            {
-                              className: "auto-badge",
-                            },
-                            I18n.t("communityVideo.autoDetected")
-                          )
-                        )
-                      ),
+                      renderVideoInfo(video),
 
                       // Action buttons
                       renderVideoActions(video)

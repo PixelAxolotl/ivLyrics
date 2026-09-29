@@ -468,6 +468,53 @@
         return typeof entry === 'string' ? entry : entry?.provider;
     }
 
+    // Applies the user's lyrics-type permissions to a fully-processed provider
+    // result and derives the has*/granularity flags. Pure: reads `result` and
+    // the allow flags, returns a fresh `finalResult` (never mutates `result`).
+    // `isPseudoKaraoke` is passed in so this stays free of the manager instance.
+    function filterProviderCandidateResult(result, allow, isPseudoKaraokeFn) {
+        const { allowKaraoke, allowCharacter, allowWord, allowSynced, allowUnsynced } = allow;
+
+        const finalResult = { ...result };
+        if (finalResult.syncDataApplied) {
+            finalResult.syncDataRendererVersion = SYNC_DATA_RENDERER_VERSION;
+        }
+        const finalKaraokeGranularity = hasLyricsContent(finalResult.karaoke)
+            ? inferKaraokeGranularity(finalResult)
+            : '';
+        const karaokeGranularityAllowed = finalKaraokeGranularity === LYRICS_TYPES.CHARACTER
+            ? allowCharacter
+            : finalKaraokeGranularity === LYRICS_TYPES.WORD
+                ? allowWord
+                : false;
+        if (!allowKaraoke || !karaokeGranularityAllowed) {
+            finalResult.karaoke = null;
+            finalResult.karaokeGranularity = null;
+        }
+        if (!allowSynced) finalResult.synced = null;
+        if (!allowUnsynced) finalResult.unsynced = null;
+
+        const hasKaraoke = hasLyricsContent(finalResult.karaoke);
+        const hasCharacterKaraoke = hasKaraoke
+            && finalKaraokeGranularity === LYRICS_TYPES.CHARACTER;
+        const hasWordKaraoke = hasKaraoke
+            && finalKaraokeGranularity === LYRICS_TYPES.WORD;
+        const hasSynced = hasLyricsContent(finalResult.synced);
+        const hasUnsynced = hasLyricsContent(finalResult.unsynced);
+        const isPseudoKaraoke = hasKaraoke && isPseudoKaraokeFn(finalResult);
+
+        return {
+            finalResult,
+            finalKaraokeGranularity,
+            hasKaraoke,
+            hasCharacterKaraoke,
+            hasWordKaraoke,
+            hasSynced,
+            hasUnsynced,
+            isPseudoKaraoke
+        };
+    }
+
     // ============================================
     // LyricsAddonManager Class
     // ============================================
@@ -1441,33 +1488,20 @@
             instrumentalBreaksNormalized = instrumentalBreaksNormalized
                 || finalInstrumentalBreaks.changed;
 
-            const finalResult = { ...result };
-            if (finalResult.syncDataApplied) {
-                finalResult.syncDataRendererVersion = SYNC_DATA_RENDERER_VERSION;
-            }
-            const finalKaraokeGranularity = hasLyricsContent(finalResult.karaoke)
-                ? inferKaraokeGranularity(finalResult)
-                : '';
-            const karaokeGranularityAllowed = finalKaraokeGranularity === LYRICS_TYPES.CHARACTER
-                ? allowCharacter
-                : finalKaraokeGranularity === LYRICS_TYPES.WORD
-                    ? allowWord
-                    : false;
-            if (!allowKaraoke || !karaokeGranularityAllowed) {
-                finalResult.karaoke = null;
-                finalResult.karaokeGranularity = null;
-            }
-            if (!allowSynced) finalResult.synced = null;
-            if (!allowUnsynced) finalResult.unsynced = null;
-
-            const hasKaraoke = hasLyricsContent(finalResult.karaoke);
-            const hasCharacterKaraoke = hasKaraoke
-                && finalKaraokeGranularity === LYRICS_TYPES.CHARACTER;
-            const hasWordKaraoke = hasKaraoke
-                && finalKaraokeGranularity === LYRICS_TYPES.WORD;
-            const hasSynced = hasLyricsContent(finalResult.synced);
-            const hasUnsynced = hasLyricsContent(finalResult.unsynced);
-            const isPseudoKaraoke = hasKaraoke && this._isPseudoKaraoke(finalResult);
+            const {
+                finalResult,
+                finalKaraokeGranularity,
+                hasKaraoke,
+                hasCharacterKaraoke,
+                hasWordKaraoke,
+                hasSynced,
+                hasUnsynced,
+                isPseudoKaraoke
+            } = filterProviderCandidateResult(
+                result,
+                { allowKaraoke, allowCharacter, allowWord, allowSynced, allowUnsynced },
+                (candidate) => this._isPseudoKaraoke(candidate)
+            );
 
             window.__ivLyricsDebugLog?.(`[LyricsAddonManager] After filtering for ${provider.id}:`, {
                 hasKaraoke,

@@ -6847,8 +6847,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				return;
 			}
 
-			// Enter: 현재 라인 완료 (중간에서도 완료 가능, 키보드 싱크 중일 때만)
-			if (normalizedHotkey === 'enter') {
+			const handleEnterShortcut = () => {
 				// 키보드 싱크 중일 때만 처리 (글자를 하나라도 맞췄을 때)
 				if (isKeyboardSyncingRef.current && keyboardCharIndexRef.current >= 0) {
 					consumeKeyboardEvent();
@@ -6856,10 +6855,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				}
 				// 싱크 중이 아닐 때는 기본 동작 허용 (다른 버튼 클릭 등)
 				return;
+			};
+			// Enter: 현재 라인 완료 (중간에서도 완료 가능, 키보드 싱크 중일 때만)
+			if (normalizedHotkey === 'enter') {
+				handleEnterShortcut();
+				return;
 			}
 
-			// Backspace: 현재 라인 싱크 취소
-			if (normalizedHotkey === 'backspace') {
+			const handleBackspaceShortcut = () => {
 				consumeKeyboardEvent();
 				scoreInputRef.current = null;
 				if (isKeyboardSyncingRef.current) {
@@ -6886,9 +6889,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					}
 				}
 				return;
+			};
+			// Backspace: 현재 라인 싱크 취소
+			if (normalizedHotkey === 'backspace') {
+				handleBackspaceShortcut();
+				return;
 			}
 
-			if (normalizedHotkey === 'space') {
+			const handleSpaceShortcut = () => {
 				consumeKeyboardEvent();
 				if (typeof Spicetify.Player?.togglePlay === 'function') {
 					Spicetify.Player.togglePlay();
@@ -6897,6 +6905,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				} else {
 					Spicetify.Player?.play?.();
 				}
+				return;
+			};
+			if (normalizedHotkey === 'space') {
+				handleSpaceShortcut();
 				return;
 			}
 

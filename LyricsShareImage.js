@@ -322,6 +322,80 @@ const LyricsShareImage = (() => {
     ctx.closePath();
   }
 
+  // 각 가사 블록을 줄바꿈 처리하고 높이를 계산 (렌더링 순서와 무관한 순수 측정 단계)
+  function measureLyricsBlocks(ctx, lyrics, cfg, fontFamily, originalFontSize, pronFontSize, transFontSize, maxTextWidth) {
+    let totalLyricsHeight = 0;
+    const processedLyrics = lyrics.map((line, idx) => {
+      const orig = line.originalText || line.displayText || '';
+      const pron = cfg.showPronunciation ? (line.pronText || null) : null;
+      const trans = cfg.showTranslation ? (line.transText || null) : null;
+
+      ctx.font = `${cfg.fontWeight} ${originalFontSize}px ${fontFamily}`;
+      const wrappedOrig = wrapText(ctx, orig, maxTextWidth);
+
+      ctx.font = `400 ${pronFontSize}px ${fontFamily}`;
+      const wrappedPron = pron ? wrapText(ctx, pron, maxTextWidth) : [];
+
+      ctx.font = `500 ${transFontSize}px ${fontFamily}`;
+      const wrappedTrans = trans ? wrapText(ctx, trans, maxTextWidth) : [];
+
+      // 블록 높이 계산 (원어 + 발음 + 번역 + 내부 간격)
+      const origHeight = wrappedOrig.length * (originalFontSize * cfg.lineHeight);
+      const pronHeight = wrappedPron.length > 0 ? wrappedPron.length * (pronFontSize * 1.4) + cfg.innerGap : 0;
+      const transHeight = wrappedTrans.length > 0 ? wrappedTrans.length * (transFontSize * 1.4) + cfg.innerGap : 0;
+      const blockHeight = origHeight + pronHeight + transHeight;
+
+      totalLyricsHeight += blockHeight + (idx < lyrics.length - 1 ? cfg.blockGap : 0);
+
+      return { wrappedOrig, wrappedPron, wrappedTrans, blockHeight };
+    });
+    return { totalLyricsHeight, processedLyrics };
+  }
+
+  // 측정된 가사 블록을 순서대로 캔버스에 그림 (원어 -> 발음 -> 번역)
+  function drawLyricsBlocks(ctx, cfg, processedLyrics, fontFamily, originalFontSize, pronFontSize, transFontSize, textX, startY) {
+    let currentY = startY;
+    for (let i = 0; i < processedLyrics.length; i++) {
+      const block = processedLyrics[i];
+
+      // 원어 텍스트
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `${cfg.fontWeight} ${originalFontSize}px ${fontFamily}`;
+      for (const line of block.wrappedOrig) {
+        ctx.fillText(line, textX, currentY);
+        currentY += originalFontSize * cfg.lineHeight;
+      }
+
+      // 발음 텍스트
+      if (block.wrappedPron.length > 0) {
+        currentY += cfg.innerGap;
+        ctx.fillStyle = `rgba(255, 255, 255, ${cfg.pronOpacity})`;
+        ctx.font = `400 ${pronFontSize}px ${fontFamily}`;
+        for (const line of block.wrappedPron) {
+          ctx.fillText(line, textX, currentY);
+          currentY += pronFontSize * 1.4;
+        }
+      }
+
+      // 번역 텍스트
+      if (block.wrappedTrans.length > 0) {
+        currentY += cfg.innerGap;
+        ctx.fillStyle = cfg.transColor;
+        ctx.font = `500 ${transFontSize}px ${fontFamily}`;
+        for (const line of block.wrappedTrans) {
+          ctx.fillText(line, textX, currentY);
+          currentY += transFontSize * 1.4;
+        }
+      }
+
+      // 블록 간 간격
+      if (i < processedLyrics.length - 1) {
+        currentY += cfg.blockGap;
+      }
+    }
+    return currentY;
+  }
+
   /**
    * 가사 이미지 생성
    * @param {Object} options - 옵션
@@ -370,31 +444,9 @@ const LyricsShareImage = (() => {
     const maxTextWidth = width - cfg.padding * 2;
     
     // 각 가사 블록의 높이 계산
-    let totalLyricsHeight = 0;
-    const processedLyrics = lyrics.map((line, idx) => {
-      const orig = line.originalText || line.displayText || '';
-      const pron = cfg.showPronunciation ? (line.pronText || null) : null;
-      const trans = cfg.showTranslation ? (line.transText || null) : null;
-      
-      ctx.font = `${cfg.fontWeight} ${originalFontSize}px ${fontFamily}`;
-      const wrappedOrig = wrapText(ctx, orig, maxTextWidth);
-      
-      ctx.font = `400 ${pronFontSize}px ${fontFamily}`;
-      const wrappedPron = pron ? wrapText(ctx, pron, maxTextWidth) : [];
-      
-      ctx.font = `500 ${transFontSize}px ${fontFamily}`;
-      const wrappedTrans = trans ? wrapText(ctx, trans, maxTextWidth) : [];
-      
-      // 블록 높이 계산 (원어 + 발음 + 번역 + 내부 간격)
-      const origHeight = wrappedOrig.length * (originalFontSize * cfg.lineHeight);
-      const pronHeight = wrappedPron.length > 0 ? wrappedPron.length * (pronFontSize * 1.4) + cfg.innerGap : 0;
-      const transHeight = wrappedTrans.length > 0 ? wrappedTrans.length * (transFontSize * 1.4) + cfg.innerGap : 0;
-      const blockHeight = origHeight + pronHeight + transHeight;
-      
-      totalLyricsHeight += blockHeight + (idx < lyrics.length - 1 ? cfg.blockGap : 0);
-      
-      return { wrappedOrig, wrappedPron, wrappedTrans, blockHeight };
-    });
+    const { totalLyricsHeight, processedLyrics } = measureLyricsBlocks(
+      ctx, lyrics, cfg, fontFamily, originalFontSize, pronFontSize, transFontSize, maxTextWidth
+    );
 
     // 헤더 높이 계산
     let headerHeight = 20;
@@ -428,45 +480,8 @@ const LyricsShareImage = (() => {
     const textX = cfg.lyricsAlign === 'center' ? width / 2 : cfg.padding;
     ctx.textAlign = cfg.lyricsAlign === 'center' ? 'center' : 'left';
     ctx.textBaseline = 'top';
-    
-    for (let i = 0; i < processedLyrics.length; i++) {
-      const block = processedLyrics[i];
-      
-      // 원어 텍스트
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `${cfg.fontWeight} ${originalFontSize}px ${fontFamily}`;
-      for (const line of block.wrappedOrig) {
-        ctx.fillText(line, textX, currentY);
-        currentY += originalFontSize * cfg.lineHeight;
-      }
-      
-      // 발음 텍스트
-      if (block.wrappedPron.length > 0) {
-        currentY += cfg.innerGap;
-        ctx.fillStyle = `rgba(255, 255, 255, ${cfg.pronOpacity})`;
-        ctx.font = `400 ${pronFontSize}px ${fontFamily}`;
-        for (const line of block.wrappedPron) {
-          ctx.fillText(line, textX, currentY);
-          currentY += pronFontSize * 1.4;
-        }
-      }
-      
-      // 번역 텍스트
-      if (block.wrappedTrans.length > 0) {
-        currentY += cfg.innerGap;
-        ctx.fillStyle = cfg.transColor;
-        ctx.font = `500 ${transFontSize}px ${fontFamily}`;
-        for (const line of block.wrappedTrans) {
-          ctx.fillText(line, textX, currentY);
-          currentY += transFontSize * 1.4;
-        }
-      }
-      
-      // 블록 간 간격
-      if (i < processedLyrics.length - 1) {
-        currentY += cfg.blockGap;
-      }
-    }
+
+    drawLyricsBlocks(ctx, cfg, processedLyrics, fontFamily, originalFontSize, pronFontSize, transFontSize, textX, currentY);
 
     // ========== 워터마크 ==========
     if (cfg.showWatermark) {

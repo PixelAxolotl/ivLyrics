@@ -2759,29 +2759,43 @@ const FullscreenOverlay = (() => {
             }
         }, [closeTmiMode, tmiMode, trackUri]);
 
-        const currentPlayerItem = Spicetify.Player.data?.item;
-        const currentPlayerMetadata = currentPlayerItem?.metadata;
-        const currentTrackUri = getFirstSpotifyUri(currentPlayerItem?.uri, trackUri);
-        const currentArtistUri = getCurrentArtistUri();
-        const currentAlbumUri = getCurrentAlbumUri();
-        const currentCoverUrl = currentPlayerMetadata?.image_xlarge_url
-            || currentPlayerMetadata?.image_large_url
-            || currentPlayerItem?.album?.images?.[0]?.url
-            || currentPlayerMetadata?.image_url
-            || coverUrl;
-        const currentVinylTitle = currentPlayerMetadata?.title || title || "LP";
-        const currentVinylArtist = currentPlayerMetadata?.artist_name || artist || "";
-        const currentVinylAlbum = currentPlayerMetadata?.album_title || currentVinylTitle;
-        const liveVinylTrack = {
-            uri: currentTrackUri || `${currentVinylTitle}\u0000${currentVinylArtist}`,
-            coverUrl: currentCoverUrl,
-            title: currentVinylTitle,
-            artist: currentVinylArtist,
-            album: currentVinylAlbum,
-            accent: currentTrackUri && currentTrackUri === trackAccentUri
-                ? String(trackAccent || "").trim()
-                : ""
+        const computeLiveVinylTrack = () => {
+            const currentPlayerItem = Spicetify.Player.data?.item;
+            const currentPlayerMetadata = currentPlayerItem?.metadata;
+            const currentTrackUri = getFirstSpotifyUri(currentPlayerItem?.uri, trackUri);
+            const currentArtistUri = getCurrentArtistUri();
+            const currentAlbumUri = getCurrentAlbumUri();
+            const currentCoverUrl = currentPlayerMetadata?.image_xlarge_url
+                || currentPlayerMetadata?.image_large_url
+                || currentPlayerItem?.album?.images?.[0]?.url
+                || currentPlayerMetadata?.image_url
+                || coverUrl;
+            const currentVinylTitle = currentPlayerMetadata?.title || title || "LP";
+            const currentVinylArtist = currentPlayerMetadata?.artist_name || artist || "";
+            const currentVinylAlbum = currentPlayerMetadata?.album_title || currentVinylTitle;
+            const liveVinylTrack = {
+                uri: currentTrackUri || `${currentVinylTitle}\u0000${currentVinylArtist}`,
+                coverUrl: currentCoverUrl,
+                title: currentVinylTitle,
+                artist: currentVinylArtist,
+                album: currentVinylAlbum,
+                accent: currentTrackUri && currentTrackUri === trackAccentUri
+                    ? String(trackAccent || "").trim()
+                    : ""
+            };
+            return {
+                currentPlayerItem, currentPlayerMetadata, currentTrackUri,
+                currentArtistUri, currentAlbumUri, currentCoverUrl,
+                currentVinylTitle, currentVinylArtist, currentVinylAlbum,
+                liveVinylTrack
+            };
         };
+        const {
+            currentPlayerItem, currentPlayerMetadata, currentTrackUri,
+            currentArtistUri, currentAlbumUri, currentCoverUrl,
+            currentVinylTitle, currentVinylArtist, currentVinylAlbum,
+            liveVinylTrack
+        } = computeLiveVinylTrack();
 
         const albumActionCopy = {
             click: I18n.t("vinyl.click"),

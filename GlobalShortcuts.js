@@ -228,20 +228,24 @@
         )
     );
 
+    // 공용 단축키 차단 조건: 이미 처리됐거나, 수정 키/조합 입력, 입력 필드 포커스, 열린 대화상자
+    const hasBlockingShortcutModifiers = (event) =>
+        event.defaultPrevented
+        || event.repeat
+        || event.isComposing
+        || event.metaKey
+        || event.ctrlKey
+        || event.altKey
+        || event.shiftKey
+        || isInputFocused(event.target)
+        || hasOpenIvLyricsDialog();
+
     const handleSettingsShortcut = (event) => {
         const isSettingsKey = event.code === 'KeyS'
             || String(event.key || '').toLowerCase() === 's';
         if (
             !isSettingsKey
-            || event.defaultPrevented
-            || event.repeat
-            || event.isComposing
-            || event.metaKey
-            || event.ctrlKey
-            || event.altKey
-            || event.shiftKey
-            || isInputFocused(event.target)
-            || hasOpenIvLyricsDialog()
+            || hasBlockingShortcutModifiers(event)
             || (!isOnLyricsPage() && !isInFullscreenMode())
             || typeof window.ivLyricsOpenConfig !== 'function'
         ) {
@@ -258,15 +262,7 @@
             || FULLSCREEN_PRESENTATION_SHORTCUTS[String(event.key || '')];
         if (
             !nextPresentation
-            || event.defaultPrevented
-            || event.repeat
-            || event.isComposing
-            || event.metaKey
-            || event.ctrlKey
-            || event.altKey
-            || event.shiftKey
-            || isInputFocused(event.target)
-            || hasOpenIvLyricsDialog()
+            || hasBlockingShortcutModifiers(event)
             || !isInFullscreenMode()
         ) {
             return;

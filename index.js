@@ -9949,7 +9949,7 @@ class LyricsContainer extends react.Component {
     const renderedUnsyncedLyrics = isSyncCreatorActive && syncCreatorPlainLyrics.length > 0
       ? syncCreatorPlainLyrics
       : this.state.unsynced;
-    const syncCreatorPlainPage = isSyncCreatorActive
+    const computeSyncCreatorPlainPage = () => isSyncCreatorActive
       ? react.createElement(
         "div",
         {
@@ -9976,6 +9976,7 @@ class LyricsContainer extends react.Component {
           : react.createElement("div", null, I18n.t("messages.noLyrics"))
       )
       : null;
+    const syncCreatorPlainPage = computeSyncCreatorPlainPage();
     const fullscreenPresentation = this.state.isFullscreen
       ? normalizeIvLyricsFullscreenPresentation(
         this.state.fullscreenPresentation

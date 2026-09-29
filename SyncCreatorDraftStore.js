@@ -610,57 +610,57 @@
   });
 
   const mergeAutosaveRecord = (existing, incoming) => {
-      if (existing && incoming.clientRevision <= existing.clientRevision) return cloneValue(existing);
-      const createdAt = existing?.createdAt || incoming.createdAt;
-      let history = existing?.history?.map(cloneValue) || [];
-      let historyCursorId = existing?.historyCursorId || "";
+    if (existing && incoming.clientRevision <= existing.clientRevision) return cloneValue(existing);
+    const createdAt = existing?.createdAt || incoming.createdAt;
+    let history = existing?.history?.map(cloneValue) || [];
+    let historyCursorId = existing?.historyCursorId || "";
 
-      if (history.length === 0) {
-        const sourceEntry = createInitialHistoryEntry({ ...incoming, createdAt });
-        if (!sourceEntry) throw new Error("Invalid Sync Creator source checkpoint.");
-        history = [sourceEntry];
-        historyCursorId = sourceEntry.id;
-      } else {
-        let cursorIndex = history.findIndex((entry) => entry.id === historyCursorId);
-        if (cursorIndex < 0) cursorIndex = history.length - 1;
-        const cursorEntry = history[cursorIndex];
-        const draftChangedFromCursor = !cursorEntry
-          || !snapshotsEqual(cursorEntry.snapshot, incoming.draft);
-        if (draftChangedFromCursor) {
-          if (cursorIndex < history.length - 1) {
-            history = history.slice(0, cursorIndex + 1);
-          }
+    if (history.length === 0) {
+      const sourceEntry = createInitialHistoryEntry({ ...incoming, createdAt });
+      if (!sourceEntry) throw new Error("Invalid Sync Creator source checkpoint.");
+      history = [sourceEntry];
+      historyCursorId = sourceEntry.id;
+    } else {
+      let cursorIndex = history.findIndex((entry) => entry.id === historyCursorId);
+      if (cursorIndex < 0) cursorIndex = history.length - 1;
+      const cursorEntry = history[cursorIndex];
+      const draftChangedFromCursor = !cursorEntry
+        || !snapshotsEqual(cursorEntry.snapshot, incoming.draft);
+      if (draftChangedFromCursor) {
+        if (cursorIndex < history.length - 1) {
+          history = history.slice(0, cursorIndex + 1);
+        }
 
-          const currentEntry = history[history.length - 1];
-          if (currentEntry?.kind === "working") {
-            currentEntry.snapshot = cloneValue(incoming.draft);
-            currentEntry.createdAt = Date.now();
-            currentEntry.lineIndex = Number(incoming.draft?.editor?.currentLineIndex) || 0;
-            historyCursorId = currentEntry.id;
-          } else {
-            const workingEntry = createHistoryEntry(incoming.draft, {
-              kind: "working",
-              lineIndex: Number(incoming.draft?.editor?.currentLineIndex) || 0,
-            });
-            if (!workingEntry) throw new Error("Invalid Sync Creator working checkpoint.");
-            history.push(workingEntry);
-            historyCursorId = workingEntry.id;
-          }
+        const currentEntry = history[history.length - 1];
+        if (currentEntry?.kind === "working") {
+          currentEntry.snapshot = cloneValue(incoming.draft);
+          currentEntry.createdAt = Date.now();
+          currentEntry.lineIndex = Number(incoming.draft?.editor?.currentLineIndex) || 0;
+          historyCursorId = currentEntry.id;
+        } else {
+          const workingEntry = createHistoryEntry(incoming.draft, {
+            kind: "working",
+            lineIndex: Number(incoming.draft?.editor?.currentLineIndex) || 0,
+          });
+          if (!workingEntry) throw new Error("Invalid Sync Creator working checkpoint.");
+          history.push(workingEntry);
+          historyCursorId = workingEntry.id;
         }
       }
+    }
 
-      history = trimHistory(history);
-      if (!history.some((entry) => entry.id === historyCursorId)) {
-        historyCursorId = history[history.length - 1]?.id || "";
-      }
-      return normalizeRecord({
-        ...existing,
-        ...incoming,
-        createdAt,
-        updatedAt: Date.now(),
-        history,
-        historyCursorId,
-      });
+    history = trimHistory(history);
+    if (!history.some((entry) => entry.id === historyCursorId)) {
+      historyCursorId = history[history.length - 1]?.id || "";
+    }
+    return normalizeRecord({
+      ...existing,
+      ...incoming,
+      createdAt,
+      updatedAt: Date.now(),
+      history,
+      historyCursorId,
+    });
   };
 
   const saveDraft = async (record) => {
@@ -683,43 +683,43 @@
       : null;
     if (checkpoint.baselineSnapshot && !baselineSnapshot) {
       throw new Error("Invalid Sync Creator checkpoint record.");
+  }
+    if (existing && incoming.clientRevision <= existing.clientRevision) return cloneValue(existing);
+    const createdAt = existing?.createdAt || incoming.createdAt;
+    let history = existing?.history?.map(cloneValue) || [];
+    let cursorId = existing?.historyCursorId || history[history.length - 1]?.id || "";
+    if (history.length === 0) {
+      const sourceEntry = createInitialHistoryEntry(
+        { ...incoming, createdAt },
+        baselineSnapshot || incoming.draft,
+      );
+      if (!sourceEntry) throw new Error("Invalid Sync Creator source checkpoint.");
+      history.push(sourceEntry);
+      cursorId = sourceEntry.id;
     }
-      if (existing && incoming.clientRevision <= existing.clientRevision) return cloneValue(existing);
-      const createdAt = existing?.createdAt || incoming.createdAt;
-      let history = existing?.history?.map(cloneValue) || [];
-      let cursorId = existing?.historyCursorId || history[history.length - 1]?.id || "";
-      if (history.length === 0) {
-        const sourceEntry = createInitialHistoryEntry(
-          { ...incoming, createdAt },
-          baselineSnapshot || incoming.draft,
-        );
-        if (!sourceEntry) throw new Error("Invalid Sync Creator source checkpoint.");
-        history.push(sourceEntry);
-        cursorId = sourceEntry.id;
-      }
 
-      let cursorIndex = history.findIndex((entry) => entry.id === cursorId);
-      if (cursorIndex < 0) cursorIndex = history.length - 1;
-      if (history[cursorIndex]?.kind === "working") {
-        history.splice(cursorIndex, 1);
-        cursorIndex -= 1;
-      }
-      if (cursorIndex >= 0 && cursorIndex < history.length - 1) {
-        history = history.slice(0, cursorIndex + 1);
-      }
+    let cursorIndex = history.findIndex((entry) => entry.id === cursorId);
+    if (cursorIndex < 0) cursorIndex = history.length - 1;
+    if (history[cursorIndex]?.kind === "working") {
+      history.splice(cursorIndex, 1);
+      cursorIndex -= 1;
+    }
+    if (cursorIndex >= 0 && cursorIndex < history.length - 1) {
+      history = history.slice(0, cursorIndex + 1);
+    }
 
-      const entry = createHistoryEntry(checkpoint.snapshot || incoming.draft, checkpoint);
-      if (!entry) throw new Error("Invalid Sync Creator checkpoint.");
-      history.push(entry);
-      history = trimHistory(history);
-      return normalizeRecord({
-        ...existing,
-        ...incoming,
-        createdAt,
-        updatedAt: Date.now(),
-        draft: cloneValue(entry.snapshot),
-        history,
-        historyCursorId: entry.id,
+    const entry = createHistoryEntry(checkpoint.snapshot || incoming.draft, checkpoint);
+    if (!entry) throw new Error("Invalid Sync Creator checkpoint.");
+    history.push(entry);
+    history = trimHistory(history);
+    return normalizeRecord({
+      ...existing,
+      ...incoming,
+      createdAt,
+      updatedAt: Date.now(),
+      draft: cloneValue(entry.snapshot),
+      history,
+      historyCursorId: entry.id,
       });
   };
 
@@ -748,19 +748,19 @@
   };
 
   const mergeRestoredRecord = (existing, checkpointId, normalizedDraft, clientRevision) => {
-      if (!existing) throw new Error("Sync Creator draft was not found.");
-      if (clientRevision <= existing.clientRevision) return cloneValue(existing);
-      const entryIndex = existing.history.findIndex((candidate) => candidate.id === checkpointId);
-      if (entryIndex < 0) throw new Error("Sync Creator checkpoint was not found.");
-      const history = existing.history.map(cloneValue);
-      history[entryIndex].snapshot = cloneValue(normalizedDraft);
-      return normalizeRecord({
-        ...existing,
-        clientRevision,
-        updatedAt: Date.now(),
-        draft: cloneValue(normalizedDraft),
-        history,
-        historyCursorId: checkpointId,
+    if (!existing) throw new Error("Sync Creator draft was not found.");
+    if (clientRevision <= existing.clientRevision) return cloneValue(existing);
+    const entryIndex = existing.history.findIndex((candidate) => candidate.id === checkpointId);
+    if (entryIndex < 0) throw new Error("Sync Creator checkpoint was not found.");
+    const history = existing.history.map(cloneValue);
+    history[entryIndex].snapshot = cloneValue(normalizedDraft);
+    return normalizeRecord({
+      ...existing,
+      clientRevision,
+      updatedAt: Date.now(),
+      draft: cloneValue(normalizedDraft),
+      history,
+      historyCursorId: checkpointId,
       });
   };
 

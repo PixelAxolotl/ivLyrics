@@ -4265,8 +4265,7 @@ const SyncAdjustButtonFluent = react.memo(({
       )
     )
   );
-  const modalOverlay = isOpen
-    ? react.createElement(
+  const renderSyncAdjustOverlay = () => react.createElement(
         "div",
         {
           className: "lyrics-sync-adjust-floating",
@@ -4336,7 +4335,10 @@ const SyncAdjustButtonFluent = react.memo(({
               : globalControls
           )
         )
-      )
+      );
+
+  const modalOverlay = isOpen
+    ? renderSyncAdjustOverlay()
     : null;
 
   return react.createElement(

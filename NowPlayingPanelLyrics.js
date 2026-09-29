@@ -4929,16 +4929,6 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         }, [lyrics, isEnabled, trackOffset, globalOffset, karaokeSource, pseudoKaraokeAdvanceMs, autoInstrumentalBreakEnabled, hasKaraokeTiming, reducePanelMotion, panelPlaybackTimeline]); // currentIndex 의존성 제거
 
         // 스크롤 애니메이션 비활성화 - Now Playing 탭 스크롤 문제 방지
-        // useEffect(() => {
-        //     if (!scrollRef.current || !isEnabled) return;
-        //     const activeElement = scrollRef.current.querySelector('.ivlyrics-panel-line.active');
-        //     if (activeElement) {
-        //         activeElement.scrollIntoView({
-        //             behavior: 'smooth',
-        //             block: 'center'
-        //         });
-        //     }
-        // }, [currentIndex, isEnabled]);
 
         const visibleLineCount = DEFAULT_LINES;
 

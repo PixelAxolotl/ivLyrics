@@ -715,7 +715,7 @@
         const agents = payload?.metadata?.agents || {};
         const songParts = Array.isArray(payload?.metadata?.songParts) ? payload.metadata.songParts : [];
 
-        const parsedLines = payload.lyrics.map((sourceLine, lineIndex) => {
+        const parseSourceLine = (sourceLine, lineIndex) => {
             const rawStart = toFiniteMilliseconds(sourceLine?.time);
             const rawDuration = toPositiveMilliseconds(sourceLine?.duration);
             const rawEnd = Number.isFinite(rawStart) && Number.isFinite(rawDuration)
@@ -804,7 +804,9 @@
             }
 
             return line;
-        }).filter(Boolean);
+        };
+
+        const parsedLines = payload.lyrics.map(parseSourceLine).filter(Boolean);
 
         const timedLines = parsedLines
             .filter(line => Number.isFinite(line.startTime))

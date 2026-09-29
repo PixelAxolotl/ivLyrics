@@ -9651,6 +9651,124 @@ react.createElement(
         react.createElement(OverlaySettings)
       );
 
+  const renderPerformanceTab = () =>
+react.createElement(
+        "div",
+        {
+          className: `tab-content ${activeTab === "performance" ? "active" : ""}`,
+          "data-tab-id": "performance",
+        },
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.performance.rendering.title"),
+          subtitle: I18n.t("settingsAdvanced.performance.rendering.subtitle"),
+          sectionKey: "performance-rendering",
+        }),
+        react.createElement(OptionList, {
+          items: [
+            {
+              desc: I18n.t("settingsAdvanced.performance.frameRate.label"),
+              info: I18n.t("settingsAdvanced.performance.frameRate.desc"),
+              key: "performance-frame-rate",
+              type: ConfigSliderRange,
+              defaultValue: Number(CONFIG.visual["performance-frame-rate"] ?? 60),
+              min: 10,
+              max: 240,
+              step: 1,
+              unit: I18n.t("settingsAdvanced.performance.frameRate.unit"),
+            },
+            {
+              desc: I18n.t("settings.reduceMotion.label"),
+              info: I18n.t("settings.reduceMotion.desc"),
+              key: "reduce-motion",
+              defaultValue: CONFIG.visual["reduce-motion"] ?? false,
+              type: ConfigSlider,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.karaokeMode.bounce.label"),
+              info: I18n.t("settingsAdvanced.karaokeMode.bounce.desc"),
+              key: "karaoke-bounce",
+              type: ConfigSlider,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.karaokeMode.lineTransition.label"),
+              info: I18n.t("settingsAdvanced.karaokeMode.lineTransition.desc"),
+              key: "karaoke-line-transition",
+              type: ConfigSlider,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.performance.textEffects.label"),
+              info: I18n.t("settingsAdvanced.performance.textEffects.desc"),
+              key: "karaoke-text-effects",
+              defaultValue: CONFIG.visual["karaoke-text-effects"] ?? true,
+              type: ConfigSlider,
+            },
+          ],
+          onChange: handlePerformanceSettingChange,
+        }),
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.performance.visualCost.title"),
+          subtitle: I18n.t("settingsAdvanced.performance.visualCost.subtitle"),
+          sectionKey: "performance-visual-cost",
+        }),
+        react.createElement(OptionList, {
+          items: [
+            {
+              desc: I18n.t("settingsAdvanced.syncMode.fadeoutBlur.label"),
+              key: "fade-blur",
+              info: I18n.t("settingsAdvanced.syncMode.fadeoutBlur.desc"),
+              type: ConfigSlider,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.syncMode.highlightMode.label"),
+              key: "highlight-mode",
+              info: I18n.t("settingsAdvanced.syncMode.highlightMode.desc"),
+              type: ConfigSlider,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.textShadow.enabled.label"),
+              info: I18n.t("settingsAdvanced.textShadow.enabled.desc"),
+              key: "text-shadow-enabled",
+              type: ConfigSlider,
+            },
+            {
+              desc: I18n.t("settings.blurGradientBackground.label"),
+              key: "blur-gradient-background",
+              info: I18n.t("settings.blurGradientBackground.desc"),
+              type: ConfigSlider,
+            },
+            {
+              desc: I18n.t("settings.videoBackground.label"),
+              key: "video-background",
+              info: I18n.t("settings.videoBackground.desc"),
+              type: ConfigSlider,
+            },
+          ],
+          onChange: handlePerformanceSettingChange,
+        }),
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.performance.backgroundWork.title"),
+          subtitle: I18n.t("settingsAdvanced.performance.backgroundWork.subtitle"),
+          sectionKey: "performance-background-work",
+        }),
+        react.createElement(OptionList, {
+          items: [
+            {
+              desc: I18n.t("settingsAdvanced.prefetch.enabled.label"),
+              info: I18n.t("settingsAdvanced.prefetch.enabled.desc"),
+              key: "prefetch-enabled",
+              type: ConfigSlider,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.prefetch.videoEnabled.label"),
+              info: I18n.t("settingsAdvanced.prefetch.videoEnabled.desc"),
+              key: "prefetch-video-enabled",
+              type: ConfigSlider,
+            },
+          ],
+          onChange: handlePerformanceSettingChange,
+        })
+      );
+
   return react.createElement(
     "div",
     {
@@ -10173,122 +10291,7 @@ react.createElement(
       ),
       // 성능 탭
       activeTab === "performance" &&
-      react.createElement(
-        "div",
-        {
-          className: `tab-content ${activeTab === "performance" ? "active" : ""}`,
-          "data-tab-id": "performance",
-        },
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.performance.rendering.title"),
-          subtitle: I18n.t("settingsAdvanced.performance.rendering.subtitle"),
-          sectionKey: "performance-rendering",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.performance.frameRate.label"),
-              info: I18n.t("settingsAdvanced.performance.frameRate.desc"),
-              key: "performance-frame-rate",
-              type: ConfigSliderRange,
-              defaultValue: Number(CONFIG.visual["performance-frame-rate"] ?? 60),
-              min: 10,
-              max: 240,
-              step: 1,
-              unit: I18n.t("settingsAdvanced.performance.frameRate.unit"),
-            },
-            {
-              desc: I18n.t("settings.reduceMotion.label"),
-              info: I18n.t("settings.reduceMotion.desc"),
-              key: "reduce-motion",
-              defaultValue: CONFIG.visual["reduce-motion"] ?? false,
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.karaokeMode.bounce.label"),
-              info: I18n.t("settingsAdvanced.karaokeMode.bounce.desc"),
-              key: "karaoke-bounce",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.karaokeMode.lineTransition.label"),
-              info: I18n.t("settingsAdvanced.karaokeMode.lineTransition.desc"),
-              key: "karaoke-line-transition",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.performance.textEffects.label"),
-              info: I18n.t("settingsAdvanced.performance.textEffects.desc"),
-              key: "karaoke-text-effects",
-              defaultValue: CONFIG.visual["karaoke-text-effects"] ?? true,
-              type: ConfigSlider,
-            },
-          ],
-          onChange: handlePerformanceSettingChange,
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.performance.visualCost.title"),
-          subtitle: I18n.t("settingsAdvanced.performance.visualCost.subtitle"),
-          sectionKey: "performance-visual-cost",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.syncMode.fadeoutBlur.label"),
-              key: "fade-blur",
-              info: I18n.t("settingsAdvanced.syncMode.fadeoutBlur.desc"),
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.syncMode.highlightMode.label"),
-              key: "highlight-mode",
-              info: I18n.t("settingsAdvanced.syncMode.highlightMode.desc"),
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.textShadow.enabled.label"),
-              info: I18n.t("settingsAdvanced.textShadow.enabled.desc"),
-              key: "text-shadow-enabled",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settings.blurGradientBackground.label"),
-              key: "blur-gradient-background",
-              info: I18n.t("settings.blurGradientBackground.desc"),
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settings.videoBackground.label"),
-              key: "video-background",
-              info: I18n.t("settings.videoBackground.desc"),
-              type: ConfigSlider,
-            },
-          ],
-          onChange: handlePerformanceSettingChange,
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.performance.backgroundWork.title"),
-          subtitle: I18n.t("settingsAdvanced.performance.backgroundWork.subtitle"),
-          sectionKey: "performance-background-work",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.prefetch.enabled.label"),
-              info: I18n.t("settingsAdvanced.prefetch.enabled.desc"),
-              key: "prefetch-enabled",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.prefetch.videoEnabled.label"),
-              info: I18n.t("settingsAdvanced.prefetch.videoEnabled.desc"),
-              key: "prefetch-video-enabled",
-              type: ConfigSlider,
-            },
-          ],
-          onChange: handlePerformanceSettingChange,
-        })
-      ),
+      renderPerformanceTab(),
       // 가사 탭 (가사 동기화 및 동작)
       activeTab === "lyrics" &&
       react.createElement(

@@ -2146,21 +2146,17 @@ const SetupWizard = ({ onComplete }) => {
       });
 
       // Set selected background
-      if (themeSettings.background === "colorful") {
-        StorageManager.saveConfig("colorful", true);
-        CONFIG.visual.colorful = true;
-      } else if (themeSettings.background === "gradient") {
-        StorageManager.saveConfig("gradient-background", true);
-        CONFIG.visual["gradient-background"] = true;
-      } else if (themeSettings.background === "blurGradient") {
-        StorageManager.saveConfig("blur-gradient-background", true);
-        CONFIG.visual["blur-gradient-background"] = true;
-      } else if (themeSettings.background === "solid") {
-        StorageManager.saveConfig("solid-background", true);
-        CONFIG.visual["solid-background"] = true;
-      } else if (themeSettings.background === "video") {
-        StorageManager.saveConfig("video-background", true);
-        CONFIG.visual["video-background"] = true;
+      const wizardBackgroundConfigKeys = {
+        colorful: "colorful",
+        gradient: "gradient-background",
+        blurGradient: "blur-gradient-background",
+        solid: "solid-background",
+        video: "video-background",
+      };
+      const selectedBackgroundKey = wizardBackgroundConfigKeys[themeSettings.background];
+      if (selectedBackgroundKey) {
+        StorageManager.saveConfig(selectedBackgroundKey, true);
+        CONFIG.visual[selectedBackgroundKey] = true;
       }
 
       // Save video helper setting (only if video background selected and helper step was shown)

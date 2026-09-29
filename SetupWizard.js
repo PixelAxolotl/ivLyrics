@@ -1861,23 +1861,7 @@ const VideoHelperTestStep = ({ onNext, onBack, onSkip, helperEnabled, onHelperCh
       )
     );
 
-  return react.createElement(
-    "div",
-    {
-      className: "wizard-step video-helper-test-step",
-      style: wizardStepStyle,
-    },
-    react.createElement(
-      "h2",
-      { style: wizardTitleStyle },
-      I18n.t("setupWizard.videoHelperTest.title")
-    ),
-    react.createElement(
-      "p",
-      { style: wizardSubtitleStyle },
-      I18n.t("setupWizard.videoHelperTest.subtitle")
-    ),
-    // Enable helper toggle
+  const renderVideoHelperEnableToggle = () =>
     react.createElement(
       "div",
       {
@@ -1906,7 +1890,26 @@ const VideoHelperTestStep = ({ onNext, onBack, onSkip, helperEnabled, onHelperCh
       react.createElement(WizardToggleVisual, {
         enabled: helperEnabled,
       })
+    );
+
+  return react.createElement(
+    "div",
+    {
+      className: "wizard-step video-helper-test-step",
+      style: wizardStepStyle,
+    },
+    react.createElement(
+      "h2",
+      { style: wizardTitleStyle },
+      I18n.t("setupWizard.videoHelperTest.title")
     ),
+    react.createElement(
+      "p",
+      { style: wizardSubtitleStyle },
+      I18n.t("setupWizard.videoHelperTest.subtitle")
+    ),
+    // Enable helper toggle
+    renderVideoHelperEnableToggle(),
     // Test button
     helperEnabled &&
     react.createElement(

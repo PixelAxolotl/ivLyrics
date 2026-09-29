@@ -2843,20 +2843,7 @@ const DebugInfoPanel = () => {
     );
   }
 
-  return react.createElement(
-    "div",
-    {
-      className: "info-card debug-info-panel",
-      style: {
-        padding: "20px",
-        background: "rgba(255, 255, 255, 0.03)",
-        border: "1px solid rgba(255, 255, 255, 0.08)",
-        borderRadius: "0 0 12px 12px",
-        backdropFilter: "blur(30px) saturate(150%)",
-        WebkitBackdropFilter: "blur(30px) saturate(150%)",
-        marginBottom: "24px"
-      }
-    },
+  const renderDebugHeader = () =>
     // 헤더 (새로고침 버튼 포함)
     react.createElement(
       "div",
@@ -2888,7 +2875,9 @@ const DebugInfoPanel = () => {
         }),
         I18n.t("settingsAdvanced.debugTab.refresh")
       )
-    ),
+    );
+
+  const renderDebugTrackInfo = () =>
     // 트랙 정보
     debugInfo.track && react.createElement(
       "div",
@@ -2918,7 +2907,9 @@ const DebugInfoPanel = () => {
           }, debugInfo.track.id)
         )
       )
-    ),
+    );
+
+  const renderDebugApiLogs = () =>
     // API 요청 로그 섹션
     react.createElement(
       "div",
@@ -3008,7 +2999,9 @@ const DebugInfoPanel = () => {
             )
           ))
       )
-    ),
+    );
+
+  const renderDebugLyricsInfo = () =>
     // 가사 정보
     react.createElement(
       "div",
@@ -3050,7 +3043,9 @@ const DebugInfoPanel = () => {
           )
         ) : react.createElement("span", { className: "debug-info-empty" }, I18n.t("settingsAdvanced.debugTab.noLyrics"))
       )
-    ),
+    );
+
+  const renderDebugActions = () =>
     // 복사 버튼들
     react.createElement(
       "div",
@@ -3102,7 +3097,32 @@ const DebugInfoPanel = () => {
         }),
         I18n.t("settingsAdvanced.debugTab.sendToDiscord")
       )
-    )
+    );
+
+  return react.createElement(
+    "div",
+    {
+      className: "info-card debug-info-panel",
+      style: {
+        padding: "20px",
+        background: "rgba(255, 255, 255, 0.03)",
+        border: "1px solid rgba(255, 255, 255, 0.08)",
+        borderRadius: "0 0 12px 12px",
+        backdropFilter: "blur(30px) saturate(150%)",
+        WebkitBackdropFilter: "blur(30px) saturate(150%)",
+        marginBottom: "24px"
+      }
+    },
+    // 헤더 (새로고침 버튼 포함)
+    renderDebugHeader(),
+    // 트랙 정보
+    renderDebugTrackInfo(),
+    // API 요청 로그 섹션
+    renderDebugApiLogs(),
+    // 가사 정보
+    renderDebugLyricsInfo(),
+    // 복사 버튼들
+    renderDebugActions()
   );
 };
 

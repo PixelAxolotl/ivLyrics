@@ -19,6 +19,22 @@ const MarketplacePage = (() => {
     const FILTER_AI = 'ai';
     const FILTER_STYLE = 'style';
 
+    // Shared detail-header back button (identical markup in addon detail and developer profile views)
+    function createMarketplaceBackButton(onBack) {
+        return react.createElement('button', {
+            className: 'ivlyrics-marketplace-detail-back',
+            onClick: onBack,
+        },
+            react.createElement('svg', {
+                width: 20, height: 20, viewBox: '0 0 24 24',
+                fill: 'none', stroke: 'currentColor', strokeWidth: 2
+            },
+                react.createElement('path', { d: 'M19 12H5m0 0l7 7m-7-7l7-7' })
+            ),
+            I18n.t('marketplace.backToLyrics')
+        );
+    }
+
     // ============================================
     // Markdown Renderer
     // ============================================
@@ -763,18 +779,7 @@ const MarketplacePage = (() => {
         return react.createElement('div', { className: 'ivlyrics-marketplace-detail' },
             // Header with back button + action buttons
             react.createElement('div', { className: 'ivlyrics-marketplace-detail-header' },
-                react.createElement('button', {
-                    className: 'ivlyrics-marketplace-detail-back',
-                    onClick: onBack,
-                },
-                    react.createElement('svg', {
-                        width: 20, height: 20, viewBox: '0 0 24 24',
-                        fill: 'none', stroke: 'currentColor', strokeWidth: 2
-                    },
-                        react.createElement('path', { d: 'M19 12H5m0 0l7 7m-7-7l7-7' })
-                    ),
-                    I18n.t('marketplace.backToLyrics')
-                ),
+                createMarketplaceBackButton(onBack),
                 // Action Buttons in header
                 react.createElement('div', { className: 'ivlyrics-marketplace-detail-header-actions' },
                     addon.hasUpdate && react.createElement('button', {
@@ -922,18 +927,7 @@ const MarketplacePage = (() => {
         return react.createElement('div', { className: 'ivlyrics-marketplace-detail' },
             // Header
             react.createElement('div', { className: 'ivlyrics-marketplace-detail-header' },
-                react.createElement('button', {
-                    className: 'ivlyrics-marketplace-detail-back',
-                    onClick: onBack,
-                },
-                    react.createElement('svg', {
-                        width: 20, height: 20, viewBox: '0 0 24 24',
-                        fill: 'none', stroke: 'currentColor', strokeWidth: 2
-                    },
-                        react.createElement('path', { d: 'M19 12H5m0 0l7 7m-7-7l7-7' })
-                    ),
-                    I18n.t('marketplace.backToLyrics')
-                ),
+                createMarketplaceBackButton(onBack),
             ),
             // Developer Profile Content
             react.createElement('div', { className: 'ivlyrics-marketplace-detail-content' },

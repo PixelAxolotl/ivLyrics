@@ -10480,255 +10480,278 @@ react.createElement(
             )
           )
         );
-  const renderAppearanceTab = () =>
-react.createElement(
-        "div",
+  const renderAppearanceTab = () => {
+    const renderAppearanceVisualEffectsSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("sections.visualEffects"),
+            subtitle: I18n.t("sections.visualEffectsSubtitle"),
+            sectionKey: "background-experience",
+          }),
+          isFadActive &&
+          react.createElement(
+            "div",
+            {
+              className: "setting-row",
+              style: {
+                backgroundColor: "rgba(var(--spice-rgb-warning), 0.1)",
+              },
+            },
+            react.createElement(
+              "div",
+              { className: "setting-row-content" },
+              react.createElement(
+                "div",
+                { className: "setting-row-left" },
+                react.createElement(
+                  "div",
+                  {
+                    className: "setting-name",
+                    style: { color: "var(--spice-text)", fontWeight: "600" },
+                  },
+                  I18n.t("sections.fadWarningTitle")
+                ),
+                react.createElement(
+                  "div",
+                  {
+                    className: "setting-description",
+                    style: { color: "var(--spice-subtext)" },
+                  },
+                  I18n.t("sections.fadWarningDesc"),
+                  react.createElement("br"),
+                  I18n.t("sections.fadWarningTip")
+                )
+              )
+            )
+          ),
+          react.createElement(BackgroundExperienceSection, { isFadActive }),
+    ];
+    const renderAppearanceSyncModeSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.syncMode.title"),
+            subtitle: I18n.t("settingsAdvanced.syncMode.subtitle"),
+            sectionKey: "sync-mode",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.syncMode.linesBefore.label"),
+                key: "lines-before",
+                info: I18n.t("settingsAdvanced.syncMode.linesBefore.desc"),
+                type: ConfigSelection,
+                options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+              },
+              {
+                desc: I18n.t("settingsAdvanced.syncMode.linesAfter.label"),
+                key: "lines-after",
+                info: I18n.t("settingsAdvanced.syncMode.linesAfter.desc"),
+                type: ConfigSelection,
+                options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+              },
+              {
+                desc: I18n.t("settingsAdvanced.syncMode.fadeoutBlur.label"),
+                key: "fade-blur",
+                info: I18n.t("settingsAdvanced.syncMode.fadeoutBlur.desc"),
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.syncMode.highlightMode.label"),
+                key: "highlight-mode",
+                info: I18n.t("settingsAdvanced.syncMode.highlightMode.desc"),
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.syncMode.highlightIntensity.label"),
+                key: "highlight-intensity",
+                info: I18n.t("settingsAdvanced.syncMode.highlightIntensity.desc"),
+                type: ConfigSliderRange,
+                min: 30,
+                max: 90,
+                step: 5,
+                unit: "%",
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+    ];
+    const renderAppearanceMultiVocalSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.multiVocalColors.title") || "Multi-vocal Colors",
+            subtitle: I18n.t("settingsAdvanced.multiVocalColors.subtitle") || "Customize male, female, and duet speaker colors.",
+            sectionKey: "multi-vocal-colors",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.multiVocalColors.useCreatorColors.label") || "Use sync creator custom colors",
+                key: "sync-data-custom-speaker-colors-enabled",
+                info: I18n.t("settingsAdvanced.multiVocalColors.useCreatorColors.desc") || "Use custom speaker colors embedded by sync creators. When disabled, CUSTOM speakers use the fallback selected by the sync creator.",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["sync-data-custom-speaker-colors-enabled"] ?? true,
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+          react.createElement(ConfigMultiVocalColorSettings),
+    ];
+    const renderAppearanceInstrumentalSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.instrumentalBreak.title") || "Instrumental Marker",
+            subtitle: I18n.t("settingsAdvanced.instrumentalBreak.subtitle") || "Replace long blank or note-only lyric gaps with an icon",
+            sectionKey: "instrumental-break",
+          }),
+          renderAppearanceInstrumentalBreakSection(),
+          react.createElement("div", {
+            className: "settings-live-preview-spacer",
+            "aria-hidden": "true",
+          }),
+          renderAppearanceLivePreviewSection(),
+    ];
+    const renderAppearanceMotionSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("sections.motion"),
+            subtitle: I18n.t("settings.reduceMotion.desc"),
+            sectionKey: "reduce-motion",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settings.reduceMotion.label"),
+                info: I18n.t("settings.reduceMotion.desc"),
+                key: "reduce-motion",
+                defaultValue: CONFIG.visual["reduce-motion"] ?? false,
+                type: ConfigSlider,
+              },
+            ],
+            onChange: (name, value) => {
+              CONFIG.visual[name] = value;
+              StorageManager.setItem(`${APP_NAME}:visual:${name}`, value);
+              applySettingsMotionClasses();
+              lyricContainerUpdate?.();
+              window.dispatchEvent(
+                new CustomEvent("ivLyrics", {
+                  detail: { type: "config", name, value },
+                })
+              );
+            },
+          }),
+    ];
+    const renderAppearanceFuriganaSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.furiganaStyle.title"),
+            subtitle: I18n.t("settingsAdvanced.furiganaStyle.subtitle"),
+            sectionKey: "furigana-style",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.languageDetection.furigana.label"),
+                info: I18n.t("settingsAdvanced.languageDetection.furigana.desc"),
+                key: "furigana-enabled",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.furiganaStyle.fontSize.label"),
+                info: I18n.t("settingsAdvanced.furiganaStyle.fontSize.desc"),
+                key: "furigana-font-size",
+                type: ConfigSliderRange,
+                min: 8,
+                max: 48,
+                step: 1,
+                unit: "px",
+              },
+              {
+                desc: I18n.t("settingsAdvanced.furiganaStyle.fontWeight.label"),
+                info: I18n.t("settingsAdvanced.furiganaStyle.fontWeight.desc"),
+                key: "furigana-font-weight",
+                type: ConfigFontWeightSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.furiganaStyle.opacity.label"),
+                info: I18n.t("settingsAdvanced.furiganaStyle.opacity.desc"),
+                key: "furigana-opacity",
+                type: ConfigSliderRange,
+                min: 0,
+                max: 100,
+                step: 5,
+                unit: "%",
+              },
+              {
+                desc: I18n.t("settingsAdvanced.furiganaStyle.spacing.label"),
+                info: I18n.t("settingsAdvanced.furiganaStyle.spacing.desc"),
+                key: "furigana-spacing",
+                type: ConfigSliderRange,
+                min: -5,
+                max: 20,
+                step: 1,
+                unit: "px",
+              },
+              ...createTextOutlineSettingItems("furigana"),
+            ],
+            onChange: handleAppearancePreviewChange,
+          }),
+    ];
+    const renderAppearanceTextShadowSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.textShadow.title"),
+            subtitle: I18n.t("settingsAdvanced.textShadow.subtitle"),
+            sectionKey: "text-shadow",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.textShadow.enabled.label"),
+                info: I18n.t("settingsAdvanced.textShadow.enabled.desc"),
+                key: "text-shadow-enabled",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.textShadow.color.label"),
+                info: I18n.t("settingsAdvanced.textShadow.color.desc"),
+                key: "text-shadow-color",
+                type: ConfigColorPicker,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.textShadow.opacity.label"),
+                info: I18n.t("settingsAdvanced.textShadow.opacity.desc"),
+                key: "text-shadow-opacity",
+                type: ConfigSliderRange,
+                min: 0,
+                max: 100,
+                step: 5,
+                unit: "%",
+              },
+              {
+                desc: I18n.t("settingsAdvanced.textShadow.blur.label"),
+                info: I18n.t("settingsAdvanced.textShadow.blur.desc"),
+                key: "text-shadow-blur",
+                type: ConfigSliderRange,
+                min: 0,
+                max: 10,
+                step: 1,
+                unit: "px",
+              },
+            ],
+            onChange: handleAppearancePreviewChange,
+          })
+    ];
+
+    return react.createElement(
+      "div",
         {
           className: `tab-content ${activeTab === "appearance" ? "active" : ""
             }`,
           "data-tab-id": "appearance",
         },
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("sections.visualEffects"),
-          subtitle: I18n.t("sections.visualEffectsSubtitle"),
-          sectionKey: "background-experience",
-        }),
-        isFadActive &&
-        react.createElement(
-          "div",
-          {
-            className: "setting-row",
-            style: {
-              backgroundColor: "rgba(var(--spice-rgb-warning), 0.1)",
-            },
-          },
-          react.createElement(
-            "div",
-            { className: "setting-row-content" },
-            react.createElement(
-              "div",
-              { className: "setting-row-left" },
-              react.createElement(
-                "div",
-                {
-                  className: "setting-name",
-                  style: { color: "var(--spice-text)", fontWeight: "600" },
-                },
-                I18n.t("sections.fadWarningTitle")
-              ),
-              react.createElement(
-                "div",
-                {
-                  className: "setting-description",
-                  style: { color: "var(--spice-subtext)" },
-                },
-                I18n.t("sections.fadWarningDesc"),
-                react.createElement("br"),
-                I18n.t("sections.fadWarningTip")
-              )
-            )
-          )
-        ),
-        react.createElement(BackgroundExperienceSection, { isFadActive }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.syncMode.title"),
-          subtitle: I18n.t("settingsAdvanced.syncMode.subtitle"),
-          sectionKey: "sync-mode",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.syncMode.linesBefore.label"),
-              key: "lines-before",
-              info: I18n.t("settingsAdvanced.syncMode.linesBefore.desc"),
-              type: ConfigSelection,
-              options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            },
-            {
-              desc: I18n.t("settingsAdvanced.syncMode.linesAfter.label"),
-              key: "lines-after",
-              info: I18n.t("settingsAdvanced.syncMode.linesAfter.desc"),
-              type: ConfigSelection,
-              options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            },
-            {
-              desc: I18n.t("settingsAdvanced.syncMode.fadeoutBlur.label"),
-              key: "fade-blur",
-              info: I18n.t("settingsAdvanced.syncMode.fadeoutBlur.desc"),
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.syncMode.highlightMode.label"),
-              key: "highlight-mode",
-              info: I18n.t("settingsAdvanced.syncMode.highlightMode.desc"),
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.syncMode.highlightIntensity.label"),
-              key: "highlight-intensity",
-              info: I18n.t("settingsAdvanced.syncMode.highlightIntensity.desc"),
-              type: ConfigSliderRange,
-              min: 30,
-              max: 90,
-              step: 5,
-              unit: "%",
-            },
-          ],
-          onChange: handleVisualConfigChange,
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.multiVocalColors.title") || "Multi-vocal Colors",
-          subtitle: I18n.t("settingsAdvanced.multiVocalColors.subtitle") || "Customize male, female, and duet speaker colors.",
-          sectionKey: "multi-vocal-colors",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.multiVocalColors.useCreatorColors.label") || "Use sync creator custom colors",
-              key: "sync-data-custom-speaker-colors-enabled",
-              info: I18n.t("settingsAdvanced.multiVocalColors.useCreatorColors.desc") || "Use custom speaker colors embedded by sync creators. When disabled, CUSTOM speakers use the fallback selected by the sync creator.",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["sync-data-custom-speaker-colors-enabled"] ?? true,
-            },
-          ],
-          onChange: handleVisualConfigChange,
-        }),
-        react.createElement(ConfigMultiVocalColorSettings),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.instrumentalBreak.title") || "Instrumental Marker",
-          subtitle: I18n.t("settingsAdvanced.instrumentalBreak.subtitle") || "Replace long blank or note-only lyric gaps with an icon",
-          sectionKey: "instrumental-break",
-        }),
-        renderAppearanceInstrumentalBreakSection(),
-        react.createElement("div", {
-          className: "settings-live-preview-spacer",
-          "aria-hidden": "true",
-        }),
-        renderAppearanceLivePreviewSection(),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("sections.motion"),
-          subtitle: I18n.t("settings.reduceMotion.desc"),
-          sectionKey: "reduce-motion",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settings.reduceMotion.label"),
-              info: I18n.t("settings.reduceMotion.desc"),
-              key: "reduce-motion",
-              defaultValue: CONFIG.visual["reduce-motion"] ?? false,
-              type: ConfigSlider,
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.setItem(`${APP_NAME}:visual:${name}`, value);
-            applySettingsMotionClasses();
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        }),
+      ...renderAppearanceVisualEffectsSection(),
+      ...renderAppearanceSyncModeSection(),
+      ...renderAppearanceMultiVocalSection(),
+      ...renderAppearanceInstrumentalSection(),
+      ...renderAppearanceMotionSection(),
         ...renderLyricsTypographySections({ onChange: saveLyricsTypographySetting }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.furiganaStyle.title"),
-          subtitle: I18n.t("settingsAdvanced.furiganaStyle.subtitle"),
-          sectionKey: "furigana-style",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.languageDetection.furigana.label"),
-              info: I18n.t("settingsAdvanced.languageDetection.furigana.desc"),
-              key: "furigana-enabled",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.furiganaStyle.fontSize.label"),
-              info: I18n.t("settingsAdvanced.furiganaStyle.fontSize.desc"),
-              key: "furigana-font-size",
-              type: ConfigSliderRange,
-              min: 8,
-              max: 48,
-              step: 1,
-              unit: "px",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.furiganaStyle.fontWeight.label"),
-              info: I18n.t("settingsAdvanced.furiganaStyle.fontWeight.desc"),
-              key: "furigana-font-weight",
-              type: ConfigFontWeightSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.furiganaStyle.opacity.label"),
-              info: I18n.t("settingsAdvanced.furiganaStyle.opacity.desc"),
-              key: "furigana-opacity",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 100,
-              step: 5,
-              unit: "%",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.furiganaStyle.spacing.label"),
-              info: I18n.t("settingsAdvanced.furiganaStyle.spacing.desc"),
-              key: "furigana-spacing",
-              type: ConfigSliderRange,
-              min: -5,
-              max: 20,
-              step: 1,
-              unit: "px",
-            },
-            ...createTextOutlineSettingItems("furigana"),
-          ],
-          onChange: handleAppearancePreviewChange,
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.textShadow.title"),
-          subtitle: I18n.t("settingsAdvanced.textShadow.subtitle"),
-          sectionKey: "text-shadow",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.textShadow.enabled.label"),
-              info: I18n.t("settingsAdvanced.textShadow.enabled.desc"),
-              key: "text-shadow-enabled",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.textShadow.color.label"),
-              info: I18n.t("settingsAdvanced.textShadow.color.desc"),
-              key: "text-shadow-color",
-              type: ConfigColorPicker,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.textShadow.opacity.label"),
-              info: I18n.t("settingsAdvanced.textShadow.opacity.desc"),
-              key: "text-shadow-opacity",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 100,
-              step: 5,
-              unit: "%",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.textShadow.blur.label"),
-              info: I18n.t("settingsAdvanced.textShadow.blur.desc"),
-              key: "text-shadow-blur",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 10,
-              step: 1,
-              unit: "px",
-            },
-          ],
-          onChange: handleAppearancePreviewChange,
-        })
-      );
+      ...renderAppearanceFuriganaSection(),
+      ...renderAppearanceTextShadowSection(),
+    );
+  };
 
   const renderAdvancedExportImportSection = () =>
 react.createElement(OptionList, {

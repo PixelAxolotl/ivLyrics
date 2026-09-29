@@ -2777,7 +2777,7 @@
                                 currentQuizAnswer?.correct ? "is-correct" : "",
                                 currentQuizAnswer && !currentQuizAnswer.correct ? "is-wrong" : ""
                             ].filter(Boolean).join(" ")
-                        }, 
+                        },
                             react.createElement("div", { className: "ivlyrics-study-quiz-prompt" },
                                 normalizeQuizType(currentQuiz.type) === "blank"
                                     ? react.createElement(BlankQuestion, { text: currentQuiz.question })

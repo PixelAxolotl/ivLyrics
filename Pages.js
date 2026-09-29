@@ -973,6 +973,64 @@ const SyncCreatorProfileModal = react.memo(({
 		}
 	}, [uiTheme]);
 
+	const renderCreatorProfileNameRow = () => (
+				react.createElement(
+					"div",
+					{ className: "lyrics-creator-profile-name-row" },
+					react.createElement(
+						"div",
+						{ className: "lyrics-creator-profile-title-block" },
+						react.createElement(
+							"div",
+							{ className: "lyrics-creator-profile-name-with-badge" },
+							react.createElement("h2", { className: "lyrics-creator-profile-name" }, displayName),
+							supportBadgeLabel && react.createElement("span", { className: `lyrics-creator-support-badge is-${supportTier}` }, supportBadgeLabel)
+						),
+						subtitle && react.createElement("div", { className: "lyrics-creator-profile-handle" }, subtitle)
+					),
+				react.createElement(
+					"div",
+					{ className: "lyrics-creator-profile-actions" },
+					publicProfileUrl && react.createElement(
+						"a",
+						{
+							className: "lyrics-creator-profile-public-link",
+							href: publicProfileUrl,
+							target: "_blank",
+							rel: "noopener noreferrer",
+							title: copy.openProfile
+						},
+						copy.openProfile
+					),
+					react.createElement(
+						"button",
+						{
+							type: "button",
+								className: `lyrics-creator-profile-like-inline ${liked ? "is-liked" : ""} ${likePending ? "is-loading" : ""}`.trim(),
+								onClick: onToggleLike,
+								disabled: likePending || !canLike,
+								title: likeButtonTitle,
+								"aria-label": likeButtonLabel
+						},
+						likeIcon,
+						react.createElement("span", null, likeButtonLabel)
+					),
+					isOwnProfile && react.createElement(
+						"button",
+						{
+							type: "button",
+							className: `lyrics-creator-profile-decoration-toggle ${isDecorationEditorOpen ? "is-active" : ""}`.trim(),
+							onClick: () => setIsDecorationEditorOpen((current) => !current),
+							title: copy.nicknameStyle,
+							"aria-label": copy.nicknameStyle,
+							"aria-expanded": isDecorationEditorOpen,
+							"aria-controls": "lyrics-creator-decoration-panel"
+						},
+						decorationSettingsIcon
+					)
+				)
+				)
+	);
 	const renderCreatorProfileDecorationPanel = () => (
 			isOwnProfile && react.createElement(
 				"div",
@@ -1149,62 +1207,7 @@ const SyncCreatorProfileModal = react.memo(({
 			react.createElement(
 				"div",
 				{ className: "lyrics-creator-profile-info" },
-				react.createElement(
-					"div",
-					{ className: "lyrics-creator-profile-name-row" },
-					react.createElement(
-						"div",
-						{ className: "lyrics-creator-profile-title-block" },
-						react.createElement(
-							"div",
-							{ className: "lyrics-creator-profile-name-with-badge" },
-							react.createElement("h2", { className: "lyrics-creator-profile-name" }, displayName),
-							supportBadgeLabel && react.createElement("span", { className: `lyrics-creator-support-badge is-${supportTier}` }, supportBadgeLabel)
-						),
-						subtitle && react.createElement("div", { className: "lyrics-creator-profile-handle" }, subtitle)
-					),
-				react.createElement(
-					"div",
-					{ className: "lyrics-creator-profile-actions" },
-					publicProfileUrl && react.createElement(
-						"a",
-						{
-							className: "lyrics-creator-profile-public-link",
-							href: publicProfileUrl,
-							target: "_blank",
-							rel: "noopener noreferrer",
-							title: copy.openProfile
-						},
-						copy.openProfile
-					),
-					react.createElement(
-						"button",
-						{
-							type: "button",
-								className: `lyrics-creator-profile-like-inline ${liked ? "is-liked" : ""} ${likePending ? "is-loading" : ""}`.trim(),
-								onClick: onToggleLike,
-								disabled: likePending || !canLike,
-								title: likeButtonTitle,
-								"aria-label": likeButtonLabel
-						},
-						likeIcon,
-						react.createElement("span", null, likeButtonLabel)
-					),
-					isOwnProfile && react.createElement(
-						"button",
-						{
-							type: "button",
-							className: `lyrics-creator-profile-decoration-toggle ${isDecorationEditorOpen ? "is-active" : ""}`.trim(),
-							onClick: () => setIsDecorationEditorOpen((current) => !current),
-							title: copy.nicknameStyle,
-							"aria-label": copy.nicknameStyle,
-							"aria-expanded": isDecorationEditorOpen,
-							"aria-controls": "lyrics-creator-decoration-panel"
-						},
-						decorationSettingsIcon
-					)
-				)
-				),
+				renderCreatorProfileNameRow(),
 			renderCreatorProfileDecorationPanel(),
 			renderCreatorProfileGreetingBlock(),
 			renderCreatorProfileStats()

@@ -11536,18 +11536,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					)
 				);
 
-		return react.createElement('section', {
-			className: 'sync-creator-range-style-editor',
-			style: {
-				flexShrink: 0,
-				marginTop: 8,
-				border: `1px solid ${TOSS_BORDER}`,
-				borderRadius: 10,
-				background: 'rgba(255,255,255,0.025)',
-				overflow: 'hidden'
-			}
-		},
-			react.createElement('button', {
+		const renderStyleRangeToggle = () => react.createElement('button', {
 				type: 'button',
 				style: {
 					width: '100%',
@@ -11578,8 +11567,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						: (I18n.t('syncCreator.rangeStyleEmpty') || '설정된 범위 없음')
 				),
 				react.createElement('span', { style: { color: 'var(--spice-subtext)', fontSize: 16, lineHeight: 1 } }, isStyleRangeEditorExpanded ? '⌃' : '⌄')
-			),
-			isStyleRangeEditorExpanded && react.createElement('div', {
+		);
+		const renderStyleRangeExpandedBody = () => react.createElement('div', {
 				style: { padding: '0 11px 10px', borderTop: `1px solid ${TOSS_BORDER}` }
 			},
 				react.createElement('div', { style: { marginTop: 8, fontSize: 10.5, color: 'var(--spice-subtext)', lineHeight: 1.4 } },
@@ -11613,7 +11602,20 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					),
 					renderStyleRangeColorColumn()
 				)
-			)
+		);
+		return react.createElement('section', {
+			className: 'sync-creator-range-style-editor',
+			style: {
+				flexShrink: 0,
+				marginTop: 8,
+				border: `1px solid ${TOSS_BORDER}`,
+				borderRadius: 10,
+				background: 'rgba(255,255,255,0.025)',
+				overflow: 'hidden'
+			}
+		},
+			renderStyleRangeToggle(),
+			isStyleRangeEditorExpanded && renderStyleRangeExpandedBody()
 		);
 	};
 

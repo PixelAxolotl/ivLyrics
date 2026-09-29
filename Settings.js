@@ -11981,209 +11981,8 @@ react.createElement(
         })
       );
 
-  const renderAboutTab = () =>
-react.createElement(
-        "div",
-        {
-          className: `tab-content ${activeTab === "about" ? "active" : ""}`,
-          "data-tab-id": "about",
-        },
-        // Discord 계정 연동 섹션 (최상단)
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.aboutTab.account.title"),
-          subtitle: I18n.t("settingsAdvanced.aboutTab.account.subtitle"),
-          sectionKey: "about-account",
-        }),
-        react.createElement(AccountSection),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.aboutTab.appInfo.title"),
-          subtitle: I18n.t("settingsAdvanced.aboutTab.subtitle"),
-          sectionKey: "about-app-info",
-        }),
-        react.createElement(
-          "div",
-          {
-            className: "info-card about-info-card",
-            style: {
-              padding: "20px",
-              background: "rgba(255, 255, 255, 0.03)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: "0 0 12px 12px",
-              backdropFilter: "blur(30px) saturate(150%)",
-              WebkitBackdropFilter: "blur(30px) saturate(150%)",
-              marginBottom: "24px",
-            },
-          },
-          react.createElement(
-            "h3",
-            {
-              className: "about-info-title",
-              style: {
-                margin: "0 0 12px",
-                fontSize: "18px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              },
-            },
-            "ivLyrics"
-          ),
-          react.createElement(
-            "p",
-            {
-              className: "about-info-description",
-              style: {
-                margin: "0 0 16px",
-                lineHeight: "1.6",
-              },
-            },
-            I18n.t("settingsAdvanced.aboutTab.appDescription")
-          ),
-          react.createElement(
-            "p",
-            {
-              className: "about-info-meta",
-              style: {
-                margin: "0 0 8px",
-                fontSize: "14px",
-              },
-            },
-            `${I18n.t("settingsAdvanced.aboutTab.versionPrefix")}: ${Utils.currentVersion}`
-          ),
-          react.createElement("div", {
-            className: "about-info-divider",
-            style: {
-              height: "1px",
-              margin: "16px 0",
-            },
-          }),
-          react.createElement(
-            "p",
-            {
-              className: "about-info-line",
-              style: {
-                margin: "0 0 12px",
-                lineHeight: "1.6",
-              },
-            },
-            react.createElement("strong", null, I18n.t("settingsAdvanced.aboutTab.developer")),
-            " ivLis Studio"
-          ),
-          react.createElement(
-            "p",
-            {
-              className: "about-info-line",
-              style: {
-                margin: "0 0 12px",
-                lineHeight: "1.6",
-              },
-            },
-            react.createElement("strong", null, I18n.t("settingsAdvanced.aboutTab.originalProject")),
-            "lyrics-plus by khanhas"
-          ),
-          react.createElement(
-            "p",
-            {
-              className: "about-info-note",
-              style: {
-                margin: "0",
-                fontSize: "14px",
-                lineHeight: "1.6",
-              },
-            },
-            I18n.t("settingsAdvanced.aboutTab.thanks")
-          )
-        ),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.aboutTab.clientInfo.title"),
-          subtitle: I18n.t("settingsAdvanced.aboutTab.clientInfo.subtitle"),
-          sectionKey: "about-client-info",
-        }),
-        react.createElement(
-          "div",
-          {
-            className: "info-card about-info-card about-client-card",
-            style: {
-              padding: "20px",
-              background: "rgba(255, 255, 255, 0.03)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: "0 0 12px 12px",
-              backdropFilter: "blur(30px) saturate(150%)",
-              WebkitBackdropFilter: "blur(30px) saturate(150%)",
-              marginBottom: "24px",
-            },
-          },
-          react.createElement(
-            "p",
-            {
-              className: "about-info-description about-info-description-compact",
-              style: {
-                margin: "0 0 8px",
-                fontSize: "13px",
-                lineHeight: "1.6",
-              },
-            },
-            I18n.t("settingsAdvanced.aboutTab.clientInfo.description"),
-          ),
-          react.createElement(
-            "div",
-            {
-              className: "about-client-id-row",
-              style: {
-                marginTop: "12px",
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-              },
-            },
-            react.createElement(
-              "div",
-              {
-                className: "about-client-id-box",
-                style: {
-                  flex: 1,
-                  borderRadius: "8px",
-                  padding: "10px 14px",
-                  fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-                  fontSize: "13px",
-                  userSelect: "all",
-                  wordBreak: "break-all",
-                  lineHeight: "1.5",
-                },
-              },
-              Spicetify.LocalStorage.get("ivLyrics:user-hash")
-            ),
-            react.createElement(
-              "button",
-              {
-                className: "btn about-client-copy-btn",
-                onClick: () => {
-                  const clientId = Spicetify.LocalStorage.get("ivLyrics:user-hash");
-                  navigator.clipboard.writeText(clientId).then(() => {
-                    Toast.success(I18n.t("settingsAdvanced.aboutTab.clientInfo.copied"));
-                  }).catch(() => {
-                    Toast.error(I18n.t("settingsAdvanced.aboutTab.clientInfo.copyFailed"));
-                  });
-                },
-                style: {
-                  padding: "10px 16px",
-                  borderRadius: "8px",
-                  fontSize: "13px",
-                  fontWeight: "600",
-                  letterSpacing: "-0.01em",
-                  whiteSpace: "nowrap",
-                },
-              },
-              I18n.t("settingsAdvanced.aboutTab.clientInfo.copy")
-            )
-          )
-        ),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.aboutTab.update.title"),
-          subtitle: I18n.t("settingsAdvanced.aboutTab.update.subtitle"),
-          sectionKey: "about-update",
-        }),
-        react.createElement(OptionList, {
+  const renderAboutUpdateSection = () =>
+react.createElement(OptionList, {
           items: [
             {
               desc: I18n.t("settingsAdvanced.aboutTab.update.checkUpdate.desc"),
@@ -12464,7 +12263,210 @@ react.createElement(
             },
           ],
           onChange: () => { },
+        });
+  const renderAboutTab = () =>
+react.createElement(
+        "div",
+        {
+          className: `tab-content ${activeTab === "about" ? "active" : ""}`,
+          "data-tab-id": "about",
+        },
+        // Discord 계정 연동 섹션 (최상단)
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.aboutTab.account.title"),
+          subtitle: I18n.t("settingsAdvanced.aboutTab.account.subtitle"),
+          sectionKey: "about-account",
         }),
+        react.createElement(AccountSection),
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.aboutTab.appInfo.title"),
+          subtitle: I18n.t("settingsAdvanced.aboutTab.subtitle"),
+          sectionKey: "about-app-info",
+        }),
+        react.createElement(
+          "div",
+          {
+            className: "info-card about-info-card",
+            style: {
+              padding: "20px",
+              background: "rgba(255, 255, 255, 0.03)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: "0 0 12px 12px",
+              backdropFilter: "blur(30px) saturate(150%)",
+              WebkitBackdropFilter: "blur(30px) saturate(150%)",
+              marginBottom: "24px",
+            },
+          },
+          react.createElement(
+            "h3",
+            {
+              className: "about-info-title",
+              style: {
+                margin: "0 0 12px",
+                fontSize: "18px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              },
+            },
+            "ivLyrics"
+          ),
+          react.createElement(
+            "p",
+            {
+              className: "about-info-description",
+              style: {
+                margin: "0 0 16px",
+                lineHeight: "1.6",
+              },
+            },
+            I18n.t("settingsAdvanced.aboutTab.appDescription")
+          ),
+          react.createElement(
+            "p",
+            {
+              className: "about-info-meta",
+              style: {
+                margin: "0 0 8px",
+                fontSize: "14px",
+              },
+            },
+            `${I18n.t("settingsAdvanced.aboutTab.versionPrefix")}: ${Utils.currentVersion}`
+          ),
+          react.createElement("div", {
+            className: "about-info-divider",
+            style: {
+              height: "1px",
+              margin: "16px 0",
+            },
+          }),
+          react.createElement(
+            "p",
+            {
+              className: "about-info-line",
+              style: {
+                margin: "0 0 12px",
+                lineHeight: "1.6",
+              },
+            },
+            react.createElement("strong", null, I18n.t("settingsAdvanced.aboutTab.developer")),
+            " ivLis Studio"
+          ),
+          react.createElement(
+            "p",
+            {
+              className: "about-info-line",
+              style: {
+                margin: "0 0 12px",
+                lineHeight: "1.6",
+              },
+            },
+            react.createElement("strong", null, I18n.t("settingsAdvanced.aboutTab.originalProject")),
+            "lyrics-plus by khanhas"
+          ),
+          react.createElement(
+            "p",
+            {
+              className: "about-info-note",
+              style: {
+                margin: "0",
+                fontSize: "14px",
+                lineHeight: "1.6",
+              },
+            },
+            I18n.t("settingsAdvanced.aboutTab.thanks")
+          )
+        ),
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.aboutTab.clientInfo.title"),
+          subtitle: I18n.t("settingsAdvanced.aboutTab.clientInfo.subtitle"),
+          sectionKey: "about-client-info",
+        }),
+        react.createElement(
+          "div",
+          {
+            className: "info-card about-info-card about-client-card",
+            style: {
+              padding: "20px",
+              background: "rgba(255, 255, 255, 0.03)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: "0 0 12px 12px",
+              backdropFilter: "blur(30px) saturate(150%)",
+              WebkitBackdropFilter: "blur(30px) saturate(150%)",
+              marginBottom: "24px",
+            },
+          },
+          react.createElement(
+            "p",
+            {
+              className: "about-info-description about-info-description-compact",
+              style: {
+                margin: "0 0 8px",
+                fontSize: "13px",
+                lineHeight: "1.6",
+              },
+            },
+            I18n.t("settingsAdvanced.aboutTab.clientInfo.description"),
+          ),
+          react.createElement(
+            "div",
+            {
+              className: "about-client-id-row",
+              style: {
+                marginTop: "12px",
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+              },
+            },
+            react.createElement(
+              "div",
+              {
+                className: "about-client-id-box",
+                style: {
+                  flex: 1,
+                  borderRadius: "8px",
+                  padding: "10px 14px",
+                  fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                  fontSize: "13px",
+                  userSelect: "all",
+                  wordBreak: "break-all",
+                  lineHeight: "1.5",
+                },
+              },
+              Spicetify.LocalStorage.get("ivLyrics:user-hash")
+            ),
+            react.createElement(
+              "button",
+              {
+                className: "btn about-client-copy-btn",
+                onClick: () => {
+                  const clientId = Spicetify.LocalStorage.get("ivLyrics:user-hash");
+                  navigator.clipboard.writeText(clientId).then(() => {
+                    Toast.success(I18n.t("settingsAdvanced.aboutTab.clientInfo.copied"));
+                  }).catch(() => {
+                    Toast.error(I18n.t("settingsAdvanced.aboutTab.clientInfo.copyFailed"));
+                  });
+                },
+                style: {
+                  padding: "10px 16px",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  letterSpacing: "-0.01em",
+                  whiteSpace: "nowrap",
+                },
+              },
+              I18n.t("settingsAdvanced.aboutTab.clientInfo.copy")
+            )
+          )
+        ),
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.aboutTab.update.title"),
+          subtitle: I18n.t("settingsAdvanced.aboutTab.update.subtitle"),
+          sectionKey: "about-update",
+        }),
+        renderAboutUpdateSection(),
 
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.aboutTab.patchNotes.title"),

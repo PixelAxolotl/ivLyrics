@@ -8178,7 +8178,7 @@
                             });
                         });
 
-                        lyrics = lyrics.map((line, idx) => {
+                        const mergeSlotResultsIntoLine = (line, idx) => {
                             const isKaraokeLine = Array.isArray(line.syllables)
                                 || Array.isArray(line.vocals?.lead?.syllables);
                             const originalText = isKaraokeLine && line.originalText
@@ -8239,7 +8239,8 @@
                                 translation: transText || line.translation || null,
                                 translationText: transText || line.translationText || null
                             };
-                        });
+                        };
+                        lyrics = lyrics.map(mergeSlotResultsIntoLine);
                         serviceDebug('[LyricsService] 발음/번역 완료:', {
                             successful: successfulSlots.length,
                             requested: activeSlots.length

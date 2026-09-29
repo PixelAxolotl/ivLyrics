@@ -5292,25 +5292,31 @@
                 const lineCharTimes = lineTimingRepair.times;
 
                 // 라인 시작/종료 시간 계산 (일단 다음 줄 시작 전까지로 잡지만, 아래에서 조정함)
-                const lineStartTime = lineCharTimes[0];
-                let lineEndTime = lineTimingRepairs[i + 1]
-                    ? lineTimingRepairs[i + 1].times[0]
-                    : (lineCharTimes[lineCharTimes.length - 1] ?? lineStartTime) + 2000;
-                if (lineTimingRepair.usedLineFallback) {
-                    const safeFallbackEnd = effectiveLineStarts[i + 1]
-                        ?? providerLineBounds[i].fallbackEndTime;
-                    if (Number.isFinite(safeFallbackEnd) && safeFallbackEnd > lineStartTime) {
-                        lineEndTime = safeFallbackEnd;
+                const computeLineCharTiming = () => {
+                    const lineStartTime = lineCharTimes[0];
+                    let lineEndTime = lineTimingRepairs[i + 1]
+                        ? lineTimingRepairs[i + 1].times[0]
+                        : (lineCharTimes[lineCharTimes.length - 1] ?? lineStartTime) + 2000;
+                    if (lineTimingRepair.usedLineFallback) {
+                        const safeFallbackEnd = effectiveLineStarts[i + 1]
+                            ?? providerLineBounds[i].fallbackEndTime;
+                        if (Number.isFinite(safeFallbackEnd) && safeFallbackEnd > lineStartTime) {
+                            lineEndTime = safeFallbackEnd;
+                        }
                     }
-                }
 
-                // 평균 글자 지속 시간 계산 (초 단위)
-                const lineDuration = Math.max(0, lineEndTime - lineStartTime) / 1000;
-                const avgCharDuration = Math.max(0.2, lineDuration / Math.max(1, lineData.chars.length));
+                    // 평균 글자 지속 시간 계산 (초 단위)
+                    const lineDuration = Math.max(0, lineEndTime - lineStartTime) / 1000;
+                    const avgCharDuration = Math.max(0.2, lineDuration / Math.max(1, lineData.chars.length));
 
-                // 마지막 글자의 자연스러운 최대 지속 시간 (평균의 2.5배 또는 최대 1.5초)
-                // 너무 짧게 끊기지 않도록 최소 0.5초는 보장
-                const lastCharMaxDuration = Math.max(0.5, Math.min(1.5, avgCharDuration * 2.5));
+                    // 마지막 글자의 자연스러운 최대 지속 시간 (평균의 2.5배 또는 최대 1.5초)
+                    // 너무 짧게 끊기지 않도록 최소 0.5초는 보장
+                    const lastCharMaxDuration = Math.max(0.5, Math.min(1.5, avgCharDuration * 2.5));
+                    return { lineStartTime, lineEndTime, lineDuration, avgCharDuration, lastCharMaxDuration };
+                };
+                const lineCharTiming = computeLineCharTiming();
+                const { lineStartTime, lineDuration, avgCharDuration, lastCharMaxDuration } = lineCharTiming;
+                let lineEndTime = lineCharTiming.lineEndTime;
 
                 // 각 글자별 syllable 생성
                 let syllables = [];

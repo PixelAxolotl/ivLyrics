@@ -5200,10 +5200,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             textEffectRevision
         });
 
-        // 비활성화 또는 가사 없음
-        if (!isEnabled) return null;
-        if (!lyrics || lyrics.length === 0) {
-            return react.createElement("div", {
+        const renderPanelEmptyState = () => react.createElement("div", {
                 className: sectionClassName,
                 ref: containerRef,
                 onClick: handleContainerClick,
@@ -5217,9 +5214,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     translatePanelText("syncCreator.loadingLyrics", "가사 불러오는 중")
                 )
             );
-        }
 
-        return react.createElement("div", {
+        const renderPanelLyricsTree = () => react.createElement("div", {
             className: sectionClassName,
             ref: containerRef,
             onClick: handleContainerClick,
@@ -5248,6 +5244,14 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 )
             )
         );
+
+        // 비활성화 또는 가사 없음
+        if (!isEnabled) return null;
+        if (!lyrics || lyrics.length === 0) {
+            return renderPanelEmptyState();
+        }
+
+        return renderPanelLyricsTree();
     };
 
     // ============================================

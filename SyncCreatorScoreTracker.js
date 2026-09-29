@@ -90,6 +90,51 @@
       }
       processing = (async () => {
         const recoveredEvents = new Set();
+        // Recover from a 409 conflict: resume the server session, discard only
+        // acknowledged events, then let the caller retry the current event.
+        const resolveScoreConflict = async (next, error) => {
+          if (error?.status !== 409) throw error;
+          const failure = new Error('다른 작업 상태와 충돌했습니다. 현재 초안은 보존됩니다. 다른 편집기를 닫고 이 작업을 다시 열어 주세요.');
+          failure.status = 409;
+          if (recoveredEvents.has(next.eventId)) {
+            conflictError = failure;
+            throw failure;
+          }
+          let resumed;
+          try {
+            resumed = await options.request({ action: 'resume', eventId: eventId(),
+              isrc: options.isrc, provider: 'lrclib', ...(state.sessionId ? { sessionId: state.sessionId } : {}) });
+          } catch (resumeError) {
+            if (resumeError?.status === 409) conflictError = failure;
+            throw conflictError || resumeError;
+          }
+          if (!resumed?.success || !resumed.sessionId || !Number.isSafeInteger(resumed.sequence) || !resumed.syncData) {
+            conflictError = failure;
+            throw failure;
+          }
+          // Only acknowledged events may be discarded. Similar data alone
+          // cannot erase an import boundary or assert that a record was saved.
+          const acknowledged = state.queue.findIndex(event => event.eventId === resumed.lastEventId
+            && sameSnapshot(event.syncData, resumed.syncData));
+          const unchanged = sameSnapshot(state.lastSnapshot || (!state.sequence ? options.initialSyncData : null), resumed.syncData);
+          if (acknowledged < 0 && !unchanged) {
+            conflictError = failure;
+            throw failure;
+          }
+          recoveredEvents.add(next.eventId);
+          if (acknowledged >= 0) state.queue.splice(0, acknowledged + 1);
+          state.lastSnapshot = clone(resumed.syncData);
+          state.sessionId = resumed.sessionId;
+          state.sequence = resumed.sequence;
+          if (resumed.sameSession === false) {
+            // An idle other session may be handed over, always using its
+            // unchanged server snapshot as the new baseline.
+            state.sessionId = '';
+            state.sequence = 0;
+            state.queue.unshift({ eventId: eventId(), action: 'start', syncData: clone(resumed.syncData), activeSeconds: 0 });
+          }
+          await persist();
+        };
         while (state.queue.length) {
           if (!isAuthorized()) throw new Error('Sync scoring account changed.');
           const next = state.queue[0];
@@ -104,47 +149,7 @@
           try {
             result = await options.request(payload);
           } catch (error) {
-            if (error?.status !== 409) throw error;
-            const failure = new Error('다른 작업 상태와 충돌했습니다. 현재 초안은 보존됩니다. 다른 편집기를 닫고 이 작업을 다시 열어 주세요.');
-            failure.status = 409;
-            if (recoveredEvents.has(next.eventId)) {
-              conflictError = failure;
-              throw failure;
-            }
-            let resumed;
-            try {
-              resumed = await options.request({ action: 'resume', eventId: eventId(),
-                isrc: options.isrc, provider: 'lrclib', ...(state.sessionId ? { sessionId: state.sessionId } : {}) });
-            } catch (resumeError) {
-              if (resumeError?.status === 409) conflictError = failure;
-              throw conflictError || resumeError;
-            }
-            if (!resumed?.success || !resumed.sessionId || !Number.isSafeInteger(resumed.sequence) || !resumed.syncData) {
-              conflictError = failure;
-              throw failure;
-            }
-            // Only acknowledged events may be discarded. Similar data alone
-            // cannot erase an import boundary or assert that a record was saved.
-            const acknowledged = state.queue.findIndex(event => event.eventId === resumed.lastEventId
-              && sameSnapshot(event.syncData, resumed.syncData));
-            const unchanged = sameSnapshot(state.lastSnapshot || (!state.sequence ? options.initialSyncData : null), resumed.syncData);
-            if (acknowledged < 0 && !unchanged) {
-              conflictError = failure;
-              throw failure;
-            }
-            recoveredEvents.add(next.eventId);
-            if (acknowledged >= 0) state.queue.splice(0, acknowledged + 1);
-            state.lastSnapshot = clone(resumed.syncData);
-            state.sessionId = resumed.sessionId;
-            state.sequence = resumed.sequence;
-            if (resumed.sameSession === false) {
-              // An idle other session may be handed over, always using its
-              // unchanged server snapshot as the new baseline.
-              state.sessionId = '';
-              state.sequence = 0;
-              state.queue.unshift({ eventId: eventId(), action: 'start', syncData: clone(resumed.syncData), activeSeconds: 0 });
-            }
-            await persist();
+            await resolveScoreConflict(next, error);
             continue;
           }
           if (!result?.success || !result.sessionId || !Number.isInteger(result.sequence)) {

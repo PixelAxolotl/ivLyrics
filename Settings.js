@@ -226,20 +226,6 @@ const OverlaySettings = () => {
     }
   };
 
-  // 연결 확인
-  const handleCheckConnection = async () => {
-    if (!window.OverlaySender) return;
-    setChecking(true);
-    await window.OverlaySender.checkConnection();
-    setIsConnected(window.OverlaySender.isConnected);
-    setChecking(false);
-  };
-
-  // 앱 열기
-  const handleOpenApp = () => {
-    window.OverlaySender?.openOverlayApp?.();
-  };
-
   // 다운로드 URL
   const handleDownload = () => {
     const url = window.OverlaySender?.getDownloadUrl?.() || 'https://ivlis.kr/ivLyrics/extensions/#overlay';
@@ -251,12 +237,6 @@ const OverlaySettings = () => {
     if (checking) return I18n.t("overlay.status.checking");
     if (isConnected) return I18n.t("overlay.status.connected");
     return I18n.t("overlay.status.disconnected");
-  };
-
-  const getStatusColor = () => {
-    if (checking) return "#fbbf24";
-    if (isConnected) return "#4ade80";
-    return "#ef4444";
   };
 
   return react.createElement(
@@ -5752,7 +5732,6 @@ const normalizeKaraokeFillCurvePoints = (value) => {
 
   const points = KARAOKE_FILL_CURVE_DEFAULT_POINTS.map((defaultPoint, index) => {
     const source = Array.isArray(parsed) ? parsed[index] : null;
-    const sourceX = Array.isArray(source) ? source[0] : source?.x;
     const sourceY = Array.isArray(source) ? source[1] : source?.y;
     return {
       x: defaultPoint.x,
@@ -12540,11 +12519,7 @@ const ConfigModal = ({
                   const updateInfo = await Utils.checkForUpdates();
 
                   if (resultContainer) {
-                    let message,
-                      showUpdateSection = false;
-
                     if (updateInfo.error) {
-                      message = I18n.t("settingsAdvanced.update.checkFailedWithError").replace("{error}", updateInfo.error);
                       resultContainer.innerHTML = `
 												<div style="
 													padding: 16px 20px;
@@ -12577,7 +12552,6 @@ const ConfigModal = ({
 												</div>
 											`;
                     } else if (updateInfo.hasUpdate) {
-                      showUpdateSection = true;
                       showCopyButton = true;
                       const safeUpdateAvailable = escapeSettingsReleaseHtml(
                         I18n.t("notifications.updateAvailable")

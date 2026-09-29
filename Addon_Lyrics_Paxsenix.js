@@ -774,36 +774,6 @@
         return isContributorNameList(normalized);
     }
 
-    function isLikelyLeadingHeaderName(text) {
-        const normalized = String(text || '').normalize('NFKC').trim();
-        if (!normalized || normalized.length > 160 || /[:：]/u.test(normalized)) return false;
-        return isContributorNameList(normalized, true);
-    }
-
-    function identitiesOverlap(expected, actual) {
-        if (!expected || !actual) return false;
-        if (expected === actual) return true;
-        return Math.min(expected.length, actual.length) >= 4
-            && (expected.includes(actual) || actual.includes(expected));
-    }
-
-    function isDashSeparatedHeaderLikeText(text) {
-        const normalized = String(text || '').normalize('NFKC').trim();
-        if (!normalized || normalized.length > 240) return false;
-
-        for (const separator of normalized.matchAll(/[-‐‑‒–—]/gu)) {
-            const title = normalized.slice(0, separator.index).trim();
-            const annotatedArtists = normalized.slice(separator.index + separator[0].length).trim();
-            if (!/[\p{L}\p{N}]/u.test(title) || !/[\p{L}\p{N}]/u.test(annotatedArtists)) continue;
-
-            const artists = annotatedArtists
-                .replace(/\([^)]*\)|（[^）]*）|\[[^\]]*\]|【[^】]*】/gu, ' ')
-                .trim();
-            if (artists && isContributorNameList(artists)) return true;
-        }
-        return false;
-    }
-
     function getEarlyCreditAnchorIndex(allLines, _info, referenceLines) {
         const lookahead = Math.min(allLines.length, 10);
         for (let index = 0; index < lookahead; index += 1) {

@@ -17,7 +17,6 @@
         useCallback,
         useEffect,
         useMemo,
-        useRef,
         useState
     } = react;
 
@@ -1751,7 +1750,6 @@
         const [studyDifficulty, setStudyDifficulty] = useState(getInitialStudyDifficulty);
         const [quizDifficulty, setQuizDifficulty] = useState(getInitialStudyDifficulty);
         const [studyHistory, setStudyHistory] = useState([]);
-        const generationRef = useRef(0);
 
         const normalizedLyrics = useMemo(() => normalizeLyrics(lyrics), [lyrics]);
         const lyricsHash = useMemo(

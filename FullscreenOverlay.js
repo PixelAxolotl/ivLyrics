@@ -559,10 +559,6 @@ const FullscreenOverlay = (() => {
         return createPlaylistTrackMatch();
     };
 
-    const playlistContainsTrack = async (playlist, trackUri) => {
-        return (await getPlaylistTrackMatch(playlist, trackUri)).contains;
-    };
-
     const addTrackToSpotifyPlaylist = async (playlist, trackUri) => {
         const playlistUri = playlist?.uri || (playlist?.id ? `spotify:playlist:${playlist.id}` : "");
         if (Spicetify?.Platform?.PlaylistAPI?.add && playlistUri) {
@@ -2331,7 +2327,6 @@ const FullscreenOverlay = (() => {
         // Control style settings
         const controlButtonSize = Number(CONFIG?.visual?.["fullscreen-control-button-size"]) || 36;
         const controlsBackground = CONFIG?.visual?.["fullscreen-controls-background"] === true;
-        const controlsCompact = CONFIG?.visual?.["fullscreen-controls-compact"] === true;
 
         // Layout settings
         const controlsPosition = CONFIG?.visual?.["fullscreen-controls-position"] || "left-panel";

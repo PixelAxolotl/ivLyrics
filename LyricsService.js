@@ -5389,13 +5389,11 @@
                     let partSyllables = [];
                     const partGranularity = normalizeSyncDataGranularity(part.granularity || lineData.granularity);
                     let partCharIndex = 0;
-                    let text = '';
 
                     part.ranges.forEach((range, rangeIndex) => {
                         if (rangeIndex > 0) {
                             const joinMode = Array.isArray(part.join) ? Number(part.join[rangeIndex - 1]) : 1;
                             if (joinMode === 1 || joinMode === 2) {
-                                text += ' ';
                                 const previousPartTime = getSyncDataMilliseconds(
                                     part.chars[Math.max(0, partCharIndex - 1)]
                                 );
@@ -5471,7 +5469,6 @@
                             }
                             charEnd = Math.max(charStart, charEnd);
 
-                            text += char;
 							partSyllables.push(applyInlineStyle({
                                 text: char,
                                 startTime: charStart,
@@ -7994,7 +7991,6 @@
                 }
 
                 // 설정을 LocalStorage에서 직접 읽기
-                const translationProvider = Spicetify.LocalStorage.get("ivLyrics:visual:translate:translated-lyrics-source") || "auto";
                 const modeKey = friendlyLanguage || "gemini";
 
                 // 설정 키: translation-mode:japanese, translation-mode-2:japanese 등

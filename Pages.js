@@ -824,7 +824,6 @@ const SyncCreatorProfileModal = react.memo(({
 	const trackCount = Number(profileData.stats?.trackCount || 0);
 	const contributionPoints = Number(profileData.stats?.contributionPoints || 0);
 	const likeCount = Number(profileData.stats?.likeCount || 0);
-	const artistGroupCount = Number(profileData.stats?.artistGroupCount || 0);
 	const totalContributionCount = Number(profileData.pagination?.totalCount || trackCount || 0);
 	const loadedContributionCount = contributions.length;
 	const hasMoreContributions = !!profileData.pagination?.hasMore;
@@ -6567,9 +6566,6 @@ const useSyncedLyricsEngine = ({
 				subText,
 				subText2,
 			} = line;
-			const compactVisibleIndex = compact
-				? displayLineNumber - compactWindowStartIndex
-				: visibleIndex;
 
 			if (compact && lineNumber === 1 && layoutActiveLineIndex <= leadingEmptyLines) {
 				if (isBeforeFirstLyric) {
@@ -6602,16 +6598,6 @@ const useSyncedLyricsEngine = ({
 			const playbackState = getSyncedLinePlaybackState(playbackWindows[lineNumber], position);
 			const isHighlightedLine = isKara ? playbackState.isHighlighted : lineNumber === activeLineIndex;
 			const isAnimatingLine = isKara ? playbackState.isAnimating : isAnchorLine;
-			let animationIndex = getSyncedAnimationIndex({
-				compact,
-				isScrolling,
-				activeLineIndex: compact ? visualDisplayLineIndex : visualLineIndex,
-				lineNumber: compact ? displayLineNumber : lineNumber,
-				visibleIndex: compactVisibleIndex,
-			});
-			if (trailingInterludeLine && lineNumber <= layoutActiveLineIndex) {
-				animationIndex -= 1;
-			}
 			const visibilityAnimationIndex = compact
 				? displayLineNumber - activeDisplayLineIndex
 				: lineNumber - layoutActiveLineIndex;
@@ -8235,9 +8221,6 @@ const SyncedLyricsPage = react.memo(({ lyrics = [], provider, contributors, copy
 		handleContainerClick,
 		renderItems,
 		compactOffset,
-		activeLyricIndex,
-		globalCharOffsets,
-		activeGlobalCharIndex,
 	} = useSyncedLyricsEngine({
 		lyrics,
 		position: karaokePosition,

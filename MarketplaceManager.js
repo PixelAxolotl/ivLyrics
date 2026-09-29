@@ -46,7 +46,6 @@
     const DB_NAME = 'ivLyrics_marketplace';
     const DB_VERSION = 1;
     const STORE_NAME = 'addons';
-    const STORAGE_PREFIX = 'ivLyrics:marketplace:';
     const FETCH_TIMEOUT = 15000;
     const DIRECT_ADDON_MAX_BYTES = 2 * 1024 * 1024;
     const GITHUB_TOPIC = 'ivlyrics-addon';

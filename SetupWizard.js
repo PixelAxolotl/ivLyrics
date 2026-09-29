@@ -1796,7 +1796,7 @@ const VideoHelperTestStep = ({ onNext, onBack, onSkip, helperEnabled, onHelperCh
     }
 
     // Request the video
-    const abort = VideoHelperService.requestVideo(testVideoId, {
+    VideoHelperService.requestVideo(testVideoId, {
       onProgress: (data) => {
         setTestStatus("downloading");
         setDownloadPercent(data.percent || 0);

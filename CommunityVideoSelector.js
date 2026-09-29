@@ -1312,12 +1312,6 @@ const CommunityVideoSelector = ({
     return `${mins}:${secsFormatted}`;
   };
 
-  // YouTube Embed URL 생성
-  const getEmbedUrl = (videoId, startTime = 0) => {
-    const startSeconds = Math.floor(startTime);
-    return `https://www.youtube.com/embed/${videoId}?start=${startSeconds}&autoplay=1`;
-  };
-
   const dislikedVideoCount = videos.filter((video) => video.userVote === -1).length;
   const visibleVideos = hideDislikedVideos
     ? videos.filter((video) => video.userVote !== -1)

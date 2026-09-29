@@ -3426,8 +3426,7 @@ const CacheManager = {
         const observer = new PerformanceObserver((list) => {
           for (const entry of list.getEntries()) {
             if (entry.name === "memory") {
-              const { totalJSHeapSize, usedJSHeapSize, jsHeapSizeLimit } =
-                entry;
+              const { usedJSHeapSize, jsHeapSizeLimit } = entry;
               const memoryUsage = usedJSHeapSize / jsHeapSizeLimit;
 
               // If memory usage > 80%, clear half the cache
@@ -8041,20 +8040,14 @@ class LyricsContainer extends react.Component {
         `${APP_NAME}:visual:gemini-api-key-romaji`
       );
 
-      // Determine mode type and API key
-      let wantSmartPhonetic = false;
-      let apiKey;
+      // The unified Romaji, Romaja, Pinyin button uses Smart Phonetic logic;
+      // every other Gemini mode is a translation.
+      const wantSmartPhonetic = mode === "gemini_romaji";
+      // Providers resolve their own credentials; this legacy placeholder is
+      // still forwarded with the request.
+      const apiKey = "no";
 
-      if (mode === "gemini_romaji") {
-        // Use Smart Phonetic logic for the unified Romaji, Romaja, Pinyin button
-        wantSmartPhonetic = true;
-        apiKey = "no";
-      } else {
-        // Default to Korean
-        apiKey = "no";
-      }
-
-      if (!apiKey || !Array.isArray(lyrics) || lyrics.length === 0) {
+      if (!Array.isArray(lyrics) || lyrics.length === 0) {
         return reject(
           new Error(
             "Gemini API key missing. Please add at least one key in Settings."
@@ -8068,7 +8061,6 @@ class LyricsContainer extends react.Component {
 
       if (cached) {
         // Fix cached items if they have double-encoded JSON structure
-        let fixNeeded = false;
         const targetField = wantSmartPhonetic ? 'phonetic' : 'translation';
 
         if (cached[targetField] && Array.isArray(cached[targetField]) &&
@@ -8078,14 +8070,11 @@ class LyricsContainer extends react.Component {
             const parsed = JSON.parse(cached[targetField][0]);
             if (wantSmartPhonetic && Array.isArray(parsed.phonetic)) {
               cached.phonetic = parsed.phonetic;
-              fixNeeded = true;
             } else if (!wantSmartPhonetic && Array.isArray(parsed.translation)) {
               cached.translation = parsed.translation;
-              fixNeeded = true;
             } else if (parsed.translation && Array.isArray(parsed.translation)) {
               // Fallback
               cached[targetField] = parsed.translation;
-              fixNeeded = true;
             }
           } catch (e) { }
         }
@@ -9866,7 +9855,6 @@ class LyricsContainer extends react.Component {
       this.lastProcessedMode = currentModeKey;
       this.lyricsSource(this.state, mode);
     }
-    const hasTranslation = false;
 
     // Always render the Conversions button on synced/unsynced pages.
     // Previously it was gated by detected language/loading state, causing it to

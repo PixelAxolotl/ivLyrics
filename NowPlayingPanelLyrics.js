@@ -161,7 +161,6 @@
     let panelObserver = moduleState.panelObserver;
     let lyricsRoot = null;
     let starryNightBarRoot = null; // Starry Night 테마용 렌더링 루트
-    let stylesInjected = false;
     let pageObserver = moduleState.pageObserver;
     let pageObserverTimeout = moduleState.pageObserverTimeout;
     let historyUnlisten = moduleState.historyUnlisten;
@@ -1701,7 +1700,6 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         if (existingStyle) {
             // 기존 스타일이 있으면 업데이트
             existingStyle.textContent = getPanelStyles();
-            stylesInjected = true;
             return;
         }
 
@@ -1709,7 +1707,6 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         styleElement.id = PANEL_STYLE_ID;
         styleElement.textContent = getPanelStyles();
         document.head.appendChild(styleElement);
-        stylesInjected = true;
         panelDebug("[NowPlayingPanelLyrics] Styles injected");
     };
 
@@ -1924,24 +1921,6 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         const normalizedText = typeof text === "string" ? text : "";
         return KARAOKE_RTL_STRONG_CHAR_REGEX.test(normalizedText) ||
             KARAOKE_JOINING_SCRIPT_REGEX.test(normalizedText);
-    };
-
-    const getKaraokeDetectedLanguage = (text) => {
-        const normalizedText = typeof text === "string" ? text : "";
-
-        try {
-            const detected = window.Utils?.getDetectedLanguage?.();
-            if (detected) return detected;
-        } catch { }
-
-        try {
-            const detected = window.LyricsService?.detectLanguage?.([{ text: normalizedText }]);
-            if (detected) return detected;
-        } catch { }
-
-        if (/[\u3040-\u30ff\uff66-\uff9f]/u.test(normalizedText)) return "ja";
-        if (/[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/u.test(normalizedText)) return "zh";
-        return null;
     };
 
     const shouldWrapKaraokeByWord = (text) => {
@@ -4730,8 +4709,6 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 // 설정값 읽기
                 const bgType = getStorageValue(BG_TYPE_KEY, DEFAULT_BG_TYPE);
                 const bgColor = getStorageValue(BG_COLOR_KEY, DEFAULT_BG_COLOR);
-                const bgGradient1 = getStorageValue(BG_GRADIENT_1_KEY, DEFAULT_BG_GRADIENT_1);
-                const bgGradient2 = getStorageValue(BG_GRADIENT_2_KEY, DEFAULT_BG_GRADIENT_2);
                 const bgOpacity = getStorageValue(BG_OPACITY_KEY, DEFAULT_BG_OPACITY) / 100;
                 const borderEnabled = getStorageValue(BORDER_ENABLED_KEY, DEFAULT_BORDER_ENABLED);
                 const borderColor = getStorageValue(BORDER_COLOR_KEY, DEFAULT_BORDER_COLOR);

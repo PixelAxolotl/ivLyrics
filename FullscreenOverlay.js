@@ -1258,8 +1258,7 @@ const FullscreenOverlay = (() => {
             height: `${buttonSize - 4}px`
         }), [buttonSize]);
 
-        const handleVolumeChange = (e) => {
-            const newVolume = parseFloat(e.target.value);
+        const applyVolumeChange = (newVolume) => {
             setVolume(newVolume);
             Spicetify.Player.setVolume(newVolume);
             setIsMuted(newVolume === 0);
@@ -1269,6 +1268,11 @@ const FullscreenOverlay = (() => {
             volumeChangeTimeoutRef.current = setTimeout(() => setIsVolumeChanging(false), 1000);
         };
 
+        const handleVolumeChange = (e) => {
+            const newVolume = parseFloat(e.target.value);
+            applyVolumeChange(newVolume);
+        };
+
         const handleVolumeWheel = (e) => {
             if (!isVolumeHovered) return;
             e.preventDefault();
@@ -1276,13 +1280,7 @@ const FullscreenOverlay = (() => {
             const delta = e.deltaY > 0 ? -step : step;
             const newVolume = Math.min(1, Math.max(0, volume + delta));
 
-            setVolume(newVolume);
-            Spicetify.Player.setVolume(newVolume);
-            setIsMuted(newVolume === 0);
-
-            setIsVolumeChanging(true);
-            if (volumeChangeTimeoutRef.current) clearTimeout(volumeChangeTimeoutRef.current);
-            volumeChangeTimeoutRef.current = setTimeout(() => setIsVolumeChanging(false), 1000);
+            applyVolumeChange(newVolume);
         };
 
         const toggleMute = () => {

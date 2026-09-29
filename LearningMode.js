@@ -2925,17 +2925,7 @@
                     )
                 );
 
-        return react.createElement("aside", {
-            className: `ivlyrics-study-panel theme-${studyTheme}`,
-            role: "dialog",
-            "aria-label": t("title", "AI 학습 모드"),
-            onKeyDown: handleQuizKeyDown,
-            tabIndex: -1
-        },
-            renderStudyHeader(),
-            react.createElement("div", { className: "ivlyrics-study-body" },
-                renderStudyRail(),
-                react.createElement("main", { className: "ivlyrics-study-stage" },
+        const renderStudyStage = () => react.createElement("main", { className: "ivlyrics-study-stage" },
                     !hasLyrics && activeTab !== "history" && react.createElement(EmptyState, null, t("noLyrics", "학습할 가사가 없습니다.")),
                     hasLyrics && activeTab !== "history" && !pack && status !== "loading" && react.createElement(EmptyState, null,
                         react.createElement("p", null, t("empty", "현재 곡의 학습 데이터가 없습니다.")),
@@ -2958,7 +2948,19 @@
                     pack && activeTab === "explain" && renderExplainTab(),
                     pack && activeTab === "quiz" && renderQuizTab(),
                     pack && activeTab === "words" && renderWordsTab()
-                )
+                );
+
+        return react.createElement("aside", {
+            className: `ivlyrics-study-panel theme-${studyTheme}`,
+            role: "dialog",
+            "aria-label": t("title", "AI 학습 모드"),
+            onKeyDown: handleQuizKeyDown,
+            tabIndex: -1
+        },
+            renderStudyHeader(),
+            react.createElement("div", { className: "ivlyrics-study-body" },
+                renderStudyRail(),
+                renderStudyStage()
             )
         );
     });

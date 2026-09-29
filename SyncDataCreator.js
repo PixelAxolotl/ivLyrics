@@ -2183,6 +2183,23 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 	};
 
+	const trimSyncCreatorRunWhitespace = (chars, runStart, endIndex, pushHidden) => {
+		if (runStart !== null && endIndex >= runStart) {
+			while (runStart <= endIndex && /\s/u.test(chars[runStart] || '')) {
+				pushHidden(runStart);
+				runStart++;
+			}
+			const originalEndIndex = endIndex;
+			while (endIndex >= runStart && /\s/u.test(chars[endIndex] || '')) {
+				endIndex--;
+			}
+			for (let index = endIndex + 1; index <= originalEndIndex; index++) {
+				pushHidden(index);
+			}
+		}
+		return { runStart, endIndex };
+	};
+
 	const normalizeSyncCreatorHiddenRanges = (ranges) => {
 		if (!Array.isArray(ranges)) return [];
 		const normalizedRanges = ranges
@@ -2568,19 +2585,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			const pushHidden = (index) => pushSyncCreatorHiddenIndex(hiddenRanges, lineStart, index);
 
 			const flushRun = (endIndex) => {
-				if (runStart !== null && endIndex >= runStart) {
-					while (runStart <= endIndex && /\s/u.test(chars[runStart] || '')) {
-						pushHidden(runStart);
-						runStart++;
-					}
-					const originalEndIndex = endIndex;
-					while (endIndex >= runStart && /\s/u.test(chars[endIndex] || '')) {
-						endIndex--;
-					}
-					for (let index = endIndex + 1; index <= originalEndIndex; index++) {
-						pushHidden(index);
-					}
-				}
+				const trimmed = trimSyncCreatorRunWhitespace(chars, runStart, endIndex, pushHidden);
+				runStart = trimmed.runStart;
+				endIndex = trimmed.endIndex;
 				if (runStart !== null && endIndex >= runStart) {
 					if (!partRanges[partIndex]) partRanges[partIndex] = [];
 					pushSyncCreatorRange(partRanges[partIndex], runStart, endIndex, lineStart);
@@ -2636,19 +2643,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		let runPart = null;
 
 		const flushRun = (endIndex) => {
-			if (runStart !== null && endIndex >= runStart) {
-				while (runStart <= endIndex && /\s/u.test(chars[runStart] || '')) {
-					pushHidden(runStart);
-					runStart++;
-				}
-				const originalEndIndex = endIndex;
-				while (endIndex >= runStart && /\s/u.test(chars[endIndex] || '')) {
-					endIndex--;
-				}
-				for (let index = endIndex + 1; index <= originalEndIndex; index++) {
-					pushHidden(index);
-				}
-			}
+			const trimmed = trimSyncCreatorRunWhitespace(chars, runStart, endIndex, pushHidden);
+			runStart = trimmed.runStart;
+			endIndex = trimmed.endIndex;
 			if (runStart !== null && endIndex >= runStart) {
 				if (runPart === 'background') {
 					const ranges = [];

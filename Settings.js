@@ -9580,6 +9580,77 @@ const ConfigModal = ({
     );
   };
 
+  const renderGeneralTab = () =>
+react.createElement(
+          "div",
+          {
+            className: `tab-content ${activeTab === "general" ? "active" : ""}`,
+            "data-tab-id": "general",
+          },
+        // 언어 설정 섹션
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("sections.language"),
+          subtitle: I18n.t("settings.language.desc"),
+          sectionKey: "language",
+        }),
+        react.createElement(OptionList, {
+          items: [
+            {
+              desc: I18n.t("settings.language.label") + " (Language)",
+              key: "language",
+              info: I18n.t("settings.language.desc"),
+              type: ConfigSelection,
+              options: Object.fromEntries(
+                I18n.getAvailableLanguages().map(language => [language.code, language.name])
+              ),
+            },
+          ],
+          onChange: (name, value) => {
+            CONFIG.visual[name] = value;
+            StorageManager.saveConfig(name, value);
+            // I18n 시스템에도 언어 변경 알림
+            if (window.I18n && window.I18n.setLanguage) {
+              window.I18n.setLanguage(value);
+            }
+            queueReloadIntoIvLyrics({
+              reopenSettings: true,
+              initialTab: "general",
+            });
+          },
+        }),
+        react.createElement(OptionList, {
+          items: [
+            {
+              desc: I18n.t("settings.translationTargetLanguage.label"),
+              key: "translate:target-language",
+              info: I18n.t("settings.translationTargetLanguage.desc"),
+              type: ConfigSelection,
+              options: {
+                auto: I18n.t("settings.translationTargetLanguage.options.auto"),
+                ...Object.fromEntries(
+                  I18n.getAvailableLanguages().map(language => [language.code, language.name])
+                ),
+              },
+            },
+          ],
+          onChange: (name, value) => {
+            CONFIG.visual[name] = value;
+            StorageManager.saveConfig(name, value);
+            queueReloadIntoIvLyrics({
+              reopenSettings: true,
+              initialTab: "general",
+            });
+          },
+        }),
+        // 데스크탑 오버레이 섹션
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("sections.desktopOverlay"),
+          subtitle: I18n.t("sections.desktopOverlaySubtitle"),
+          sectionKey: "overlay-enabled",
+        }),
+        react.createElement(OverlaySettings)
+      );
+
   return react.createElement(
     "div",
     {
@@ -9668,75 +9739,7 @@ const ConfigModal = ({
       ),
       // 일반 탭 (동작 관련 설정)
       activeTab === "general" &&
-        react.createElement(
-          "div",
-          {
-            className: `tab-content ${activeTab === "general" ? "active" : ""}`,
-            "data-tab-id": "general",
-          },
-        // 언어 설정 섹션
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("sections.language"),
-          subtitle: I18n.t("settings.language.desc"),
-          sectionKey: "language",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settings.language.label") + " (Language)",
-              key: "language",
-              info: I18n.t("settings.language.desc"),
-              type: ConfigSelection,
-              options: Object.fromEntries(
-                I18n.getAvailableLanguages().map(language => [language.code, language.name])
-              ),
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            // I18n 시스템에도 언어 변경 알림
-            if (window.I18n && window.I18n.setLanguage) {
-              window.I18n.setLanguage(value);
-            }
-            queueReloadIntoIvLyrics({
-              reopenSettings: true,
-              initialTab: "general",
-            });
-          },
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settings.translationTargetLanguage.label"),
-              key: "translate:target-language",
-              info: I18n.t("settings.translationTargetLanguage.desc"),
-              type: ConfigSelection,
-              options: {
-                auto: I18n.t("settings.translationTargetLanguage.options.auto"),
-                ...Object.fromEntries(
-                  I18n.getAvailableLanguages().map(language => [language.code, language.name])
-                ),
-              },
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            queueReloadIntoIvLyrics({
-              reopenSettings: true,
-              initialTab: "general",
-            });
-          },
-        }),
-        // 데스크탑 오버레이 섹션
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("sections.desktopOverlay"),
-          subtitle: I18n.t("sections.desktopOverlaySubtitle"),
-          sectionKey: "overlay-enabled",
-        }),
-        react.createElement(OverlaySettings)
-      ),
+        renderGeneralTab(),
       // 외관 탭 (시각 효과 + 타이포그래피)
       activeTab === "appearance" &&
       react.createElement(

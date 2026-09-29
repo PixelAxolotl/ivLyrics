@@ -2483,9 +2483,7 @@ const LocalCacheManager = () => {
     )
     .replace("{providerCount}", openDbInfo?.providerCount || 0);
 
-  return react.createElement(
-    "div",
-    { className: "option-list-wrapper cache-management-list" },
+  const renderLocalCacheRow = () =>
     react.createElement(
       "div",
       { className: "setting-row" },
@@ -2530,7 +2528,9 @@ const LocalCacheManager = () => {
         )
       )
     )
-    ),
+    );
+
+  const renderOpenDbCacheRow = () =>
     react.createElement(
       "div",
       { className: "setting-row opendb-cache-row" },
@@ -2638,7 +2638,13 @@ const LocalCacheManager = () => {
           )
         )
       )
-    )
+    );
+
+  return react.createElement(
+    "div",
+    { className: "option-list-wrapper cache-management-list" },
+    renderLocalCacheRow(),
+    renderOpenDbCacheRow()
   );
 };
 

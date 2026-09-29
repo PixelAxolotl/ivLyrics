@@ -10417,6 +10417,23 @@ class LyricsContainer extends react.Component {
           onExitFullscreen: this.toggleFullscreen
         })
     );
+    const renderStaticGradientBackground = () => (
+        shouldRenderStaticBackground && react.createElement("div", {
+          id: "ivLyrics-gradient-background",
+          className: !isSyncCreatorActive && effectiveBackgroundMode === "blur-gradient-background" ? "color-gradient-bg" : "",
+          style: backgroundStyle,
+        },
+          // 블러 그라데이션일 때 여러 블롭 생성
+          !isSyncCreatorActive && effectiveBackgroundMode === "blur-gradient-background" && [
+            react.createElement("div", { key: "blob1", className: "gradient-blob blob-1" }),
+            react.createElement("div", { key: "blob2", className: "gradient-blob blob-2" }),
+            react.createElement("div", { key: "blob3", className: "gradient-blob blob-3" }),
+            react.createElement("div", { key: "blob4", className: "gradient-blob blob-4" }),
+            react.createElement("div", { key: "blob5", className: "gradient-blob blob-5" }),
+            react.createElement("div", { key: "blob6", className: "gradient-blob blob-6" }),
+          ]
+        )
+    );
     const out = react.createElement(
       "div",
       {
@@ -10444,21 +10461,7 @@ class LyricsContainer extends react.Component {
       topBarContent,
       // Update notification banner
       updateBanner,
-      shouldRenderStaticBackground && react.createElement("div", {
-        id: "ivLyrics-gradient-background",
-        className: !isSyncCreatorActive && effectiveBackgroundMode === "blur-gradient-background" ? "color-gradient-bg" : "",
-        style: backgroundStyle,
-      },
-        // 블러 그라데이션일 때 여러 블롭 생성
-        !isSyncCreatorActive && effectiveBackgroundMode === "blur-gradient-background" && [
-          react.createElement("div", { key: "blob1", className: "gradient-blob blob-1" }),
-          react.createElement("div", { key: "blob2", className: "gradient-blob blob-2" }),
-          react.createElement("div", { key: "blob3", className: "gradient-blob blob-3" }),
-          react.createElement("div", { key: "blob4", className: "gradient-blob blob-4" }),
-          react.createElement("div", { key: "blob5", className: "gradient-blob blob-5" }),
-          react.createElement("div", { key: "blob6", className: "gradient-blob blob-6" }),
-        ]
-      ),
+      renderStaticGradientBackground(),
       shouldUseVideoBackground && window.VideoBackground && react.createElement(window.VideoBackground, {
         trackUri: this.state.uri,
         firstLyricTime: this.state.currentLyrics && this.state.currentLyrics.length > 0 ? this.state.currentLyrics[0].startTime : null,

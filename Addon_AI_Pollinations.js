@@ -548,6 +548,7 @@
                         try { const d = await response.json(); if (d.error?.message) msg = d.error.message; else if (d.message) msg = d.message; } catch (e) { }
                         throw new Error(`[Pollinations.ai] ${msg}`);
                     }
+                    const consumePollinationsStream = async () => {
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let sseBuffer = '', accumulated = '';
@@ -616,6 +617,9 @@
                     }
 
                     return transformed;
+                    };
+
+                    return await consumePollinationsStream();
                 } catch (e) {
                     lastError = e;
                     resetProvisionalOutput(attempt < maxRetries - 1 ? 'retry' : 'failed', e);

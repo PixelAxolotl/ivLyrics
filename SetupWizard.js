@@ -232,6 +232,29 @@ const renderWizardInteractiveToggle = (enabled, onToggle, labelKey) =>
     })
   );
 
+// Muted description paragraph shared by tip steps
+const renderWizardTipDescription = (descKey) =>
+  react.createElement(
+    "div",
+    {
+      style: {
+        ...wizardMessageStyle,
+      },
+    },
+    react.createElement(
+      "p",
+      {
+        style: {
+          fontSize: "12px",
+          color: WIZARD_COLORS.muted,
+          lineHeight: "1.6",
+          margin: 0,
+        },
+      },
+      I18n.t(descKey)
+    )
+  );
+
 const WizardNavigation = ({ onBack, onNext, nextLabel, extraActions, hideBack = false, nextDisabled = false }) =>
   react.createElement(
     "div",
@@ -841,26 +864,7 @@ const TranslationTipStep = ({ onNext, onBack }) => {
         )
       ),
       // Description text
-      react.createElement(
-        "div",
-        {
-          style: {
-            ...wizardMessageStyle,
-          },
-        },
-        react.createElement(
-          "p",
-          {
-            style: {
-              fontSize: "12px",
-              color: WIZARD_COLORS.muted,
-              lineHeight: "1.6",
-              margin: 0,
-            },
-          },
-          I18n.t("setupWizard.translationTip.description")
-        )
-      )
+      renderWizardTipDescription("setupWizard.translationTip.description")
     ),
     react.createElement(WizardNavigation, { onBack, onNext })
   );
@@ -1263,26 +1267,7 @@ const NowPlayingTipStep = ({ nowPlayingEnabled, onNowPlayingChange, onNext, onBa
         "setupWizard.nowPlayingTip.enabled"
       ),
       // Description text
-      react.createElement(
-        "div",
-        {
-          style: {
-            ...wizardMessageStyle,
-          },
-        },
-        react.createElement(
-          "p",
-          {
-            style: {
-              fontSize: "12px",
-              color: WIZARD_COLORS.muted,
-              lineHeight: "1.6",
-              margin: 0,
-            },
-          },
-          I18n.t("setupWizard.nowPlayingTip.description")
-        )
-      )
+      renderWizardTipDescription("setupWizard.nowPlayingTip.description")
     ),
     react.createElement(WizardNavigation, { onBack, onNext })
   );

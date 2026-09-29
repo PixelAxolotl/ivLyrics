@@ -2859,6 +2859,116 @@ const LocalLyricsLrclibSearchModal = ({ trackInfo = {}, onApplyLocalLyrics, onCl
     )
   );
 
+  const renderLrclibCandidate = (candidate, index) => {
+    const candidateKey = candidate.candidateKey || `${candidate.id || "candidate"}-${index}`;
+    const title = candidate.trackName || candidate.name || getOptionsText("menu.unknownTitle", "Unknown title");
+    const artist = candidate.artistName || getOptionsText("menu.unknownArtist", "Unknown artist");
+    const album = candidate.albumName || "";
+    const duration = formatLrclibCandidateDuration(candidate.duration);
+    const previewLines = getLrclibCandidatePreviewLines(candidate);
+    const badges = [
+      (candidate.hasSyncedLyrics || candidate.syncedLyrics) && getOptionsText("syncCreator.lrclibBadgeSynced", "Synced"),
+      (candidate.hasPlainLyrics || candidate.plainLyrics) && getOptionsText("syncCreator.lrclibBadgePlain", "Plain"),
+      candidate.instrumental && getOptionsText("syncCreator.lrclibBadgeInstrumental", "Instrumental"),
+    ].filter(Boolean);
+
+    return react.createElement(
+      "div",
+      {
+        key: candidateKey,
+        style: {
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) auto",
+          gap: "12px",
+          padding: "12px",
+          border: "1px solid rgba(255,255,255,0.1)",
+          background: "rgba(255,255,255,0.04)",
+        },
+      },
+      react.createElement(
+        "div",
+        { style: { minWidth: 0 } },
+        react.createElement(
+          "div",
+          {
+            style: {
+              fontWeight: 700,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            },
+            title,
+          },
+          title
+        ),
+        react.createElement(
+          "div",
+          {
+            style: {
+              marginTop: "3px",
+              color: "rgba(255,255,255,0.7)",
+              fontSize: "13px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            },
+            title: [artist, album, duration].filter(Boolean).join(" · "),
+          },
+          [artist, album, duration].filter(Boolean).join(" · ")
+        ),
+        badges.length > 0 && react.createElement(
+          "div",
+          {
+            style: {
+              display: "flex",
+              gap: "6px",
+              flexWrap: "wrap",
+              marginTop: "8px",
+            },
+          },
+          badges.map((badge) => react.createElement(
+            "span",
+            {
+              key: badge,
+              style: {
+                padding: "2px 6px",
+                border: "1px solid rgba(255,255,255,0.12)",
+                fontSize: "11px",
+                color: "rgba(255,255,255,0.78)",
+              },
+            },
+            badge
+          ))
+        ),
+        previewLines.length > 0 && react.createElement(
+          "div",
+          {
+            style: {
+              marginTop: "8px",
+              color: "rgba(255,255,255,0.58)",
+              fontSize: "12px",
+              lineHeight: 1.45,
+            },
+          },
+          previewLines.join(" / ")
+        )
+      ),
+      react.createElement(
+        "button",
+        {
+          className: "ivlyrics-fluent-btn",
+          type: "button",
+          onClick: () => void applyCandidate(candidate),
+          disabled: !!applyingKey,
+          style: { alignSelf: "start" },
+        },
+        applyingKey === candidateKey
+          ? getOptionsText("menu.localLyricsApplying", "적용 중")
+          : getOptionsText("menu.apply", "적용")
+      )
+    );
+  };
+
   return react.createElement(
     react.Fragment,
     null,
@@ -2925,115 +3035,7 @@ const LocalLyricsLrclibSearchModal = ({ trackInfo = {}, onApplyLocalLyrics, onCl
             gap: "8px",
           },
         },
-        candidates.map((candidate, index) => {
-          const candidateKey = candidate.candidateKey || `${candidate.id || "candidate"}-${index}`;
-          const title = candidate.trackName || candidate.name || getOptionsText("menu.unknownTitle", "Unknown title");
-          const artist = candidate.artistName || getOptionsText("menu.unknownArtist", "Unknown artist");
-          const album = candidate.albumName || "";
-          const duration = formatLrclibCandidateDuration(candidate.duration);
-          const previewLines = getLrclibCandidatePreviewLines(candidate);
-          const badges = [
-            (candidate.hasSyncedLyrics || candidate.syncedLyrics) && getOptionsText("syncCreator.lrclibBadgeSynced", "Synced"),
-            (candidate.hasPlainLyrics || candidate.plainLyrics) && getOptionsText("syncCreator.lrclibBadgePlain", "Plain"),
-            candidate.instrumental && getOptionsText("syncCreator.lrclibBadgeInstrumental", "Instrumental"),
-          ].filter(Boolean);
-
-          return react.createElement(
-            "div",
-            {
-              key: candidateKey,
-              style: {
-                display: "grid",
-                gridTemplateColumns: "minmax(0, 1fr) auto",
-                gap: "12px",
-                padding: "12px",
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: "rgba(255,255,255,0.04)",
-              },
-            },
-            react.createElement(
-              "div",
-              { style: { minWidth: 0 } },
-              react.createElement(
-                "div",
-                {
-                  style: {
-                    fontWeight: 700,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  },
-                  title,
-                },
-                title
-              ),
-              react.createElement(
-                "div",
-                {
-                  style: {
-                    marginTop: "3px",
-                    color: "rgba(255,255,255,0.7)",
-                    fontSize: "13px",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  },
-                  title: [artist, album, duration].filter(Boolean).join(" · "),
-                },
-                [artist, album, duration].filter(Boolean).join(" · ")
-              ),
-              badges.length > 0 && react.createElement(
-                "div",
-                {
-                  style: {
-                    display: "flex",
-                    gap: "6px",
-                    flexWrap: "wrap",
-                    marginTop: "8px",
-                  },
-                },
-                badges.map((badge) => react.createElement(
-                  "span",
-                  {
-                    key: badge,
-                    style: {
-                      padding: "2px 6px",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      fontSize: "11px",
-                      color: "rgba(255,255,255,0.78)",
-                    },
-                  },
-                  badge
-                ))
-              ),
-              previewLines.length > 0 && react.createElement(
-                "div",
-                {
-                  style: {
-                    marginTop: "8px",
-                    color: "rgba(255,255,255,0.58)",
-                    fontSize: "12px",
-                    lineHeight: 1.45,
-                  },
-                },
-                previewLines.join(" / ")
-              )
-            ),
-            react.createElement(
-              "button",
-              {
-                className: "ivlyrics-fluent-btn",
-                type: "button",
-                onClick: () => void applyCandidate(candidate),
-                disabled: !!applyingKey,
-                style: { alignSelf: "start" },
-              },
-              applyingKey === candidateKey
-                ? getOptionsText("menu.localLyricsApplying", "적용 중")
-                : getOptionsText("menu.apply", "적용")
-            )
-          );
-        })
+        candidates.map(renderLrclibCandidate)
       )
     )
   );

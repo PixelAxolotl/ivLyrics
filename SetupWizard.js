@@ -640,6 +640,36 @@ const TranslationTipStep = ({ onNext, onBack }) => {
     return () => clearInterval(interval);
   }, []);
 
+  const renderTranslationTipToggle = (labelKey) =>
+    react.createElement(
+      "div",
+      {
+        style: {
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          padding: "10px 16px",
+          ...wizardPanelStyle,
+        },
+      },
+      react.createElement(
+        "span",
+        {
+          style: {
+            fontSize: "12px",
+            color: "rgba(255, 255, 255, 0.7)",
+            minWidth: "40px",
+          },
+        },
+        I18n.t(labelKey)
+      ),
+      // Toggle switch
+      react.createElement(WizardToggleVisual, {
+        enabled: true,
+        accentColor: languages[activeIndex].color,
+      })
+    );
+
   return react.createElement(
     "div",
     {
@@ -767,63 +797,9 @@ const TranslationTipStep = ({ onNext, onBack }) => {
             },
           },
           // Pronunciation toggle
-          react.createElement(
-            "div",
-            {
-              style: {
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "10px 16px",
-                ...wizardPanelStyle,
-              },
-            },
-            react.createElement(
-              "span",
-              {
-                style: {
-                  fontSize: "12px",
-                  color: "rgba(255, 255, 255, 0.7)",
-                  minWidth: "40px",
-                },
-              },
-              I18n.t("setupWizard.translationTip.pronunciation")
-            ),
-            // Toggle switch
-            react.createElement(WizardToggleVisual, {
-              enabled: true,
-              accentColor: languages[activeIndex].color,
-            })
-          ),
+          renderTranslationTipToggle("setupWizard.translationTip.pronunciation"),
           // Translation toggle
-          react.createElement(
-            "div",
-            {
-              style: {
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "10px 16px",
-                ...wizardPanelStyle,
-              },
-            },
-            react.createElement(
-              "span",
-              {
-                style: {
-                  fontSize: "12px",
-                  color: "rgba(255, 255, 255, 0.7)",
-                  minWidth: "40px",
-                },
-              },
-              I18n.t("setupWizard.translationTip.translation")
-            ),
-            // Toggle switch
-            react.createElement(WizardToggleVisual, {
-              enabled: true,
-              accentColor: languages[activeIndex].color,
-            })
-          )
+          renderTranslationTipToggle("setupWizard.translationTip.translation")
         )
       ),
       // Description text

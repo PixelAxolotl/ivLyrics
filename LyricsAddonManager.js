@@ -1479,22 +1479,26 @@
                 }
             }
 
-            if (allowKaraoke && window.PseudoKaraokeService?.applyToResult) {
-                try {
-                    const karaokeBeforePseudo = result.karaoke;
-                    const karaokeSourceBeforePseudo = result.karaokeSource;
-                    const pseudoCacheVersionBeforePseudo = result.pseudoKaraokeCacheVersion;
-                    const pseudoResult = await window.PseudoKaraokeService.applyToResult(result, info);
-                    if (pseudoResult) {
-                        Object.assign(result, pseudoResult);
+            const applyPseudoKaraoke = async () => {
+                if (allowKaraoke && window.PseudoKaraokeService?.applyToResult) {
+                    try {
+                        const karaokeBeforePseudo = result.karaoke;
+                        const karaokeSourceBeforePseudo = result.karaokeSource;
+                        const pseudoCacheVersionBeforePseudo = result.pseudoKaraokeCacheVersion;
+                        const pseudoResult = await window.PseudoKaraokeService.applyToResult(result, info);
+                        if (pseudoResult) {
+                            Object.assign(result, pseudoResult);
+                        }
+                        return result.karaoke !== karaokeBeforePseudo
+                            || result.karaokeSource !== karaokeSourceBeforePseudo
+                            || result.pseudoKaraokeCacheVersion !== pseudoCacheVersionBeforePseudo;
+                    } catch (error) {
+                        console.warn('[LyricsAddonManager] Failed to apply pseudo karaoke:', error);
                     }
-                    pseudoKaraokeChanged = result.karaoke !== karaokeBeforePseudo
-                        || result.karaokeSource !== karaokeSourceBeforePseudo
-                        || result.pseudoKaraokeCacheVersion !== pseudoCacheVersionBeforePseudo;
-                } catch (error) {
-                    console.warn('[LyricsAddonManager] Failed to apply pseudo karaoke:', error);
                 }
-            }
+                return pseudoKaraokeChanged;
+            };
+            pseudoKaraokeChanged = await applyPseudoKaraoke();
 
             // Sync-data and pseudo-karaoke can rebuild line objects after the
             // provider result was normalized. Normalize once more at the final

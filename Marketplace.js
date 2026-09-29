@@ -532,17 +532,7 @@ const MarketplacePage = (() => {
             }
         }, [consented, installing, onInstall, url]);
 
-        return react.createElement('div', {
-            className: 'ivlyrics-marketplace-confirm-overlay',
-            onClick: handleOverlayClick
-        },
-            react.createElement('form', {
-                className: 'ivlyrics-marketplace-confirm-modal ivlyrics-marketplace-direct-modal',
-                role: 'dialog',
-                'aria-modal': 'true',
-                'aria-labelledby': titleId,
-                onSubmit: handleSubmit
-            },
+        const renderDirectHeading = () => (
                 react.createElement('div', { className: 'ivlyrics-marketplace-direct-heading' },
                     react.createElement('div', { className: 'ivlyrics-marketplace-disclaimer-icon' },
                         react.createElement('svg', {
@@ -559,7 +549,37 @@ const MarketplacePage = (() => {
                             I18n.t('marketplace.directUrlTitle')
                         )
                     )
-                ),
+                )
+        );
+
+        const renderDirectButtons = () => (
+                react.createElement('div', { className: 'ivlyrics-marketplace-confirm-buttons' },
+                    react.createElement('button', {
+                        type: 'button',
+                        className: 'ivlyrics-marketplace-confirm-btn ivlyrics-marketplace-confirm-btn-cancel',
+                        disabled: installing,
+                        onClick: onCancel
+                    }, I18n.t('buttons.cancel')),
+                    react.createElement('button', {
+                        type: 'submit',
+                        className: 'ivlyrics-marketplace-confirm-btn ivlyrics-marketplace-confirm-btn-ok ivlyrics-marketplace-confirm-btn-warn',
+                        disabled: installing || !consented || !url.trim()
+                    }, installing ? I18n.t('marketplace.installing') : I18n.t('marketplace.install'))
+                )
+        );
+
+        return react.createElement('div', {
+            className: 'ivlyrics-marketplace-confirm-overlay',
+            onClick: handleOverlayClick
+        },
+            react.createElement('form', {
+                className: 'ivlyrics-marketplace-confirm-modal ivlyrics-marketplace-direct-modal',
+                role: 'dialog',
+                'aria-modal': 'true',
+                'aria-labelledby': titleId,
+                onSubmit: handleSubmit
+            },
+                renderDirectHeading(),
                 react.createElement('div', { className: 'ivlyrics-marketplace-direct-warning', role: 'alert' },
                     react.createElement('strong', null, I18n.t('marketplace.directWarningTitle')),
                     react.createElement('p', null, I18n.t('marketplace.directWarningBody'))
@@ -598,19 +618,7 @@ const MarketplacePage = (() => {
                     className: 'ivlyrics-marketplace-direct-error',
                     role: 'alert'
                 }, error),
-                react.createElement('div', { className: 'ivlyrics-marketplace-confirm-buttons' },
-                    react.createElement('button', {
-                        type: 'button',
-                        className: 'ivlyrics-marketplace-confirm-btn ivlyrics-marketplace-confirm-btn-cancel',
-                        disabled: installing,
-                        onClick: onCancel
-                    }, I18n.t('buttons.cancel')),
-                    react.createElement('button', {
-                        type: 'submit',
-                        className: 'ivlyrics-marketplace-confirm-btn ivlyrics-marketplace-confirm-btn-ok ivlyrics-marketplace-confirm-btn-warn',
-                        disabled: installing || !consented || !url.trim()
-                    }, installing ? I18n.t('marketplace.installing') : I18n.t('marketplace.install'))
-                )
+                renderDirectButtons()
             )
         );
     });

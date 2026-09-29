@@ -602,6 +602,13 @@
         }
     }
 
+    function drainSseLines(buffer, flush, processSseLine) {
+        const lines = buffer.split(/\r?\n/);
+        const remaining = flush ? '' : (lines.pop() || '');
+        for (const line of lines) processSseLine(line);
+        return remaining;
+    }
+
     function createResponsesAPIError(data, fallback = 'Responses API request failed') {
         const response = data?.response || data;
         const error = response?.error || data?.error;
@@ -736,10 +743,7 @@
                     };
 
                     const drainSseBuffer = (flush = false) => {
-                        const lines = sseBuffer.split(/\r?\n/);
-                        if (flush) sseBuffer = '';
-                        else sseBuffer = lines.pop() || '';
-                        for (const line of lines) processSseLine(line);
+                        sseBuffer = drainSseLines(sseBuffer, flush, processSseLine);
                     };
 
                     while (true) {
@@ -897,13 +901,7 @@
                     };
 
                     const drainSseBuffer = (flush = false) => {
-                        const parts = sseBuffer.split(/\r?\n/);
-                        if (flush) {
-                            sseBuffer = '';
-                        } else {
-                            sseBuffer = parts.pop() || '';
-                        }
-                        for (const line of parts) processSseLine(line);
+                        sseBuffer = drainSseLines(sseBuffer, flush, processSseLine);
                     };
 
                     while (true) {

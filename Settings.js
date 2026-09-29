@@ -10261,6 +10261,121 @@ react.createElement(
         })
       );
 
+  const renderAppearanceInstrumentalBreakSection = () =>
+react.createElement(OptionList, {
+          items: [
+            {
+              desc: I18n.t("settingsAdvanced.instrumentalBreak.autoDetect.label") || "Auto-detect instrumental gaps",
+              key: "instrumental-break-auto-detect",
+              info: I18n.t("settingsAdvanced.instrumentalBreak.autoDetect.desc") || "After a karaoke lyric line finishes, show an instrumental marker for a long gap before the next line.",
+              type: ConfigSlider,
+              defaultValue: CONFIG.visual["instrumental-break-auto-detect"] ?? true,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.instrumentalBreak.icon.label") || "Icon Design",
+              key: "instrumental-break-icon",
+              info: I18n.t("settingsAdvanced.instrumentalBreak.icon.desc") || "Choose the animation shown for instrumental gaps longer than 0.5 seconds",
+              type: ConfigInstrumentalBreakIconPicker,
+              options: {
+                equalizer: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.equalizer") || "01 Equalizer",
+                dotWave: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.dotWave") || "02 Dot Wave",
+                ripples: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.ripples") || "03 Ripples",
+                orbit: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.orbit") || "04 Orbit",
+                diamonds: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.diamonds") || "05 Diamonds",
+                scan: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.scan") || "06 Scan",
+                arcs: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.arcs") || "07 Arcs",
+                signal: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.signal") || "08 Signal",
+                pulseDot: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.pulseDot") || "09 Pulse Dot",
+                stack: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.stack") || "10 Stack",
+                spark: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.spark") || "11 Spark",
+                splitBars: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.splitBars") || "12 Split Bars",
+                metronome: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.metronome") || "13 Metronome",
+                vinyl: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.vinyl") || "14 Vinyl",
+                beat: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.beat") || "15 Beat",
+                reels: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.reels") || "16 Reels",
+                triangle: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.triangle") || "17 Triangle",
+                morph: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.morph") || "18 Morph",
+                strings: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.strings") || "19 Strings",
+                piano: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.piano") || "20 Piano",
+                bloom: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.bloom") || "21 Bloom",
+                speaker: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.speaker") || "22 Speaker",
+                crossfade: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.crossfade") || "23 Crossfade",
+              },
+            },
+            {
+              desc: I18n.t("settingsAdvanced.instrumentalBreak.showLabel.label") || "Show Text Label",
+              key: "instrumental-break-show-label",
+              info: I18n.t("settingsAdvanced.instrumentalBreak.showLabel.desc") || "Show Intro, Break, or Outro next to the icon based on lyric position",
+              type: ConfigSlider,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontFamily.label") || "Text Label Font",
+              key: "instrumental-break-label-font-family",
+              info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontFamily.desc") || "Select the font for the Intro, Break, or Outro label",
+              type: ConfigFontSelector,
+              defaultValue: getInstrumentalBreakLabelStyleDefault("font-family", "original-font-family", "Pretendard Variable"),
+              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontSize.label") || "Text Label Size",
+              key: "instrumental-break-label-font-size",
+              info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontSize.desc") || "Font size for the text label",
+              type: ConfigSliderRange,
+              min: 12,
+              max: 128,
+              step: 2,
+              unit: "px",
+              defaultValue: getInstrumentalBreakLabelStyleDefault("font-size", null, 20),
+              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontWeight.label") || "Text Label Weight",
+              key: "instrumental-break-label-font-weight",
+              info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontWeight.desc") || "Font weight for the text label",
+              type: ConfigFontWeightSlider,
+              defaultValue: getInstrumentalBreakLabelStyleDefault("font-weight", null, 200),
+              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.opacity.label") || "Text Label Opacity",
+              key: "instrumental-break-label-opacity",
+              info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.opacity.desc") || "Opacity for the text label",
+              type: ConfigSliderRange,
+              min: 0,
+              max: 100,
+              step: 5,
+              unit: "%",
+              defaultValue: getInstrumentalBreakLabelStyleDefault("opacity", null, 65),
+              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
+            },
+            ...createTextOutlineSettingItems("instrumental-break-label", {
+              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
+            }),
+            {
+              desc: I18n.t("settingsAdvanced.instrumentalBreak.speed.label") || "Animation Speed",
+              key: "instrumental-break-animation-speed",
+              info: I18n.t("settingsAdvanced.instrumentalBreak.speed.desc") || "Adjust the animation speed for the instrumental marker",
+              type: ConfigSliderRange,
+              min: 50,
+              max: 200,
+              step: 5,
+              unit: "%",
+            },
+          ],
+          onChange: (name, value) => {
+            CONFIG.visual[name] = value;
+            if (name === "instrumental-break-label-font-family") {
+              loadGoogleFontFamily(value);
+            }
+            StorageManager.saveConfig(name, value);
+            lyricContainerUpdate?.();
+            window.dispatchEvent(
+              new CustomEvent("ivLyrics", {
+                detail: { type: "config", name, value },
+              })
+            );
+          },
+        });
   const renderAppearanceTab = () =>
 react.createElement(
         "div",
@@ -10380,120 +10495,7 @@ react.createElement(
           subtitle: I18n.t("settingsAdvanced.instrumentalBreak.subtitle") || "Replace long blank or note-only lyric gaps with an icon",
           sectionKey: "instrumental-break",
         }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.instrumentalBreak.autoDetect.label") || "Auto-detect instrumental gaps",
-              key: "instrumental-break-auto-detect",
-              info: I18n.t("settingsAdvanced.instrumentalBreak.autoDetect.desc") || "After a karaoke lyric line finishes, show an instrumental marker for a long gap before the next line.",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["instrumental-break-auto-detect"] ?? true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.instrumentalBreak.icon.label") || "Icon Design",
-              key: "instrumental-break-icon",
-              info: I18n.t("settingsAdvanced.instrumentalBreak.icon.desc") || "Choose the animation shown for instrumental gaps longer than 0.5 seconds",
-              type: ConfigInstrumentalBreakIconPicker,
-              options: {
-                equalizer: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.equalizer") || "01 Equalizer",
-                dotWave: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.dotWave") || "02 Dot Wave",
-                ripples: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.ripples") || "03 Ripples",
-                orbit: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.orbit") || "04 Orbit",
-                diamonds: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.diamonds") || "05 Diamonds",
-                scan: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.scan") || "06 Scan",
-                arcs: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.arcs") || "07 Arcs",
-                signal: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.signal") || "08 Signal",
-                pulseDot: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.pulseDot") || "09 Pulse Dot",
-                stack: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.stack") || "10 Stack",
-                spark: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.spark") || "11 Spark",
-                splitBars: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.splitBars") || "12 Split Bars",
-                metronome: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.metronome") || "13 Metronome",
-                vinyl: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.vinyl") || "14 Vinyl",
-                beat: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.beat") || "15 Beat",
-                reels: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.reels") || "16 Reels",
-                triangle: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.triangle") || "17 Triangle",
-                morph: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.morph") || "18 Morph",
-                strings: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.strings") || "19 Strings",
-                piano: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.piano") || "20 Piano",
-                bloom: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.bloom") || "21 Bloom",
-                speaker: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.speaker") || "22 Speaker",
-                crossfade: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.crossfade") || "23 Crossfade",
-              },
-            },
-            {
-              desc: I18n.t("settingsAdvanced.instrumentalBreak.showLabel.label") || "Show Text Label",
-              key: "instrumental-break-show-label",
-              info: I18n.t("settingsAdvanced.instrumentalBreak.showLabel.desc") || "Show Intro, Break, or Outro next to the icon based on lyric position",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontFamily.label") || "Text Label Font",
-              key: "instrumental-break-label-font-family",
-              info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontFamily.desc") || "Select the font for the Intro, Break, or Outro label",
-              type: ConfigFontSelector,
-              defaultValue: getInstrumentalBreakLabelStyleDefault("font-family", "original-font-family", "Pretendard Variable"),
-              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontSize.label") || "Text Label Size",
-              key: "instrumental-break-label-font-size",
-              info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontSize.desc") || "Font size for the text label",
-              type: ConfigSliderRange,
-              min: 12,
-              max: 128,
-              step: 2,
-              unit: "px",
-              defaultValue: getInstrumentalBreakLabelStyleDefault("font-size", null, 20),
-              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontWeight.label") || "Text Label Weight",
-              key: "instrumental-break-label-font-weight",
-              info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontWeight.desc") || "Font weight for the text label",
-              type: ConfigFontWeightSlider,
-              defaultValue: getInstrumentalBreakLabelStyleDefault("font-weight", null, 200),
-              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.opacity.label") || "Text Label Opacity",
-              key: "instrumental-break-label-opacity",
-              info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.opacity.desc") || "Opacity for the text label",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 100,
-              step: 5,
-              unit: "%",
-              defaultValue: getInstrumentalBreakLabelStyleDefault("opacity", null, 65),
-              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
-            },
-            ...createTextOutlineSettingItems("instrumental-break-label", {
-              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
-            }),
-            {
-              desc: I18n.t("settingsAdvanced.instrumentalBreak.speed.label") || "Animation Speed",
-              key: "instrumental-break-animation-speed",
-              info: I18n.t("settingsAdvanced.instrumentalBreak.speed.desc") || "Adjust the animation speed for the instrumental marker",
-              type: ConfigSliderRange,
-              min: 50,
-              max: 200,
-              step: 5,
-              unit: "%",
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            if (name === "instrumental-break-label-font-family") {
-              loadGoogleFontFamily(value);
-            }
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        }),
+        renderAppearanceInstrumentalBreakSection(),
         react.createElement("div", {
           className: "settings-live-preview-spacer",
           "aria-hidden": "true",

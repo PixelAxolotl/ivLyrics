@@ -6677,8 +6677,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				return;
 			}
 
-			// ; 키: 음절 단위 싱크 (다음 모음까지 진행)
-			if (shortcutAction === 'syllable') {
+			const handleSyllableShortcut = () => {
 				consumeKeyboardEvent();
 				const currentTime = Spicetify.Player.getProgress() / 1000;
 
@@ -6767,6 +6766,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					endIdx: nextSegment.end,
 					startTime: currentTime
 				};
+				return;
+			};
+			// ; 키: 음절 단위 싱크 (다음 모음까지 진행)
+			if (shortcutAction === 'syllable') {
+				handleSyllableShortcut();
 				return;
 			}
 

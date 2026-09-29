@@ -449,21 +449,25 @@ const LyricsShareImage = (() => {
     );
 
     // 헤더 높이 계산
-    let headerHeight = 20;
-    if (cfg.showCover && cfg.coverPosition !== 'hidden') {
-      headerHeight = cfg.coverSize + 50;
-    } else if (cfg.showTrackInfo) {
-      headerHeight = 85;
-    }
-    
-    const footerHeight = cfg.showWatermark ? 60 : 30;
+    const computeCanvasHeight = () => {
+      let headerHeight = 20;
+      if (cfg.showCover && cfg.coverPosition !== 'hidden') {
+        headerHeight = cfg.coverSize + 50;
+      } else if (cfg.showTrackInfo) {
+        headerHeight = 85;
+      }
 
-    let calculatedHeight = cfg.padding + headerHeight + totalLyricsHeight + footerHeight + cfg.padding;
+      const footerHeight = cfg.showWatermark ? 60 : 30;
 
-    // 스토리 비율인 경우
-    if (cfg.aspectRatio) {
-      calculatedHeight = Math.max(calculatedHeight, width / cfg.aspectRatio);
-    }
+      let calculatedHeight = cfg.padding + headerHeight + totalLyricsHeight + footerHeight + cfg.padding;
+
+      // 스토리 비율인 경우
+      if (cfg.aspectRatio) {
+        calculatedHeight = Math.max(calculatedHeight, width / cfg.aspectRatio);
+      }
+      return calculatedHeight;
+    };
+    const calculatedHeight = computeCanvasHeight();
 
     canvas.width = width;
     canvas.height = calculatedHeight;

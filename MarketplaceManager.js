@@ -951,11 +951,14 @@
                 // 매니저에서 기존 등록 해제
                 const type = addonInfo.type;
                 const runtimeId = this._installedAddons.get(id)?.metadata?.runtimeId || id;
-                if (type === 'lyrics' && window.LyricsAddonManager) {
-                    window.LyricsAddonManager.unregister(runtimeId);
-                } else if (type === 'ai' && window.AIAddonManager) {
-                    window.AIAddonManager.unregister(runtimeId);
-                }
+                const unregisterExistingRuntime = () => {
+                    if (type === 'lyrics' && window.LyricsAddonManager) {
+                        window.LyricsAddonManager.unregister(runtimeId);
+                    } else if (type === 'ai' && window.AIAddonManager) {
+                        window.AIAddonManager.unregister(runtimeId);
+                    }
+                };
+                unregisterExistingRuntime();
 
                 // 새 코드 다운로드
                 const code = await this._downloadAddonCode(addonInfo.downloadUrl);

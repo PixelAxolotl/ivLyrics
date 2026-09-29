@@ -10061,6 +10061,206 @@ react.createElement(
         react.createElement(DebugInfoPanel)
       );
 
+  const renderSearchTab = () =>
+react.createElement(
+          "div",
+          {
+            className: `tab-content ${activeTab === "search" ? "active" : ""}`,
+            "data-tab-id": "search",
+          },
+        renderSearchResults()
+      );
+
+  const renderNowPlayingTab = () =>
+react.createElement(
+        "div",
+        {
+          className: `tab-content ${activeTab === "nowplaying" ? "active" : ""}`,
+          "data-tab-id": "nowplaying",
+        },
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.nowPlayingPanel.title") || "NowPlaying Panel Lyrics",
+          subtitle: I18n.t("settingsAdvanced.nowPlayingPanel.subtitle") || "Lyrics display settings for the Now Playing panel",
+          sectionKey: "panel-lyrics-general",
+        }),
+        // 미리보기 컴포넌트
+        react.createElement(NowPlayingPanelPreview),
+        react.createElement(OptionList, {
+          items: [
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.enabled.label") || "Enable Panel Lyrics",
+              key: "panel-lyrics-enabled",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.enabled.desc") || "Display current lyrics in the Now Playing panel",
+              type: ConfigSlider,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.fontFamily.label") || "Font Family",
+              key: "panel-lyrics-font-family",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.fontFamily.desc") || "Font for panel lyrics",
+              type: ConfigFontSelector,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.originalFont.label") || "Original Text Font",
+              key: "panel-lyrics-original-font",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.originalFont.desc") || "Font for original lyrics (empty = use default, comma-separated for multiple fonts)",
+              type: ConfigFontSelector,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.phoneticFont.label") || "Phonetic Text Font",
+              key: "panel-lyrics-phonetic-font",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.phoneticFont.desc") || "Font for phonetic text (empty = use default, comma-separated for multiple fonts)",
+              type: ConfigFontSelector,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.translationFont.label") || "Translation Text Font",
+              key: "panel-lyrics-translation-font",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.translationFont.desc") || "Font for translation text (empty = use default, comma-separated for multiple fonts)",
+              type: ConfigFontSelector,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.fontScale.label") || "Overall Font Scale",
+              key: "panel-font-scale",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.fontScale.desc") || "Overall font scale for panel lyrics (50%-200%)",
+              type: ConfigSliderRange,
+              min: 50,
+              max: 200,
+              step: 5,
+              unit: "%",
+            },
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.originalSize.label") || "Original Text Size",
+              key: "panel-lyrics-original-size",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.originalSize.desc") || "Font size for original lyrics (px)",
+              type: ConfigSliderRange,
+              min: 10,
+              max: 30,
+              step: 1,
+              unit: "px",
+            },
+            ...createTextOutlineSettingItems("panel-lyrics-original", {
+              labelPrefix: `${I18n.t("settingsAdvanced.nowPlayingPanel.originalFont.label") || "Original Text"} · `,
+            }),
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.phoneticSize.label") || "Phonetic Text Size",
+              key: "panel-lyrics-phonetic-size",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.phoneticSize.desc") || "Font size for phonetic text (px)",
+              type: ConfigSliderRange,
+              min: 8,
+              max: 24,
+              step: 1,
+              unit: "px",
+            },
+            ...createTextOutlineSettingItems("panel-lyrics-phonetic", {
+              labelPrefix: `${I18n.t("settingsAdvanced.nowPlayingPanel.phoneticFont.label") || "Phonetic Text"} · `,
+            }),
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.translationSize.label") || "Translation Text Size",
+              key: "panel-lyrics-translation-size",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.translationSize.desc") || "Font size for translation text (px)",
+              type: ConfigSliderRange,
+              min: 8,
+              max: 24,
+              step: 1,
+              unit: "px",
+            },
+            ...createTextOutlineSettingItems("panel-lyrics-translation", {
+              labelPrefix: `${I18n.t("settingsAdvanced.nowPlayingPanel.translationFont.label") || "Translation Text"} · `,
+            }),
+          ],
+          onChange: handleNowPlayingPanelChange,
+        }),
+        // 배경 설정 섹션
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.nowPlayingPanel.background.title") || "Background",
+          subtitle: I18n.t("settingsAdvanced.nowPlayingPanel.background.subtitle") || "Customize the panel background",
+          sectionKey: "panel-background",
+        }),
+        react.createElement(OptionList, {
+          items: [
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.type.label") || "Background Type",
+              key: "panel-bg-type",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.type.desc") || "Choose background style",
+              type: ConfigSelection,
+              options: {
+                "album": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.album") || "Album Color",
+                "gradient": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.gradient") || "Custom Gradient",
+                "custom": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.custom") || "Solid Color",
+                "transparent": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.transparent") || "Transparent",
+              },
+            },
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.color.label") || "Background Color",
+              key: "panel-bg-color",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.color.desc") || "Custom background color",
+              type: ConfigColorPicker,
+              when: () => CONFIG.visual["panel-bg-type"] === "custom",
+            },
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient1.label") || "Gradient Color 1",
+              key: "panel-bg-gradient-1",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient1.desc") || "First gradient color",
+              type: ConfigColorPicker,
+              when: () => CONFIG.visual["panel-bg-type"] === "gradient",
+            },
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient2.label") || "Gradient Color 2",
+              key: "panel-bg-gradient-2",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient2.desc") || "Second gradient color",
+              type: ConfigColorPicker,
+              when: () => CONFIG.visual["panel-bg-type"] === "gradient",
+            },
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.opacity.label") || "Background Opacity",
+              key: "panel-bg-opacity",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.opacity.desc") || "Background transparency (0-100%)",
+              type: ConfigSliderRange,
+              min: 0,
+              max: 100,
+              step: 5,
+              unit: "%",
+              when: () => CONFIG.visual["panel-bg-type"] !== "transparent",
+            },
+          ],
+          onChange: handleNowPlayingPanelChange,
+        }),
+        // Border 설정 섹션
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.nowPlayingPanel.border.title") || "Border",
+          subtitle: I18n.t("settingsAdvanced.nowPlayingPanel.border.subtitle") || "Customize the panel border",
+          sectionKey: "panel-border",
+        }),
+        react.createElement(OptionList, {
+          items: [
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.border.enabled.label") || "Enable Border",
+              key: "panel-border-enabled",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.border.enabled.desc") || "Show border around the panel",
+              type: ConfigSlider,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.border.color.label") || "Border Color",
+              key: "panel-border-color",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.border.color.desc") || "Border color",
+              type: ConfigColorPicker,
+              when: () => CONFIG.visual["panel-border-enabled"] === true,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.nowPlayingPanel.border.opacity.label") || "Border Opacity",
+              key: "panel-border-opacity",
+              info: I18n.t("settingsAdvanced.nowPlayingPanel.border.opacity.desc") || "Border transparency (0-100%)",
+              type: ConfigSliderRange,
+              min: 0,
+              max: 100,
+              step: 5,
+              unit: "%",
+              when: () => CONFIG.visual["panel-border-enabled"] === true,
+            },
+          ],
+          onChange: handleNowPlayingPanelChange,
+        })
+      );
+
   return react.createElement(
     "div",
     {
@@ -10139,14 +10339,7 @@ react.createElement(
       },
       // 검색 결과 탭
       activeTab === "search" &&
-        react.createElement(
-          "div",
-          {
-            className: `tab-content ${activeTab === "search" ? "active" : ""}`,
-            "data-tab-id": "search",
-          },
-        renderSearchResults()
-      ),
+        renderSearchTab(),
       // 일반 탭 (동작 관련 설정)
       activeTab === "general" &&
         renderGeneralTab(),
@@ -11884,194 +12077,7 @@ react.createElement(
       ),
       // NowPlaying 패널 가사 탭
       activeTab === "nowplaying" &&
-      react.createElement(
-        "div",
-        {
-          className: `tab-content ${activeTab === "nowplaying" ? "active" : ""}`,
-          "data-tab-id": "nowplaying",
-        },
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.nowPlayingPanel.title") || "NowPlaying Panel Lyrics",
-          subtitle: I18n.t("settingsAdvanced.nowPlayingPanel.subtitle") || "Lyrics display settings for the Now Playing panel",
-          sectionKey: "panel-lyrics-general",
-        }),
-        // 미리보기 컴포넌트
-        react.createElement(NowPlayingPanelPreview),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.enabled.label") || "Enable Panel Lyrics",
-              key: "panel-lyrics-enabled",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.enabled.desc") || "Display current lyrics in the Now Playing panel",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.fontFamily.label") || "Font Family",
-              key: "panel-lyrics-font-family",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.fontFamily.desc") || "Font for panel lyrics",
-              type: ConfigFontSelector,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.originalFont.label") || "Original Text Font",
-              key: "panel-lyrics-original-font",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.originalFont.desc") || "Font for original lyrics (empty = use default, comma-separated for multiple fonts)",
-              type: ConfigFontSelector,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.phoneticFont.label") || "Phonetic Text Font",
-              key: "panel-lyrics-phonetic-font",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.phoneticFont.desc") || "Font for phonetic text (empty = use default, comma-separated for multiple fonts)",
-              type: ConfigFontSelector,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.translationFont.label") || "Translation Text Font",
-              key: "panel-lyrics-translation-font",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.translationFont.desc") || "Font for translation text (empty = use default, comma-separated for multiple fonts)",
-              type: ConfigFontSelector,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.fontScale.label") || "Overall Font Scale",
-              key: "panel-font-scale",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.fontScale.desc") || "Overall font scale for panel lyrics (50%-200%)",
-              type: ConfigSliderRange,
-              min: 50,
-              max: 200,
-              step: 5,
-              unit: "%",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.originalSize.label") || "Original Text Size",
-              key: "panel-lyrics-original-size",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.originalSize.desc") || "Font size for original lyrics (px)",
-              type: ConfigSliderRange,
-              min: 10,
-              max: 30,
-              step: 1,
-              unit: "px",
-            },
-            ...createTextOutlineSettingItems("panel-lyrics-original", {
-              labelPrefix: `${I18n.t("settingsAdvanced.nowPlayingPanel.originalFont.label") || "Original Text"} · `,
-            }),
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.phoneticSize.label") || "Phonetic Text Size",
-              key: "panel-lyrics-phonetic-size",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.phoneticSize.desc") || "Font size for phonetic text (px)",
-              type: ConfigSliderRange,
-              min: 8,
-              max: 24,
-              step: 1,
-              unit: "px",
-            },
-            ...createTextOutlineSettingItems("panel-lyrics-phonetic", {
-              labelPrefix: `${I18n.t("settingsAdvanced.nowPlayingPanel.phoneticFont.label") || "Phonetic Text"} · `,
-            }),
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.translationSize.label") || "Translation Text Size",
-              key: "panel-lyrics-translation-size",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.translationSize.desc") || "Font size for translation text (px)",
-              type: ConfigSliderRange,
-              min: 8,
-              max: 24,
-              step: 1,
-              unit: "px",
-            },
-            ...createTextOutlineSettingItems("panel-lyrics-translation", {
-              labelPrefix: `${I18n.t("settingsAdvanced.nowPlayingPanel.translationFont.label") || "Translation Text"} · `,
-            }),
-          ],
-          onChange: handleNowPlayingPanelChange,
-        }),
-        // 배경 설정 섹션
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.nowPlayingPanel.background.title") || "Background",
-          subtitle: I18n.t("settingsAdvanced.nowPlayingPanel.background.subtitle") || "Customize the panel background",
-          sectionKey: "panel-background",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.type.label") || "Background Type",
-              key: "panel-bg-type",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.type.desc") || "Choose background style",
-              type: ConfigSelection,
-              options: {
-                "album": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.album") || "Album Color",
-                "gradient": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.gradient") || "Custom Gradient",
-                "custom": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.custom") || "Solid Color",
-                "transparent": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.transparent") || "Transparent",
-              },
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.color.label") || "Background Color",
-              key: "panel-bg-color",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.color.desc") || "Custom background color",
-              type: ConfigColorPicker,
-              when: () => CONFIG.visual["panel-bg-type"] === "custom",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient1.label") || "Gradient Color 1",
-              key: "panel-bg-gradient-1",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient1.desc") || "First gradient color",
-              type: ConfigColorPicker,
-              when: () => CONFIG.visual["panel-bg-type"] === "gradient",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient2.label") || "Gradient Color 2",
-              key: "panel-bg-gradient-2",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient2.desc") || "Second gradient color",
-              type: ConfigColorPicker,
-              when: () => CONFIG.visual["panel-bg-type"] === "gradient",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.opacity.label") || "Background Opacity",
-              key: "panel-bg-opacity",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.opacity.desc") || "Background transparency (0-100%)",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 100,
-              step: 5,
-              unit: "%",
-              when: () => CONFIG.visual["panel-bg-type"] !== "transparent",
-            },
-          ],
-          onChange: handleNowPlayingPanelChange,
-        }),
-        // Border 설정 섹션
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.nowPlayingPanel.border.title") || "Border",
-          subtitle: I18n.t("settingsAdvanced.nowPlayingPanel.border.subtitle") || "Customize the panel border",
-          sectionKey: "panel-border",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.border.enabled.label") || "Enable Border",
-              key: "panel-border-enabled",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.border.enabled.desc") || "Show border around the panel",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.border.color.label") || "Border Color",
-              key: "panel-border-color",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.border.color.desc") || "Border color",
-              type: ConfigColorPicker,
-              when: () => CONFIG.visual["panel-border-enabled"] === true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.border.opacity.label") || "Border Opacity",
-              key: "panel-border-opacity",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.border.opacity.desc") || "Border transparency (0-100%)",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 100,
-              step: 5,
-              unit: "%",
-              when: () => CONFIG.visual["panel-border-enabled"] === true,
-            },
-          ],
-          onChange: handleNowPlayingPanelChange,
-        })
-      ),
+      renderNowPlayingTab(),
       // 디버그 탭
       activeTab === "debug" &&
       renderDebugTab(),

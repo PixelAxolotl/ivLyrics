@@ -2451,38 +2451,27 @@
                 const query = new URLSearchParams({ q: queryValue });
                 const response = await fetchWithTimeout(`${LRCLIB_API_BASE}/search?${query.toString()}`, { headers }, 35000);
 
+                // 수동 검색 실패 응답은 error 메시지만 다르고 나머지 형태가 동일하다.
+                const manualSearchFailure = (errorMessage) => ({
+                    success: false,
+                    error: errorMessage,
+                    candidates: [],
+                    selectedCandidateKey: null,
+                    searchMode: 'manual',
+                    totalResults: 0
+                });
+
                 if (!response) {
-                    return {
-                        success: false,
-                        error: 'Network request failed',
-                        candidates: [],
-                        selectedCandidateKey: null,
-                        searchMode: 'manual',
-                        totalResults: 0
-                    };
+                    return manualSearchFailure('Network request failed');
                 }
 
                 if (!response.ok) {
-                    return {
-                        success: false,
-                        error: response.status === 404 ? 'No lyrics found' : `API error: ${response.status}`,
-                        candidates: [],
-                        selectedCandidateKey: null,
-                        searchMode: 'manual',
-                        totalResults: 0
-                    };
+                    return manualSearchFailure(response.status === 404 ? 'No lyrics found' : `API error: ${response.status}`);
                 }
 
                 const data = await response.json();
                 if (!Array.isArray(data)) {
-                    return {
-                        success: false,
-                        error: 'Invalid LRCLIB response',
-                        candidates: [],
-                        selectedCandidateKey: null,
-                        searchMode: 'manual',
-                        totalResults: 0
-                    };
+                    return manualSearchFailure('Invalid LRCLIB response');
                 }
 
                 const trackDuration = Number(info?.duration || 0);

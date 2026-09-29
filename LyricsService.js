@@ -1179,7 +1179,7 @@
             // above letters several languages share.
             const countOf = (match) => (match ? match.length : 0);
 
-            const diacriticCandidates = [
+            const computeDiacriticFallbackCandidates = () => [
                 ["vi", countOf(vietnameseUniqueMatch) * 3 + countOf(vietnameseMatch)],
                 ["cs", countOf(czechUniqueMatch) * 3 + countOf(czechMatch)],
                 ["tr", countOf(turkishUniqueMatch) * 3 + countOf(turkishMatch)],
@@ -1191,6 +1191,7 @@
                 ["es", countOf(spanishMatch)]
             ].sort((left, right) => right[1] - left[1]);
 
+            const diacriticCandidates = computeDiacriticFallbackCandidates();
             const [diacriticLanguage, diacriticScore] = diacriticCandidates[0];
             if (diacriticScore >= 4) {
                 this._cacheLanguageResult(cacheKey, diacriticLanguage);

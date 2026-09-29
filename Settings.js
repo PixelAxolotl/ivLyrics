@@ -10017,6 +10017,50 @@ react.createElement(
         })
       );
 
+  const renderLyricsProvidersTab = () =>
+react.createElement(
+        "div",
+        {
+          className: `tab-content ${activeTab === "lyrics-providers" ? "active" : ""}`,
+          "data-tab-id": "lyrics-providers",
+        },
+        react.createElement(
+          "div",
+          { "data-setting-key": "lyrics-providers" },
+          react.createElement(LyricsProvidersTab)
+        )
+      );
+
+  const renderAiProvidersTab = () =>
+react.createElement(
+        "div",
+        {
+          className: `tab-content ${activeTab === "ai-providers" ? "active" : ""}`,
+          "data-tab-id": "ai-providers",
+        },
+        react.createElement(
+          "div",
+          { "data-setting-key": "ai-providers" },
+          react.createElement("p", { className: "setting-description" }, I18n.t("settingsUi.aiAutosave")),
+          react.createElement(AIProvidersTab)
+        )
+      );
+
+  const renderDebugTab = () =>
+react.createElement(
+        "div",
+        {
+          className: `tab-content ${activeTab === "debug" ? "active" : ""}`,
+          "data-tab-id": "debug",
+        },
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.debugTab.title"),
+          subtitle: I18n.t("settingsAdvanced.debugTab.subtitle"),
+          sectionKey: "debug-overview",
+        }),
+        react.createElement(DebugInfoPanel)
+      );
+
   return react.createElement(
     "div",
     {
@@ -11183,33 +11227,10 @@ react.createElement(
       ),
       // 가사 제공자 탭
       activeTab === "lyrics-providers" &&
-      react.createElement(
-        "div",
-        {
-          className: `tab-content ${activeTab === "lyrics-providers" ? "active" : ""}`,
-          "data-tab-id": "lyrics-providers",
-        },
-        react.createElement(
-          "div",
-          { "data-setting-key": "lyrics-providers" },
-          react.createElement(LyricsProvidersTab)
-        )
-      ),
+      renderLyricsProvidersTab(),
       // AI 제공자 탭
       activeTab === "ai-providers" &&
-      react.createElement(
-        "div",
-        {
-          className: `tab-content ${activeTab === "ai-providers" ? "active" : ""}`,
-          "data-tab-id": "ai-providers",
-        },
-        react.createElement(
-          "div",
-          { "data-setting-key": "ai-providers" },
-          react.createElement("p", { className: "setting-description" }, I18n.t("settingsUi.aiAutosave")),
-          react.createElement(AIProvidersTab)
-        )
-      ),
+      renderAiProvidersTab(),
       // 전체화면 탭
       activeTab === "fullscreen" &&
       react.createElement(
@@ -12053,19 +12074,7 @@ react.createElement(
       ),
       // 디버그 탭
       activeTab === "debug" &&
-      react.createElement(
-        "div",
-        {
-          className: `tab-content ${activeTab === "debug" ? "active" : ""}`,
-          "data-tab-id": "debug",
-        },
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.debugTab.title"),
-          subtitle: I18n.t("settingsAdvanced.debugTab.subtitle"),
-          sectionKey: "debug-overview",
-        }),
-        react.createElement(DebugInfoPanel)
-      ),
+      renderDebugTab(),
       // 정보 탭
       activeTab === "about" &&
       react.createElement(

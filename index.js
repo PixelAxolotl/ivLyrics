@@ -6475,26 +6475,31 @@ class LyricsContainer extends react.Component {
     let translationLoadingToken = null;
     let phoneticCompleted = false;
     let translationCompleted = false;
-    const regenerationToastKind = needPhonetic && needTranslation
-      ? "both"
-      : needPhonetic
-        ? "phonetic"
-        : "translation";
-    const regenerationToastStart = regenerationToastKind === "phonetic"
-      ? I18n.t("notifications.requestingPronunciation")
-      : regenerationToastKind === "both"
-        ? `${I18n.t("notifications.requestingPronunciation")} ${I18n.t("notifications.requestingTranslation")}`
-        : I18n.t("notifications.regeneratingTranslation");
-    const regenerationToastSuccess = regenerationToastKind === "translation"
-      ? I18n.t("notifications.translationRegenerated")
-      : `${regenerationToastKind === "phonetic"
-        ? I18n.t("menu.pronunciation")
-        : I18n.t("menu.regenerateBoth")} · ${I18n.t("generationStatus.complete")}`;
-    const regenerationToastFailure = regenerationToastKind === "phonetic"
-      ? I18n.t("notifications.romajiTranslationFailed")
-      : regenerationToastKind === "both"
-        ? `${I18n.t("notifications.romajiTranslationFailed")} / ${I18n.t("notifications.translationRegenerateFailed")}`
-        : I18n.t("notifications.translationRegenerateFailed");
+    const computeRegenerationToasts = () => {
+      const regenerationToastKind = needPhonetic && needTranslation
+        ? "both"
+        : needPhonetic
+          ? "phonetic"
+          : "translation";
+      const regenerationToastStart = regenerationToastKind === "phonetic"
+        ? I18n.t("notifications.requestingPronunciation")
+        : regenerationToastKind === "both"
+          ? `${I18n.t("notifications.requestingPronunciation")} ${I18n.t("notifications.requestingTranslation")}`
+          : I18n.t("notifications.regeneratingTranslation");
+      const regenerationToastSuccess = regenerationToastKind === "translation"
+        ? I18n.t("notifications.translationRegenerated")
+        : `${regenerationToastKind === "phonetic"
+          ? I18n.t("menu.pronunciation")
+          : I18n.t("menu.regenerateBoth")} · ${I18n.t("generationStatus.complete")}`;
+      const regenerationToastFailure = regenerationToastKind === "phonetic"
+        ? I18n.t("notifications.romajiTranslationFailed")
+        : regenerationToastKind === "both"
+          ? `${I18n.t("notifications.romajiTranslationFailed")} / ${I18n.t("notifications.translationRegenerateFailed")}`
+          : I18n.t("notifications.translationRegenerateFailed");
+      return { regenerationToastStart, regenerationToastSuccess, regenerationToastFailure };
+    };
+    const { regenerationToastStart, regenerationToastSuccess, regenerationToastFailure } =
+      computeRegenerationToasts();
 
     try {
       if (needPhonetic) {

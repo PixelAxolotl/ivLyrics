@@ -202,7 +202,7 @@
 				if (success) {
 					document.head.appendChild(fullscreenStyle);
 					// 버튼에 고유 클래스 추가하여 CSS로 위치 조정 가능하게 함
-					setTimeout(() => {
+					const applyFullscreenButtonClass = () => {
 						// Spicetify.Playbar.Button의 내부 element 속성 사용 시도
 						if (fullscreenButton.element) {
 							fullscreenButton.element.classList.add('ivlyrics-fullscreen-btn');
@@ -218,7 +218,8 @@
 								}
 							}
 						}
-					}, 100);
+					};
+					setTimeout(applyFullscreenButtonClass, 100);
 				} else {
 					// 버튼 등록 실패 시 deregister하고 로그 출력
 					try {

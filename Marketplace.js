@@ -1240,8 +1240,7 @@ const MarketplacePage = (() => {
             );
         };
 
-        const renderMarketplaceBrowseLayout = () => react.createElement('div', { className: 'ivlyrics-marketplace-container' },
-                react.createElement('div', { className: 'ivlyrics-marketplace-top' },
+        const renderMarketplaceBrowseHeader = () => (
                     react.createElement('div', { className: 'ivlyrics-marketplace-header' },
                         react.createElement('div', { className: 'ivlyrics-marketplace-header-left' },
                             react.createElement('button', {
@@ -1286,7 +1285,12 @@ const MarketplacePage = (() => {
                                 })
                             )
                         )
-                    ),
+                    )
+        );
+
+        const renderMarketplaceBrowseLayout = () => react.createElement('div', { className: 'ivlyrics-marketplace-container' },
+                react.createElement('div', { className: 'ivlyrics-marketplace-top' },
+                    renderMarketplaceBrowseHeader(),
                     react.createElement('div', {
                         className: 'ivlyrics-marketplace-primary-tabs',
                         role: 'tablist',

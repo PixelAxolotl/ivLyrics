@@ -9224,7 +9224,7 @@
             await this.awaitFinished("ja");
             const out = await this.kuroshiro.convert(text, {
                 to: target,
-                mode: mode,
+                mode,
                 romajiSystem: "hepburn",
             });
             return window.Translator.normalizeRomajiString(out);
@@ -9242,7 +9242,7 @@
         async convertChinese(text, from, target) {
             await this.awaitFinished("zh");
             const converter = this.OpenCC.Converter({
-                from: from,
+                from,
                 to: target,
             });
             return converter(text);
@@ -10359,7 +10359,7 @@
                     title: currentTitle,
                     artist: currentArtist,
                     album: currentAlbum,
-                    albumArt: albumArt,
+                    albumArt,
                     duration: Spicetify.Player.getDuration() || 0
                 },
                 lyrics: mappedLines,
@@ -10507,7 +10507,7 @@
                                 title: this.formatMetadataText(currentItem?.metadata?.title || currentItem?.name || ''),
                                 artist: this.formatMetadataText(currentItem?.metadata?.artist_name || ''),
                                 album: currentItem?.metadata?.album_title || '',
-                                albumArt: albumArt
+                                albumArt
                             };
                         } catch (e) { }
                     }
@@ -10523,7 +10523,7 @@
                                 nextTrack = {
                                     title: this.formatMetadataText(next.contextTrack.metadata.title || ''),
                                     artist: this.formatMetadataText(next.contextTrack.metadata.artist_name || ''),
-                                    albumArt: albumArt
+                                    albumArt
                                 };
                             }
                         }
@@ -10531,12 +10531,12 @@
 
                     await this.sendProgressPayload('/progress', {
                         trackUri: currentUri || null,
-                        position: position,
+                        position,
                         isPlaying: getOverlayProgressIsPlaying(),
-                        duration: duration,
-                        remaining: remaining,
-                        currentTrack: currentTrack,
-                        nextTrack: nextTrack
+                        duration,
+                        remaining,
+                        currentTrack,
+                        nextTrack
                     }, currentUri);
                 } finally {
                     if (this._worker === sendingWorker) this._isSendingProgress = false;
@@ -11038,7 +11038,7 @@
                         title: currentTitle,
                         artist: currentArtist,
                         album: currentAlbum,
-                        albumArt: albumArt,
+                        albumArt,
                         duration: Spicetify.Player.getDuration() || 0
                     },
                     lyrics: mappedLines,
@@ -11251,7 +11251,7 @@
                                     title: currentItem?.metadata?.title || currentItem?.name || '',
                                     artist: currentItem?.metadata?.artist_name || '',
                                     album: currentItem?.metadata?.album_title || '',
-                                    albumArt: albumArt
+                                    albumArt
                                 };
                             } catch (e) { }
                         }
@@ -11267,7 +11267,7 @@
                                     nextTrack = {
                                         title: next.contextTrack.metadata.title || '',
                                         artist: next.contextTrack.metadata.artist_name || '',
-                                        albumArt: albumArt
+                                        albumArt
                                     };
                                 }
                             }
@@ -11275,12 +11275,12 @@
 
                         // 새로운 엔드포인트 사용: /lyrics/progress
                         await this.sendProgressPayload('/lyrics/progress', {
-                            position: position,
+                            position,
                             isPlaying: getOverlayProgressIsPlaying(),
-                            duration: duration,
-                            remaining: remaining,
-                            currentTrack: currentTrack,
-                            nextTrack: nextTrack
+                            duration,
+                            remaining,
+                            currentTrack,
+                            nextTrack
                         }, currentUri);
                     } finally {
                         if (this._worker === sendingWorker) this._isSendingProgress = false;

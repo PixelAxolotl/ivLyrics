@@ -9898,8 +9898,8 @@ const ConfigModal = ({
             const configChange = new CustomEvent("ivLyrics", {
               detail: {
                 type: "config",
-                name: name,
-                value: value,
+                name,
+                value,
               },
             });
             window.dispatchEvent(configChange);

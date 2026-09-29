@@ -416,9 +416,9 @@
 
                     const response = await window.ivLyricsFetch(endpoint, {
                         method: 'POST',
-                        headers: headers,
+                        headers,
                         body: JSON.stringify({
-                            model: model,
+                            model,
                             messages: buildPromptMessages(prompt),
                             ...getAdvancedRequestParams()
                         })

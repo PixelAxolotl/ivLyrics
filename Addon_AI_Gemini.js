@@ -101,7 +101,7 @@
                 .map(m => {
                     const id = m.name.replace('models/', '');
                     return {
-                        id: id,
+                        id,
                         name: m.displayName || id,
                         description: m.description || '',
                         input_token_limit: asPositiveInteger(m.inputTokenLimit),

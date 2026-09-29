@@ -6448,7 +6448,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						if (interpolationEnabledRef.current) {
 							pendingWordSyncRef.current = {
 								startIdx: wordStartIdx,
-								endIdx: endIdx,
+								endIdx,
 								startTime: currentTime
 							};
 						}

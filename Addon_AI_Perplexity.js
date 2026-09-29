@@ -239,7 +239,7 @@
                             'Authorization': `Bearer ${apiKey}`
                         },
                         body: JSON.stringify({
-                            model: model,
+                            model,
                             messages: buildPromptMessages(prompt),
                             ...getAdvancedRequestParams()
                         })

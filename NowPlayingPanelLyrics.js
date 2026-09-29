@@ -5827,8 +5827,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             });
         },
         getLyricsSnapshot: (trackUri) => getSharedLyricsSnapshot(trackUri),
-        updateStyles: updateStyles,
-        updateCSSVariables: updateCSSVariables,
+        updateStyles,
+        updateCSSVariables,
         destroy: () => {
             if (settingsListener) {
                 window.removeEventListener('ivLyrics', settingsListener);

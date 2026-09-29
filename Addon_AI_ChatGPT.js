@@ -339,7 +339,7 @@
     function buildChatGPTRequestBody(model, prompt, { stream = false } = {}) {
         const { systemPrompt, userPrompt } = normalizePromptRequest(prompt);
         const requestBody = {
-            model: model,
+            model,
             messages: [
                 ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
                 { role: 'user', content: userPrompt }

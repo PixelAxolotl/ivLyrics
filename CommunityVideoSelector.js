@@ -409,7 +409,7 @@ const SyncedVideoPreview = ({ videoId, startTime, skipSegments = [], isAutoGener
       containerRef.current.appendChild(playerDiv);
 
       playerRef.current = new window.YT.Player(playerId, {
-        videoId: videoId,
+        videoId,
         width: "100%",
         height: 200,
         playerVars: {
@@ -644,7 +644,7 @@ const SimpleVideoPreview = ({ videoId, startTime, skipSegments = [] }) => {
       containerRef.current.appendChild(playerDiv);
 
       playerRef.current = new window.YT.Player(playerId, {
-        videoId: videoId,
+        videoId,
         width: "100%",
         height: "180",
         playerVars: {

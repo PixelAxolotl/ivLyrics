@@ -2142,7 +2142,7 @@ const OptionsMenu = react.memo(
           return react.createElement(
             "div",
             {
-              key: key,
+              key,
               className: `optionsMenu-item ${isSelected ? "selected" : ""}`,
               onMouseDown: (e) => {
                 // onClick 대신 onMouseDown 사용: window의 mousedown 리스너가 먼저 실행되어 메뉴를 닫는 것을 방지
@@ -2386,7 +2386,7 @@ const IvConfigButton = react.memo(({ text, onClick }) => {
     "button",
     {
       className: "ivlyrics-fluent-btn",
-      onClick: onClick,
+      onClick,
     },
     text
   );
@@ -2423,7 +2423,7 @@ const IvOptionList = react.memo(({ items, onChange }) => {
 
       return react.createElement(
         "div",
-        { key: key, className: `ivlyrics-popup-setting-row${control ? "" : " no-control"}` },
+        { key, className: `ivlyrics-popup-setting-row${control ? "" : " no-control"}` },
         react.createElement(
           "div",
           { className: "ivlyrics-popup-setting-row-content" },
@@ -4414,8 +4414,8 @@ function openCommunityVideoSelector(trackUri, currentVideoId, onVideoSelect, def
     removeExisting: false,
     render: (closeModal) =>
       react.createElement(CommunityVideoSelector, {
-        trackUri: trackUri,
-        currentVideoId: currentVideoId,
+        trackUri,
+        currentVideoId,
         defaultStartTime,
         onVideoSelect: async (newVideoInfo) => {
           try {
@@ -5362,8 +5362,8 @@ async function openSyncDataCreator(trackInfo, initialData = null) {
   }
 
   const creatorComponent = react.createElement(SyncDataCreator, {
-    trackInfo: trackInfo,
-    initialData: initialData,
+    trackInfo,
+    initialData,
     onClose: closeModal
   });
 

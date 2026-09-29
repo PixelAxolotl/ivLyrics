@@ -1079,7 +1079,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                         buffered: '-',
                         videoId: videoInfo?.youtubeVideoId || '-',
                         videoHelper: 'Helper (Local)',
-                        helperStatus: helperStatus  //
+                        helperStatus
                     });
                     return;
                 }
@@ -1097,7 +1097,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                         buffered: `${bufferedPercent}%`,
                         videoId: videoInfo?.youtubeVideoId || '-',
                         videoHelper: 'Helper (Local)',
-                        helperStatus: helperStatus
+                        helperStatus
                     });
                 } catch (e) {}
             }

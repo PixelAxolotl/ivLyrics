@@ -384,7 +384,7 @@
         refreshAvailableLanguages();
 
         return AVAILABLE_LANGUAGES.map(function (code) {
-            return { code: code, name: LANGUAGE_NAMES[code] || code };
+            return { code, name: LANGUAGE_NAMES[code] || code };
         });
     }
 
@@ -429,18 +429,18 @@
 
     // Create the I18n object
     var I18n = {
-        init: init,
-        initSync: initSync,
-        getString: getString,
+        init,
+        initSync,
+        getString,
         t: getString,
-        getAllTranslations: getAllTranslations,
-        getCurrentLanguage: getCurrentLanguage,
-        setLanguage: setLanguage,
-        getAvailableLanguages: getAvailableLanguages,
-        getLanguageName: getLanguageName,
-        isInitialized: isInitialized,
-        AVAILABLE_LANGUAGES: AVAILABLE_LANGUAGES,
-        DEFAULT_LANGUAGE: DEFAULT_LANGUAGE
+        getAllTranslations,
+        getCurrentLanguage,
+        setLanguage,
+        getAvailableLanguages,
+        getLanguageName,
+        isInitialized,
+        AVAILABLE_LANGUAGES,
+        DEFAULT_LANGUAGE
     };
 
     // Export to window

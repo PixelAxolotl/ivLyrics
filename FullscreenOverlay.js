@@ -3050,7 +3050,7 @@ const FullscreenOverlay = (() => {
                 tmiLoading && !tmiData ?
                     react.createElement(window.SongInfoTMI?.TMILoadingView || 'div', {
                         onClose: closeTmiMode,
-                        tmiScale: tmiScale,
+                        tmiScale,
                         webSearchFallback: tmiWebSearchFallback
                     }) :
                     react.createElement(window.SongInfoTMI?.TMIFullView || 'div', {
@@ -3058,7 +3058,7 @@ const FullscreenOverlay = (() => {
                         isGenerating: tmiLoading,
                         webSearchFallback: tmiWebSearchFallback,
                         onClose: closeTmiMode,
-                        tmiScale: tmiScale,
+                        tmiScale,
                         trackName: (() => {
                             const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
                             const original = title || Spicetify.Player.data?.item?.metadata?.title;
@@ -3401,7 +3401,7 @@ const FullscreenOverlay = (() => {
                     showProgress && react.createElement(ProgressBar, { show: true }),
                     showControls && react.createElement(PlayerControls, {
                         show: true,
-                        showVolume: showVolume,
+                        showVolume,
                         buttonSize: controlButtonSize,
                         showBackground: controlsBackground
                     })
@@ -3417,7 +3417,7 @@ const FullscreenOverlay = (() => {
                     tmiLoading && !tmiData ?
                         react.createElement(window.SongInfoTMI?.TMILoadingView || 'div', {
                             onClose: closeTmiMode,
-                            tmiScale: tmiScale,
+                            tmiScale,
                             webSearchFallback: tmiWebSearchFallback
                         }) :
                         react.createElement(window.SongInfoTMI?.TMIFullView || 'div', {
@@ -3425,7 +3425,7 @@ const FullscreenOverlay = (() => {
                             isGenerating: tmiLoading,
                             webSearchFallback: tmiWebSearchFallback,
                             onClose: closeTmiMode,
-                            tmiScale: tmiScale,
+                            tmiScale,
                             trackName: (() => {
                                 const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
                                 const original = title || Spicetify.Player.data?.item?.metadata?.title;
@@ -3698,7 +3698,7 @@ const FullscreenOverlay = (() => {
                 showProgress && react.createElement(ProgressBar, { show: true }),
                 react.createElement(PlayerControls, {
                     show: true,
-                    showVolume: showVolume,
+                    showVolume,
                     buttonSize: controlButtonSize,
                     showBackground: controlsBackground
                 })
@@ -3722,7 +3722,7 @@ const FullscreenOverlay = (() => {
             // Queue panel (right side hover)
             react.createElement(QueuePanel, {
                 show: showQueueInOverlay,
-                isFullscreen: isFullscreen
+                isFullscreen
             })
         );
     };

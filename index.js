@@ -4060,8 +4060,8 @@ const Prefetcher = {
         onComplete: (url) => {
           ivLyricsDebug(`[Prefetcher] Helper prefetch complete for: ${videoId}`);
           this._prefetchCache.set(helperCacheKey, {
-            videoId: videoId,
-            url: url,
+            videoId,
+            url,
             timestamp: Date.now(),
           });
           this._inflightRequests.delete(helperCacheKey);

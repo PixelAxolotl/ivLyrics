@@ -273,7 +273,7 @@
                             'anthropic-dangerous-direct-browser-access': 'true'
                         },
                         body: JSON.stringify({
-                            model: model,
+                            model,
                             ...getAdvancedRequestParams(),
                             ...(systemPrompt ? { system: systemPrompt } : {}),
                             messages: [
@@ -424,7 +424,7 @@
                             'anthropic-dangerous-direct-browser-access': 'true'
                         },
                         body: JSON.stringify({
-                            model: model,
+                            model,
                             ...getAdvancedRequestParams(),
                             ...requestOverrides,
                             ...(systemPrompt ? { system: systemPrompt } : {}),

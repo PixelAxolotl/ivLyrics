@@ -2958,6 +2958,21 @@ const FullscreenOverlay = (() => {
         const leftPlayerControlsClass = `${leftControlsClass} left-controls-player`;
         const leftProgressOnlyClass = `${leftControlsClass} left-controls-progress-only`;
 
+        // TMI FullView의 trackName/artistName IIFE에서 반복되던 표시 모드 해석 로직.
+        // 축소 레이아웃(TV/Portrait 위 오버레이)은 translated/romanized 두 모드만 처리하고,
+        // 전체 레이아웃은 original-translated/original-romanized/all 합성 모드까지 처리하던
+        // 동작 차이를 includeCompositeModes 플래그로 명시적으로 유지한다.
+        const resolveTmiMetadataName = (mode, original, trans, rom, includeCompositeModes) => {
+            if (mode === "translated") return trans || original;
+            if (mode === "romanized") return rom || original;
+            if (includeCompositeModes) {
+                if (mode === "original-translated") return (trans && trans !== original) ? `${original} (${trans})` : original;
+                if (mode === "original-romanized") return (rom && rom !== original) ? `${original} (${rom})` : original;
+                if (mode === "all") return (trans && trans !== original) ? `${original} (${trans})` : original;
+            }
+            return original;
+        };
+
         const resolveTvMetadataLines = (mode, originalValue, translatedValue, romanizedValue) => {
             const values = {
                 original: getNonEmptyString(originalValue),
@@ -3049,18 +3064,14 @@ const FullscreenOverlay = (() => {
                             const original = title || Spicetify.Player.data?.item?.metadata?.title;
                             const trans = translatedMetadata?.translated?.title;
                             const rom = translatedMetadata?.romanized?.title;
-                            if (mode === "translated") return trans || original;
-                            if (mode === "romanized") return rom || original;
-                            return original;
+                            return resolveTmiMetadataName(mode, original, trans, rom, false);
                         })(),
                         artistName: (() => {
                             const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
                             const original = artist || Spicetify.Player.data?.item?.metadata?.artist_name;
                             const trans = translatedMetadata?.translated?.artist;
                             const rom = translatedMetadata?.romanized?.artist;
-                            if (mode === "translated") return trans || original;
-                            if (mode === "romanized") return rom || original;
-                            return original;
+                            return resolveTmiMetadataName(mode, original, trans, rom, false);
                         })(),
                         coverUrl: coverUrl || Spicetify.Player.data?.item?.metadata?.image_url,
                         onRegenerate: handleRegenerate
@@ -3417,12 +3428,7 @@ const FullscreenOverlay = (() => {
                                 const trans = translatedMetadata?.translated?.title;
                                 const rom = translatedMetadata?.romanized?.title;
 
-                                if (mode === "translated") return trans || original;
-                                if (mode === "romanized") return rom || original;
-                                if (mode === "original-translated") return (trans && trans !== original) ? `${original} (${trans})` : original;
-                                if (mode === "original-romanized") return (rom && rom !== original) ? `${original} (${rom})` : original;
-                                if (mode === "all") return (trans && trans !== original) ? `${original} (${trans})` : original;
-                                return original;
+                                return resolveTmiMetadataName(mode, original, trans, rom, true);
                             })(),
                             artistName: (() => {
                                 const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
@@ -3430,12 +3436,7 @@ const FullscreenOverlay = (() => {
                                 const trans = translatedMetadata?.translated?.artist;
                                 const rom = translatedMetadata?.romanized?.artist;
 
-                                if (mode === "translated") return trans || original;
-                                if (mode === "romanized") return rom || original;
-                                if (mode === "original-translated") return (trans && trans !== original) ? `${original} (${trans})` : original;
-                                if (mode === "original-romanized") return (rom && rom !== original) ? `${original} (${rom})` : original;
-                                if (mode === "all") return (trans && trans !== original) ? `${original} (${trans})` : original;
-                                return original;
+                                return resolveTmiMetadataName(mode, original, trans, rom, true);
                             })(),
                             coverUrl: coverUrl || Spicetify.Player.data?.item?.metadata?.image_url,
                             onRegenerate: handleRegenerate

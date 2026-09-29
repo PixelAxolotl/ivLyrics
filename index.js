@@ -5085,19 +5085,7 @@ class LyricsContainer extends react.Component {
   }
 
   getTranslationTargetLanguage() {
-    const targetLanguage =
-      window.CONFIG?.visual?.["translate:target-language"] ||
-      localStorage.getItem("ivLyrics:visual:translate:target-language");
-
-    if (targetLanguage && targetLanguage !== "auto") {
-      return targetLanguage;
-    }
-
-    return (
-      window.I18n?.getCurrentLanguage?.() ||
-      Spicetify.Locale?.getLocale?.()?.split("-")[0] ||
-      "en"
-    );
+    return getCurrentTranslationTargetLanguage();
   }
 
   isCulturalAnnotationsEnabled() {

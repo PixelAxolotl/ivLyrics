@@ -4127,6 +4127,69 @@ const ConfigSettingsPresets = () => {
                 )
               );
 
+  const renderPresetsSaveBlock = () =>
+react.createElement(
+        "div",
+        {
+          style: {
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) auto",
+            gap: "10px",
+          },
+        },
+        react.createElement("input", {
+          className: "config-text-input",
+          type: "text",
+          value: presetName,
+          placeholder: getSettingsPresetText("namePlaceholder", "My preset"),
+          onChange: (event) => setPresetName(event.target.value),
+          onKeyDown: (event) => {
+            if (event.key === "Enter") {
+              handleSave();
+            }
+          },
+        }),
+        react.createElement(
+          "button",
+          {
+            className: "btn",
+            type: "button",
+            onClick: handleSave,
+          },
+          getSettingsPresetText("saveCurrent", "Save current")
+        )
+      );
+  const renderPresetsSavedListBlock = () =>
+react.createElement(
+        "div",
+        {
+          style: {
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+          },
+        },
+        react.createElement(
+          "div",
+          {
+            className: "setting-name",
+            style: { fontSize: "13px" },
+          },
+          getSettingsPresetText("savedPresets", "Saved presets")
+        ),
+        presets.length === 0
+          ? react.createElement(
+              "div",
+              {
+                className: "setting-description",
+                style: {
+                  padding: "12px 0",
+                },
+              },
+              getSettingsPresetText("empty", "No presets saved yet.")
+            )
+          : presets.map((preset) => renderPresetRow(preset))
+      );
   return react.createElement(
     "div",
     {
@@ -4159,67 +4222,8 @@ const ConfigSettingsPresets = () => {
           )
         )
       ),
-      react.createElement(
-        "div",
-        {
-          style: {
-            display: "grid",
-            gridTemplateColumns: "minmax(0, 1fr) auto",
-            gap: "10px",
-          },
-        },
-        react.createElement("input", {
-          className: "config-text-input",
-          type: "text",
-          value: presetName,
-          placeholder: getSettingsPresetText("namePlaceholder", "My preset"),
-          onChange: (event) => setPresetName(event.target.value),
-          onKeyDown: (event) => {
-            if (event.key === "Enter") {
-              handleSave();
-            }
-          },
-        }),
-        react.createElement(
-          "button",
-          {
-            className: "btn",
-            type: "button",
-            onClick: handleSave,
-          },
-          getSettingsPresetText("saveCurrent", "Save current")
-        )
-      ),
-      react.createElement(
-        "div",
-        {
-          style: {
-            display: "flex",
-            flexDirection: "column",
-            gap: "8px",
-          },
-        },
-        react.createElement(
-          "div",
-          {
-            className: "setting-name",
-            style: { fontSize: "13px" },
-          },
-          getSettingsPresetText("savedPresets", "Saved presets")
-        ),
-        presets.length === 0
-          ? react.createElement(
-              "div",
-              {
-                className: "setting-description",
-                style: {
-                  padding: "12px 0",
-                },
-              },
-              getSettingsPresetText("empty", "No presets saved yet.")
-            )
-          : presets.map((preset) => renderPresetRow(preset))
-      )
+      renderPresetsSaveBlock(),
+      renderPresetsSavedListBlock()
     )
   );
 };

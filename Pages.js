@@ -973,6 +973,36 @@ const SyncCreatorProfileModal = react.memo(({
 		}
 	}, [uiTheme]);
 
+	const renderCreatorProfileStats = () => (
+			hasLoadedProfileData
+				? react.createElement(
+						"div",
+						{ className: "lyrics-creator-profile-stats" },
+						react.createElement(
+							"div",
+							{ className: "lyrics-creator-profile-stat" },
+							react.createElement("strong", null, trackCount.toLocaleString()),
+							react.createElement("span", null, copy.tracks)
+						),
+					react.createElement(
+						"div",
+						{ className: "lyrics-creator-profile-stat" },
+						react.createElement("strong", null, likeCount.toLocaleString()),
+						react.createElement("span", null, copy.likes)
+					),
+					react.createElement(
+						"div",
+						{ className: "lyrics-creator-profile-stat is-points" },
+						react.createElement("strong", null, contributionPoints.toLocaleString(undefined, { maximumFractionDigits: 2 })),
+						react.createElement("span", null, copy.points)
+					)
+				)
+				: react.createElement(
+					"div",
+					{ className: "lyrics-creator-profile-inline-state" },
+					copy.loading
+			)
+	);
 	const renderCreatorProfileGreetingBlock = () => (
 			(greeting || canEditGreeting) && react.createElement(
 				"div",
@@ -1174,34 +1204,7 @@ const SyncCreatorProfileModal = react.memo(({
 					)
 			),
 			renderCreatorProfileGreetingBlock(),
-			hasLoadedProfileData
-				? react.createElement(
-						"div",
-						{ className: "lyrics-creator-profile-stats" },
-						react.createElement(
-							"div",
-							{ className: "lyrics-creator-profile-stat" },
-							react.createElement("strong", null, trackCount.toLocaleString()),
-							react.createElement("span", null, copy.tracks)
-						),
-					react.createElement(
-						"div",
-						{ className: "lyrics-creator-profile-stat" },
-						react.createElement("strong", null, likeCount.toLocaleString()),
-						react.createElement("span", null, copy.likes)
-					),
-					react.createElement(
-						"div",
-						{ className: "lyrics-creator-profile-stat is-points" },
-						react.createElement("strong", null, contributionPoints.toLocaleString(undefined, { maximumFractionDigits: 2 })),
-						react.createElement("span", null, copy.points)
-					)
-				)
-				: react.createElement(
-					"div",
-					{ className: "lyrics-creator-profile-inline-state" },
-					copy.loading
-			)
+			renderCreatorProfileStats()
 		)
 	)
 	);

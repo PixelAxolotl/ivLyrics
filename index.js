@@ -940,6 +940,93 @@ const UpdateBanner = ({ updateInfo, onDismiss }) => {
   const currentVersion = formatUpdateVersion(updateInfo.currentVersion);
   const latestVersion = formatUpdateVersion(updateInfo.latestVersion);
 
+  const renderUpdateBannerHeader = () => react.createElement(
+    "div",
+    { className: "ivlyrics-update-dialog__header" },
+    react.createElement(
+      "div",
+      { className: "ivlyrics-update-dialog__icon" },
+      createUpdateBannerIcon("update", 22)
+    ),
+    react.createElement(
+      "div",
+      { className: "ivlyrics-update-dialog__heading" },
+      react.createElement(
+        "h2",
+        { id: "ivlyrics-update-title" },
+        I18n.t("notifications.updateAvailable")
+      ),
+      react.createElement(
+        "div",
+        {
+          className: "ivlyrics-update-dialog__versions",
+        },
+        react.createElement("span", null, currentVersion),
+        createUpdateBannerIcon("arrow", 14),
+        react.createElement("strong", null, latestVersion)
+      )
+    ),
+    react.createElement(
+      "button",
+      {
+        type: "button",
+        className: "ivlyrics-update-dialog__close",
+        onClick: () => onDismissRef.current?.(),
+        title: closeLabel,
+        "aria-label": closeLabel,
+      },
+      createUpdateBannerIcon("close", 18)
+    )
+  );
+
+  const renderUpdateBannerBody = () => react.createElement(
+    "div",
+    { className: "ivlyrics-update-dialog__body" },
+    react.createElement(
+      "p",
+      {
+        id: "ivlyrics-update-description",
+        className: "ivlyrics-update-dialog__description",
+      },
+      I18n.t("settingsAdvanced.aboutTab.update.protocol.info")
+    )
+  );
+
+  const renderUpdateBannerFooter = () => react.createElement(
+    "div",
+    { className: "ivlyrics-update-dialog__footer" },
+    react.createElement(
+      "a",
+      {
+        href: updateInfo.releaseUrl,
+        target: "_blank",
+        rel: "noopener noreferrer",
+        className: "ivlyrics-update-dialog__button ivlyrics-update-dialog__button--secondary",
+      },
+      createUpdateBannerIcon("notes", 16),
+      react.createElement("span", null, I18n.t("update.releaseNotes"))
+    ),
+    react.createElement(
+      "span",
+      { className: "ivlyrics-update-dialog__footer-spacer" }
+    ),
+    react.createElement(
+      "a",
+      {
+        href: updatePageUrl,
+        target: "_blank",
+        rel: "noopener noreferrer",
+        className: "ivlyrics-update-dialog__button ivlyrics-update-dialog__button--primary",
+      },
+      react.createElement(
+        "span",
+        null,
+        I18n.t("settingsAdvanced.aboutTab.update.protocol.button")
+      ),
+      createUpdateBannerIcon("external", 16)
+    )
+  );
+
   return react.createElement(
     "div",
     {
@@ -959,90 +1046,9 @@ const UpdateBanner = ({ updateInfo, onDismiss }) => {
         tabIndex: -1,
         onClick: (event) => event.stopPropagation(),
       },
-      react.createElement(
-        "div",
-        { className: "ivlyrics-update-dialog__header" },
-        react.createElement(
-          "div",
-          { className: "ivlyrics-update-dialog__icon" },
-          createUpdateBannerIcon("update", 22)
-        ),
-        react.createElement(
-          "div",
-          { className: "ivlyrics-update-dialog__heading" },
-          react.createElement(
-            "h2",
-            { id: "ivlyrics-update-title" },
-            I18n.t("notifications.updateAvailable")
-          ),
-          react.createElement(
-            "div",
-            {
-              className: "ivlyrics-update-dialog__versions",
-            },
-            react.createElement("span", null, currentVersion),
-            createUpdateBannerIcon("arrow", 14),
-            react.createElement("strong", null, latestVersion)
-          )
-        ),
-        react.createElement(
-          "button",
-          {
-            type: "button",
-            className: "ivlyrics-update-dialog__close",
-            onClick: () => onDismissRef.current?.(),
-            title: closeLabel,
-            "aria-label": closeLabel,
-          },
-          createUpdateBannerIcon("close", 18)
-        )
-      ),
-      react.createElement(
-        "div",
-        { className: "ivlyrics-update-dialog__body" },
-        react.createElement(
-          "p",
-          {
-            id: "ivlyrics-update-description",
-            className: "ivlyrics-update-dialog__description",
-          },
-          I18n.t("settingsAdvanced.aboutTab.update.protocol.info")
-        )
-      ),
-      react.createElement(
-        "div",
-        { className: "ivlyrics-update-dialog__footer" },
-        react.createElement(
-          "a",
-          {
-            href: updateInfo.releaseUrl,
-            target: "_blank",
-            rel: "noopener noreferrer",
-            className: "ivlyrics-update-dialog__button ivlyrics-update-dialog__button--secondary",
-          },
-          createUpdateBannerIcon("notes", 16),
-          react.createElement("span", null, I18n.t("update.releaseNotes"))
-        ),
-        react.createElement(
-          "span",
-          { className: "ivlyrics-update-dialog__footer-spacer" }
-        ),
-        react.createElement(
-          "a",
-          {
-            href: updatePageUrl,
-            target: "_blank",
-            rel: "noopener noreferrer",
-            className: "ivlyrics-update-dialog__button ivlyrics-update-dialog__button--primary",
-          },
-          react.createElement(
-            "span",
-            null,
-            I18n.t("settingsAdvanced.aboutTab.update.protocol.button")
-          ),
-          createUpdateBannerIcon("external", 16)
-        )
-      )
+      renderUpdateBannerHeader(),
+      renderUpdateBannerBody(),
+      renderUpdateBannerFooter()
     )
   );
 };

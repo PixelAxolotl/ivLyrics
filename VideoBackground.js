@@ -1550,22 +1550,8 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
         ...blurCompositeStyle,
     };
 
-    return react.createElement("div", {
-        style: {
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            overflow: "hidden",
-            zIndex: 0,
-            isolation: "isolate",
-        }
-    },
-        renderFallback(),
-
-
-        showStats && react.createElement("div", {
+    const renderStatsPanel = () =>
+        react.createElement("div", {
             style: {
                 position: "absolute",
                 top: "20px",
@@ -1663,7 +1649,25 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                     textAlign: "center"
                 }
             }, "Press Shift+S to toggle")
-        ),
+        )
+    ;
+
+    return react.createElement("div", {
+        style: {
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            overflow: "hidden",
+            zIndex: 0,
+            isolation: "isolate",
+        }
+    },
+        renderFallback(),
+
+
+        showStats && renderStatsPanel(),
 
         // 헬퍼 모드: HTML5 video 태그
         useHelper && react.createElement("video", {

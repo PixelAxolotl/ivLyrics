@@ -701,6 +701,7 @@
                         return transformed;
                     }
 
+                    const consumeResponsesStream = async () => {
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let sseBuffer = '';
@@ -779,6 +780,9 @@
                         transformed.forEach((line, index) => onLine(index, line));
                     }
                     return transformed;
+                    };
+
+                    return await consumeResponsesStream();
                 } catch (error) {
                     lastError = error;
                     window.__ivLyricsDebugLog?.(`[ChatGPT Addon] Responses API attempt ${attempt + 1} failed:`, error.message);
@@ -876,6 +880,7 @@
                         return transformed;
                     }
 
+                    const consumeChatGPTStream = async () => {
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let sseBuffer = '';
@@ -951,6 +956,9 @@
                     }
 
                     return transformed;
+                    };
+
+                    return await consumeChatGPTStream();
 
                 } catch (e) {
                     lastError = e;

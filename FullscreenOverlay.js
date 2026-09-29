@@ -1340,10 +1340,7 @@ const FullscreenOverlay = (() => {
                             );
         };
 
-        return react.createElement("div", {
-            className: `fullscreen-player-controls ${showBackground ? 'with-background' : ''}`
-        },
-            // Main control row: like, shuffle, prev, play, next, repeat, add-to-playlist
+        const renderMainControlRow = () =>
             react.createElement("div", { className: "fullscreen-control-row fullscreen-control-main-row" },
                 // Like button (left side)
                 react.createElement("button", {
@@ -1465,9 +1462,11 @@ const FullscreenOverlay = (() => {
                         !isPlaylistsLoading && !playlistError && playlists.map((playlist) => renderPlaylistPickerItem(playlist))
                     )
                 )
-            ),
-            // Volume row
-            showVolume && react.createElement("div", { className: "fullscreen-control-row fullscreen-control-volume-row" },
+            )
+        ;
+
+        const renderVolumeRow = () =>
+            react.createElement("div", { className: "fullscreen-control-row fullscreen-control-volume-row" },
                 react.createElement("div", {
                     className: "fullscreen-volume-wrapper",
                     onMouseEnter: () => setIsVolumeHovered(true),
@@ -1513,6 +1512,15 @@ const FullscreenOverlay = (() => {
                     }, `${Math.round(volume * 100)}%`)
                 )
             )
+        ;
+
+        return react.createElement("div", {
+            className: `fullscreen-player-controls ${showBackground ? 'with-background' : ''}`
+        },
+            // Main control row: like, shuffle, prev, play, next, repeat, add-to-playlist
+            renderMainControlRow(),
+            // Volume row
+            showVolume && renderVolumeRow()
         );
     };
 

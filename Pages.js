@@ -850,20 +850,23 @@ const SyncCreatorProfileModal = react.memo(({
 		react.createElement("path", { d: "M3 3l10 10" }),
 		react.createElement("path", { d: "M13 3L3 13" })
 	);
+	const buildThemeToggleIcon = (...iconChildren) => react.createElement(
+		"svg",
+		{
+			width: 16,
+			height: 16,
+			viewBox: "0 0 24 24",
+			fill: "none",
+			stroke: "currentColor",
+			strokeWidth: 2,
+			strokeLinecap: "round",
+			strokeLinejoin: "round",
+			"aria-hidden": "true"
+		},
+		...iconChildren
+	);
 	const themeIcon = isDarkTheme
-		? react.createElement(
-			"svg",
-			{
-				width: 16,
-				height: 16,
-				viewBox: "0 0 24 24",
-				fill: "none",
-				stroke: "currentColor",
-				strokeWidth: 2,
-				strokeLinecap: "round",
-				strokeLinejoin: "round",
-				"aria-hidden": "true"
-			},
+		? buildThemeToggleIcon(
 			react.createElement("circle", { cx: 12, cy: 12, r: 4 }),
 			react.createElement("path", { d: "M12 2v2" }),
 			react.createElement("path", { d: "M12 20v2" }),
@@ -874,19 +877,7 @@ const SyncCreatorProfileModal = react.memo(({
 			react.createElement("path", { d: "m6.34 17.66-1.41 1.41" }),
 			react.createElement("path", { d: "m19.07 4.93-1.41 1.41" })
 		)
-		: react.createElement(
-			"svg",
-			{
-				width: 16,
-				height: 16,
-				viewBox: "0 0 24 24",
-				fill: "none",
-				stroke: "currentColor",
-				strokeWidth: 2,
-				strokeLinecap: "round",
-				strokeLinejoin: "round",
-				"aria-hidden": "true"
-			},
+		: buildThemeToggleIcon(
 			react.createElement("path", { d: "M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8 8 0 1 0 11 11Z" })
 		);
 	const likeIcon = react.createElement(

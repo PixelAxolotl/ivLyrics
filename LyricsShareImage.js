@@ -172,16 +172,18 @@ const LyricsShareImage = (() => {
   async function extractColors(imageUrl) {
     const convertedUrl = convertImageUrl(imageUrl);
     
+    const fallbackColors = () => ({
+      primary: '#1a1a1a',
+      darker: '#000000',
+      lighter: '#333333',
+      isDark: true,
+      textColor: '#ffffff',
+      subTextColor: 'rgba(255,255,255,0.7)',
+    });
+
     return new Promise((resolve) => {
       if (!convertedUrl) {
-        resolve({
-          primary: '#1a1a1a',
-          darker: '#000000',
-          lighter: '#333333',
-          isDark: true,
-          textColor: '#ffffff',
-          subTextColor: 'rgba(255,255,255,0.7)',
-        });
+        resolve(fallbackColors());
         return;
       }
       
@@ -224,26 +226,12 @@ const LyricsShareImage = (() => {
         });
         } catch (e) {
           console.warn('[LyricsShareImage] Color extraction failed:', e);
-          resolve({
-            primary: '#1a1a1a',
-            darker: '#000000',
-            lighter: '#333333',
-            isDark: true,
-            textColor: '#ffffff',
-            subTextColor: 'rgba(255,255,255,0.7)',
-          });
+          resolve(fallbackColors());
         }
       };
       img.onerror = () => {
         console.warn('[LyricsShareImage] Image load failed for color extraction');
-        resolve({
-          primary: '#1a1a1a',
-          darker: '#000000',
-          lighter: '#333333',
-          isDark: true,
-          textColor: '#ffffff',
-          subTextColor: 'rgba(255,255,255,0.7)',
-        });
+        resolve(fallbackColors());
       };
       img.src = convertedUrl;
     });

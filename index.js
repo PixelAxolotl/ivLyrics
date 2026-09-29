@@ -10434,6 +10434,22 @@ class LyricsContainer extends react.Component {
           ]
         )
     );
+    const renderVideoBackgroundChild = () => (
+        shouldUseVideoBackground && window.VideoBackground && react.createElement(window.VideoBackground, {
+          trackUri: this.state.uri,
+          firstLyricTime: this.state.currentLyrics && this.state.currentLyrics.length > 0 ? this.state.currentLyrics[0].startTime : null,
+          brightness: isVideoStagePresentation
+            ? 100
+            : CONFIG.visual["background-brightness"],
+          blurAmount: isVideoStagePresentation
+            ? 0
+            : CONFIG.visual["video-blur"],
+          coverMode: CONFIG.visual["video-cover"],
+          videoScale: CONFIG.visual["video-scale"],
+          externalVideoInfo: this.state.videoInfo,
+          onLoadingChange: this.handleVideoBackgroundLoadingChange
+        })
+    );
     const out = react.createElement(
       "div",
       {
@@ -10462,20 +10478,7 @@ class LyricsContainer extends react.Component {
       // Update notification banner
       updateBanner,
       renderStaticGradientBackground(),
-      shouldUseVideoBackground && window.VideoBackground && react.createElement(window.VideoBackground, {
-        trackUri: this.state.uri,
-        firstLyricTime: this.state.currentLyrics && this.state.currentLyrics.length > 0 ? this.state.currentLyrics[0].startTime : null,
-        brightness: isVideoStagePresentation
-          ? 100
-          : CONFIG.visual["background-brightness"],
-        blurAmount: isVideoStagePresentation
-          ? 0
-          : CONFIG.visual["video-blur"],
-        coverMode: CONFIG.visual["video-cover"],
-        videoScale: CONFIG.visual["video-scale"],
-        externalVideoInfo: this.state.videoInfo,
-        onLoadingChange: this.handleVideoBackgroundLoadingChange
-      }),
+      renderVideoBackgroundChild(),
       shouldRenderStaticBackground && react.createElement("div", {
         className: "lyrics-lyricsContainer-LyricsBackground",
       }),

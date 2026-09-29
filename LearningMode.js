@@ -2497,6 +2497,101 @@
                 )
         );
 
+        const renderCurrentQuizSection = () => react.createElement("section", {
+                    key: currentQuiz.id || currentQuizIndex,
+                    className: [
+                        "ivlyrics-study-card",
+                        "ivlyrics-study-quiz",
+                        `quiz-type-${normalizeQuizType(currentQuiz.type)}`,
+                        currentQuizAnswer?.correct ? "is-correct" : "",
+                        currentQuizAnswer && !currentQuizAnswer.correct ? "is-wrong" : ""
+                    ].filter(Boolean).join(" ")
+                },
+                    react.createElement("div", { className: "ivlyrics-study-quiz-prompt" },
+                        normalizeQuizType(currentQuiz.type) === "blank"
+                            ? react.createElement(BlankQuestion, { text: currentQuiz.question })
+                            : react.createElement("p", null, currentQuiz.question),
+                        shouldShowQuizSource(currentQuiz) && react.createElement("div", { className: "ivlyrics-study-source-card compact" },
+                            react.createElement("div", { className: "ivlyrics-study-source-head" },
+                                react.createElement("span", null, t("sourceLine", "가사 원문")),
+                                Number.isFinite(Number(currentQuiz.startTime)) && react.createElement(LyricPlayButton, {
+                                    onClick: () => playLyricAt({
+                                        trackUri,
+                                        startTime: currentQuiz.startTime,
+                                        endTime: currentQuiz.endTime,
+                                        sourceText: currentQuiz.sourceText
+                                    })
+                                })
+                            ),
+                            react.createElement("blockquote", null, currentQuiz.sourceText),
+                            react.createElement(ReadingHints, {
+                                reading: currentQuiz.reading,
+                                pronunciation: currentQuiz.pronunciation
+                            })
+                        )
+                    ),
+                    react.createElement("div", { className: "ivlyrics-study-choice-grid" },
+                        currentQuiz.choices.map((choice, choiceIndex) => {
+                            const isAnswered = !!currentQuizAnswer;
+                            const isCorrect = currentQuiz.answerIndex === choiceIndex;
+                            const selected = currentQuizAnswer?.choiceIndex === choiceIndex;
+                            const letter = String.fromCharCode(65 + choiceIndex);
+                            return react.createElement("button", {
+                                key: `${currentQuizIndex}-${choiceIndex}`,
+                                type: "button",
+                                disabled: isAnswered,
+                                className: [
+                                    "ivlyrics-study-choice",
+                                    selected ? "selected" : "",
+                                    isAnswered && isCorrect ? "correct" : "",
+                                    isAnswered && selected && !isCorrect ? "wrong" : ""
+                                ].filter(Boolean).join(" "),
+                                onClick: () => answerQuiz(currentQuizIndex, choiceIndex)
+                            },
+                                react.createElement("span", { className: "ivlyrics-study-choice-letter" }, letter),
+                                react.createElement("strong", null, choice),
+                                isAnswered && isCorrect && react.createElement("span", { className: "ivlyrics-study-choice-mark" }, "✓"),
+                                isAnswered && selected && !isCorrect && react.createElement("span", { className: "ivlyrics-study-choice-mark" }, "×")
+                            );
+                        })
+                    ),
+                    currentQuizAnswer && react.createElement("div", {
+                        className: [
+                            "ivlyrics-study-quiz-explanation",
+                            currentQuizAnswer.correct ? "correct" : "wrong"
+                        ].join(" ")
+                    },
+                        react.createElement("strong", null,
+                            currentQuizAnswer.correct
+                                ? t("quizCorrect", "정답입니다")
+                                : t("quizWrong", "해설")
+                        ),
+                        currentQuiz.explanation && react.createElement("p", null, currentQuiz.explanation)
+                    ),
+                    wrongQuizItems.length > 0 && react.createElement("div", { className: "ivlyrics-study-wrong-strip" },
+                        react.createElement("span", null, t("wrongReview", "다시 볼 표현")),
+                        wrongQuizItems.map((item, index) => react.createElement("button", {
+                            key: `${item.id || item.lineIndex || index}-${index}`,
+                            type: "button",
+                            onClick: () => setQuizStep(Math.max(0, pack.quiz.indexOf(item)))
+                        }, item.sourceText || item.question))
+                    ),
+                    react.createElement("div", { className: "ivlyrics-study-quiz-footer" },
+                        react.createElement("button", {
+                            type: "button",
+                            className: "ivlyrics-study-secondary subtle",
+                            onClick: goNextQuiz,
+                            disabled: currentQuizIndex >= totalQuiz - 1
+                        }, t("skipQuiz", "건너뛰기")),
+                        react.createElement("button", {
+                            type: "button",
+                            className: "ivlyrics-study-primary dark",
+                            onClick: finishOrNextQuiz,
+                            disabled: !currentQuizAnswer
+                        }, currentQuizIndex >= totalQuiz - 1 ? t("quizDone", "완료") : t("nextQuiz", "다음 문제"))
+                    )
+                );
+
         const renderQuizResultSection = () => react.createElement("section", {
                     className: "ivlyrics-study-card ivlyrics-study-quiz-result"
                 },
@@ -2641,100 +2736,7 @@
                     }, t("quizRegenerate", "새 문제 만들기"))
                 ),
                 quizFinished && totalQuiz > 0 && renderQuizResultSection(),
-                currentQuiz && !quizFinished && react.createElement("section", {
-                    key: currentQuiz.id || currentQuizIndex,
-                    className: [
-                        "ivlyrics-study-card",
-                        "ivlyrics-study-quiz",
-                        `quiz-type-${normalizeQuizType(currentQuiz.type)}`,
-                        currentQuizAnswer?.correct ? "is-correct" : "",
-                        currentQuizAnswer && !currentQuizAnswer.correct ? "is-wrong" : ""
-                    ].filter(Boolean).join(" ")
-                },
-                    react.createElement("div", { className: "ivlyrics-study-quiz-prompt" },
-                        normalizeQuizType(currentQuiz.type) === "blank"
-                            ? react.createElement(BlankQuestion, { text: currentQuiz.question })
-                            : react.createElement("p", null, currentQuiz.question),
-                        shouldShowQuizSource(currentQuiz) && react.createElement("div", { className: "ivlyrics-study-source-card compact" },
-                            react.createElement("div", { className: "ivlyrics-study-source-head" },
-                                react.createElement("span", null, t("sourceLine", "가사 원문")),
-                                Number.isFinite(Number(currentQuiz.startTime)) && react.createElement(LyricPlayButton, {
-                                    onClick: () => playLyricAt({
-                                        trackUri,
-                                        startTime: currentQuiz.startTime,
-                                        endTime: currentQuiz.endTime,
-                                        sourceText: currentQuiz.sourceText
-                                    })
-                                })
-                            ),
-                            react.createElement("blockquote", null, currentQuiz.sourceText),
-                            react.createElement(ReadingHints, {
-                                reading: currentQuiz.reading,
-                                pronunciation: currentQuiz.pronunciation
-                            })
-                        )
-                    ),
-                    react.createElement("div", { className: "ivlyrics-study-choice-grid" },
-                        currentQuiz.choices.map((choice, choiceIndex) => {
-                            const isAnswered = !!currentQuizAnswer;
-                            const isCorrect = currentQuiz.answerIndex === choiceIndex;
-                            const selected = currentQuizAnswer?.choiceIndex === choiceIndex;
-                            const letter = String.fromCharCode(65 + choiceIndex);
-                            return react.createElement("button", {
-                                key: `${currentQuizIndex}-${choiceIndex}`,
-                                type: "button",
-                                disabled: isAnswered,
-                                className: [
-                                    "ivlyrics-study-choice",
-                                    selected ? "selected" : "",
-                                    isAnswered && isCorrect ? "correct" : "",
-                                    isAnswered && selected && !isCorrect ? "wrong" : ""
-                                ].filter(Boolean).join(" "),
-                                onClick: () => answerQuiz(currentQuizIndex, choiceIndex)
-                            },
-                                react.createElement("span", { className: "ivlyrics-study-choice-letter" }, letter),
-                                react.createElement("strong", null, choice),
-                                isAnswered && isCorrect && react.createElement("span", { className: "ivlyrics-study-choice-mark" }, "✓"),
-                                isAnswered && selected && !isCorrect && react.createElement("span", { className: "ivlyrics-study-choice-mark" }, "×")
-                            );
-                        })
-                    ),
-                    currentQuizAnswer && react.createElement("div", {
-                        className: [
-                            "ivlyrics-study-quiz-explanation",
-                            currentQuizAnswer.correct ? "correct" : "wrong"
-                        ].join(" ")
-                    },
-                        react.createElement("strong", null,
-                            currentQuizAnswer.correct
-                                ? t("quizCorrect", "정답입니다")
-                                : t("quizWrong", "해설")
-                        ),
-                        currentQuiz.explanation && react.createElement("p", null, currentQuiz.explanation)
-                    ),
-                    wrongQuizItems.length > 0 && react.createElement("div", { className: "ivlyrics-study-wrong-strip" },
-                        react.createElement("span", null, t("wrongReview", "다시 볼 표현")),
-                        wrongQuizItems.map((item, index) => react.createElement("button", {
-                            key: `${item.id || item.lineIndex || index}-${index}`,
-                            type: "button",
-                            onClick: () => setQuizStep(Math.max(0, pack.quiz.indexOf(item)))
-                        }, item.sourceText || item.question))
-                    ),
-                    react.createElement("div", { className: "ivlyrics-study-quiz-footer" },
-                        react.createElement("button", {
-                            type: "button",
-                            className: "ivlyrics-study-secondary subtle",
-                            onClick: goNextQuiz,
-                            disabled: currentQuizIndex >= totalQuiz - 1
-                        }, t("skipQuiz", "건너뛰기")),
-                        react.createElement("button", {
-                            type: "button",
-                            className: "ivlyrics-study-primary dark",
-                            onClick: finishOrNextQuiz,
-                            disabled: !currentQuizAnswer
-                        }, currentQuizIndex >= totalQuiz - 1 ? t("quizDone", "완료") : t("nextQuiz", "다음 문제"))
-                    )
-                )
+                currentQuiz && !quizFinished && renderCurrentQuizSection()
         );
 
         const renderWordsTab = () => react.createElement("div", { className: "ivlyrics-study-section ivlyrics-study-wordbook" },

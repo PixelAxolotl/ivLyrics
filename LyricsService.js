@@ -7970,41 +7970,45 @@
                 // Keep AI mode handling available during a partial update where
                 // the shared conversion helper has not loaded yet.
                 const translationModes = window.ivLyricsTranslationModes || {};
-                const normalizeMode = typeof translationModes.normalizeMode === 'function'
-                    ? translationModes.normalizeMode
-                    : (mode) => String(mode ?? '').trim().toLowerCase();
-                const isActiveMode = typeof translationModes.isActiveMode === 'function'
-                    ? translationModes.isActiveMode
-                    : (mode) => {
-                        const normalized = normalizeMode(mode);
-                        return normalized !== '' && normalized !== 'none';
-                    };
-                const isPronunciationMode = typeof translationModes.isPronunciationMode === 'function'
-                    ? translationModes.isPronunciationMode
-                    : (mode) => new Set([
-                        'gemini_romaji', 'romaji', 'romaja', 'pinyin',
-                        'hiragana', 'katakana', 'furigana'
-                    ]).has(normalizeMode(mode));
-                const getModeTargetField = typeof translationModes.getTargetField === 'function'
-                    ? translationModes.getTargetField
-                    : (mode) => isPronunciationMode(mode) ? 'phonetic' : 'translation';
-                const isAiMode = typeof translationModes.isAiMode === 'function'
-                    ? translationModes.isAiMode
-                    : (mode) => normalizeMode(mode).startsWith('gemini');
-                const needsTraditionalConverter = typeof translationModes.needsTraditionalConverter === 'function'
-                    ? translationModes.needsTraditionalConverter
-                    : (language, mode) => {
-                        const source = String(language || '').toLowerCase().replace(/_/g, '-');
-                        const target = normalizeMode(mode);
-                        if (source === 'ja' || source.startsWith('ja-')) {
-                            return ['romaji', 'furigana', 'hiragana', 'katakana'].includes(target);
-                        }
-                        if (source === 'ko' || source.startsWith('ko-')) return target === 'romaja';
-                        const chinese = source === 'zh' || source === 'zh-hans' || source === 'zh-cn'
-                            || source === 'zh-sg' || source === 'zh-hant' || source === 'zh-tw' || source === 'zh-hk';
-                        return chinese && ['pinyin', 'cn', 'tw', 'hk'].includes(target)
-                            && !(source !== 'zh-hant' && source !== 'zh-tw' && source !== 'zh-hk' && target === 'cn');
-                    };
+                const resolveTranslationModeHelpers = () => {
+                    const normalizeMode = typeof translationModes.normalizeMode === 'function'
+                        ? translationModes.normalizeMode
+                        : (mode) => String(mode ?? '').trim().toLowerCase();
+                    const isActiveMode = typeof translationModes.isActiveMode === 'function'
+                        ? translationModes.isActiveMode
+                        : (mode) => {
+                            const normalized = normalizeMode(mode);
+                            return normalized !== '' && normalized !== 'none';
+                        };
+                    const isPronunciationMode = typeof translationModes.isPronunciationMode === 'function'
+                        ? translationModes.isPronunciationMode
+                        : (mode) => new Set([
+                            'gemini_romaji', 'romaji', 'romaja', 'pinyin',
+                            'hiragana', 'katakana', 'furigana'
+                        ]).has(normalizeMode(mode));
+                    const getModeTargetField = typeof translationModes.getTargetField === 'function'
+                        ? translationModes.getTargetField
+                        : (mode) => isPronunciationMode(mode) ? 'phonetic' : 'translation';
+                    const isAiMode = typeof translationModes.isAiMode === 'function'
+                        ? translationModes.isAiMode
+                        : (mode) => normalizeMode(mode).startsWith('gemini');
+                    const needsTraditionalConverter = typeof translationModes.needsTraditionalConverter === 'function'
+                        ? translationModes.needsTraditionalConverter
+                        : (language, mode) => {
+                            const source = String(language || '').toLowerCase().replace(/_/g, '-');
+                            const target = normalizeMode(mode);
+                            if (source === 'ja' || source.startsWith('ja-')) {
+                                return ['romaji', 'furigana', 'hiragana', 'katakana'].includes(target);
+                            }
+                            if (source === 'ko' || source.startsWith('ko-')) return target === 'romaja';
+                            const chinese = source === 'zh' || source === 'zh-hans' || source === 'zh-cn'
+                                || source === 'zh-sg' || source === 'zh-hant' || source === 'zh-tw' || source === 'zh-hk';
+                            return chinese && ['pinyin', 'cn', 'tw', 'hk'].includes(target)
+                                && !(source !== 'zh-hant' && source !== 'zh-tw' && source !== 'zh-hk' && target === 'cn');
+                        };
+                    return { isActiveMode, getModeTargetField, isAiMode, needsTraditionalConverter };
+                };
+                const { isActiveMode, getModeTargetField, isAiMode, needsTraditionalConverter } = resolveTranslationModeHelpers();
                 const translationConfigured = [mode1, mode2].some(isActiveMode);
                 const needsTranslation = translationConfigured && !skipTranslation;
                 // multi-vocal 라인은 각 파트를 별도 요청 줄로 펼친 뒤 다시 파트별로 매핑한다.

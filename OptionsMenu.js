@@ -2969,14 +2969,7 @@ const LocalLyricsLrclibSearchModal = ({ trackInfo = {}, onApplyLocalLyrics, onCl
     );
   };
 
-  return react.createElement(
-    react.Fragment,
-    null,
-    renderSearchHeader(),
-    react.createElement(
-      "div",
-      { className: "ivlyrics-fluent-body ivlyrics-options-modal-body" },
-      react.createElement(
+  const renderLrclibSearchBar = () => react.createElement(
         "div",
         {
           style: {
@@ -3014,7 +3007,16 @@ const LocalLyricsLrclibSearchModal = ({ trackInfo = {}, onApplyLocalLyrics, onCl
             ? getOptionsText("menu.localLyricsSearching", "검색 중")
             : getOptionsText("menu.search", "검색")
         )
-      ),
+      );
+
+  return react.createElement(
+    react.Fragment,
+    null,
+    renderSearchHeader(),
+    react.createElement(
+      "div",
+      { className: "ivlyrics-fluent-body ivlyrics-options-modal-body" },
+      renderLrclibSearchBar(),
       statusText && react.createElement(
         "div",
         {

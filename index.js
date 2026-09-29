@@ -4512,6 +4512,38 @@ const GENERATION_REQUEST_PILL_CONFIG = Object.freeze({
   }),
 });
 
+// Enhanced FAD container detection - try multiple selectors if main one fails.
+// Reads/writes the passed domCache object's `fadContainer` field (same reference,
+// same caching semantics) and returns the resolved container element (or null).
+const resolveFadLyricsContainer = (domCache) => {
+  let fadLyricsContainer = domCache?.fadContainer;
+
+  if (!fadLyricsContainer || !document.contains(fadLyricsContainer)) {
+    // Try main selector first
+    fadLyricsContainer = document.getElementById("fad-ivLyrics-container");
+
+    // If not found, try alternative selectors for FAD extension
+    if (!fadLyricsContainer) {
+      const altSelectors = ["[data-fad-lyrics]", ".fad-lyrics-container"];
+
+      for (const selector of altSelectors) {
+        const element = document.querySelector(selector);
+        if (element) {
+          fadLyricsContainer = element;
+          break;
+        }
+      }
+    }
+
+    // Cache the result
+    if (domCache) {
+      domCache.fadContainer = fadLyricsContainer;
+    }
+  }
+
+  return fadLyricsContainer;
+};
+
 class LyricsContainer extends react.Component {
   constructor() {
     super();
@@ -9535,30 +9567,7 @@ class LyricsContainer extends react.Component {
       : null;
 
     // Enhanced FAD container detection - try multiple selectors if main one fails
-    let fadLyricsContainer = this._domCache?.fadContainer;
-
-    if (!fadLyricsContainer || !document.contains(fadLyricsContainer)) {
-      // Try main selector first
-      fadLyricsContainer = document.getElementById("fad-ivLyrics-container");
-
-      // If not found, try alternative selectors for FAD extension
-      if (!fadLyricsContainer) {
-        const altSelectors = ["[data-fad-lyrics]", ".fad-lyrics-container"];
-
-        for (const selector of altSelectors) {
-          const element = document.querySelector(selector);
-          if (element) {
-            fadLyricsContainer = element;
-            break;
-          }
-        }
-      }
-
-      // Cache the result
-      if (this._domCache) {
-        this._domCache.fadContainer = fadLyricsContainer;
-      }
-    }
+    const fadLyricsContainer = resolveFadLyricsContainer(this._domCache);
 
     this.state.isFADMode = !!fadLyricsContainer;
     const isSyncCreatorOverlayPresent =

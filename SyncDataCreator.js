@@ -6217,7 +6217,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				e.stopImmediatePropagation();
 			};
 			const isSeekHotkey = normalizedHotkey === 'z' || normalizedHotkey === 'x';
-			if (isSeekHotkey) {
+			const handleSeekShortcut = () => {
 				const target = e.target;
 				if (
 					target?.isContentEditable
@@ -6233,6 +6233,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					const duration = Spicetify.Player.getDuration();
 					Spicetify.Player.seek(Math.min(duration, currentPos + 3000));
 				}
+				return;
+			};
+			if (isSeekHotkey) {
+				handleSeekShortcut();
 				return;
 			}
 

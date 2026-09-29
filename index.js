@@ -9802,7 +9802,7 @@ class LyricsContainer extends react.Component {
 
     const vinylTrackAccent = this.state.colors.background || "";
 
-    this.styleVariables = {
+    const computeExtendedLyricsStyleVariables = () => ({
       ...this.styleVariables,
       ...getLyricsTypographyStyleVariables(CONFIG.visual),
       "--highlight-inactive-opacity":
@@ -9820,7 +9820,8 @@ class LyricsContainer extends react.Component {
       ...(vinylTrackAccent ? {
         "--iv-vinyl-track-accent": vinylTrackAccent,
       } : {}),
-    };
+    });
+    this.styleVariables = computeExtendedLyricsStyleVariables();
     if (isSyncCreatorActive) {
       this.styleVariables = {
         ...this.styleVariables,

@@ -3941,37 +3941,37 @@ const createCopyHandler = (text, successMessageKey, failureMessageKey) => (event
 };
 
 const getLyricsAnchorRatio = (container) => {
-  if (!container) {
-          return 0.5;
-  }
+	if (!container) {
+		return 0.5;
+	}
 
 	const rawAnchorRatio = window.getComputedStyle(container).getPropertyValue("--ivfs-lyrics-anchor-ratio").trim();
 	const parsedAnchorRatio = Number.parseFloat(rawAnchorRatio);
 
 	return Number.isFinite(parsedAnchorRatio)
-          ? Math.min(0.95, Math.max(0.05, parsedAnchorRatio))
-          : 0.5;
+		? Math.min(0.95, Math.max(0.05, parsedAnchorRatio))
+		: 0.5;
 };
 
 const getElementOffsetTopWithin = (element, container) => {
-  if (!element || !container) {
-          return 0;
-  }
+	if (!element || !container) {
+		return 0;
+	}
 
-  let top = 0;
-  let node = element;
-  while (node && node !== container) {
-          top += Number(node.offsetTop) || 0;
-          node = node.offsetParent;
-  }
+	let top = 0;
+	let node = element;
+	while (node && node !== container) {
+		top += Number(node.offsetTop) || 0;
+		node = node.offsetParent;
+	}
 
-  if (node === container) {
-          return top;
-  }
+	if (node === container) {
+		return top;
+	}
 
-  const elementRect = element.getBoundingClientRect();
-  const containerRect = container.getBoundingClientRect();
-  return (elementRect.top - containerRect.top) + (container.scrollTop || 0);
+	const elementRect = element.getBoundingClientRect();
+	const containerRect = container.getBoundingClientRect();
+	return (elementRect.top - containerRect.top) + (container.scrollTop || 0);
 };
 
 const LYRICS_CENTERING_DURATION_MS = 420;
@@ -4228,13 +4228,13 @@ const animateSyncedLyricsScroll = (container, targetTop) => {
 };
 
 const scrollSyncedContainerToActiveLine = (container, activeLine, behavior = "smooth") => {
-  if (!container || !activeLine) return;
+	if (!container || !activeLine) return;
 
-  const anchorRatio = getLyricsAnchorRatio(container);
-  const containerHeight = container.clientHeight || 0;
-  const lineAnchorCenter = getActiveLineAnchorCenter(activeLine);
-  const activeLineTop = getElementOffsetTopWithin(activeLine, container);
-  const targetTop = activeLineTop - (containerHeight * anchorRatio - lineAnchorCenter);
+	const anchorRatio = getLyricsAnchorRatio(container);
+	const containerHeight = container.clientHeight || 0;
+	const lineAnchorCenter = getActiveLineAnchorCenter(activeLine);
+	const activeLineTop = getElementOffsetTopWithin(activeLine, container);
+	const targetTop = activeLineTop - (containerHeight * anchorRatio - lineAnchorCenter);
 	const maxScrollTop = Math.max(0, container.scrollHeight - containerHeight);
 	const nextTop = Math.max(0, Math.min(targetTop, maxScrollTop));
 
@@ -4316,10 +4316,10 @@ const getCompactSyncedOffset = (container, activeLine, isScrolling) => {
 		return 0;
 	}
 
-  const anchorRatio = getLyricsAnchorRatio(container);
-  const anchorOffset = container.clientHeight * anchorRatio;
-  const activeLineTop = getElementOffsetTopWithin(activeLine, container);
-  return anchorOffset - (activeLineTop + getActiveLineAnchorCenter(activeLine));
+	const anchorRatio = getLyricsAnchorRatio(container);
+	const anchorOffset = container.clientHeight * anchorRatio;
+	const activeLineTop = getElementOffsetTopWithin(activeLine, container);
+	return anchorOffset - (activeLineTop + getActiveLineAnchorCenter(activeLine));
 };
 
 const useSyncedLayoutEffect = react.useLayoutEffect || useEffect;
@@ -7128,9 +7128,9 @@ const applyKaraokeWhitespaceCompensation = (timedChars) => {
 };
 
 const getActiveKaraokeTimedCharIndex = (timedChars, position) => {
-  if (!Array.isArray(timedChars) || timedChars.length === 0) {
-          return -1;
-  }
+	if (!Array.isArray(timedChars) || timedChars.length === 0) {
+		return -1;
+	}
 
 	let activeCharIndex = -1;
 	let lastPassedCharIndex = -1;
@@ -7168,7 +7168,7 @@ const getActiveKaraokeTimedCharIndex = (timedChars, position) => {
 		}
 	}
 
-  return activeCharIndex;
+	return activeCharIndex;
 };
 
 const KARAOKE_VOCAL_STACK_CENTER_THRESHOLD = 4;
@@ -7244,36 +7244,36 @@ const getKaraokeVocalAnchorLineKey = (line) => [
 ].join("|");
 
 const getKaraokeVocalAnchorPosition = (vocalRowRenderData, position, activeCharIndexes = null) => {
-  if (!Array.isArray(vocalRowRenderData) || vocalRowRenderData.length === 0 || !Number.isFinite(position)) {
-          return -1;
-  }
+	if (!Array.isArray(vocalRowRenderData) || vocalRowRenderData.length === 0 || !Number.isFinite(position)) {
+		return -1;
+	}
 
-  let firstActiveRowIndex = -1;
-  let lastActiveRowIndex = -1;
+	let firstActiveRowIndex = -1;
+	let lastActiveRowIndex = -1;
 
-  for (let rowIndex = 0; rowIndex < vocalRowRenderData.length; rowIndex++) {
-          const { timedChars: rowTimedChars, bounds, anchorEndTime } = vocalRowRenderData[rowIndex];
-          const activeCharIndex = activeCharIndexes?.[rowIndex]
-                  ?? getActiveKaraokeTimedCharIndex(rowTimedChars, position);
-          const { startTime, endTime } = bounds;
-          const rowActive = Number.isFinite(anchorEndTime)
-                  ? position >= startTime && position < anchorEndTime
-                  : (activeCharIndex >= 0 && activeCharIndex < rowTimedChars.length)
-                          || (position >= startTime && position <= endTime);
+	for (let rowIndex = 0; rowIndex < vocalRowRenderData.length; rowIndex++) {
+		const { timedChars: rowTimedChars, bounds, anchorEndTime } = vocalRowRenderData[rowIndex];
+		const activeCharIndex = activeCharIndexes?.[rowIndex]
+			?? getActiveKaraokeTimedCharIndex(rowTimedChars, position);
+		const { startTime, endTime } = bounds;
+		const rowActive = Number.isFinite(anchorEndTime)
+			? position >= startTime && position < anchorEndTime
+			: (activeCharIndex >= 0 && activeCharIndex < rowTimedChars.length)
+				|| (position >= startTime && position <= endTime);
 
-          if (rowActive) {
-                  if (firstActiveRowIndex < 0) {
-                          firstActiveRowIndex = rowIndex;
-                  }
-                  lastActiveRowIndex = rowIndex;
-          }
-  }
+		if (rowActive) {
+			if (firstActiveRowIndex < 0) {
+				firstActiveRowIndex = rowIndex;
+			}
+			lastActiveRowIndex = rowIndex;
+		}
+	}
 
-  if (firstActiveRowIndex >= 0 && lastActiveRowIndex >= 0) {
-          return Math.ceil((firstActiveRowIndex + lastActiveRowIndex) / 2);
-  }
+	if (firstActiveRowIndex >= 0 && lastActiveRowIndex >= 0) {
+		return Math.ceil((firstActiveRowIndex + lastActiveRowIndex) / 2);
+	}
 
-  return -1;
+	return -1;
 };
 
 const getKaraokeVocalAnchorWindowMs = (vocalRowRenderData, anchorPosition) => {
@@ -7320,33 +7320,33 @@ const getKaraokeVocalAnchorWindowMs = (vocalRowRenderData, anchorPosition) => {
 };
 
 const getStableKaraokeVocalAnchorPosition = (stateRef, line, position, nextAnchorPosition) => {
-  if (!stateRef?.current) {
-          return nextAnchorPosition;
-  }
+	if (!stateRef?.current) {
+		return nextAnchorPosition;
+	}
 
-  const lineKey = getKaraokeVocalAnchorLineKey(line);
-  const state = stateRef.current;
-  const positionWentBack = Number.isFinite(state.lastPlaybackPosition)
-          && Number.isFinite(position)
-          && position < state.lastPlaybackPosition - 250;
+	const lineKey = getKaraokeVocalAnchorLineKey(line);
+	const state = stateRef.current;
+	const positionWentBack = Number.isFinite(state.lastPlaybackPosition)
+		&& Number.isFinite(position)
+		&& position < state.lastPlaybackPosition - 250;
 
-  if (state.lineKey !== lineKey || positionWentBack) {
-          state.lineKey = lineKey;
-          state.anchorPosition = nextAnchorPosition;
-          state.lastPlaybackPosition = position;
-          return nextAnchorPosition;
-  }
+	if (state.lineKey !== lineKey || positionWentBack) {
+		state.lineKey = lineKey;
+		state.anchorPosition = nextAnchorPosition;
+		state.lastPlaybackPosition = position;
+		return nextAnchorPosition;
+	}
 
-  state.lastPlaybackPosition = position;
-  if (!Number.isFinite(nextAnchorPosition) || nextAnchorPosition < 0) {
-          return Number.isFinite(state.anchorPosition) ? state.anchorPosition : -1;
-  }
+	state.lastPlaybackPosition = position;
+	if (!Number.isFinite(nextAnchorPosition) || nextAnchorPosition < 0) {
+		return Number.isFinite(state.anchorPosition) ? state.anchorPosition : -1;
+	}
 
-  state.anchorPosition = Math.max(
-          Number.isFinite(state.anchorPosition) ? state.anchorPosition : nextAnchorPosition,
-          nextAnchorPosition
-  );
-  return state.anchorPosition;
+	state.anchorPosition = Math.max(
+		Number.isFinite(state.anchorPosition) ? state.anchorPosition : nextAnchorPosition,
+		nextAnchorPosition
+	);
+	return state.anchorPosition;
 };
 
 const KARAOKE_FILL_STEPS = 25;

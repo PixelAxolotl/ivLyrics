@@ -8680,8 +8680,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 		const materializedSyncData = materializeSyncCreatorParallelDrafts(syncData);
 
-		if (multiVocalMode) {
-			const linesByStart = new Map(materializedSyncData.lines.map(line => [line.start, line]));
+		const validateMultiVocalSubmissionMeta = (validationSyncData) => {
+			const linesByStart = new Map(validationSyncData.lines.map(line => [line.start, line]));
 			for (let index = 0; index < lyricsLines.length; index++) {
 				if (isLineCoveredByMergedPrevious(index, linesByStart)) {
 					continue;
@@ -8691,7 +8691,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				const lineData = linesByStart.get(lineStart);
 				if (!lineData) {
 					Toast.error(I18n.t('syncCreator.lineMissingSync', { line: index + 1 }) || `Line ${index + 1} has no sync yet.`);
-					return;
+					return false;
 				}
 
 				const mergedIndexes = getMergedLineIndexesForStart(index, linesByStart);
@@ -8706,11 +8706,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						const existingPart = existingParts.find(item => item.id === part.id);
 						if (!existingPart || !hasReusableSyncCreatorParallelChars(part, existingPart)) {
 							Toast.error(I18n.t('syncCreator.lineAllPartsMissingSync', { line: index + 1 }) || `Sync every vocal part on line ${index + 1}.`);
-							return;
+							return false;
 						}
 						if (!isSyncCreatorSpeakerMetaComplete(existingPart) || !(normalizeSyncCreatorKind(existingPart.kind) || SYNC_CREATOR_DEFAULT_KIND)) {
 							Toast.error(I18n.t('syncCreator.linePartMetaRequired', { line: index + 1 }) || `Select SPEAKER and text effect for every vocal part on line ${index + 1}.`);
-							return;
+							return false;
 						}
 					}
 				} else if (!isSyncCreatorSpeakerMetaComplete({
@@ -8724,9 +8724,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					'speaker-color': lineData['speaker-color']
 				}) || !(normalizeSyncCreatorKind(lineData.kind) || SYNC_CREATOR_DEFAULT_KIND)) {
 					Toast.error(I18n.t('syncCreator.lineMetaRequired', { line: index + 1 }) || `Select SPEAKER and text effect for line ${index + 1}.`);
-					return;
+					return false;
 				}
 			}
+			return true;
+		};
+
+		if (multiVocalMode && !validateMultiVocalSubmissionMeta(materializedSyncData)) {
+			return;
 		}
 
 		const linesByStart = new Map();

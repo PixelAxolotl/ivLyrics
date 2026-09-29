@@ -549,22 +549,26 @@
                 }
 
                 const seenIds = new Set();
-                const addons = [];
-                for (const addon of discoveredAddons) {
-                    const normalizedId = String(addon.id || '').toLowerCase();
-                    if (!normalizedId) continue;
-                    if (blacklist.blockedAddonIds.has(normalizedId)) continue;
-                    if (seenIds.has(normalizedId)) continue;
-                    seenIds.add(normalizedId);
+                const buildAddonList = () => {
+                    const addons = [];
+                    for (const addon of discoveredAddons) {
+                        const normalizedId = String(addon.id || '').toLowerCase();
+                        if (!normalizedId) continue;
+                        if (blacklist.blockedAddonIds.has(normalizedId)) continue;
+                        if (seenIds.has(normalizedId)) continue;
+                        seenIds.add(normalizedId);
 
-                    addons.push({
-                        ...addon,
-                        isInstalled: this._installedAddons.has(addon.id),
-                        installedVersion: this._installedAddons.get(addon.id)?.metadata?.version || null,
-                        hasUpdate: this._installedAddons.has(addon.id) &&
-                            this._compareVersions(addon.version, this._installedAddons.get(addon.id)?.metadata?.version) > 0
-                    });
-                }
+                        addons.push({
+                            ...addon,
+                            isInstalled: this._installedAddons.has(addon.id),
+                            installedVersion: this._installedAddons.get(addon.id)?.metadata?.version || null,
+                            hasUpdate: this._installedAddons.has(addon.id) &&
+                                this._compareVersions(addon.version, this._installedAddons.get(addon.id)?.metadata?.version) > 0
+                        });
+                    }
+                    return addons;
+                };
+                const addons = buildAddonList();
 
                 // Sort by stars descending
                 addons.sort((a, b) => (b.stars || 0) - (a.stars || 0));

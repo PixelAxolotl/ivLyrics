@@ -774,8 +774,7 @@
 
                 const hasApiKey = getApiKeys().length > 0;
 
-                return React.createElement('div', { className: 'ai-addon-settings gemini-settings' },
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                const renderApiKeyRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, 'API Key(s)'),
                         React.createElement('div', { className: 'ai-addon-input-group' },
                             React.createElement('input', {
@@ -790,8 +789,8 @@
                             }, 'Get API Key')
                         ),
                         React.createElement('small', null, 'Enter a single key or JSON array for rotation')
-                    ),
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderBaseUrlRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, 'Base URL'),
                         React.createElement('input', {
                             type: 'text',
@@ -800,8 +799,8 @@
                             placeholder: 'https://generativelanguage.googleapis.com/v1beta'
                         }),
                         React.createElement('small', null, 'Change this to use Gemini-compatible APIs')
-                    ),
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderModelRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, 'Model'),
                         React.createElement('div', { className: 'ai-addon-input-group' },
                             React.createElement('select', {
@@ -826,16 +825,22 @@
                             }, modelsLoading ? '...' : '↻')
                         ),
                         availableModels.length > 0 && React.createElement('small', null, `${availableModels.length} models available`)
-                    ),
-                    // Advanced API Parameters
-                    React.createElement(AdvancedParamsSection)
-                    ,
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderTestRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('button', { onClick: handleTest, className: 'ai-addon-btn-primary' }, 'Test Connection'),
                         testStatus && React.createElement('span', {
                             className: `ai-addon-test-status ${testStatus.startsWith('✓') ? 'success' : testStatus.startsWith('✗') ? 'error' : ''}`
                         }, testStatus)
-                    )
+                    );
+
+                return React.createElement('div', { className: 'ai-addon-settings gemini-settings' },
+                    renderApiKeyRow(),
+                    renderBaseUrlRow(),
+                    renderModelRow(),
+                    // Advanced API Parameters
+                    React.createElement(AdvancedParamsSection)
+                    ,
+                    renderTestRow()
                 );
             };
 

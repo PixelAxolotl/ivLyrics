@@ -764,7 +764,7 @@
             );
 
             let leadPart = createVocalPart(`${lineKey}-lead`, 'lead', leadSyllables, presentation);
-            let backgroundParts = [];
+            const backgroundParts = [];
             if (backgroundSyllables.length > 0) {
                 const backgroundPart = createVocalPart(
                     `${lineKey}-background-1`,

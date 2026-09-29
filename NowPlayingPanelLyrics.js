@@ -1753,7 +1753,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     };
 
     // 현재 가사 상태
-    let currentLyricsState = {
+    const currentLyricsState = {
         lyrics: [],
         currentIndex: 0,
         isPlaying: false,

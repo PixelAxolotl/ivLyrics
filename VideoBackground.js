@@ -799,7 +799,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
         videoBackgroundDebug(`[VideoBackground] Helper mode: requesting video ${videoId}`);
 
         // 응답이 늦어질 때 알약의 메시지를 준비 중 상태로 갱신합니다.
-        let preparingToastTimeout = setTimeout(() => {
+        const preparingToastTimeout = setTimeout(() => {
             if (!isActive) return;
             reportVideoBackgroundStatus("loading", {
                 label: I18n.t("videoBackground.preparing"),

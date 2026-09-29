@@ -3199,7 +3199,7 @@ const TranslationMenu = react.memo(({ friendlyLanguage, hasTranslation }) => {
     ];
 
     // 현재 트랙의 언어 오버라이드 상태 (비동기로 로드)
-    let currentOverride = window.lyricContainer?.trackLanguageOverride || null;
+    const currentOverride = window.lyricContainer?.trackLanguageOverride || null;
 
     const items = [
       {

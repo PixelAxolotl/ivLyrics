@@ -5333,7 +5333,7 @@
                 const lineCharTimes = lineTimingRepair.times;
 
                 // 라인 시작/종료 시간 계산 (일단 다음 줄 시작 전까지로 잡지만, 아래에서 조정함)
-                let lineStartTime = lineCharTimes[0];
+                const lineStartTime = lineCharTimes[0];
                 let lineEndTime = lineTimingRepairs[i + 1]
                     ? lineTimingRepairs[i + 1].times[0]
                     : (lineCharTimes[lineCharTimes.length - 1] ?? lineStartTime) + 2000;

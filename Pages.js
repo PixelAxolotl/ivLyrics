@@ -8027,7 +8027,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 		);
 		const reading = furiganaMap.get(index);
 
-		let renderedCharNode = reading
+		const renderedCharNode = reading
 			? react.createElement(
 				"ruby",
 				{

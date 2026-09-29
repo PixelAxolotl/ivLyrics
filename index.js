@@ -3211,7 +3211,7 @@ CONFIG.visual["highlight-intensity"] = Number.parseInt(
 window.CONFIG = CONFIG;
 window.ivLyricsSpeakerColors?.applyCssVariables?.();
 
-let CACHE = {};
+const CACHE = {};
 
 const emptyState = {
   karaoke: null,
@@ -8072,7 +8072,7 @@ class LyricsContainer extends react.Component {
       if (cached) {
         // Fix cached items if they have double-encoded JSON structure
         let fixNeeded = false;
-        let targetField = wantSmartPhonetic ? 'phonetic' : 'translation';
+        const targetField = wantSmartPhonetic ? 'phonetic' : 'translation';
 
         if (cached[targetField] && Array.isArray(cached[targetField]) &&
           cached[targetField].length === 1 && typeof cached[targetField][0] === 'string' &&

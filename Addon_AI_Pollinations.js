@@ -704,7 +704,7 @@
             if (!trimmed.includes('{')) return false;
             return !trimmed.endsWith('}') || trimmed.lastIndexOf('}') < trimmed.lastIndexOf('{');
         };
-        let cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+        const cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
 
         try {
             return JSON.parse(cleaned);

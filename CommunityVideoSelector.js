@@ -198,7 +198,7 @@ const SyncedVideoPreview = ({ videoId, startTime, skipSegments = [], isAutoGener
 
     // 1.5초 이내 응답 시 toast 숨기기 위한 변수
     const requestStartTime = Date.now();
-    let preparingToastTimeout = setTimeout(() => {
+    const preparingToastTimeout = setTimeout(() => {
       Toast.progress(I18n.t("videoBackground.preparing"), 0);
     }, 1500);
 
@@ -546,7 +546,7 @@ const SimpleVideoPreview = ({ videoId, startTime, skipSegments = [] }) => {
 
     // 1.5초 이내 응답 시 toast 숨기기 위한 변수
     const requestStartTime = Date.now();
-    let preparingToastTimeout = setTimeout(() => {
+    const preparingToastTimeout = setTimeout(() => {
       Toast.progress(I18n.t("videoBackground.preparing"), 0);
     }, 1500);
 

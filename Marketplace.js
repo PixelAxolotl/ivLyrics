@@ -35,6 +35,20 @@ const MarketplacePage = (() => {
         );
     }
 
+    // Shared cancel/confirm button row for the confirm and disclaimer modals
+    function renderMarketplaceConfirmButtons(onCancel, okClassName, onOk, okLabelKey) {
+        return react.createElement('div', { className: 'ivlyrics-marketplace-confirm-buttons' },
+            react.createElement('button', {
+                className: 'ivlyrics-marketplace-confirm-btn ivlyrics-marketplace-confirm-btn-cancel',
+                onClick: onCancel
+            }, I18n.t('buttons.cancel')),
+            react.createElement('button', {
+                className: okClassName,
+                onClick: onOk
+            }, I18n.t(okLabelKey))
+        );
+    }
+
     // ============================================
     // Markdown Renderer
     // ============================================
@@ -386,15 +400,11 @@ const MarketplacePage = (() => {
         },
             react.createElement('div', { className: 'ivlyrics-marketplace-confirm-modal' },
                 react.createElement('div', { className: 'ivlyrics-marketplace-confirm-message' }, message),
-                react.createElement('div', { className: 'ivlyrics-marketplace-confirm-buttons' },
-                    react.createElement('button', {
-                        className: 'ivlyrics-marketplace-confirm-btn ivlyrics-marketplace-confirm-btn-cancel',
-                        onClick: onCancel
-                    }, I18n.t('buttons.cancel')),
-                    react.createElement('button', {
-                        className: 'ivlyrics-marketplace-confirm-btn ivlyrics-marketplace-confirm-btn-ok',
-                        onClick: onConfirm
-                    }, I18n.t('buttons.confirm'))
+                renderMarketplaceConfirmButtons(
+                    onCancel,
+                    'ivlyrics-marketplace-confirm-btn ivlyrics-marketplace-confirm-btn-ok',
+                    onConfirm,
+                    'buttons.confirm'
                 )
             )
         );
@@ -457,15 +467,11 @@ const MarketplacePage = (() => {
                     }),
                     react.createElement('span', null, I18n.t('marketplace.dontShowAgain'))
                 ),
-                react.createElement('div', { className: 'ivlyrics-marketplace-confirm-buttons' },
-                    react.createElement('button', {
-                        className: 'ivlyrics-marketplace-confirm-btn ivlyrics-marketplace-confirm-btn-cancel',
-                        onClick: onCancel
-                    }, I18n.t('buttons.cancel')),
-                    react.createElement('button', {
-                        className: 'ivlyrics-marketplace-confirm-btn ivlyrics-marketplace-confirm-btn-ok ivlyrics-marketplace-confirm-btn-warn',
-                        onClick: handleConfirm
-                    }, I18n.t('marketplace.install'))
+                renderMarketplaceConfirmButtons(
+                    onCancel,
+                    'ivlyrics-marketplace-confirm-btn ivlyrics-marketplace-confirm-btn-ok ivlyrics-marketplace-confirm-btn-warn',
+                    handleConfirm,
+                    'marketplace.install'
                 )
             )
         );

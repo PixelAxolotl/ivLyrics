@@ -3026,15 +3026,17 @@ const getInterludeCandidateText = (line) => {
 	return getPlainLyricText(line);
 };
 
+const normalizeInterludeMarkerText = (text) => String(text ?? "")
+	.replace(/&nbsp;/gi, " ")
+	.replace(/<[^>]+>/g, "")
+	.trim();
+
 const isInterludeMarkerText = (text) => {
 	if (window.ivLyricsInstrumentalBreaks?.isMarkerText?.(text)) {
 		return true;
 	}
 
-	const normalized = String(text ?? "")
-		.replace(/&nbsp;/gi, " ")
-		.replace(/<[^>]+>/g, "")
-		.trim();
+	const normalized = normalizeInterludeMarkerText(text);
 
 	return !normalized || INTERLUDE_MARKER_REGEX.test(normalized);
 };
@@ -3044,10 +3046,7 @@ const isMusicNoteInterludeMarkerText = (text) => {
 		return true;
 	}
 
-	const normalized = String(text ?? "")
-		.replace(/&nbsp;/gi, " ")
-		.replace(/<[^>]+>/g, "")
-		.trim();
+	const normalized = normalizeInterludeMarkerText(text);
 
 	return INTERLUDE_NOTE_CHARACTER_REGEX.test(normalized)
 		&& INTERLUDE_MARKER_REGEX.test(normalized);

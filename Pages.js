@@ -2737,24 +2737,24 @@ const renderLyricSubLine = (
 };
 
 const renderLyricMainContent = ({
-  isKara = false,
-  karaokeRenderGranularity = null,
-  mainText,
-  line,
-  position,
+	isKara = false,
+	karaokeRenderGranularity = null,
+	mainText,
+	line,
+	position,
 	isActive,
 	isEffectFocused = isActive,
 	isEffectLive = isActive || isEffectFocused,
 	settingsRevision = 0,
 	globalCharOffset = 0,
-  activeGlobalCharIndex = -1,
-  subText = null,
-  subText2 = null,
-  culturalAnnotations = [],
+	activeGlobalCharIndex = -1,
+	subText = null,
+	subText2 = null,
+	culturalAnnotations = [],
 }) => {
 	if (isKara) {
-          return react.createElement(KaraokeLine, {
-                  line,
+		return react.createElement(KaraokeLine, {
+			line,
 			// Future rows are already pinned to 0 by the playback window. Completed
 			// rows receive one stable position past their final glyph so the painted
 			// progress remains visible without returning to the per-frame update path.
@@ -2764,13 +2764,13 @@ const renderLyricMainContent = ({
 			isEffectLive,
 			settingsRevision,
 			globalCharOffset,
-                  activeGlobalCharIndex,
-                  phonetic: subText,
-                  translation: subText2,
-                  culturalAnnotations,
-                  renderGranularity: karaokeRenderGranularity,
-          });
-  }
+			activeGlobalCharIndex,
+			phonetic: subText,
+			translation: subText2,
+			culturalAnnotations,
+			renderGranularity: karaokeRenderGranularity,
+		});
+	}
 
 	if (typeof mainText === "string") {
 		return null;

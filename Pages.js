@@ -1872,7 +1872,7 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 		return null;
 	}
 
-	const footer = react.createElement(
+	const renderFooter = () => react.createElement(
 		"div",
 		{
 			className: "lyrics-credit-footer",
@@ -1972,6 +1972,8 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 			)
 		)
 	);
+
+	const footer = renderFooter();
 
 	const modalContributor = creatorProfile && !profileLoading && !profileError
 		? activeContributor

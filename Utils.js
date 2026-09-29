@@ -382,6 +382,22 @@ setTimeout(() => window.ivLyricsSpeakerColors?.applyCssVariables?.(), 0);
 const discordAuthOperations = new WeakMap();
 const DISCORD_AUTH_OPERATION_MAX_AGE_MS = 30_000;
 
+// Parses a creator-profile account API response, throwing with the same message
+// precedence (server error -> localized key -> literal fallback) on failure and
+// returning `data.data` on success. Mirrors the identical validate-and-return
+// tail duplicated across several creator-profile fetch helpers.
+const readCreatorProfileApiResponseData = async (response, failureI18nKey, fallbackMessage) => {
+  const data = await response.json();
+
+  if (!response.ok || !data.success || !data.data) {
+    throw new Error(
+      data.error || I18n.t(failureI18nKey) || fallbackMessage
+    );
+  }
+
+  return data.data;
+};
+
 const Utils = {
   // LRU caches for frequently used operations (최적화 #10 - LRU 캐시 적용)
   _colorCache: new LRUCache(100),
@@ -2769,17 +2785,12 @@ const Utils = {
         Pragma: "no-cache",
       }),
     });
-    const data = await response.json();
 
-    if (!response.ok || !data.success || !data.data) {
-      throw new Error(
-        data.error ||
-          I18n.t("settingsAdvanced.aboutTab.account.creatorPrivacy.loadFailed") ||
-          "Failed to load creator profile privacy."
-      );
-    }
-
-    return data.data;
+    return await readCreatorProfileApiResponseData(
+      response,
+      "settingsAdvanced.aboutTab.account.creatorPrivacy.loadFailed",
+      "Failed to load creator profile privacy."
+    );
   },
 
   async setSyncCreatorPrivacy(isPrivate) {
@@ -2801,17 +2812,12 @@ const Utils = {
       }),
       body: JSON.stringify({ isPrivate: !!isPrivate }),
     });
-    const data = await response.json();
 
-    if (!response.ok || !data.success || !data.data) {
-      throw new Error(
-        data.error ||
-          I18n.t("settingsAdvanced.aboutTab.account.creatorPrivacy.saveFailed") ||
-          "Failed to update creator profile privacy."
-      );
-    }
-
-    return data.data;
+    return await readCreatorProfileApiResponseData(
+      response,
+      "settingsAdvanced.aboutTab.account.creatorPrivacy.saveFailed",
+      "Failed to update creator profile privacy."
+    );
   },
 
   async fetchSyncCreatorGreetingTranslation(userHash, locale) {
@@ -2840,17 +2846,12 @@ const Utils = {
         }),
       }
     );
-    const data = await response.json();
 
-    if (!response.ok || !data.success || !data.data) {
-      throw new Error(
-        data.error ||
-          I18n.t("creatorProfile.greetingTranslateFailed") ||
-          "Failed to translate creator greeting."
-      );
-    }
-
-    return data.data;
+    return await readCreatorProfileApiResponseData(
+      response,
+      "creatorProfile.greetingTranslateFailed",
+      "Failed to translate creator greeting."
+    );
   },
 
   async setSyncCreatorGreeting(greeting, options = {}) {

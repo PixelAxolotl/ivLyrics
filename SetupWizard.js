@@ -1739,6 +1739,123 @@ const VideoHelperTestStep = ({ onNext, onBack, onSkip, helperEnabled, onHelperCh
     });
   };
 
+  const renderVideoHelperDownloadProgress = () => react.createElement(
+      "div",
+      {
+        style: {
+          textAlign: "center",
+          marginBottom: "16px",
+        },
+      },
+      react.createElement(
+        "div",
+        {
+          style: {
+            width: "100%",
+            maxWidth: "300px",
+            height: "8px",
+            background: "rgba(255, 255, 255, 0.1)",
+            borderRadius: 0,
+            margin: "0 auto 8px",
+            overflow: "hidden",
+          },
+        },
+        react.createElement("div", {
+          style: {
+            width: `${downloadPercent}%`,
+            height: "100%",
+            background: WIZARD_COLORS.accent,
+            borderRadius: 0,
+            transition: "width 0.3s ease",
+          },
+        })
+      ),
+      react.createElement(
+        "p",
+        {
+          style: {
+            fontSize: "12px",
+            color: WIZARD_COLORS.muted,
+          },
+        },
+        I18n.t("setupWizard.videoHelperTest.downloading").replace("{percent}", Math.round(downloadPercent))
+      )
+    );
+
+  const renderVideoHelperSuccess = () => react.createElement(
+      "div",
+      {
+        style: {
+          textAlign: "center",
+          padding: "16px 20px",
+          background: WIZARD_COLORS.surfaceSelected,
+          borderRadius: 0,
+          border: `1px solid ${WIZARD_COLORS.borderStrong}`,
+          marginBottom: "16px",
+        },
+      },
+      react.createElement(
+        "p",
+        {
+          style: {
+            fontSize: "14px",
+            fontWeight: "600",
+            color: WIZARD_COLORS.accent,
+            marginBottom: videoUrl ? "12px" : "0",
+          },
+        },
+        "✓ " + I18n.t("setupWizard.videoHelperTest.success")
+      ),
+      // Show video preview if available
+      videoUrl &&
+      react.createElement(
+        "div",
+        {
+          style: {
+            maxWidth: "300px",
+            margin: "0 auto",
+            borderRadius: 0,
+            overflow: "hidden",
+          },
+        },
+        react.createElement("video", {
+          src: videoUrl,
+          style: {
+            width: "100%",
+            borderRadius: 0,
+          },
+          controls: true,
+          autoPlay: true,
+          muted: true,
+        })
+      )
+    );
+
+  const renderVideoHelperFailed = () => react.createElement(
+      "div",
+      {
+        style: {
+          textAlign: "center",
+          padding: "16px 20px",
+          background: WIZARD_COLORS.dangerSurface,
+          borderRadius: 0,
+          border: `1px solid ${WIZARD_COLORS.dangerBorder}`,
+          marginBottom: "16px",
+        },
+      },
+      react.createElement(
+        "p",
+        {
+          style: {
+            fontSize: "14px",
+            fontWeight: "600",
+            color: WIZARD_COLORS.dangerText,
+          },
+        },
+        "✕ " + I18n.t("setupWizard.videoHelperTest.failed")
+      )
+    );
+
   return react.createElement(
     "div",
     {
@@ -1812,125 +1929,11 @@ const VideoHelperTestStep = ({ onNext, onBack, onSkip, helperEnabled, onHelperCh
       )
     ),
     // Download progress
-    testStatus === "downloading" &&
-    react.createElement(
-      "div",
-      {
-        style: {
-          textAlign: "center",
-          marginBottom: "16px",
-        },
-      },
-      react.createElement(
-        "div",
-        {
-          style: {
-            width: "100%",
-            maxWidth: "300px",
-            height: "8px",
-            background: "rgba(255, 255, 255, 0.1)",
-            borderRadius: 0,
-            margin: "0 auto 8px",
-            overflow: "hidden",
-          },
-        },
-        react.createElement("div", {
-          style: {
-            width: `${downloadPercent}%`,
-            height: "100%",
-            background: WIZARD_COLORS.accent,
-            borderRadius: 0,
-            transition: "width 0.3s ease",
-          },
-        })
-      ),
-      react.createElement(
-        "p",
-        {
-          style: {
-            fontSize: "12px",
-            color: WIZARD_COLORS.muted,
-          },
-        },
-        I18n.t("setupWizard.videoHelperTest.downloading").replace("{percent}", Math.round(downloadPercent))
-      )
-    ),
+    testStatus === "downloading" && renderVideoHelperDownloadProgress(),
     // Success message
-    testStatus === "success" &&
-    react.createElement(
-      "div",
-      {
-        style: {
-          textAlign: "center",
-          padding: "16px 20px",
-          background: WIZARD_COLORS.surfaceSelected,
-          borderRadius: 0,
-          border: `1px solid ${WIZARD_COLORS.borderStrong}`,
-          marginBottom: "16px",
-        },
-      },
-      react.createElement(
-        "p",
-        {
-          style: {
-            fontSize: "14px",
-            fontWeight: "600",
-            color: WIZARD_COLORS.accent,
-            marginBottom: videoUrl ? "12px" : "0",
-          },
-        },
-        "✓ " + I18n.t("setupWizard.videoHelperTest.success")
-      ),
-      // Show video preview if available
-      videoUrl &&
-      react.createElement(
-        "div",
-        {
-          style: {
-            maxWidth: "300px",
-            margin: "0 auto",
-            borderRadius: 0,
-            overflow: "hidden",
-          },
-        },
-        react.createElement("video", {
-          src: videoUrl,
-          style: {
-            width: "100%",
-            borderRadius: 0,
-          },
-          controls: true,
-          autoPlay: true,
-          muted: true,
-        })
-      )
-    ),
+    testStatus === "success" && renderVideoHelperSuccess(),
     // Failed message
-    testStatus === "failed" &&
-    react.createElement(
-      "div",
-      {
-        style: {
-          textAlign: "center",
-          padding: "16px 20px",
-          background: WIZARD_COLORS.dangerSurface,
-          borderRadius: 0,
-          border: `1px solid ${WIZARD_COLORS.dangerBorder}`,
-          marginBottom: "16px",
-        },
-      },
-      react.createElement(
-        "p",
-        {
-          style: {
-            fontSize: "14px",
-            fontWeight: "600",
-            color: WIZARD_COLORS.dangerText,
-          },
-        },
-        "✕ " + I18n.t("setupWizard.videoHelperTest.failed")
-      )
-    ),
+    testStatus === "failed" && renderVideoHelperFailed(),
     // Spacer
     react.createElement("div", { style: { flex: 1 } }),
     react.createElement(WizardNavigation, {

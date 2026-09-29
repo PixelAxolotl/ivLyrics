@@ -2259,7 +2259,6 @@ ${normalizedText}
         getEnabledProvidersFor(capability) {
             const allProviders = this.getEnabledProviders();
             const storedCapability = capability === 'research' ? 'tmi' : capability;
-            // console.log(`[AIAddonManager] Checking providers for ${capability}. Enabled total: ${allProviders.length}`);
 
             return allProviders.filter(addon => {
                 // 1. Addon 자체가 해당 기능을 지원하는지 확인
@@ -2267,7 +2266,6 @@ ${normalizedText}
                     ? addon.supports?.research === true || addon.supports?.tmi === true || typeof addon.generateResearch === 'function' || typeof addon.generateTMI === 'function'
                     : addon.supports?.[capability] === true;
                 if (!supportsCapability) {
-                    // console.log(`[AIAddonManager] Filtered out ${addon.id}: does not support ${capability}`);
                     return false;
                 }
                 // 2. 사용자가 해당 기능을 활성화했는지 확인 (기본값 true)
@@ -2278,7 +2276,6 @@ ${normalizedText}
 
                 const isEnabled = this.isCapabilityEnabled(addon.id, storedCapability);
                 if (!isEnabled) {
-                    // console.log(`[AIAddonManager] Filtered out ${addon.id}: capability ${capability} disabled by user setting`);
                     return false;
                 }
                 return true;

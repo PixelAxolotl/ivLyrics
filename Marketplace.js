@@ -1353,29 +1353,31 @@ const MarketplacePage = (() => {
                 }, view === 'installed' ? renderInstalledContent() : renderBrowseContent())
             );
 
-        let pageContent = null;
-        if (selectedAddon) {
-            const updatedAddon = addons.find(addon => addon.id === selectedAddon.id) || selectedAddon;
-            pageContent = react.createElement(AddonDetail, {
-                addon: updatedAddon,
-                allAddons: addons,
-                onBack: () => setSelectedAddon(null),
-                onInstall: handleInstall,
-                onUninstall: handleUninstall,
-                onUpdate: handleUpdate,
-                onAuthorClick: handleAuthorClick,
-                onAddonClick: setSelectedAddon
-            });
-        } else if (selectedAuthor) {
-            pageContent = react.createElement(DeveloperProfile, {
-                authorLogin: selectedAuthor,
-                addons: authorAddons,
-                onBack: () => setSelectedAuthor(null),
-                onAddonClick: setSelectedAddon
-            });
-        } else {
-            pageContent = renderMarketplaceBrowseLayout();
-        }
+        const renderPageContent = () => {
+            if (selectedAddon) {
+                const updatedAddon = addons.find(addon => addon.id === selectedAddon.id) || selectedAddon;
+                return react.createElement(AddonDetail, {
+                    addon: updatedAddon,
+                    allAddons: addons,
+                    onBack: () => setSelectedAddon(null),
+                    onInstall: handleInstall,
+                    onUninstall: handleUninstall,
+                    onUpdate: handleUpdate,
+                    onAuthorClick: handleAuthorClick,
+                    onAddonClick: setSelectedAddon
+                });
+            }
+            if (selectedAuthor) {
+                return react.createElement(DeveloperProfile, {
+                    authorLogin: selectedAuthor,
+                    addons: authorAddons,
+                    onBack: () => setSelectedAuthor(null),
+                    onAddonClick: setSelectedAddon
+                });
+            }
+            return renderMarketplaceBrowseLayout();
+        };
+        const pageContent = renderPageContent();
 
         return react.createElement('div', { className: 'ivlyrics-marketplace-root' },
             pageContent,

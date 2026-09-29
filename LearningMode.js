@@ -1232,6 +1232,33 @@
         sourceLang: getSourceLanguage(lines)
     });
 
+    const buildStudyCategoryRequests = (lines) => [
+                    {
+                        category: "summary",
+                        loadingKey: "loadingSummary",
+                        loadingFallback: "곡의 큰 흐름을 정리하는 중...",
+                        chunks: [getPromptLineSubset(lines, SUMMARY_CHUNK_LINES, SUMMARY_CHUNK_CHARS)]
+                    },
+                    {
+                        category: "lines",
+                        loadingKey: "loadingLines",
+                        loadingFallback: "가사 카드를 만드는 중... ({current}/{total})",
+                        chunks: buildStudyChunks(lines, STUDY_CHUNK_LINES, STUDY_CHUNK_CHARS)
+                    },
+                    {
+                        category: "expressions",
+                        loadingKey: "loadingExpressions",
+                        loadingFallback: "핵심 표현을 고르는 중... ({current}/{total})",
+                        chunks: buildStudyChunks(lines, EXPRESSION_CHUNK_LINES, EXPRESSION_CHUNK_CHARS)
+                    },
+                    {
+                        category: "quiz",
+                        loadingKey: "loadingQuiz",
+                        loadingFallback: "퀴즈를 만드는 중... ({current}/{total})",
+                        chunks: buildStudyChunks(lines, QUIZ_CHUNK_LINES, QUIZ_CHUNK_CHARS)
+                    }
+                ];
+
     const startGenerationJob = ({
         normalizedLyrics,
         trackId,
@@ -1293,32 +1320,7 @@
                     if (!isCurrentJob()) return null;
                 }
 
-                const categoryRequests = [
-                    {
-                        category: "summary",
-                        loadingKey: "loadingSummary",
-                        loadingFallback: "곡의 큰 흐름을 정리하는 중...",
-                        chunks: [getPromptLineSubset(limited.lines, SUMMARY_CHUNK_LINES, SUMMARY_CHUNK_CHARS)]
-                    },
-                    {
-                        category: "lines",
-                        loadingKey: "loadingLines",
-                        loadingFallback: "가사 카드를 만드는 중... ({current}/{total})",
-                        chunks: buildStudyChunks(limited.lines, STUDY_CHUNK_LINES, STUDY_CHUNK_CHARS)
-                    },
-                    {
-                        category: "expressions",
-                        loadingKey: "loadingExpressions",
-                        loadingFallback: "핵심 표현을 고르는 중... ({current}/{total})",
-                        chunks: buildStudyChunks(limited.lines, EXPRESSION_CHUNK_LINES, EXPRESSION_CHUNK_CHARS)
-                    },
-                    {
-                        category: "quiz",
-                        loadingKey: "loadingQuiz",
-                        loadingFallback: "퀴즈를 만드는 중... ({current}/{total})",
-                        chunks: buildStudyChunks(limited.lines, QUIZ_CHUNK_LINES, QUIZ_CHUNK_CHARS)
-                    }
-                ];
+                const categoryRequests = buildStudyCategoryRequests(limited.lines);
                 const requestTotal = categoryRequests.reduce((sum, item) => (
                     sum + item.chunks.filter((chunk) => chunk.length > 0).length
                 ), 0);

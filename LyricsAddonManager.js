@@ -1301,12 +1301,12 @@
                     if (refreshedSyncData) {
                         result = {
                             ...result,
-							...(Array.isArray(refreshedSyncData.contributors)
-								? { contributors: refreshedSyncData.contributors }
-								: {}),
-							syncType: refreshedSyncData.syncType || result.syncType || 'unknown',
-							syncPoints: Number(refreshedSyncData.syncPoints ?? result.syncPoints ?? 2),
-							syncTypeBreakdown: refreshedSyncData.syncTypeBreakdown || result.syncTypeBreakdown || null
+                            ...(Array.isArray(refreshedSyncData.contributors)
+                                ? { contributors: refreshedSyncData.contributors }
+                                : {}),
+                            syncType: refreshedSyncData.syncType || result.syncType || 'unknown',
+                            syncPoints: Number(refreshedSyncData.syncPoints ?? result.syncPoints ?? 2),
+                            syncTypeBreakdown: refreshedSyncData.syncTypeBreakdown || result.syncTypeBreakdown || null
                         };
                     }
                 } catch (error) {
@@ -1377,9 +1377,9 @@
                                 result.syncDataApplied = true;
                                 result.syncDataProvider = syncProvider;
                                 result.syncDataRendererVersion = SYNC_DATA_RENDERER_VERSION;
-								result.syncType = syncData.syncType || 'unknown';
-								result.syncPoints = Number(syncData.syncPoints ?? 2);
-								result.syncTypeBreakdown = syncData.syncTypeBreakdown || null;
+                                result.syncType = syncData.syncType || 'unknown';
+                                result.syncPoints = Number(syncData.syncPoints ?? 2);
+                                result.syncTypeBreakdown = syncData.syncTypeBreakdown || null;
                                 syncDataAppliedThisCall = true;
 
                                 if (syncData.contributors || syncData.syncData?.contributors) {

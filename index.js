@@ -7229,26 +7229,29 @@ class LyricsContainer extends react.Component {
       this.resetDelay();
 
       let tempState;
-      const sharedProvider = sharedRawResult?.provider || sharedSnapshot?.provider || null;
-      const sharedOverride = sharedSnapshot?.trackLyricsProviderOverride || null;
-      const sharedHasLyrics = !!(
-        sharedRawResult &&
-        (
-          (Array.isArray(sharedRawResult.karaoke) && sharedRawResult.karaoke.length > 0) ||
-          (Array.isArray(sharedRawResult.synced) && sharedRawResult.synced.length > 0) ||
-          (Array.isArray(sharedRawResult.unsynced) && sharedRawResult.unsynced.length > 0)
-        )
-      );
-      const sharedOverrideMatches = trackLyricsProviderOverride
-        ? sharedProvider === trackLyricsProviderOverride
-        : !sharedOverride;
-      const canReuseSharedRawResult = !refresh &&
-        sharedHasLyrics &&
-        sharedOverrideMatches &&
-        isLyricsRenderCacheCurrent({
-          ...sharedRawResult,
-          trackLyricsProviderOverride: trackLyricsProviderOverride || null,
-        });
+      const computeCanReuseSharedRawResult = () => {
+        const sharedProvider = sharedRawResult?.provider || sharedSnapshot?.provider || null;
+        const sharedOverride = sharedSnapshot?.trackLyricsProviderOverride || null;
+        const sharedHasLyrics = !!(
+          sharedRawResult &&
+          (
+            (Array.isArray(sharedRawResult.karaoke) && sharedRawResult.karaoke.length > 0) ||
+            (Array.isArray(sharedRawResult.synced) && sharedRawResult.synced.length > 0) ||
+            (Array.isArray(sharedRawResult.unsynced) && sharedRawResult.unsynced.length > 0)
+          )
+        );
+        const sharedOverrideMatches = trackLyricsProviderOverride
+          ? sharedProvider === trackLyricsProviderOverride
+          : !sharedOverride;
+        return !refresh &&
+          sharedHasLyrics &&
+          sharedOverrideMatches &&
+          isLyricsRenderCacheCurrent({
+            ...sharedRawResult,
+            trackLyricsProviderOverride: trackLyricsProviderOverride || null,
+          });
+      };
+      const canReuseSharedRawResult = computeCanReuseSharedRawResult();
 
       if (canReuseSharedRawResult) {
         CACHE[info.uri] = {
@@ -7385,36 +7388,39 @@ class LyricsContainer extends react.Component {
         isLatestLyricsRequest() &&
         Array.isArray(initialLyricsForMode) &&
         initialLyricsForMode.length > 0;
-      const configuredLanguageOverride = CONFIG.visual["translate:detect-language-override"];
-      const presentationLanguage = trackLanguageOverride ||
-        (configuredLanguageOverride && configuredLanguageOverride !== 'off'
-          ? configuredLanguageOverride
-          : Utils.detectLanguage(initialLyricsForMode || []));
-      let presentationModeKey = 'gemini';
-      try {
-        if (presentationLanguage) {
-          presentationModeKey = new Intl.DisplayNames(['en'], { type: 'language' })
-            .of(String(presentationLanguage).split('-')[0])
-            ?.toLowerCase() || 'gemini';
+      const computeSharedLyricsForMode = () => {
+        const configuredLanguageOverride = CONFIG.visual["translate:detect-language-override"];
+        const presentationLanguage = trackLanguageOverride ||
+          (configuredLanguageOverride && configuredLanguageOverride !== 'off'
+            ? configuredLanguageOverride
+            : Utils.detectLanguage(initialLyricsForMode || []));
+        let presentationModeKey = 'gemini';
+        try {
+          if (presentationLanguage) {
+            presentationModeKey = new Intl.DisplayNames(['en'], { type: 'language' })
+              .of(String(presentationLanguage).split('-')[0])
+              ?.toLowerCase() || 'gemini';
+          }
+        } catch (error) {
+          // Fall back to the generic Gemini mode key.
         }
-      } catch (error) {
-        // Fall back to the generic Gemini mode key.
-      }
-      const expectedDisplayMode1 = CONFIG.visual[`translation-mode:${presentationModeKey}`] || 'none';
-      const expectedDisplayMode2 = CONFIG.visual[`translation-mode-2:${presentationModeKey}`] || 'none';
-      const sharedLyricsForMode = canReuseSharedRawResult &&
-        sharedDisplayLyrics &&
-        sharedPresentationIsComplete &&
-        sharedSnapshot?.lyricsType === getLyricsModeTypeKey(finalMode) &&
-        (sharedSnapshot.displayMode1 || 'none') === expectedDisplayMode1 &&
-        (sharedSnapshot.displayMode2 || 'none') === expectedDisplayMode2 &&
-        (sharedSnapshot.detectedLanguage || '') === (presentationLanguage || '') &&
-        (sharedSnapshot.translationTargetLanguage || '') === getCurrentTranslationTargetLanguage() &&
-        (sharedSnapshot.pronunciationNotation || 'translation') === getCurrentLyricsPronunciationNotation() &&
-        (!sharedSnapshot.translationSourceText ||
-          sharedSnapshot.translationSourceText === getNonSectionLyricsText(initialLyricsForMode || []))
-        ? sharedDisplayLyrics
-        : null;
+        const expectedDisplayMode1 = CONFIG.visual[`translation-mode:${presentationModeKey}`] || 'none';
+        const expectedDisplayMode2 = CONFIG.visual[`translation-mode-2:${presentationModeKey}`] || 'none';
+        return canReuseSharedRawResult &&
+          sharedDisplayLyrics &&
+          sharedPresentationIsComplete &&
+          sharedSnapshot?.lyricsType === getLyricsModeTypeKey(finalMode) &&
+          (sharedSnapshot.displayMode1 || 'none') === expectedDisplayMode1 &&
+          (sharedSnapshot.displayMode2 || 'none') === expectedDisplayMode2 &&
+          (sharedSnapshot.detectedLanguage || '') === (presentationLanguage || '') &&
+          (sharedSnapshot.translationTargetLanguage || '') === getCurrentTranslationTargetLanguage() &&
+          (sharedSnapshot.pronunciationNotation || 'translation') === getCurrentLyricsPronunciationNotation() &&
+          (!sharedSnapshot.translationSourceText ||
+            sharedSnapshot.translationSourceText === getNonSectionLyricsText(initialLyricsForMode || []))
+          ? sharedDisplayLyrics
+          : null;
+      };
+      const sharedLyricsForMode = computeSharedLyricsForMode();
       const { currentLyrics: _ignoredCurrentLyrics, ...rawLyricsSnapshot } = tempState;
       window.LyricsService?.publishLyricsSnapshot?.({
         trackUri: info.uri,

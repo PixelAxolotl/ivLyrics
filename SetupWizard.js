@@ -2156,11 +2156,7 @@ const SetupWizard = ({ onComplete }) => {
     }
   };
 
-  const saveSettings = () => {
-
-
-    // Save theme settings
-    if (typeof StorageManager !== "undefined" && typeof CONFIG !== "undefined") {
+  const saveThemeAndFeatureConfig = () => {
       // Alignment
       StorageManager.saveConfig("alignment", themeSettings.alignment);
       CONFIG.visual.alignment = themeSettings.alignment;
@@ -2203,6 +2199,14 @@ const SetupWizard = ({ onComplete }) => {
       // Save pseudo karaoke setting
       StorageManager.saveConfig("spotify-fake-karaoke-enabled", pseudoKaraokeEnabled);
       CONFIG.visual["spotify-fake-karaoke-enabled"] = pseudoKaraokeEnabled;
+  };
+
+  const saveSettings = () => {
+
+
+    // Save theme settings
+    if (typeof StorageManager !== "undefined" && typeof CONFIG !== "undefined") {
+      saveThemeAndFeatureConfig();
     }
 
     // Keep the overlay runtime flag in the same persistent settings store.

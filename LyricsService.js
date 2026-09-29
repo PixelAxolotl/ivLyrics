@@ -1434,6 +1434,28 @@
         tx.onerror = () => reject(tx.error);
     });
 
+    // Deletes a track's cached translation entries by walking the
+    // 'translations' object store cursor. Shared verbatim by
+    // clearTranslationForTrack (resolves true) and clearTrack (resolves
+    // undefined); resolveValue keeps each caller's original resolution.
+    const deleteTrackCacheTranslations = (db, trackId, trackKeyRange, resolveValue) =>
+        new Promise((resolve, reject) => {
+            const transTx = db.transaction('translations', 'readwrite');
+            const transStore = transTx.objectStore('translations');
+            const transRequest = transStore.openCursor(trackKeyRange || undefined);
+
+            transRequest.onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    if (trackKeyRange || cursor.value.trackId === trackId) cursor.delete();
+                    cursor.continue();
+                }
+            };
+
+            transTx.oncomplete = () => resolve(resolveValue);
+            transTx.onerror = () => reject(transTx.error);
+        });
+
     const LyricsCache = {
         DB_NAME: 'ivLyricsCache',
         DB_VERSION: 7,
@@ -2086,24 +2108,7 @@
                 const db = await this._openDB();
                 const trackKeyRange = this._getTrackCacheKeyRange(trackId);
 
-                return new Promise((resolve, reject) => {
-                    const transTx = db.transaction('translations', 'readwrite');
-                    const transStore = transTx.objectStore('translations');
-                    const transRequest = transStore.openCursor(trackKeyRange || undefined);
-
-                    transRequest.onsuccess = (event) => {
-                        const cursor = event.target.result;
-                        if (cursor) {
-                            if (trackKeyRange || cursor.value.trackId === trackId) cursor.delete();
-                            cursor.continue();
-                        }
-                    };
-
-                    transTx.oncomplete = () => {
-                        resolve(true);
-                    };
-                    transTx.onerror = () => reject(transTx.error);
-                });
+                return deleteTrackCacheTranslations(db, trackId, trackKeyRange, true);
             } catch (error) {
                 console.error('[LyricsCache] clearTranslationForTrack error:', error);
                 return false;
@@ -2134,20 +2139,7 @@
                 }));
 
                 // 번역 삭제
-                deletePromises.push(new Promise((resolve, reject) => {
-                    const transTx = db.transaction('translations', 'readwrite');
-                    const transStore = transTx.objectStore('translations');
-                    const transRequest = transStore.openCursor(trackKeyRange || undefined);
-                    transRequest.onsuccess = (event) => {
-                        const cursor = event.target.result;
-                        if (cursor) {
-                            if (trackKeyRange || cursor.value.trackId === trackId) cursor.delete();
-                            cursor.continue();
-                        }
-                    };
-                    transTx.oncomplete = () => resolve();
-                    transTx.onerror = () => reject(transTx.error);
-                }));
+                deletePromises.push(deleteTrackCacheTranslations(db, trackId, trackKeyRange));
 
                 // YouTube 삭제
                 deletePromises.push(new Promise((resolve, reject) => {

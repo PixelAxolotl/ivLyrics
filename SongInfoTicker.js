@@ -1260,9 +1260,8 @@ const SongResearch = (() => {
             return () => nav.removeEventListener("wheel", handleWheel);
         }, [sectionDefinitions.length]);
 
-        if (info?.error) {
-            const isQuotaError = /429|quota|RESOURCE_EXHAUSTED/i.test(info.message || "");
-            return react.createElement("div", {
+        const renderResearchErrorState = (isQuotaError) =>
+            react.createElement("div", {
                 className: "research-view research-state-view",
                 style: { "--research-scale": researchScale },
                 role: "alert"
@@ -1277,7 +1276,12 @@ const SongResearch = (() => {
                     onRegenerate && react.createElement("button", { type: "button", className: "research-action research-action-primary", onClick: onRegenerate }, react.createElement(Icon, { name: "refresh" }), t("research.regenerate", "Research again")),
                     react.createElement("button", { type: "button", className: "research-action", onClick: onClose }, t("research.close", "Close"))
                 )
-            );
+            )
+        ;
+
+        if (info?.error) {
+            const isQuotaError = /429|quota|RESOURCE_EXHAUSTED/i.test(info.message || "");
+            return renderResearchErrorState(isQuotaError);
         }
 
         const renderResearchHero = () =>

@@ -861,12 +861,7 @@ const MarketplacePage = (() => {
             )
         );
 
-        return react.createElement('div', { className: 'ivlyrics-marketplace-detail' },
-            // Header with back button + action buttons
-            renderDetailHeader(),
-            // Two-column layout: main content + sidebar
-            react.createElement('div', { className: 'ivlyrics-marketplace-detail-layout' },
-                // Left: main content (scrollable)
+        const renderDetailMain = () => (
                 react.createElement('div', { className: 'ivlyrics-marketplace-detail-main' },
                     // Preview
                     addon.preview && react.createElement('div', { className: 'ivlyrics-marketplace-detail-image' },
@@ -913,7 +908,16 @@ const MarketplacePage = (() => {
                     ),
                     // Description (Markdown rendered)
                     react.createElement(MarkdownDescription, { description })
-                ),
+                )
+        );
+
+        return react.createElement('div', { className: 'ivlyrics-marketplace-detail' },
+            // Header with back button + action buttons
+            renderDetailHeader(),
+            // Two-column layout: main content + sidebar
+            react.createElement('div', { className: 'ivlyrics-marketplace-detail-layout' },
+                // Left: main content (scrollable)
+                renderDetailMain(),
                 // Right: sidebar
                 renderDetailSidebar()
             ),

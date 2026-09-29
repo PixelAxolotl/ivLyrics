@@ -287,7 +287,7 @@ const NoticeSystem = (() => {
         const now = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
         // 새로운 공지사항 필터링
-        return data.notices.filter((notice) => {
+        const isNoticeUnseen = (notice) => {
             // 만료된 공지 제외
             if (notice.expiresAt && notice.expiresAt < now) {
                 return false;
@@ -299,7 +299,9 @@ const NoticeSystem = (() => {
             }
 
             return true;
-        }).sort((a, b) => {
+        };
+
+        const compareNoticesByPriorityThenDate = (a, b) => {
             // 우선순위 정렬 (urgent > high > normal)
             const priorityOrder = { urgent: 3, high: 2, normal: 1 };
             const priorityDiff = (priorityOrder[b.priority] || 1) - (priorityOrder[a.priority] || 1);
@@ -307,7 +309,9 @@ const NoticeSystem = (() => {
 
             // 날짜 내림차순 정렬
             return b.date.localeCompare(a.date);
-        });
+        };
+
+        return data.notices.filter(isNoticeUnseen).sort(compareNoticesByPriorityThenDate);
     };
 
     // 공지 확인 처리 (닫기)

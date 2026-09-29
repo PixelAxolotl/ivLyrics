@@ -2836,8 +2836,7 @@ const FullscreenOverlay = (() => {
 
         if (!isFullscreen) return null;
 
-        if (focusedLyricsActive) {
-            return react.createElement(react.Fragment, null,
+        const renderFocusedLyricsView = () => react.createElement(react.Fragment, null,
                 react.createElement(VinylMode, {
                 track: liveVinylTrack,
                 albumRadius,
@@ -2921,7 +2920,10 @@ const FullscreenOverlay = (() => {
                     onNext: () => Spicetify.Player.next()
                 }),
                 renderResearchConsentDialog()
-            );
+        );
+
+        if (focusedLyricsActive) {
+            return renderFocusedLyricsView();
         }
 
         const CompactAlbumVinyl = VinylMode?.CompactAlbumVinyl;

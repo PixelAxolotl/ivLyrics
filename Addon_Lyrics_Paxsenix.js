@@ -896,7 +896,7 @@
         const syncType = String(payload?.syncType || '').toLowerCase();
         const hasSyllableSync = syncType === 'syllable';
 
-        const parsedLines = rawLines.map((line, index) => {
+        const parseStructuredLine = (line, index) => {
             const startTime = rawStarts[index];
             const nextStart = rawStarts[index + 1];
             let endTime = toMilliseconds(line?.endtime)
@@ -955,7 +955,8 @@
                 }
             }
             return parsed;
-        }).filter(Boolean).sort((left, right) => left.startTime - right.startTime);
+        };
+        const parsedLines = rawLines.map(parseStructuredLine).filter(Boolean).sort((left, right) => left.startTime - right.startTime);
 
         if (!parsedLines.length) return null;
         const displayLines = hasSyllableSync && isJapaneseLyricsPayload(payload)

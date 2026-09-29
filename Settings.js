@@ -4028,6 +4028,88 @@ const ConfigSettingsPresets = () => {
     }
   }, [presets, persistPresets]);
 
+  const renderPresetRow = (preset) =>
+              react.createElement(
+                "div",
+                {
+                  key: preset.id,
+                  style: {
+                    display: "grid",
+                    gridTemplateColumns: "minmax(0, 1fr) auto",
+                    gap: "12px",
+                    alignItems: "center",
+                    padding: "12px",
+                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                    background: "rgba(255, 255, 255, 0.04)",
+                    borderRadius: "8px",
+                  },
+                },
+                react.createElement(
+                  "div",
+                  { style: { minWidth: 0 } },
+                  react.createElement(
+                    "div",
+                    {
+                      className: "setting-name",
+                      style: {
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      },
+                      title: preset.name,
+                    },
+                    preset.name
+                  ),
+                  react.createElement(
+                    "div",
+                    { className: "setting-description" },
+                    `${formatSettingsPresetText(
+                      "settingsCount",
+                      "{count} settings",
+                      { count: Object.keys(preset.settings || {}).length }
+                    )} · ${formatSettingsPresetText(
+                      "updatedAt",
+                      "Updated {date}",
+                      { date: formatSettingsPresetDate(preset.updatedAt) }
+                    )}`
+                  )
+                ),
+                react.createElement(
+                  "div",
+                  {
+                    style: {
+                      display: "flex",
+                      gap: "8px",
+                      flexWrap: "wrap",
+                      justifyContent: "flex-end",
+                    },
+                  },
+                  react.createElement(
+                    "button",
+                    {
+                      className: "btn",
+                      type: "button",
+                      onClick: () => handleApply(preset),
+                    },
+                    getSettingsPresetText("apply", "Apply")
+                  ),
+                  react.createElement(
+                    "button",
+                    {
+                      className: "btn",
+                      type: "button",
+                      onClick: () => handleDelete(preset),
+                      style: {
+                        background: "rgba(239, 68, 68, 0.14)",
+                        borderColor: "rgba(239, 68, 68, 0.28)",
+                        color: "#fca5a5",
+                      },
+                    },
+                    getSettingsPresetText("delete", "Delete")
+                  )
+                )
+              );
+
   return react.createElement(
     "div",
     {
@@ -4119,88 +4201,7 @@ const ConfigSettingsPresets = () => {
               },
               getSettingsPresetText("empty", "No presets saved yet.")
             )
-          : presets.map((preset) =>
-              react.createElement(
-                "div",
-                {
-                  key: preset.id,
-                  style: {
-                    display: "grid",
-                    gridTemplateColumns: "minmax(0, 1fr) auto",
-                    gap: "12px",
-                    alignItems: "center",
-                    padding: "12px",
-                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                    background: "rgba(255, 255, 255, 0.04)",
-                    borderRadius: "8px",
-                  },
-                },
-                react.createElement(
-                  "div",
-                  { style: { minWidth: 0 } },
-                  react.createElement(
-                    "div",
-                    {
-                      className: "setting-name",
-                      style: {
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      },
-                      title: preset.name,
-                    },
-                    preset.name
-                  ),
-                  react.createElement(
-                    "div",
-                    { className: "setting-description" },
-                    `${formatSettingsPresetText(
-                      "settingsCount",
-                      "{count} settings",
-                      { count: Object.keys(preset.settings || {}).length }
-                    )} · ${formatSettingsPresetText(
-                      "updatedAt",
-                      "Updated {date}",
-                      { date: formatSettingsPresetDate(preset.updatedAt) }
-                    )}`
-                  )
-                ),
-                react.createElement(
-                  "div",
-                  {
-                    style: {
-                      display: "flex",
-                      gap: "8px",
-                      flexWrap: "wrap",
-                      justifyContent: "flex-end",
-                    },
-                  },
-                  react.createElement(
-                    "button",
-                    {
-                      className: "btn",
-                      type: "button",
-                      onClick: () => handleApply(preset),
-                    },
-                    getSettingsPresetText("apply", "Apply")
-                  ),
-                  react.createElement(
-                    "button",
-                    {
-                      className: "btn",
-                      type: "button",
-                      onClick: () => handleDelete(preset),
-                      style: {
-                        background: "rgba(239, 68, 68, 0.14)",
-                        borderColor: "rgba(239, 68, 68, 0.28)",
-                        color: "#fca5a5",
-                      },
-                    },
-                    getSettingsPresetText("delete", "Delete")
-                  )
-                )
-              )
-            )
+          : presets.map((preset) => renderPresetRow(preset))
       )
     )
   );

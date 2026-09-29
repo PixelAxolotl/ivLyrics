@@ -1228,28 +1228,7 @@ const MarketplacePage = (() => {
             );
         };
 
-        let pageContent = null;
-        if (selectedAddon) {
-            const updatedAddon = addons.find(addon => addon.id === selectedAddon.id) || selectedAddon;
-            pageContent = react.createElement(AddonDetail, {
-                addon: updatedAddon,
-                allAddons: addons,
-                onBack: () => setSelectedAddon(null),
-                onInstall: handleInstall,
-                onUninstall: handleUninstall,
-                onUpdate: handleUpdate,
-                onAuthorClick: handleAuthorClick,
-                onAddonClick: setSelectedAddon
-            });
-        } else if (selectedAuthor) {
-            pageContent = react.createElement(DeveloperProfile, {
-                authorLogin: selectedAuthor,
-                addons: authorAddons,
-                onBack: () => setSelectedAuthor(null),
-                onAddonClick: setSelectedAddon
-            });
-        } else {
-            pageContent = react.createElement('div', { className: 'ivlyrics-marketplace-container' },
+        const renderMarketplaceBrowseLayout = () => react.createElement('div', { className: 'ivlyrics-marketplace-container' },
                 react.createElement('div', { className: 'ivlyrics-marketplace-top' },
                     react.createElement('div', { className: 'ivlyrics-marketplace-header' },
                         react.createElement('div', { className: 'ivlyrics-marketplace-header-left' },
@@ -1349,6 +1328,29 @@ const MarketplacePage = (() => {
                     role: 'tabpanel'
                 }, view === 'installed' ? renderInstalledContent() : renderBrowseContent())
             );
+
+        let pageContent = null;
+        if (selectedAddon) {
+            const updatedAddon = addons.find(addon => addon.id === selectedAddon.id) || selectedAddon;
+            pageContent = react.createElement(AddonDetail, {
+                addon: updatedAddon,
+                allAddons: addons,
+                onBack: () => setSelectedAddon(null),
+                onInstall: handleInstall,
+                onUninstall: handleUninstall,
+                onUpdate: handleUpdate,
+                onAuthorClick: handleAuthorClick,
+                onAddonClick: setSelectedAddon
+            });
+        } else if (selectedAuthor) {
+            pageContent = react.createElement(DeveloperProfile, {
+                authorLogin: selectedAuthor,
+                addons: authorAddons,
+                onBack: () => setSelectedAuthor(null),
+                onAddonClick: setSelectedAddon
+            });
+        } else {
+            pageContent = renderMarketplaceBrowseLayout();
         }
 
         return react.createElement('div', { className: 'ivlyrics-marketplace-root' },

@@ -882,6 +882,95 @@ const OverlayTipStep = ({ overlayEnabled, onOverlayChange, onNext, onBack }) => 
     return () => clearInterval(interval);
   }, []);
 
+  const renderOverlayTipDescription = () => react.createElement(
+      "div",
+      {
+        style: {
+          ...wizardMessageStyle,
+        },
+      },
+      react.createElement(
+        "p",
+        {
+          style: {
+            fontSize: "12px",
+            color: WIZARD_COLORS.muted,
+            lineHeight: "1.6",
+            margin: "0 0 12px 0",
+          },
+        },
+        I18n.t("setupWizard.overlayTip.description")
+      ),
+      // Requires app notice
+      react.createElement(
+        "div",
+        {
+          style: {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "6px",
+            padding: "10px 14px",
+            background: WIZARD_COLORS.warningSurface,
+            border: `1px solid ${WIZARD_COLORS.warningBorder}`,
+            borderRadius: 0,
+            marginBottom: "12px",
+          },
+        },
+        react.createElement(
+          "svg",
+          {
+            width: 16,
+            height: 16,
+            viewBox: "0 0 24 24",
+            fill: "#ffc107",
+          },
+          react.createElement("path", {
+            d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z",
+          })
+        ),
+        react.createElement(
+          "span",
+          {
+            style: {
+              fontSize: "11px",
+              color: WIZARD_COLORS.warningText,
+              fontWeight: "500",
+            },
+          },
+          I18n.t("setupWizard.overlayTip.requiresApp")
+        )
+      ),
+      // Download button
+      react.createElement(
+        WizardButton,
+        {
+          onClick: () => {
+            const url = (typeof window !== "undefined" && window.OverlaySender?.getDownloadUrl?.()) ||
+              "https://ivlis.kr/ivLyrics/extensions/#overlay";
+            window.open(url, "_blank");
+          },
+          variant: "secondary",
+          style: {
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            color: WIZARD_COLORS.text,
+            background: WIZARD_COLORS.infoSurface,
+            borderColor: WIZARD_COLORS.infoBorder,
+          },
+        },
+        react.createElement("svg", {
+          width: 14,
+          height: 14,
+          viewBox: "0 0 24 24",
+          fill: "currentColor",
+          dangerouslySetInnerHTML: { __html: WizardIcons.externalLink },
+        }),
+        I18n.t("setupWizard.overlayTip.downloadApp")
+      )
+    );
+
   return react.createElement(
     "div",
     {
@@ -1021,94 +1110,7 @@ const OverlayTipStep = ({ overlayEnabled, onOverlayChange, onNext, onBack }) => 
         "setupWizard.overlayTip.enabled"
       ),
       // Description and install notice
-      react.createElement(
-        "div",
-        {
-          style: {
-            ...wizardMessageStyle,
-          },
-        },
-        react.createElement(
-          "p",
-          {
-            style: {
-              fontSize: "12px",
-              color: WIZARD_COLORS.muted,
-              lineHeight: "1.6",
-              margin: "0 0 12px 0",
-            },
-          },
-          I18n.t("setupWizard.overlayTip.description")
-        ),
-        // Requires app notice
-        react.createElement(
-          "div",
-          {
-            style: {
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "6px",
-              padding: "10px 14px",
-              background: WIZARD_COLORS.warningSurface,
-              border: `1px solid ${WIZARD_COLORS.warningBorder}`,
-              borderRadius: 0,
-              marginBottom: "12px",
-            },
-          },
-          react.createElement(
-            "svg",
-            {
-              width: 16,
-              height: 16,
-              viewBox: "0 0 24 24",
-              fill: "#ffc107",
-            },
-            react.createElement("path", {
-              d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z",
-            })
-          ),
-          react.createElement(
-            "span",
-            {
-              style: {
-                fontSize: "11px",
-                color: WIZARD_COLORS.warningText,
-                fontWeight: "500",
-              },
-            },
-            I18n.t("setupWizard.overlayTip.requiresApp")
-          )
-        ),
-        // Download button
-        react.createElement(
-          WizardButton,
-          {
-            onClick: () => {
-              const url = (typeof window !== "undefined" && window.OverlaySender?.getDownloadUrl?.()) ||
-                "https://ivlis.kr/ivLyrics/extensions/#overlay";
-              window.open(url, "_blank");
-            },
-            variant: "secondary",
-            style: {
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              color: WIZARD_COLORS.text,
-              background: WIZARD_COLORS.infoSurface,
-              borderColor: WIZARD_COLORS.infoBorder,
-            },
-          },
-          react.createElement("svg", {
-            width: 14,
-            height: 14,
-            viewBox: "0 0 24 24",
-            fill: "currentColor",
-            dangerouslySetInnerHTML: { __html: WizardIcons.externalLink },
-          }),
-          I18n.t("setupWizard.overlayTip.downloadApp")
-        )
-      )
+      renderOverlayTipDescription()
     ),
     react.createElement(WizardNavigation, { onBack, onNext })
   );

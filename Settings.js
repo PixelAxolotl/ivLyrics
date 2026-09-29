@@ -9553,6 +9553,19 @@ const ConfigModal = ({
     );
   };
 
+  // 외형 미리보기 설정 변경: setItem으로 저장하고 미리보기 스타일을 동기화한 뒤 config 이벤트를 발생
+  const handleAppearancePreviewChange = (name, value) => {
+    CONFIG.visual[name] = value;
+    StorageManager.setItem(`${APP_NAME}:visual:${name}`, value);
+    syncSettingsLyricsPreviewStyles();
+    lyricContainerUpdate?.();
+    window.dispatchEvent(
+      new CustomEvent("ivLyrics", {
+        detail: { type: "config", name, value },
+      })
+    );
+  };
+
   // 나우플레잉 패널 설정 변경: 설정 저장 후 config 이벤트와 미리보기 이벤트를 함께 발생
   const handleNowPlayingPanelChange = (name, value) => {
     CONFIG.visual[name] = value;
@@ -10131,17 +10144,7 @@ const ConfigModal = ({
             },
             ...createTextOutlineSettingItems("furigana"),
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.setItem(`${APP_NAME}:visual:${name}`, value);
-            syncSettingsLyricsPreviewStyles();
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
+          onChange: handleAppearancePreviewChange,
         }),
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.textShadow.title"),
@@ -10183,17 +10186,7 @@ const ConfigModal = ({
               unit: "px",
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.setItem(`${APP_NAME}:visual:${name}`, value);
-            syncSettingsLyricsPreviewStyles();
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
+          onChange: handleAppearancePreviewChange,
         })
       ),
       // 성능 탭

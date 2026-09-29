@@ -831,7 +831,7 @@
             }
 
             const now = new Date().toISOString();
-            const entry = {
+            const buildDirectAddonEntry = () => ({
                 id: addonInfo.id,
                 code,
                 metadata: {
@@ -851,7 +851,8 @@
                 },
                 installedAt: now,
                 updatedAt: now
-            };
+            });
+            const entry = buildDirectAddonEntry();
 
             try {
                 await this._dbPut(entry);

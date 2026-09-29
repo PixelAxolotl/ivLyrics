@@ -533,6 +533,17 @@ const ThemeStep = ({ settings, onSettingChange, onNext, onBack }) => {
     { value: "video", label: I18n.t("setupWizard.theme.backgrounds.video"), icon: WizardIcons.video },
   ];
 
+  const renderOptionButtons = (options, settingKey) =>
+    options.map((opt) =>
+      react.createElement(OptionButton, {
+        key: opt.value,
+        icon: opt.icon,
+        label: opt.label,
+        selected: settings[settingKey] === opt.value,
+        onClick: () => onSettingChange(settingKey, opt.value),
+      })
+    );
+
   return react.createElement(
     "div",
     {
@@ -568,15 +579,7 @@ const ThemeStep = ({ settings, onSettingChange, onNext, onBack }) => {
             gap: "10px",
           },
         },
-        alignmentOptions.map((opt) =>
-          react.createElement(OptionButton, {
-            key: opt.value,
-            icon: opt.icon,
-            label: opt.label,
-            selected: settings.alignment === opt.value,
-            onClick: () => onSettingChange("alignment", opt.value),
-          })
-        )
+        renderOptionButtons(alignmentOptions, "alignment")
       )
     ),
     // Background section
@@ -600,15 +603,7 @@ const ThemeStep = ({ settings, onSettingChange, onNext, onBack }) => {
             marginBottom: "10px",
           },
         },
-        backgroundOptions.slice(0, 2).map((opt) =>
-          react.createElement(OptionButton, {
-            key: opt.value,
-            icon: opt.icon,
-            label: opt.label,
-            selected: settings.background === opt.value,
-            onClick: () => onSettingChange("background", opt.value),
-          })
-        )
+        renderOptionButtons(backgroundOptions.slice(0, 2), "background")
       ),
       // Second row - 3 items
       react.createElement(
@@ -619,15 +614,7 @@ const ThemeStep = ({ settings, onSettingChange, onNext, onBack }) => {
             gap: "10px",
           },
         },
-        backgroundOptions.slice(2).map((opt) =>
-          react.createElement(OptionButton, {
-            key: opt.value,
-            icon: opt.icon,
-            label: opt.label,
-            selected: settings.background === opt.value,
-            onClick: () => onSettingChange("background", opt.value),
-          })
-        )
+        renderOptionButtons(backgroundOptions.slice(2), "background")
       )
     ),
     // Spacer

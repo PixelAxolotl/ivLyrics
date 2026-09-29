@@ -11893,21 +11893,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			);
 		};
 
-		return react.createElement('section', {
-		ref: historyPanelRef,
-		className: 'sync-creator-history-panel',
-		style: {
-			...s.historyPanel,
-			maxHeight: 'calc(100% - 180px)',
-			...(historyPanelHeight ? {
-				flex: `0 0 ${Math.round(historyPanelHeight)}px`,
-				height: `${Math.round(historyPanelHeight)}px`
-			} : null)
-		},
-		'aria-busy': isRestoringCheckpoint ? 'true' : undefined,
-		'aria-label': I18n.t('syncCreator.historyTitle') || '작업 내역'
-	},
-		react.createElement('div', {
+		const renderHistoryResizeHandle = () => react.createElement('div', {
 			className: 'sync-creator-history-resize-handle',
 			style: s.historyResizeHandle,
 			role: 'separator',
@@ -11923,7 +11909,28 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			onPointerUp: finishHistoryResize,
 			onPointerCancel: finishHistoryResize,
 			onKeyDown: handleHistoryResizeKeyDown
-		}, react.createElement('span', { style: s.historyResizeGrip, 'aria-hidden': true })),
+		}, react.createElement('span', { style: s.historyResizeGrip, 'aria-hidden': true }));
+		const renderHistoryLiveRegion = () => react.createElement('div', {
+			style: s.historyLive,
+			role: 'status',
+			'aria-live': 'polite',
+			'aria-atomic': 'true'
+		}, historyAnnouncement);
+		return react.createElement('section', {
+		ref: historyPanelRef,
+		className: 'sync-creator-history-panel',
+		style: {
+			...s.historyPanel,
+			maxHeight: 'calc(100% - 180px)',
+			...(historyPanelHeight ? {
+				flex: `0 0 ${Math.round(historyPanelHeight)}px`,
+				height: `${Math.round(historyPanelHeight)}px`
+			} : null)
+		},
+		'aria-busy': isRestoringCheckpoint ? 'true' : undefined,
+		'aria-label': I18n.t('syncCreator.historyTitle') || '작업 내역'
+	},
+		renderHistoryResizeHandle(),
 		renderHistoryHeader(),
 		sessionHistory.length > 0
 			? react.createElement('ol', { ref: historyListRef, style: s.historyList },
@@ -11932,12 +11939,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			: react.createElement('div', { style: s.historyEmpty },
 				I18n.t('syncCreator.historyEmpty') || '30초 자동 저장 또는 수동 저장 시 작업 상태가 여기에 기록됩니다.'
 			),
-		react.createElement('div', {
-			style: s.historyLive,
-			role: 'status',
-			'aria-live': 'polite',
-			'aria-atomic': 'true'
-		}, historyAnnouncement)
+		renderHistoryLiveRegion()
 	);
 	};
 

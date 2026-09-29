@@ -213,6 +213,20 @@
         return getSetting('model', null);
     }
 
+    function resolveApiCredentials(connection) {
+        const apiKeys = getApiKeys(connection);
+        if (apiKeys.length === 0) {
+            throw new Error('[ChatGPT] API key is required. Please configure your API key in settings.');
+        }
+
+        const baseUrl = getBaseUrl(connection);
+        const model = getSelectedModel(connection);
+        if (!model) {
+            throw new Error('[ChatGPT] Model is not selected. Please select a model in settings.');
+        }
+        return { apiKeys, baseUrl, model };
+    }
+
 
     function parseConnectionKeys(raw) {
         if (Array.isArray(raw)) return raw.filter(key => typeof key === 'string').map(key => key.trim()).filter(Boolean);
@@ -501,16 +515,7 @@
         connection = null
     ) {
         if (!connection) return withProviderConnections(provider => callChatGPTAPIRaw(prompt, maxRetries, transformResult, requestTimeoutMs, provider));
-        const apiKeys = getApiKeys(connection);
-        if (apiKeys.length === 0) {
-            throw new Error('[ChatGPT] API key is required. Please configure your API key in settings.');
-        }
-
-        const baseUrl = getBaseUrl(connection);
-        const model = getSelectedModel(connection);
-        if (!model) {
-            throw new Error('[ChatGPT] Model is not selected. Please select a model in settings.');
-        }
+        const { apiKeys, baseUrl, model } = resolveApiCredentials(connection);
         let lastError = null;
 
         for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
@@ -627,16 +632,7 @@
         connection = null
     ) {
         if (!connection) return withProviderConnections(provider => callResponsesAPIStream(prompt, onLine, onStreamReset, maxRetries, transformResult, requestTimeoutMs, onRawChunk, provider));
-        const apiKeys = getApiKeys(connection);
-        if (apiKeys.length === 0) {
-            throw new Error('[ChatGPT] API key is required. Please configure your API key in settings.');
-        }
-
-        const baseUrl = getBaseUrl(connection);
-        const model = getSelectedModel(connection);
-        if (!model) {
-            throw new Error('[ChatGPT] Model is not selected. Please select a model in settings.');
-        }
+        const { apiKeys, baseUrl, model } = resolveApiCredentials(connection);
         let lastError = null;
 
         for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
@@ -803,16 +799,7 @@
         connection = null
     ) {
         if (!connection) return withProviderConnections(provider => callChatGPTAPIStream(prompt, onLine, onStreamReset, maxRetries, transformResult, requestTimeoutMs, onRawChunk, provider));
-        const apiKeys = getApiKeys(connection);
-        if (apiKeys.length === 0) {
-            throw new Error('[ChatGPT] API key is required. Please configure your API key in settings.');
-        }
-
-        const baseUrl = getBaseUrl(connection);
-        const model = getSelectedModel(connection);
-        if (!model) {
-            throw new Error('[ChatGPT] Model is not selected. Please select a model in settings.');
-        }
+        const { apiKeys, baseUrl, model } = resolveApiCredentials(connection);
         let lastError = null;
 
         for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {

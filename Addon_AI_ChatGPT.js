@@ -472,6 +472,27 @@
         return { text, finishReason };
     }
 
+    // Shared 401 / non-OK handling for the chat/completions request loops.
+    // On 401 it throws the permission message; otherwise it reports the HTTP status.
+    // Either branch reads the JSON body at most once, matching the inline versions.
+    async function throwChatGPTApiResponseError(response) {
+        if (response.status === 401) {
+            let errorMessage = 'Invalid API key or permission denied.';
+            try {
+                const errorData = await response.json();
+                if (errorData.error?.message) errorMessage = errorData.error.message;
+            } catch (parseError) { }
+            throw new Error(`[ChatGPT] ${errorMessage}`);
+        }
+
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+            const errorData = await response.json();
+            if (errorData.error?.message) errorMessage = errorData.error.message;
+        } catch (parseError) { }
+        throw new Error(`[ChatGPT] ${errorMessage}`);
+    }
+
     async function callChatGPTAPIRaw(
         prompt,
         maxRetries = window.AIAddonManager?.getProviderRequestAttempts?.() ?? 3,
@@ -513,26 +534,8 @@
                         break; // Try next key
                     }
 
-                    if (response.status === 401) {
-                        let errorMessage = 'Invalid API key or permission denied.';
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error?.message) {
-                                errorMessage = errorData.error.message;
-                            }
-                        } catch (parseError) { }
-                        throw new Error(`[ChatGPT] ${errorMessage}`);
-                    }
-
-                    if (!response.ok) {
-                        let errorMessage = `HTTP ${response.status}`;
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error?.message) {
-                                errorMessage = errorData.error.message;
-                            }
-                        } catch (parseError) { }
-                        throw new Error(`[ChatGPT] ${errorMessage}`);
+                    if (response.status === 401 || !response.ok) {
+                        await throwChatGPTApiResponseError(response);
                     }
 
                     const data = await response.json();
@@ -856,16 +859,8 @@
                         break;
                     }
 
-                    if (response.status === 401) {
-                        let errorMessage = 'Invalid API key or permission denied.';
-                        try { const d = await response.json(); if (d.error?.message) errorMessage = d.error.message; } catch (e) { }
-                        throw new Error(`[ChatGPT] ${errorMessage}`);
-                    }
-
-                    if (!response.ok) {
-                        let errorMessage = `HTTP ${response.status}`;
-                        try { const d = await response.json(); if (d.error?.message) errorMessage = d.error.message; } catch (e) { }
-                        throw new Error(`[ChatGPT] ${errorMessage}`);
+                    if (response.status === 401 || !response.ok) {
+                        await throwChatGPTApiResponseError(response);
                     }
 
                     // Some compatible APIs accept `stream: true` but still

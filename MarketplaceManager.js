@@ -53,6 +53,15 @@
     const BLACKLIST_URL_LOCAL = 'blacklist.json';
     const BLACKLIST_URL_REMOTE = 'https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/refs/heads/main/blacklist.json';
 
+    // 타입별로 해당 매니저에 마켓플레이스 에드온으로 표시
+    function markMarketplaceAddonByType(type, runtimeId) {
+        if (type === 'lyrics' && window.LyricsAddonManager) {
+            window.LyricsAddonManager.markAsMarketplaceAddon(runtimeId);
+        } else if (type === 'ai' && window.AIAddonManager) {
+            window.AIAddonManager.markAsMarketplaceAddon(runtimeId);
+        }
+    }
+
     // ============================================
     // MarketplaceManager Class
     // ============================================
@@ -259,11 +268,7 @@
                     if (this._loadErrors.has(addon.id)) continue;
                     const type = addon.metadata?.type;
                     const runtimeId = addon.metadata?.runtimeId || addon.id;
-                    if (type === 'lyrics' && window.LyricsAddonManager) {
-                        window.LyricsAddonManager.markAsMarketplaceAddon(runtimeId);
-                    } else if (type === 'ai' && window.AIAddonManager) {
-                        window.AIAddonManager.markAsMarketplaceAddon(runtimeId);
-                    }
+                    markMarketplaceAddonByType(type, runtimeId);
                 }
             }, 500);
 
@@ -767,11 +772,7 @@
                 // 매니저에 마켓플레이스 에드온으로 표시
                 setTimeout(() => {
                     const runtimeId = entry.metadata.runtimeId || id;
-                    if (type === 'lyrics' && window.LyricsAddonManager) {
-                        window.LyricsAddonManager.markAsMarketplaceAddon(runtimeId);
-                    } else if (type === 'ai' && window.AIAddonManager) {
-                        window.AIAddonManager.markAsMarketplaceAddon(runtimeId);
-                    }
+                    markMarketplaceAddonByType(type, runtimeId);
                 }, 300);
 
                 // Provider 순서에 추가 (맨 앞에)

@@ -317,8 +317,8 @@ const SyncedVideoPreview = ({ videoId, startTime, skipSegments = [], isAutoGener
 
       if (Spicetify.Player.isPlaying()) {
         if (video.paused) video.play().catch(() => { });
-      } else {
-        if (!video.paused) video.pause();
+      } else if (!video.paused) {
+        video.pause();
       }
     };
 
@@ -381,11 +381,9 @@ const SyncedVideoPreview = ({ videoId, startTime, skipSegments = [], isAutoGener
             // not playing and not buffering
             playerRef.current.playVideo();
           }
-        } else {
-          if (playerState === 1) {
-            // playing
-            playerRef.current.pauseVideo();
-          }
+        } else if (playerState === 1) {
+          // playing
+          playerRef.current.pauseVideo();
         }
       } catch (e) {
         console.error("[SyncedVideoPreview] Sync error:", e);

@@ -11235,13 +11235,8 @@ react.createElement(OptionList, {
           ],
           onChange: () => { },
         });
-  const renderAdvancedTab = () =>
-react.createElement(
-        "div",
-        {
-          className: `tab-content ${activeTab === "advanced" ? "active" : ""}`,
-          "data-tab-id": "advanced",
-        },
+  const renderAdvancedTab = () => {
+    const renderAdvancedLanguageDetectionSection = () => [
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.languageDetection.title"),
           subtitle: I18n.t("settingsAdvanced.languageDetection.subtitle"),
@@ -11273,6 +11268,8 @@ react.createElement(
           onChange: handleVisualConfigChange,
         }),
 
+    ];
+    const renderAdvancedCloudSyncSection = () => [
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.cloudSync.title"),
           subtitle: I18n.t("settingsAdvanced.cloudSync.monthlyRequired"),
@@ -11280,6 +11277,8 @@ react.createElement(
         }),
         react.createElement(ConfigCloudSync),
 
+    ];
+    const renderAdvancedExportImportGroup = () => [
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.exportImport.title"),
           subtitle: I18n.t("settingsAdvanced.exportImport.subtitle"),
@@ -11287,6 +11286,8 @@ react.createElement(
         }),
         renderAdvancedExportImportSection(),
 
+    ];
+    const renderAdvancedSettingsPresetsSection = () => [
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.settingsPresets.title"),
           subtitle: I18n.t("settingsAdvanced.settingsPresets.subtitle"),
@@ -11294,6 +11295,8 @@ react.createElement(
         }),
         react.createElement(ConfigSettingsPresets),
 
+    ];
+    const renderAdvancedDbExportImportGroup = () => [
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.dbExportImport.title"),
           subtitle: I18n.t("settingsAdvanced.dbExportImport.subtitle"),
@@ -11301,6 +11304,8 @@ react.createElement(
         }),
         renderAdvancedDbExportImportSection(),
 
+    ];
+    const renderAdvancedResetSection = () => [
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.resetSettings.title"),
           subtitle: I18n.t("settingsAdvanced.resetSettings.subtitle"),
@@ -11424,7 +11429,22 @@ react.createElement(
           ],
           onChange: () => { },
         })
-      );
+    ];
+
+    return react.createElement(
+      "div",
+        {
+          className: `tab-content ${activeTab === "advanced" ? "active" : ""}`,
+          "data-tab-id": "advanced",
+        },
+      ...renderAdvancedLanguageDetectionSection(),
+      ...renderAdvancedCloudSyncSection(),
+      ...renderAdvancedExportImportGroup(),
+      ...renderAdvancedSettingsPresetsSection(),
+      ...renderAdvancedDbExportImportGroup(),
+      ...renderAdvancedResetSection(),
+    );
+  };
 
   const renderFullscreenUiSection = () =>
 react.createElement(OptionList, {

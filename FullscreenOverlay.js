@@ -1296,6 +1296,50 @@ const FullscreenOverlay = (() => {
             }
         };
 
+        const renderPlaylistPickerItem = (playlist) => {
+                            const playlistState = playlistTrackStatus[playlist.id];
+                            const playlistStatus = getPlaylistStatusValue(playlistState);
+                            const isCheckingPlaylist = playlistStatus === "checking";
+                            const alreadyContainsTrack = playlistStatus === "contains";
+                            const isAddingPlaylist = addingPlaylistId === playlist.id;
+
+                            return react.createElement("button", {
+                                key: playlist.id,
+                                className: `fullscreen-playlist-item ${alreadyContainsTrack ? 'contains-current-track' : ''}`,
+                                onClick: () => handlePlaylistItemAction(playlist),
+                                disabled: !!addingPlaylistId || isCheckingPlaylist,
+                                role: "menuitem"
+                            },
+                                playlist.image
+                                    ? react.createElement("img", {
+                                        src: playlist.image,
+                                        className: "fullscreen-playlist-item-image",
+                                        alt: ""
+                                    })
+                                    : react.createElement("span", { className: "fullscreen-playlist-item-fallback" }, "♪"),
+                                react.createElement("span", { className: "fullscreen-playlist-item-text" },
+                                    react.createElement("span", { className: "fullscreen-playlist-item-name" }, playlist.name),
+                                    react.createElement("span", { className: "fullscreen-playlist-item-count" },
+                                        `${playlist.total} ${I18n.t("fullscreen.controls.playlistTracks") || "tracks"}`
+                                    )
+                                ),
+                                isAddingPlaylist
+                                    ? react.createElement("span", { className: "fullscreen-playlist-item-loading" }, "...")
+                                    : isCheckingPlaylist
+                                        ? react.createElement("span", { className: "fullscreen-playlist-item-status checking" },
+                                            I18n.t("fullscreen.controls.playlistChecking") || "Checking..."
+                                        )
+                                        : alreadyContainsTrack && react.createElement("span", { className: "fullscreen-playlist-item-status contains" },
+                                            react.createElement("span", { className: "fullscreen-playlist-item-status-default" },
+                                                I18n.t("fullscreen.controls.playlistAlreadyInList") || "Already in"
+                                            ),
+                                            react.createElement("span", { className: "fullscreen-playlist-item-status-remove" },
+                                                I18n.t("fullscreen.controls.playlistRemove") || "Remove"
+                                            )
+                                        )
+                            );
+        };
+
         return react.createElement("div", {
             className: `fullscreen-player-controls ${showBackground ? 'with-background' : ''}`
         },
@@ -1418,49 +1462,7 @@ const FullscreenOverlay = (() => {
                             I18n.t("fullscreen.controls.playlistLoading") || "Loading playlists..."
                         ),
                         !isPlaylistsLoading && playlistError && react.createElement("div", { className: "fullscreen-playlist-state error" }, playlistError),
-                        !isPlaylistsLoading && !playlistError && playlists.map((playlist) => {
-                            const playlistState = playlistTrackStatus[playlist.id];
-                            const playlistStatus = getPlaylistStatusValue(playlistState);
-                            const isCheckingPlaylist = playlistStatus === "checking";
-                            const alreadyContainsTrack = playlistStatus === "contains";
-                            const isAddingPlaylist = addingPlaylistId === playlist.id;
-
-                            return react.createElement("button", {
-                                key: playlist.id,
-                                className: `fullscreen-playlist-item ${alreadyContainsTrack ? 'contains-current-track' : ''}`,
-                                onClick: () => handlePlaylistItemAction(playlist),
-                                disabled: !!addingPlaylistId || isCheckingPlaylist,
-                                role: "menuitem"
-                            },
-                                playlist.image
-                                    ? react.createElement("img", {
-                                        src: playlist.image,
-                                        className: "fullscreen-playlist-item-image",
-                                        alt: ""
-                                    })
-                                    : react.createElement("span", { className: "fullscreen-playlist-item-fallback" }, "♪"),
-                                react.createElement("span", { className: "fullscreen-playlist-item-text" },
-                                    react.createElement("span", { className: "fullscreen-playlist-item-name" }, playlist.name),
-                                    react.createElement("span", { className: "fullscreen-playlist-item-count" },
-                                        `${playlist.total} ${I18n.t("fullscreen.controls.playlistTracks") || "tracks"}`
-                                    )
-                                ),
-                                isAddingPlaylist
-                                    ? react.createElement("span", { className: "fullscreen-playlist-item-loading" }, "...")
-                                    : isCheckingPlaylist
-                                        ? react.createElement("span", { className: "fullscreen-playlist-item-status checking" },
-                                            I18n.t("fullscreen.controls.playlistChecking") || "Checking..."
-                                        )
-                                        : alreadyContainsTrack && react.createElement("span", { className: "fullscreen-playlist-item-status contains" },
-                                            react.createElement("span", { className: "fullscreen-playlist-item-status-default" },
-                                                I18n.t("fullscreen.controls.playlistAlreadyInList") || "Already in"
-                                            ),
-                                            react.createElement("span", { className: "fullscreen-playlist-item-status-remove" },
-                                                I18n.t("fullscreen.controls.playlistRemove") || "Remove"
-                                            )
-                                        )
-                            );
-                        })
+                        !isPlaylistsLoading && !playlistError && playlists.map((playlist) => renderPlaylistPickerItem(playlist))
                     )
                 )
             ),

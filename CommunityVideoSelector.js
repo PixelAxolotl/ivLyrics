@@ -1512,201 +1512,7 @@ const CommunityVideoSelector = ({
                   )
   ;
 
-  return react.createElement(
-    "div",
-    {
-      className: "community-video-selector",
-      onClick: (e) => e.stopPropagation(),
-    },
-    // Header
-    react.createElement(
-      "div",
-      {
-        className: "community-video-header",
-      },
-      react.createElement("h3", null, I18n.t("communityVideo.title")),
-      react.createElement(
-        "button",
-        {
-          className: "community-video-close",
-          onClick: onClose,
-          title: I18n.t("close"),
-        },
-        react.createElement(
-          "svg",
-          { width: 16, height: 16, viewBox: "0 0 16 16", fill: "currentColor" },
-          react.createElement("path", { d: "M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z" })
-        )
-      )
-    ),
-
-    // Content
-    react.createElement(
-      "div",
-      {
-        className: "community-video-content",
-      },
-      !isLocalVideoMode &&
-      react.createElement(
-        "div",
-        {
-          className: `community-video-random-setting${randomSelectionEnabled ? " enabled" : ""}`,
-        },
-        react.createElement(
-          "div",
-          { className: "community-video-random-row" },
-          react.createElement(
-            "div",
-            { className: "community-video-random-copy" },
-            react.createElement(
-              "div",
-              {
-                id: "community-video-random-label",
-                className: "community-video-random-label",
-              },
-              I18n.t("communityVideo.randomSelectionLabel")
-            ),
-            react.createElement(
-              "div",
-              { className: "community-video-random-description" },
-              I18n.t("communityVideo.randomSelectionDesc")
-            )
-          ),
-          react.createElement(
-            "button",
-            {
-              type: "button",
-              className: "community-video-random-switch",
-              role: "switch",
-              "aria-checked": randomSelectionEnabled,
-              "aria-labelledby": "community-video-random-label",
-              onClick: toggleRandomSelection,
-            },
-            react.createElement("span", {
-              className: "community-video-random-switch-thumb",
-              "aria-hidden": "true",
-            })
-          )
-        ),
-        react.createElement(
-          "div",
-          {
-            className: "community-video-random-warning",
-            role: "note",
-          },
-          I18n.t("communityVideo.randomSelectionWarning")
-        )
-      ),
-      !isLocalVideoMode &&
-      react.createElement(
-        "div",
-        {
-          className: `community-video-filter-setting${hideDislikedVideos ? " enabled" : ""}`,
-        },
-        react.createElement(
-          "div",
-          { className: "community-video-random-row" },
-          react.createElement(
-            "div",
-            { className: "community-video-random-copy" },
-            react.createElement(
-              "div",
-              {
-                id: "community-video-hide-disliked-label",
-                className: "community-video-random-label",
-              },
-              I18n.t("communityVideo.hideDislikedLabel")
-            ),
-            react.createElement(
-              "div",
-              { className: "community-video-random-description" },
-              I18n.t("communityVideo.hideDislikedDesc", { count: dislikedVideoCount })
-            )
-          ),
-          react.createElement(
-            "button",
-            {
-              type: "button",
-              className: "community-video-random-switch",
-              role: "switch",
-              "aria-checked": hideDislikedVideos,
-              "aria-labelledby": "community-video-hide-disliked-label",
-              onClick: toggleHideDislikedVideos,
-            },
-            react.createElement("span", {
-              className: "community-video-random-switch-thumb",
-              "aria-hidden": "true",
-            })
-          )
-        )
-      ),
-      isLoading
-        ? react.createElement(
-          "div",
-          {
-            className: "community-video-loading",
-          },
-          react.createElement("div", { className: "spinner" }),
-          I18n.t("communityVideo.loading")
-        )
-        : error
-          ? react.createElement(
-            "div",
-            {
-              className: "community-video-error",
-            },
-            error
-          )
-          : react.createElement(
-            react.Fragment,
-            null,
-            isLocalVideoMode &&
-            react.createElement(
-              "div",
-              {
-                className: "community-video-local-note",
-              },
-              I18n.t("communityVideo.localTrackDesc") || "로컬 곡입니다. YouTube URL은 이 기기에만 저장되고 서버로 전송되지 않습니다."
-            ),
-            // Video List
-            visibleVideos.length > 0
-              ? react.createElement(
-                "div",
-                {
-                  className: "community-video-list",
-                },
-                visibleVideos.map((video, index) => renderVideoListItem(video, index))
-              )
-              : react.createElement(
-                "div",
-                {
-                  className: "community-video-empty",
-                },
-                hideDislikedVideos && videos.length > 0
-                  ? I18n.t("communityVideo.allDislikedHidden")
-                  : I18n.t("communityVideo.noVideos")
-              ),
-
-            // Submit Form Toggle
-            react.createElement(
-              "button",
-              {
-                className: "community-video-add-btn",
-                onClick: () => {
-                  if (showSubmitForm) {
-                    resetSubmitForm();
-                  } else {
-                    void openSubmitForm();
-                  }
-                },
-              },
-              showSubmitForm
-                ? I18n.t("cancel")
-                : I18n.t("communityVideo.addVideoNoEmoji")
-            ),
-
-            // Submit Form
-            showSubmitForm &&
+  const renderSubmitForm = () =>
             react.createElement(
               "div",
               {
@@ -2004,6 +1810,204 @@ const CommunityVideoSelector = ({
 	                      : I18n.t("communityVideo.submit")))
 	              )
 	            )
+  ;
+
+  return react.createElement(
+    "div",
+    {
+      className: "community-video-selector",
+      onClick: (e) => e.stopPropagation(),
+    },
+    // Header
+    react.createElement(
+      "div",
+      {
+        className: "community-video-header",
+      },
+      react.createElement("h3", null, I18n.t("communityVideo.title")),
+      react.createElement(
+        "button",
+        {
+          className: "community-video-close",
+          onClick: onClose,
+          title: I18n.t("close"),
+        },
+        react.createElement(
+          "svg",
+          { width: 16, height: 16, viewBox: "0 0 16 16", fill: "currentColor" },
+          react.createElement("path", { d: "M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z" })
+        )
+      )
+    ),
+
+    // Content
+    react.createElement(
+      "div",
+      {
+        className: "community-video-content",
+      },
+      !isLocalVideoMode &&
+      react.createElement(
+        "div",
+        {
+          className: `community-video-random-setting${randomSelectionEnabled ? " enabled" : ""}`,
+        },
+        react.createElement(
+          "div",
+          { className: "community-video-random-row" },
+          react.createElement(
+            "div",
+            { className: "community-video-random-copy" },
+            react.createElement(
+              "div",
+              {
+                id: "community-video-random-label",
+                className: "community-video-random-label",
+              },
+              I18n.t("communityVideo.randomSelectionLabel")
+            ),
+            react.createElement(
+              "div",
+              { className: "community-video-random-description" },
+              I18n.t("communityVideo.randomSelectionDesc")
+            )
+          ),
+          react.createElement(
+            "button",
+            {
+              type: "button",
+              className: "community-video-random-switch",
+              role: "switch",
+              "aria-checked": randomSelectionEnabled,
+              "aria-labelledby": "community-video-random-label",
+              onClick: toggleRandomSelection,
+            },
+            react.createElement("span", {
+              className: "community-video-random-switch-thumb",
+              "aria-hidden": "true",
+            })
+          )
+        ),
+        react.createElement(
+          "div",
+          {
+            className: "community-video-random-warning",
+            role: "note",
+          },
+          I18n.t("communityVideo.randomSelectionWarning")
+        )
+      ),
+      !isLocalVideoMode &&
+      react.createElement(
+        "div",
+        {
+          className: `community-video-filter-setting${hideDislikedVideos ? " enabled" : ""}`,
+        },
+        react.createElement(
+          "div",
+          { className: "community-video-random-row" },
+          react.createElement(
+            "div",
+            { className: "community-video-random-copy" },
+            react.createElement(
+              "div",
+              {
+                id: "community-video-hide-disliked-label",
+                className: "community-video-random-label",
+              },
+              I18n.t("communityVideo.hideDislikedLabel")
+            ),
+            react.createElement(
+              "div",
+              { className: "community-video-random-description" },
+              I18n.t("communityVideo.hideDislikedDesc", { count: dislikedVideoCount })
+            )
+          ),
+          react.createElement(
+            "button",
+            {
+              type: "button",
+              className: "community-video-random-switch",
+              role: "switch",
+              "aria-checked": hideDislikedVideos,
+              "aria-labelledby": "community-video-hide-disliked-label",
+              onClick: toggleHideDislikedVideos,
+            },
+            react.createElement("span", {
+              className: "community-video-random-switch-thumb",
+              "aria-hidden": "true",
+            })
+          )
+        )
+      ),
+      isLoading
+        ? react.createElement(
+          "div",
+          {
+            className: "community-video-loading",
+          },
+          react.createElement("div", { className: "spinner" }),
+          I18n.t("communityVideo.loading")
+        )
+        : error
+          ? react.createElement(
+            "div",
+            {
+              className: "community-video-error",
+            },
+            error
+          )
+          : react.createElement(
+            react.Fragment,
+            null,
+            isLocalVideoMode &&
+            react.createElement(
+              "div",
+              {
+                className: "community-video-local-note",
+              },
+              I18n.t("communityVideo.localTrackDesc") || "로컬 곡입니다. YouTube URL은 이 기기에만 저장되고 서버로 전송되지 않습니다."
+            ),
+            // Video List
+            visibleVideos.length > 0
+              ? react.createElement(
+                "div",
+                {
+                  className: "community-video-list",
+                },
+                visibleVideos.map((video, index) => renderVideoListItem(video, index))
+              )
+              : react.createElement(
+                "div",
+                {
+                  className: "community-video-empty",
+                },
+                hideDislikedVideos && videos.length > 0
+                  ? I18n.t("communityVideo.allDislikedHidden")
+                  : I18n.t("communityVideo.noVideos")
+              ),
+
+            // Submit Form Toggle
+            react.createElement(
+              "button",
+              {
+                className: "community-video-add-btn",
+                onClick: () => {
+                  if (showSubmitForm) {
+                    resetSubmitForm();
+                  } else {
+                    void openSubmitForm();
+                  }
+                },
+              },
+              showSubmitForm
+                ? I18n.t("cancel")
+                : I18n.t("communityVideo.addVideoNoEmoji")
+            ),
+
+            // Submit Form
+            showSubmitForm &&
+            renderSubmitForm()
           )
     ),
 

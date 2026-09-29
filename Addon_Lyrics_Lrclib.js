@@ -2069,117 +2069,10 @@
 
         return runSearchFlow;
     }
-    const LrclibLyricsAddon = {
-        ...ADDON_INFO,  // 메타데이터 병합 (id, name, version 등)
-
-        /**
-         * 【초기화 메서드】
-         * 애드온이 로드될 때 호출됩니다.
-         * 현재 설정 상태를 반영한 캐시 버전을 동기화합니다.
-         */
-        async init() {
-            syncAddonCacheVersion();
-        },
-
-        async searchCandidates(info) {
-            try {
-                const title = info?.title?.trim?.();
-                const artist = info?.artist?.trim?.();
-                const album = info?.album?.trim?.();
-                const searchSettings = getSearchSettings();
-                const trackDuration = Number(info?.duration || 0);
-                const trackDurationSec = trackDuration > 0 ? trackDuration / 1000 : 0;
-                const expectedArtists = splitArtists(artist);
-
-                if (!title || !artist || !trackDurationSec) {
-                    return {
-                        success: false,
-                        error: 'Missing track metadata',
-                        candidates: [],
-                        selectedCandidateKey: null
-                    };
-                }
-
-                const headers = { 'x-user-agent': `spicetify v${Spicetify.Config?.version || 'unknown'}` };
-                const trackId = window.LyricsService?.extractTrackId?.(info?.uri)
-                    || window.ivLyricsTrackIdentity?.extractTrackId?.(info?.uri)
-                    || '';
-                const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, info)
-                    || window.SyncDataService?.getTrackIsrc?.(trackId, info)
-                    || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);
-                let syncDataLineCharCounts = null;
-                let syncDataSource = null;
-
-                if (trackId && window.SyncDataService?.getSyncData) {
-                    try {
-                        const existingSyncData = await window.SyncDataService.getSyncData(trackId, ADDON_INFO.id, { ...info, isrc: trackIsrc });
-                        syncDataLineCharCounts = getSyncDataLineCharCounts(existingSyncData);
-                        syncDataSource = getSyncDataLrclibSource(existingSyncData);
-                    } catch (e) {
-                        window.__ivLyricsDebugLog?.('[LR-DEBUG] Failed to fetch sync-data for exact line matching:', e?.message || e);
-                    }
-                }
-
-                let sourceDirectLookupAttempted = false;
-                let cachedSourceDirectPreviewCandidate = null;
-                const getSourceDirectPreviewCandidate = async () => {
-                    if (sourceDirectLookupAttempted) return cachedSourceDirectPreviewCandidate;
-                    sourceDirectLookupAttempted = true;
-
-                    if (!getSyncDataLrclibId(syncDataSource)) return null;
-
-                    try {
-                        const directCandidate = decorateDirectCandidate(
-                            await fetchLrclibCandidateById(syncDataSource, headers),
-                            syncDataSource,
-                            trackDurationSec
-                        );
-                        cachedSourceDirectPreviewCandidate = buildDirectPreviewCandidate(directCandidate);
-                    } catch (e) {
-                        window.__ivLyricsDebugLog?.('[LR-DEBUG] Failed to restore LRCLIB sync-data source:', e?.message || e);
-                        cachedSourceDirectPreviewCandidate = null;
-                    }
-                    return cachedSourceDirectPreviewCandidate;
-                };
-
-                const buildSourceDirectSearchResult = (directPreviewCandidate) => ({
-                    success: true,
-                    error: null,
-                    candidates: [directPreviewCandidate],
-                    selectedCandidateKey: directPreviewCandidate.candidateKey,
-                    selectedSource: 'source-direct',
-                    searchMode: 'source-direct',
-                    totalResults: 1,
-                    usedFallbackQuery: false,
-                    syncDataLineCount: syncDataLineCharCounts?.length || 0,
-                    directLrclibId: getSyncDataLrclibId(syncDataSource),
-                    englishTitle: null,
-                    englishArtist: null
-                });
-
-                const sourceDirectPreviewCandidate = await getSourceDirectPreviewCandidate();
-                if (sourceDirectPreviewCandidate) {
-                    return buildSourceDirectSearchResult(sourceDirectPreviewCandidate);
-                }
-                const runSearchFlow = createLrclibSearchFlowRunner({ headers, searchSettings, trackDurationSec, syncDataLineCharCounts, syncDataSource });
-
-                const primaryMetadata = {
-                    title,
-                    artist,
-                    album,
-                    expectedArtists
-                };
-
-                const primarySearchFlow = await runSearchFlow(primaryMetadata, { includeAlbum: true });
-                if (primarySearchFlow.fatal) {
-                    return {
-                        success: false,
-                        error: primarySearchFlow.error,
-                        candidates: [],
-                        selectedCandidateKey: null
-                    };
-                }
-
+    // body/selectedFlow/selectedSource 후보 선택 사다리는 searchCandidates()와
+    // getLyrics()에서 완전히 동일하게 사용된다. 호출별 컨텍스트를 받아 선택 결과와
+    // 영어 재검색 상태를 그대로 돌려주는 헬퍼로 공유한다.
+    async function selectLrclibCandidate({ primarySearchFlow, runSearchFlow, syncDataLineCharCounts, syncDataSource, info }) {
                 let body = null;
                 let selectedFlow = primarySearchFlow;
                 let selectedSource = 'primary-none';
@@ -2366,6 +2259,121 @@
                         selectedSource = 'english-instrumental';
                     }
                 }
+
+        return { body, selectedFlow, selectedSource, englishSearchFlow, englishMetadata, englishSearchError };
+    }
+    const LrclibLyricsAddon = {
+        ...ADDON_INFO,  // 메타데이터 병합 (id, name, version 등)
+
+        /**
+         * 【초기화 메서드】
+         * 애드온이 로드될 때 호출됩니다.
+         * 현재 설정 상태를 반영한 캐시 버전을 동기화합니다.
+         */
+        async init() {
+            syncAddonCacheVersion();
+        },
+
+        async searchCandidates(info) {
+            try {
+                const title = info?.title?.trim?.();
+                const artist = info?.artist?.trim?.();
+                const album = info?.album?.trim?.();
+                const searchSettings = getSearchSettings();
+                const trackDuration = Number(info?.duration || 0);
+                const trackDurationSec = trackDuration > 0 ? trackDuration / 1000 : 0;
+                const expectedArtists = splitArtists(artist);
+
+                if (!title || !artist || !trackDurationSec) {
+                    return {
+                        success: false,
+                        error: 'Missing track metadata',
+                        candidates: [],
+                        selectedCandidateKey: null
+                    };
+                }
+
+                const headers = { 'x-user-agent': `spicetify v${Spicetify.Config?.version || 'unknown'}` };
+                const trackId = window.LyricsService?.extractTrackId?.(info?.uri)
+                    || window.ivLyricsTrackIdentity?.extractTrackId?.(info?.uri)
+                    || '';
+                const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, info)
+                    || window.SyncDataService?.getTrackIsrc?.(trackId, info)
+                    || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);
+                let syncDataLineCharCounts = null;
+                let syncDataSource = null;
+
+                if (trackId && window.SyncDataService?.getSyncData) {
+                    try {
+                        const existingSyncData = await window.SyncDataService.getSyncData(trackId, ADDON_INFO.id, { ...info, isrc: trackIsrc });
+                        syncDataLineCharCounts = getSyncDataLineCharCounts(existingSyncData);
+                        syncDataSource = getSyncDataLrclibSource(existingSyncData);
+                    } catch (e) {
+                        window.__ivLyricsDebugLog?.('[LR-DEBUG] Failed to fetch sync-data for exact line matching:', e?.message || e);
+                    }
+                }
+
+                let sourceDirectLookupAttempted = false;
+                let cachedSourceDirectPreviewCandidate = null;
+                const getSourceDirectPreviewCandidate = async () => {
+                    if (sourceDirectLookupAttempted) return cachedSourceDirectPreviewCandidate;
+                    sourceDirectLookupAttempted = true;
+
+                    if (!getSyncDataLrclibId(syncDataSource)) return null;
+
+                    try {
+                        const directCandidate = decorateDirectCandidate(
+                            await fetchLrclibCandidateById(syncDataSource, headers),
+                            syncDataSource,
+                            trackDurationSec
+                        );
+                        cachedSourceDirectPreviewCandidate = buildDirectPreviewCandidate(directCandidate);
+                    } catch (e) {
+                        window.__ivLyricsDebugLog?.('[LR-DEBUG] Failed to restore LRCLIB sync-data source:', e?.message || e);
+                        cachedSourceDirectPreviewCandidate = null;
+                    }
+                    return cachedSourceDirectPreviewCandidate;
+                };
+
+                const buildSourceDirectSearchResult = (directPreviewCandidate) => ({
+                    success: true,
+                    error: null,
+                    candidates: [directPreviewCandidate],
+                    selectedCandidateKey: directPreviewCandidate.candidateKey,
+                    selectedSource: 'source-direct',
+                    searchMode: 'source-direct',
+                    totalResults: 1,
+                    usedFallbackQuery: false,
+                    syncDataLineCount: syncDataLineCharCounts?.length || 0,
+                    directLrclibId: getSyncDataLrclibId(syncDataSource),
+                    englishTitle: null,
+                    englishArtist: null
+                });
+
+                const sourceDirectPreviewCandidate = await getSourceDirectPreviewCandidate();
+                if (sourceDirectPreviewCandidate) {
+                    return buildSourceDirectSearchResult(sourceDirectPreviewCandidate);
+                }
+                const runSearchFlow = createLrclibSearchFlowRunner({ headers, searchSettings, trackDurationSec, syncDataLineCharCounts, syncDataSource });
+
+                const primaryMetadata = {
+                    title,
+                    artist,
+                    album,
+                    expectedArtists
+                };
+
+                const primarySearchFlow = await runSearchFlow(primaryMetadata, { includeAlbum: true });
+                if (primarySearchFlow.fatal) {
+                    return {
+                        success: false,
+                        error: primarySearchFlow.error,
+                        candidates: [],
+                        selectedCandidateKey: null
+                    };
+                }
+
+                let { body, selectedFlow, selectedSource, englishSearchFlow, englishMetadata, englishSearchError } = await selectLrclibCandidate({ primarySearchFlow, runSearchFlow, syncDataLineCharCounts, syncDataSource, info });
 
                 if (!body && getSyncDataLrclibId(syncDataSource)) {
                     const directPreviewCandidate = await getSourceDirectPreviewCandidate();
@@ -2725,192 +2733,7 @@
                     return result;
                 }
 
-                let body = null;
-                let selectedFlow = primarySearchFlow;
-                let selectedSource = 'primary-none';
-                let englishSearchFlow = null;
-                let englishMetadata = null;
-                let englishSearchError = null;
-                let englishSearchAttempted = false;
-                const shouldPreferExactSyncLineMatch = Array.isArray(syncDataLineCharCounts) && syncDataLineCharCounts.length > 0;
-
-                const ensureEnglishSearchFlow = async () => {
-                    if (englishSearchAttempted) return englishSearchFlow;
-                    englishSearchAttempted = true;
-                    englishMetadata = await getTrackMetadataForAcceptLanguage(info?.uri, LRCLIB_ENGLISH_ACCEPT_LANGUAGE);
-
-                    if (englishMetadata?.title && englishMetadata?.artist) {
-                        englishMetadata = {
-                            title: englishMetadata.title.trim(),
-                            artist: englishMetadata.artist.trim(),
-                            album: '',
-                            expectedArtists: splitArtists(englishMetadata.artist)
-                        };
-
-                        englishSearchFlow = await runSearchFlow(englishMetadata, { includeAlbum: false });
-
-                        if (englishSearchFlow.fatal) {
-                            englishSearchError = englishSearchFlow.error;
-                            englishSearchFlow = null;
-                        }
-                    }
-
-                    return englishSearchFlow;
-                };
-
-                if (syncDataSource) {
-                    if (primarySearchFlow.bestSourceSyncedCandidate) {
-                        body = primarySearchFlow.bestSourceSyncedCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-source-synced';
-                    }
-
-                    if (!body) {
-                        await ensureEnglishSearchFlow();
-                        if (englishSearchFlow?.bestSourceSyncedCandidate) {
-                            body = englishSearchFlow.bestSourceSyncedCandidate;
-                            selectedFlow = englishSearchFlow;
-                            selectedSource = 'english-source-synced';
-                        }
-                    }
-
-                    if (!body && primarySearchFlow.bestSourcePlainCandidate) {
-                        body = primarySearchFlow.bestSourcePlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-source-plain';
-                    }
-
-                    if (!body && englishSearchFlow?.bestSourcePlainCandidate) {
-                        body = englishSearchFlow.bestSourcePlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-source-plain';
-                    }
-
-                    if (!body && primarySearchFlow.bestSourceInstrumentalCandidate) {
-                        body = primarySearchFlow.bestSourceInstrumentalCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-source-instrumental';
-                    }
-
-                    if (!body && englishSearchFlow?.bestSourceInstrumentalCandidate) {
-                        body = englishSearchFlow.bestSourceInstrumentalCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-source-instrumental';
-                    }
-                }
-
-                if (shouldPreferExactSyncLineMatch) {
-                    if (!body && primarySearchFlow.bestExactNativeSyncedCandidate) {
-                        body = primarySearchFlow.bestExactNativeSyncedCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-exact-native-synced';
-                    }
-
-                    if (!body) {
-                        await ensureEnglishSearchFlow();
-                        if (englishSearchFlow?.bestExactNativeSyncedCandidate) {
-                            body = englishSearchFlow.bestExactNativeSyncedCandidate;
-                            selectedFlow = englishSearchFlow;
-                            selectedSource = 'english-exact-native-synced';
-                        }
-                    }
-
-                    if (!body && primarySearchFlow.bestExactNativePlainCandidate) {
-                        body = primarySearchFlow.bestExactNativePlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-exact-native-plain';
-                    }
-
-                    if (!body && englishSearchFlow?.bestExactNativePlainCandidate) {
-                        body = englishSearchFlow.bestExactNativePlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-exact-native-plain';
-                    }
-
-                    if (!body && primarySearchFlow.bestExactFallbackSyncedCandidate) {
-                        body = primarySearchFlow.bestExactFallbackSyncedCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-exact-fallback-synced';
-                    }
-
-                    if (!body && englishSearchFlow?.bestExactFallbackSyncedCandidate) {
-                        body = englishSearchFlow.bestExactFallbackSyncedCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-exact-fallback-synced';
-                    }
-
-                    if (!body && primarySearchFlow.bestExactFallbackPlainCandidate) {
-                        body = primarySearchFlow.bestExactFallbackPlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-exact-fallback-plain';
-                    }
-
-                    if (!body && englishSearchFlow?.bestExactFallbackPlainCandidate) {
-                        body = englishSearchFlow.bestExactFallbackPlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-exact-fallback-plain';
-                    }
-                }
-
-                if (!body) {
-                    body = primarySearchFlow.bestNativeSyncedCandidate;
-                    if (body) {
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-native-synced';
-                    }
-                }
-
-                if (!body) {
-                    await ensureEnglishSearchFlow();
-                    if (englishSearchFlow?.bestNativeSyncedCandidate) {
-                        body = englishSearchFlow.bestNativeSyncedCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-native-synced';
-                    }
-                }
-
-                if (!body) {
-                    if (primarySearchFlow.bestNativePlainCandidate) {
-                        body = primarySearchFlow.bestNativePlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-native-plain';
-                    }
-                    else if (englishSearchFlow?.bestNativePlainCandidate) {
-                        body = englishSearchFlow.bestNativePlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-native-plain';
-                    }
-                    else if (primarySearchFlow.bestFallbackSyncedCandidate) {
-                        body = primarySearchFlow.bestFallbackSyncedCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-fallback-synced';
-                    }
-                    else if (englishSearchFlow?.bestFallbackSyncedCandidate) {
-                        body = englishSearchFlow.bestFallbackSyncedCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-fallback-synced';
-                    }
-                    else if (primarySearchFlow.bestFallbackPlainCandidate) {
-                        body = primarySearchFlow.bestFallbackPlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-fallback-plain';
-                    }
-                    else if (englishSearchFlow?.bestFallbackPlainCandidate) {
-                        body = englishSearchFlow.bestFallbackPlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-fallback-plain';
-                    }
-                    else if (primarySearchFlow.bestInstrumentalCandidate) {
-                        body = primarySearchFlow.bestInstrumentalCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-instrumental';
-                    }
-                    else if (englishSearchFlow?.bestInstrumentalCandidate) {
-                        body = englishSearchFlow.bestInstrumentalCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-instrumental';
-                    }
-                }
+                let { body, selectedFlow, selectedSource, englishSearchFlow, englishMetadata, englishSearchError } = await selectLrclibCandidate({ primarySearchFlow, runSearchFlow, syncDataLineCharCounts, syncDataSource, info });
 
                 if (!body) {
                     if (englishSearchError) {

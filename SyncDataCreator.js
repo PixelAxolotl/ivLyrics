@@ -3475,11 +3475,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			|| null;
 	}, [lrclibCandidates, previewLrclibCandidateKey, selectedLrclibCandidateKey]);
 
-	const applySelectedLrclibCandidate = useCallback(async (candidateKey) => {
-		const candidate = lrclibCandidates.find(item => item.candidateKey === candidateKey);
-		if (!candidate) return;
-
-		const sourceChangeRequestId = beginSyncCreatorSourceChange();
+	// Reset the editor to a clean "no lyrics loaded yet" state before a new
+	// LRCLIB source is fetched. Every referenced updater is a stable React state
+	// setter, so this closes over nothing that changes between renders.
+	const resetSyncCreatorLyricsLoadingState = () => {
 		setIsLoading(true);
 		setError(null);
 		setLyrics(null);
@@ -3494,6 +3493,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		setPendingMultiVocalDecision(null);
 		setActiveParallelPartId('full');
 		setMode('idle');
+	};
+
+	const applySelectedLrclibCandidate = useCallback(async (candidateKey) => {
+		const candidate = lrclibCandidates.find(item => item.candidateKey === candidateKey);
+		if (!candidate) return;
+
+		const sourceChangeRequestId = beginSyncCreatorSourceChange();
+		resetSyncCreatorLyricsLoadingState();
 
 		try {
 			const syntheticResult = buildSyntheticLrclibResult(candidate);
@@ -3579,20 +3586,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 		const sourceChangeRequestId = beginSyncCreatorSourceChange();
 		setIsLoadingLrclibId(true);
-		setIsLoading(true);
-		setError(null);
-		setLyrics(null);
-		setLyricsText('');
-		setSyncData(null);
-		setCurrentLineIndex(0);
-		setMultiVocalMode(false);
-		setManualParallelSplitDrafts({});
-		setParentheticalLayoutDrafts({});
-		setPendingParentheticalLayoutDecision(null);
-		setMergedLineDrafts({});
-		setPendingMultiVocalDecision(null);
-		setActiveParallelPartId('full');
-		setMode('idle');
+		resetSyncCreatorLyricsLoadingState();
 		clearLrclibCandidateState();
 
 		try {

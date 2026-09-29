@@ -1807,98 +1807,10 @@
     // ADDON_INFO를 스프레드하여 메타데이터를 포함하고,
     // init(), getSettingsUI(), getLyrics() 메서드를 구현합니다.
 
-    const LrclibLyricsAddon = {
-        ...ADDON_INFO,  // 메타데이터 병합 (id, name, version 등)
-
-        /**
-         * 【초기화 메서드】
-         * 애드온이 로드될 때 호출됩니다.
-         * 현재 설정 상태를 반영한 캐시 버전을 동기화합니다.
-         */
-        async init() {
-            syncAddonCacheVersion();
-        },
-
-        async searchCandidates(info) {
-            try {
-                const title = info?.title?.trim?.();
-                const artist = info?.artist?.trim?.();
-                const album = info?.album?.trim?.();
-                const searchSettings = getSearchSettings();
-                const trackDuration = Number(info?.duration || 0);
-                const trackDurationSec = trackDuration > 0 ? trackDuration / 1000 : 0;
-                const expectedArtists = splitArtists(artist);
-
-                if (!title || !artist || !trackDurationSec) {
-                    return {
-                        success: false,
-                        error: 'Missing track metadata',
-                        candidates: [],
-                        selectedCandidateKey: null
-                    };
-                }
-
-                const headers = { 'x-user-agent': `spicetify v${Spicetify.Config?.version || 'unknown'}` };
-                const trackId = window.LyricsService?.extractTrackId?.(info?.uri)
-                    || window.ivLyricsTrackIdentity?.extractTrackId?.(info?.uri)
-                    || '';
-                const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, info)
-                    || window.SyncDataService?.getTrackIsrc?.(trackId, info)
-                    || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);
-                let syncDataLineCharCounts = null;
-                let syncDataSource = null;
-
-                if (trackId && window.SyncDataService?.getSyncData) {
-                    try {
-                        const existingSyncData = await window.SyncDataService.getSyncData(trackId, ADDON_INFO.id, { ...info, isrc: trackIsrc });
-                        syncDataLineCharCounts = getSyncDataLineCharCounts(existingSyncData);
-                        syncDataSource = getSyncDataLrclibSource(existingSyncData);
-                    } catch (e) {
-                        window.__ivLyricsDebugLog?.('[LR-DEBUG] Failed to fetch sync-data for exact line matching:', e?.message || e);
-                    }
-                }
-
-                let sourceDirectLookupAttempted = false;
-                let cachedSourceDirectPreviewCandidate = null;
-                const getSourceDirectPreviewCandidate = async () => {
-                    if (sourceDirectLookupAttempted) return cachedSourceDirectPreviewCandidate;
-                    sourceDirectLookupAttempted = true;
-
-                    if (!getSyncDataLrclibId(syncDataSource)) return null;
-
-                    try {
-                        const directCandidate = decorateDirectCandidate(
-                            await fetchLrclibCandidateById(syncDataSource, headers),
-                            syncDataSource,
-                            trackDurationSec
-                        );
-                        cachedSourceDirectPreviewCandidate = buildDirectPreviewCandidate(directCandidate);
-                    } catch (e) {
-                        window.__ivLyricsDebugLog?.('[LR-DEBUG] Failed to restore LRCLIB sync-data source:', e?.message || e);
-                        cachedSourceDirectPreviewCandidate = null;
-                    }
-                    return cachedSourceDirectPreviewCandidate;
-                };
-
-                const buildSourceDirectSearchResult = (directPreviewCandidate) => ({
-                    success: true,
-                    error: null,
-                    candidates: [directPreviewCandidate],
-                    selectedCandidateKey: directPreviewCandidate.candidateKey,
-                    selectedSource: 'source-direct',
-                    searchMode: 'source-direct',
-                    totalResults: 1,
-                    usedFallbackQuery: false,
-                    syncDataLineCount: syncDataLineCharCounts?.length || 0,
-                    directLrclibId: getSyncDataLrclibId(syncDataSource),
-                    englishTitle: null,
-                    englishArtist: null
-                });
-
-                const sourceDirectPreviewCandidate = await getSourceDirectPreviewCandidate();
-                if (sourceDirectPreviewCandidate) {
-                    return buildSourceDirectSearchResult(sourceDirectPreviewCandidate);
-                }
+    // 검색 실행/후보 랭킹/검색 흐름 로직은 searchCandidates()와 getLyrics()에서
+    // 동일하게 사용되므로, 호출별 컨텍스트를 받아 runSearchFlow를 돌려주는
+    // 팩토리로 공유한다. 반환되는 클로저 및 그 안의 로직은 원본과 완전히 동일하다.
+    function createLrclibSearchFlowRunner({ headers, searchSettings, trackDurationSec, syncDataLineCharCounts, syncDataSource }) {
                 const runSearch = async (params, label) => {
                     const query = new URLSearchParams();
                     if (params.track_name) query.set('track_name', params.track_name);
@@ -2154,6 +2066,102 @@
                             || null
                     };
                 };
+
+        return runSearchFlow;
+    }
+    const LrclibLyricsAddon = {
+        ...ADDON_INFO,  // 메타데이터 병합 (id, name, version 등)
+
+        /**
+         * 【초기화 메서드】
+         * 애드온이 로드될 때 호출됩니다.
+         * 현재 설정 상태를 반영한 캐시 버전을 동기화합니다.
+         */
+        async init() {
+            syncAddonCacheVersion();
+        },
+
+        async searchCandidates(info) {
+            try {
+                const title = info?.title?.trim?.();
+                const artist = info?.artist?.trim?.();
+                const album = info?.album?.trim?.();
+                const searchSettings = getSearchSettings();
+                const trackDuration = Number(info?.duration || 0);
+                const trackDurationSec = trackDuration > 0 ? trackDuration / 1000 : 0;
+                const expectedArtists = splitArtists(artist);
+
+                if (!title || !artist || !trackDurationSec) {
+                    return {
+                        success: false,
+                        error: 'Missing track metadata',
+                        candidates: [],
+                        selectedCandidateKey: null
+                    };
+                }
+
+                const headers = { 'x-user-agent': `spicetify v${Spicetify.Config?.version || 'unknown'}` };
+                const trackId = window.LyricsService?.extractTrackId?.(info?.uri)
+                    || window.ivLyricsTrackIdentity?.extractTrackId?.(info?.uri)
+                    || '';
+                const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, info)
+                    || window.SyncDataService?.getTrackIsrc?.(trackId, info)
+                    || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);
+                let syncDataLineCharCounts = null;
+                let syncDataSource = null;
+
+                if (trackId && window.SyncDataService?.getSyncData) {
+                    try {
+                        const existingSyncData = await window.SyncDataService.getSyncData(trackId, ADDON_INFO.id, { ...info, isrc: trackIsrc });
+                        syncDataLineCharCounts = getSyncDataLineCharCounts(existingSyncData);
+                        syncDataSource = getSyncDataLrclibSource(existingSyncData);
+                    } catch (e) {
+                        window.__ivLyricsDebugLog?.('[LR-DEBUG] Failed to fetch sync-data for exact line matching:', e?.message || e);
+                    }
+                }
+
+                let sourceDirectLookupAttempted = false;
+                let cachedSourceDirectPreviewCandidate = null;
+                const getSourceDirectPreviewCandidate = async () => {
+                    if (sourceDirectLookupAttempted) return cachedSourceDirectPreviewCandidate;
+                    sourceDirectLookupAttempted = true;
+
+                    if (!getSyncDataLrclibId(syncDataSource)) return null;
+
+                    try {
+                        const directCandidate = decorateDirectCandidate(
+                            await fetchLrclibCandidateById(syncDataSource, headers),
+                            syncDataSource,
+                            trackDurationSec
+                        );
+                        cachedSourceDirectPreviewCandidate = buildDirectPreviewCandidate(directCandidate);
+                    } catch (e) {
+                        window.__ivLyricsDebugLog?.('[LR-DEBUG] Failed to restore LRCLIB sync-data source:', e?.message || e);
+                        cachedSourceDirectPreviewCandidate = null;
+                    }
+                    return cachedSourceDirectPreviewCandidate;
+                };
+
+                const buildSourceDirectSearchResult = (directPreviewCandidate) => ({
+                    success: true,
+                    error: null,
+                    candidates: [directPreviewCandidate],
+                    selectedCandidateKey: directPreviewCandidate.candidateKey,
+                    selectedSource: 'source-direct',
+                    searchMode: 'source-direct',
+                    totalResults: 1,
+                    usedFallbackQuery: false,
+                    syncDataLineCount: syncDataLineCharCounts?.length || 0,
+                    directLrclibId: getSyncDataLrclibId(syncDataSource),
+                    englishTitle: null,
+                    englishArtist: null
+                });
+
+                const sourceDirectPreviewCandidate = await getSourceDirectPreviewCandidate();
+                if (sourceDirectPreviewCandidate) {
+                    return buildSourceDirectSearchResult(sourceDirectPreviewCandidate);
+                }
+                const runSearchFlow = createLrclibSearchFlowRunner({ headers, searchSettings, trackDurationSec, syncDataLineCharCounts, syncDataSource });
 
                 const primaryMetadata = {
                     title,
@@ -2697,261 +2705,7 @@
                     }
                 }
 
-                const runSearch = async (params, label) => {
-                    const query = new URLSearchParams();
-                    if (params.track_name) query.set('track_name', params.track_name);
-                    if (params.artist_name) query.set('artist_name', params.artist_name);
-                    if (params.album_name && params.album_name !== 'undefined') query.set('album_name', params.album_name);
-                    if (params.q) query.set('q', params.q);
-
-                    const searchUrl = `${LRCLIB_API_BASE}/search?${query.toString()}`;
-                    const response = await fetchWithTimeout(searchUrl, { headers }, 35000);
-
-                    if (!response) {
-                        return {
-                            fatal: true,
-                            error: 'Network request failed',
-                            searchLabel: label,
-                            totalResults: 0,
-                            candidates: []
-                        };
-                    }
-
-                    if (!response.ok) {
-                        if (response.status === 429) {
-                            return {
-                                fatal: true,
-                                error: 'Rate limit exceeded (429)',
-                                searchLabel: label,
-                                totalResults: 0,
-                                candidates: []
-                            };
-                        }
-                        if (response.status === 404) {
-                            return {
-                                fatal: false,
-                                error: 'No lyrics found',
-                                searchLabel: label,
-                                totalResults: 0,
-                                candidates: []
-                            };
-                        }
-                        return {
-                            fatal: true,
-                            error: `API error: ${response.status}`,
-                            searchLabel: label,
-                            totalResults: 0,
-                            candidates: []
-                        };
-                    }
-
-                    const data = await response.json();
-                    if (!Array.isArray(data)) {
-                        return {
-                            fatal: true,
-                            error: 'Invalid LRCLIB response',
-                            searchLabel: label,
-                            totalResults: 0,
-                            candidates: []
-                        };
-                    }
-
-                    return {
-                        fatal: false,
-                        error: data.length === 0 ? 'No lyrics found' : null,
-                        searchLabel: label,
-                        totalResults: data.length,
-                        candidates: data
-                    };
-                };
-
-                const rankCandidates = (candidates, metadata, { allowTitleDrivenMatch = false } = {}) => {
-                    const metadataTitle = metadata?.title || '';
-                    const metadataArtists = metadata?.expectedArtists || [];
-
-                    return candidates
-                        .map(item => {
-                            const candidateArtists = splitArtists(item?.artistName || '');
-                            const candidateTitle = item?.trackName || item?.name || '';
-                            const syncLineMatch = getCandidateSyncLineMatch(item, syncDataLineCharCounts);
-                            const lyricsText = getCandidateLyricsText(item, syncLineMatch.preferredLyricsSource);
-                            const lyricsMix = analyzeLyricsLanguageMix(lyricsText);
-                            const titleScore = getTitleScore(metadataTitle, candidateTitle);
-                            const artistScore = getBestArtistScore(metadataArtists, candidateArtists);
-                            const durationDiff = Math.abs(Number(item?.duration || 0) - trackDurationSec);
-                            const exactDurationMatch = hasExactDurationMatch(trackDurationSec, Number(item?.duration || 0));
-                            const artistMatched = artistScore > LRCLIB_ARTIST_MATCH_THRESHOLD;
-                            const titleDrivenMatch = allowTitleDrivenMatch
-                                && titleScore >= LRCLIB_FALLBACK_TITLE_MATCH_THRESHOLD
-                                && exactDurationMatch;
-                            const rankedItem = {
-                                ...item,
-                                artistScore,
-                                titleScore,
-                                durationDiff,
-                                exactDurationMatch,
-                                artistMatched,
-                                titleDrivenMatch,
-                                syncLineExactMatch: syncLineMatch.syncLineExactMatch,
-                                exactSyncedLineMatch: syncLineMatch.exactSyncedLineMatch,
-                                exactPlainLineMatch: syncLineMatch.exactPlainLineMatch,
-                                preferredLyricsSource: syncLineMatch.preferredLyricsSource,
-                                lyricsMix,
-                                hasInterleavedTranslations: lyricsMix.hasInterleavedTranslations,
-                                matchReason: artistMatched ? 'artist' : (titleDrivenMatch ? 'title' : 'rejected')
-                            };
-                            const sourceMatch = getCandidateSourceMatch(rankedItem, syncDataSource);
-
-                            return {
-                                ...rankedItem,
-                                ...sourceMatch
-                            };
-                        })
-                        .filter(item => {
-                            if (!item?.syncedLyrics && !item?.plainLyrics && !item?.instrumental) return false;
-                            if (item.artistMatched) return true;
-                            if (allowTitleDrivenMatch && item.titleDrivenMatch) return true;
-                            return false;
-                        })
-                        .sort((a, b) => {
-                            if (a.syncSourceMatchScore !== b.syncSourceMatchScore) {
-                                return Number(b.syncSourceMatchScore || 0) - Number(a.syncSourceMatchScore || 0);
-                            }
-                            if (a.syncLineExactMatch !== b.syncLineExactMatch) {
-                                return Number(b.syncLineExactMatch) - Number(a.syncLineExactMatch);
-                            }
-                            if (a.exactSyncedLineMatch !== b.exactSyncedLineMatch) {
-                                return Number(b.exactSyncedLineMatch) - Number(a.exactSyncedLineMatch);
-                            }
-                            if (a.artistMatched !== b.artistMatched) {
-                                return Number(b.artistMatched) - Number(a.artistMatched);
-                            }
-                            if (a.hasInterleavedTranslations !== b.hasInterleavedTranslations) {
-                                return Number(a.hasInterleavedTranslations) - Number(b.hasInterleavedTranslations);
-                            }
-                            if (b.titleScore !== a.titleScore) {
-                                return b.titleScore - a.titleScore;
-                            }
-                            if (a.durationDiff !== b.durationDiff) {
-                                return a.durationDiff - b.durationDiff;
-                            }
-                            return b.artistScore - a.artistScore;
-                        });
-                };
-
-                const runSearchFlow = async (metadata, { includeAlbum = true } = {}) => {
-                    const structuredSearch = await runSearch({
-                        track_name: metadata.title,
-                        artist_name: metadata.artist,
-                        album_name: includeAlbum ? metadata.album : ''
-                    }, includeAlbum ? 'structured' : 'structured:no-album');
-
-                    if (structuredSearch.fatal) {
-                        return {
-                            fatal: true,
-                            error: structuredSearch.error,
-                            resolvedSearch: structuredSearch,
-                            rankedCandidates: [],
-                            usedFallbackQuery: false,
-                            bestSyncedCandidate: null,
-                            bestPlainCandidate: null
-                        };
-                    }
-
-                    let resolvedSearch = structuredSearch;
-                    let rankedCandidates = rankCandidates(structuredSearch.candidates, metadata);
-                    let usedFallbackQuery = false;
-
-                    if (rankedCandidates.length === 0 && LRCLIB_ENABLE_INEXACT_SEARCH) {
-                        const fallbackAttempts = [];
-                        if (searchSettings.enableFallbackTitleArtist && metadata.title && metadata.artist) {
-                            fallbackAttempts.push({ params: { q: `${metadata.title} ${metadata.artist}` }, label: 'q:title+artist' });
-                        }
-                        if (searchSettings.enableFallbackTitleOnly && metadata.title) {
-                            fallbackAttempts.push({ params: { q: metadata.title }, label: 'q:title' });
-                        }
-
-                        for (const attempt of fallbackAttempts) {
-                            const fallbackSearch = await runSearch(attempt.params, attempt.label);
-                            usedFallbackQuery = true;
-
-                            if (fallbackSearch.fatal) {
-                                return {
-                                    fatal: true,
-                                    error: fallbackSearch.error,
-                                    resolvedSearch: fallbackSearch,
-                                    rankedCandidates: [],
-                                    usedFallbackQuery,
-                                    bestSyncedCandidate: null,
-                                    bestPlainCandidate: null
-                                };
-                            }
-
-                            resolvedSearch = fallbackSearch;
-                            rankedCandidates = rankCandidates(fallbackSearch.candidates, metadata, { allowTitleDrivenMatch: true });
-
-                            if (rankedCandidates.length > 0) {
-                                break;
-                            }
-                        }
-                    }
-
-                    const withinTolerance = item => item?.durationDiff <= LRCLIB_DURATION_TOLERANCE_SEC;
-                    const sourceMatchedCandidates = rankedCandidates.filter(item => Number(item?.syncSourceMatchScore || 0) > 0);
-                    const exactMatchCandidates = rankedCandidates.filter(item => item.syncLineExactMatch);
-                    const nativeScriptCandidates = rankedCandidates.filter(item => hasOriginalLyricsScript(getCandidateLyricsText(item, item.preferredLyricsSource)));
-                    const fallbackScriptCandidates = rankedCandidates.filter(item => !hasOriginalLyricsScript(getCandidateLyricsText(item, item.preferredLyricsSource)));
-                    const exactNativeScriptCandidates = nativeScriptCandidates.filter(item => item.syncLineExactMatch);
-                    const exactFallbackScriptCandidates = fallbackScriptCandidates.filter(item => item.syncLineExactMatch);
-                    const preferredNativeScriptCandidates = nativeScriptCandidates.filter(item => !item.hasInterleavedTranslations);
-                    const interleavedNativeScriptCandidates = nativeScriptCandidates.filter(item => item.hasInterleavedTranslations);
-                    const orderedNativeScriptCandidates = preferredNativeScriptCandidates.concat(interleavedNativeScriptCandidates);
-
-                    return {
-                        fatal: false,
-                        error: null,
-                        resolvedSearch,
-                        rankedCandidates,
-                        hasExactSyncLineMatch: exactMatchCandidates.length > 0,
-                        usedFallbackQuery,
-                        bestSourceSyncedCandidate: sourceMatchedCandidates.find(item => withinTolerance(item) && item.syncedLyrics)
-                            || sourceMatchedCandidates.find(item => item.syncedLyrics)
-                            || null,
-                        bestSourcePlainCandidate: sourceMatchedCandidates.find(item => withinTolerance(item) && item.plainLyrics)
-                            || sourceMatchedCandidates.find(item => item.plainLyrics)
-                            || null,
-                        bestSourceInstrumentalCandidate: sourceMatchedCandidates.find(item => withinTolerance(item) && item.instrumental)
-                            || sourceMatchedCandidates.find(item => item.instrumental)
-                            || null,
-                        bestExactNativeSyncedCandidate: exactNativeScriptCandidates.find(item => withinTolerance(item) && item.preferredLyricsSource === 'synced')
-                            || exactNativeScriptCandidates.find(item => item.preferredLyricsSource === 'synced')
-                            || null,
-                        bestExactNativePlainCandidate: exactNativeScriptCandidates.find(item => withinTolerance(item) && item.preferredLyricsSource === 'plain')
-                            || exactNativeScriptCandidates.find(item => item.preferredLyricsSource === 'plain')
-                            || null,
-                        bestExactFallbackSyncedCandidate: exactFallbackScriptCandidates.find(item => withinTolerance(item) && item.preferredLyricsSource === 'synced')
-                            || exactFallbackScriptCandidates.find(item => item.preferredLyricsSource === 'synced')
-                            || null,
-                        bestExactFallbackPlainCandidate: exactFallbackScriptCandidates.find(item => withinTolerance(item) && item.preferredLyricsSource === 'plain')
-                            || exactFallbackScriptCandidates.find(item => item.preferredLyricsSource === 'plain')
-                            || null,
-                        bestNativeSyncedCandidate: orderedNativeScriptCandidates.find(item => withinTolerance(item) && item.syncedLyrics)
-                            || orderedNativeScriptCandidates.find(item => item.syncedLyrics)
-                            || null,
-                        bestNativePlainCandidate: orderedNativeScriptCandidates.find(item => withinTolerance(item) && item.plainLyrics)
-                            || orderedNativeScriptCandidates.find(item => item.plainLyrics)
-                            || null,
-                        bestFallbackSyncedCandidate: fallbackScriptCandidates.find(item => withinTolerance(item) && item.syncedLyrics)
-                            || fallbackScriptCandidates.find(item => item.syncedLyrics)
-                            || null,
-                        bestFallbackPlainCandidate: fallbackScriptCandidates.find(item => withinTolerance(item) && item.plainLyrics)
-                            || fallbackScriptCandidates.find(item => item.plainLyrics)
-                            || null,
-                        bestInstrumentalCandidate: rankedCandidates.find(item => withinTolerance(item) && item.instrumental)
-                            || rankedCandidates.find(item => item.instrumental)
-                            || null
-                    };
-                };
+                const runSearchFlow = createLrclibSearchFlowRunner({ headers, searchSettings, trackDurationSec, syncDataLineCharCounts, syncDataSource });
 
                 const primaryMetadata = {
                     title,

@@ -3718,7 +3718,7 @@
                     return await _inflightRequests.get(inflightKey);
                 }
 
-                fetchPromise = (async () => {
+                const runSyncDataFetch = async () => {
                     const url = new URL(`${API_BASE}/lyrics/sync-data`);
                     const reportsMetadata = appendSyncDataQueryParams(url, identity, metadata, queryProvider);
                     let requestUrl = url.toString();
@@ -3814,7 +3814,9 @@
                         return syncData;
                     }
                     return null;
-                })();
+                };
+
+                fetchPromise = runSyncDataFetch();
 
                 _inflightRequests.set(inflightKey, fetchPromise);
                 const result = await fetchPromise;

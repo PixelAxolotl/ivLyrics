@@ -10261,91 +10261,8 @@ react.createElement(
         })
       );
 
-  return react.createElement(
-    "div",
-    {
-      id: `${APP_NAME}-config-container`,
-      className: shouldReduceMotion ? "motion-reduced" : "",
-      "data-ui-theme": uiTheme,
-      "data-ui-theme-preference": uiThemePreference,
-    },
-    react.createElement("style", {
-      dangerouslySetInnerHTML: {
-        __html: SETTINGS_MODAL_CSS,
-      },
-    }),
-    renderHeaderSection(),
-    react.createElement(
-      SettingsSidebarShell,
-      { sidebarRef: settingsSidebarRef },
-      react.createElement(
-        "div",
-        { className: "settings-search-container" },
-        react.createElement(
-          "div",
-          { className: `settings-search-wrapper${searchQuery ? " has-query" : ""}` },
-          react.createElement(
-            "svg",
-            {
-              className: "settings-search-icon",
-              viewBox: "0 0 20 20",
-              fill: "currentColor",
-              "aria-hidden": "true",
-            },
-            react.createElement("path", {
-              fillRule: "evenodd",
-              d: "M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z",
-              clipRule: "evenodd",
-            })
-          ),
-          react.createElement("input", {
-            type: "search",
-            className: "settings-search-input",
-            placeholder: I18n.t("search.placeholder"),
-            "aria-label": I18n.t("search.placeholder"),
-            value: searchQuery,
-            onChange: handleSearchChange,
-            onKeyDown: (event) => {
-              if (event.key === "Escape" && searchQuery) {
-                event.preventDefault();
-                event.stopPropagation();
-                handleClearSearch();
-              }
-            },
-          }),
-          searchQuery && react.createElement(
-            "button",
-            {
-              className: "settings-search-clear",
-              type: "button",
-              onClick: handleClearSearch,
-              title: I18n.t("search.clear"),
-              "aria-label": I18n.t("search.clear"),
-            },
-            "×"
-          )
-        )
-      ),
-      renderSidebarNavigation()
-    ),
-    react.createElement(
-      SettingsMainPanelShell,
-      {
-        contentRef: settingsContentRef,
-        badge: activeNavigationGroup?.badge || activeTabMeta?.badge,
-        label: activeNavigationGroup?.label || activeTabMeta?.label,
-        description:
-          activeNavigationGroup?.description || activeTabMeta?.description,
-      },
-      // 검색 결과 탭
-      activeTab === "search" &&
-        renderSearchTab(),
-      // 일반 탭 (동작 관련 설정)
-      activeTab === "general" &&
-        renderGeneralTab(),
-      // 외관 탭 (시각 효과 + 타이포그래피)
-      activeTab === "appearance" &&
-      react.createElement(
+  const renderAppearanceTab = () =>
+react.createElement(
         "div",
         {
           className: `tab-content ${activeTab === "appearance" ? "active" : ""
@@ -10773,7 +10690,93 @@ react.createElement(
           ],
           onChange: handleAppearancePreviewChange,
         })
+      );
+
+  return react.createElement(
+    "div",
+    {
+      id: `${APP_NAME}-config-container`,
+      className: shouldReduceMotion ? "motion-reduced" : "",
+      "data-ui-theme": uiTheme,
+      "data-ui-theme-preference": uiThemePreference,
+    },
+    react.createElement("style", {
+      dangerouslySetInnerHTML: {
+        __html: SETTINGS_MODAL_CSS,
+      },
+    }),
+    renderHeaderSection(),
+    react.createElement(
+      SettingsSidebarShell,
+      { sidebarRef: settingsSidebarRef },
+      react.createElement(
+        "div",
+        { className: "settings-search-container" },
+        react.createElement(
+          "div",
+          { className: `settings-search-wrapper${searchQuery ? " has-query" : ""}` },
+          react.createElement(
+            "svg",
+            {
+              className: "settings-search-icon",
+              viewBox: "0 0 20 20",
+              fill: "currentColor",
+              "aria-hidden": "true",
+            },
+            react.createElement("path", {
+              fillRule: "evenodd",
+              d: "M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z",
+              clipRule: "evenodd",
+            })
+          ),
+          react.createElement("input", {
+            type: "search",
+            className: "settings-search-input",
+            placeholder: I18n.t("search.placeholder"),
+            "aria-label": I18n.t("search.placeholder"),
+            value: searchQuery,
+            onChange: handleSearchChange,
+            onKeyDown: (event) => {
+              if (event.key === "Escape" && searchQuery) {
+                event.preventDefault();
+                event.stopPropagation();
+                handleClearSearch();
+              }
+            },
+          }),
+          searchQuery && react.createElement(
+            "button",
+            {
+              className: "settings-search-clear",
+              type: "button",
+              onClick: handleClearSearch,
+              title: I18n.t("search.clear"),
+              "aria-label": I18n.t("search.clear"),
+            },
+            "×"
+          )
+        )
       ),
+      renderSidebarNavigation()
+    ),
+    react.createElement(
+      SettingsMainPanelShell,
+      {
+        contentRef: settingsContentRef,
+        badge: activeNavigationGroup?.badge || activeTabMeta?.badge,
+        label: activeNavigationGroup?.label || activeTabMeta?.label,
+        description:
+          activeNavigationGroup?.description || activeTabMeta?.description,
+      },
+      // 검색 결과 탭
+      activeTab === "search" &&
+        renderSearchTab(),
+      // 일반 탭 (동작 관련 설정)
+      activeTab === "general" &&
+        renderGeneralTab(),
+      // 외관 탭 (시각 효과 + 타이포그래피)
+      activeTab === "appearance" &&
+      renderAppearanceTab(),
       // 성능 탭
       activeTab === "performance" &&
       renderPerformanceTab(),

@@ -782,6 +782,59 @@ const MarketplacePage = (() => {
                 .slice(0, 5);
         }, [allAddons, addon.id]);
 
+        const renderDetailSidebar = () => (
+                react.createElement('div', { className: 'ivlyrics-marketplace-detail-sidebar' },
+                    // Developer card
+                    addon.authorLogin && react.createElement('div', { className: 'ivlyrics-marketplace-sidebar-section' },
+                        react.createElement('div', {
+                            className: 'ivlyrics-marketplace-sidebar-dev',
+                            onClick: handleAuthorClick,
+                            role: 'button',
+                            tabIndex: 0
+                        },
+                            avatarUrl && react.createElement('img', {
+                                className: 'ivlyrics-marketplace-sidebar-dev-avatar',
+                                src: avatarUrl,
+                                alt: addon.authorLogin,
+                                onError: (e) => { e.target.style.display = 'none'; }
+                            }),
+                            react.createElement('div', { className: 'ivlyrics-marketplace-sidebar-dev-text' },
+                                react.createElement('div', { className: 'ivlyrics-marketplace-sidebar-dev-name' }, addon.authorLogin),
+                                react.createElement('div', { className: 'ivlyrics-marketplace-sidebar-dev-label' },
+                                    I18n.t('marketplace.developer') || 'Developer'
+                                )
+                            )
+                        ),
+                        // Author's other addons
+                        authorOtherAddons.length > 0 && react.createElement('div', { className: 'ivlyrics-marketplace-sidebar-list' },
+                            react.createElement('div', { className: 'ivlyrics-marketplace-sidebar-title' },
+                                I18n.t('marketplace.moreByDeveloper') || 'More by this developer'
+                            ),
+                            authorOtherAddons.slice(0, 4).map(a =>
+                                react.createElement(SidebarMiniCard, {
+                                    key: a.id,
+                                    addon: a,
+                                    onClick: onAddonClick
+                                })
+                            )
+                        )
+                    ),
+                    // Popular addons
+                    popularAddons.length > 0 && react.createElement('div', { className: 'ivlyrics-marketplace-sidebar-section' },
+                        react.createElement('div', { className: 'ivlyrics-marketplace-sidebar-title' },
+                            I18n.t('marketplace.popular') || 'Popular'
+                        ),
+                        popularAddons.map(a =>
+                            react.createElement(SidebarMiniCard, {
+                                key: a.id,
+                                addon: a,
+                                onClick: onAddonClick
+                            })
+                        )
+                    )
+                )
+        );
+
         return react.createElement('div', { className: 'ivlyrics-marketplace-detail' },
             // Header with back button + action buttons
             react.createElement('div', { className: 'ivlyrics-marketplace-detail-header' },
@@ -858,56 +911,7 @@ const MarketplacePage = (() => {
                     react.createElement(MarkdownDescription, { description })
                 ),
                 // Right: sidebar
-                react.createElement('div', { className: 'ivlyrics-marketplace-detail-sidebar' },
-                    // Developer card
-                    addon.authorLogin && react.createElement('div', { className: 'ivlyrics-marketplace-sidebar-section' },
-                        react.createElement('div', {
-                            className: 'ivlyrics-marketplace-sidebar-dev',
-                            onClick: handleAuthorClick,
-                            role: 'button',
-                            tabIndex: 0
-                        },
-                            avatarUrl && react.createElement('img', {
-                                className: 'ivlyrics-marketplace-sidebar-dev-avatar',
-                                src: avatarUrl,
-                                alt: addon.authorLogin,
-                                onError: (e) => { e.target.style.display = 'none'; }
-                            }),
-                            react.createElement('div', { className: 'ivlyrics-marketplace-sidebar-dev-text' },
-                                react.createElement('div', { className: 'ivlyrics-marketplace-sidebar-dev-name' }, addon.authorLogin),
-                                react.createElement('div', { className: 'ivlyrics-marketplace-sidebar-dev-label' },
-                                    I18n.t('marketplace.developer') || 'Developer'
-                                )
-                            )
-                        ),
-                        // Author's other addons
-                        authorOtherAddons.length > 0 && react.createElement('div', { className: 'ivlyrics-marketplace-sidebar-list' },
-                            react.createElement('div', { className: 'ivlyrics-marketplace-sidebar-title' },
-                                I18n.t('marketplace.moreByDeveloper') || 'More by this developer'
-                            ),
-                            authorOtherAddons.slice(0, 4).map(a =>
-                                react.createElement(SidebarMiniCard, {
-                                    key: a.id,
-                                    addon: a,
-                                    onClick: onAddonClick
-                                })
-                            )
-                        )
-                    ),
-                    // Popular addons
-                    popularAddons.length > 0 && react.createElement('div', { className: 'ivlyrics-marketplace-sidebar-section' },
-                        react.createElement('div', { className: 'ivlyrics-marketplace-sidebar-title' },
-                            I18n.t('marketplace.popular') || 'Popular'
-                        ),
-                        popularAddons.map(a =>
-                            react.createElement(SidebarMiniCard, {
-                                key: a.id,
-                                addon: a,
-                                onClick: onAddonClick
-                            })
-                        )
-                    )
-                )
+                renderDetailSidebar()
             ),
             showConfirm && react.createElement(ConfirmModal, {
                 message: I18n.t('marketplace.uninstallConfirm', { name: addon.name }),

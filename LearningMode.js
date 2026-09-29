@@ -2294,6 +2294,44 @@
         }));
         const historyCount = studyHistory.length;
 
+        const renderHistoryTab = () => react.createElement("div", { className: "ivlyrics-study-section ivlyrics-study-history" },
+                react.createElement("section", { className: "ivlyrics-study-wordbook-hero ivlyrics-study-history-hero" },
+                    react.createElement("div", null,
+                        react.createElement("span", null, t("tabHistory", "학습 기록")),
+                        react.createElement("h3", null, t("studyHistoryTitle", "생성한 곡"))
+                    ),
+                    react.createElement("strong", null,
+                        t("studyHistoryCount", "{count}곡").replace("{count}", historyCount)
+                    )
+                ),
+                studyHistory.length === 0 && react.createElement(EmptyState, null, t("studyHistoryEmpty", "아직 생성한 학습 곡이 없습니다.")),
+                studyHistory.length > 0 && react.createElement("div", { className: "ivlyrics-study-history-grid" },
+                    studyHistory.map((item) => {
+                        const isCurrent = item.cacheKey === cacheKey;
+                        return react.createElement("article", {
+                            key: item.cacheKey,
+                            className: `ivlyrics-study-history-card${isCurrent ? " active" : ""}`
+                        },
+                            react.createElement("button", {
+                                type: "button",
+                                onClick: () => openHistoryItem(item)
+                            },
+                                react.createElement("div", null,
+                                    react.createElement("strong", null, item.title || t("unknownSong", "제목 없음")),
+                                    item.artist && react.createElement("span", null, item.artist)
+                                ),
+                                react.createElement("div", { className: "ivlyrics-study-history-meta" },
+                                    isCurrent && react.createElement("em", { className: "current" }, t("studyHistoryCurrent", "현재 학습")),
+                                    react.createElement("em", null, getStudyDifficultyLabel(item.difficulty)),
+                                    react.createElement("em", null, `${item.quizCount} ${t("tabQuiz", "퀴즈")}`),
+                                    item.updatedAt && react.createElement("em", null, new Date(item.updatedAt).toLocaleDateString())
+                                )
+                            )
+                        );
+                    })
+                )
+        );
+
         return react.createElement("aside", {
             className: `ivlyrics-study-panel theme-${studyTheme}`,
             role: "dialog",
@@ -2412,43 +2450,7 @@
                         react.createElement("div", { className: "ivlyrics-study-spinner" }),
                         react.createElement("p", null, loadingText || t("loading", "가사를 분석하는 중..."))
                     ),
-                    activeTab === "history" && react.createElement("div", { className: "ivlyrics-study-section ivlyrics-study-history" },
-                        react.createElement("section", { className: "ivlyrics-study-wordbook-hero ivlyrics-study-history-hero" },
-                            react.createElement("div", null,
-                                react.createElement("span", null, t("tabHistory", "학습 기록")),
-                                react.createElement("h3", null, t("studyHistoryTitle", "생성한 곡"))
-                            ),
-                            react.createElement("strong", null,
-                                t("studyHistoryCount", "{count}곡").replace("{count}", historyCount)
-                            )
-                        ),
-                        studyHistory.length === 0 && react.createElement(EmptyState, null, t("studyHistoryEmpty", "아직 생성한 학습 곡이 없습니다.")),
-                        studyHistory.length > 0 && react.createElement("div", { className: "ivlyrics-study-history-grid" },
-                            studyHistory.map((item) => {
-                                const isCurrent = item.cacheKey === cacheKey;
-                                return react.createElement("article", {
-                                    key: item.cacheKey,
-                                    className: `ivlyrics-study-history-card${isCurrent ? " active" : ""}`
-                                },
-                                    react.createElement("button", {
-                                        type: "button",
-                                        onClick: () => openHistoryItem(item)
-                                    },
-                                        react.createElement("div", null,
-                                            react.createElement("strong", null, item.title || t("unknownSong", "제목 없음")),
-                                            item.artist && react.createElement("span", null, item.artist)
-                                        ),
-                                        react.createElement("div", { className: "ivlyrics-study-history-meta" },
-                                            isCurrent && react.createElement("em", { className: "current" }, t("studyHistoryCurrent", "현재 학습")),
-                                            react.createElement("em", null, getStudyDifficultyLabel(item.difficulty)),
-                                            react.createElement("em", null, `${item.quizCount} ${t("tabQuiz", "퀴즈")}`),
-                                            item.updatedAt && react.createElement("em", null, new Date(item.updatedAt).toLocaleDateString())
-                                        )
-                                    )
-                                );
-                            })
-                        )
-                    ),
+                    activeTab === "history" && renderHistoryTab(),
                     pack && activeTab === "explain" && react.createElement("div", { className: "ivlyrics-study-section" },
                         currentLineStudy && react.createElement("section", { className: "ivlyrics-study-card ivlyrics-study-current" },
                             react.createElement("h3", null, t("currentLine", "지금 가사")),

@@ -6554,6 +6554,16 @@
             const spans = [];
             let currentSpan = null;
 
+            const flushSilenceSpan = () => {
+                if (currentSpan && (currentSpan.end - currentSpan.start) >= minSpanMs) {
+                    spans.push({
+                        ...currentSpan,
+                        avgMass: currentSpan.totalMass / Math.max(1, currentSpan.count),
+                        center: Math.round((currentSpan.start + currentSpan.end) / 2)
+                    });
+                }
+            };
+
             for (let index = 0; index < frames.length; index++) {
                 const frame = frames[index];
                 const nextTime = frames[index + 1]?.time ?? endTime;
@@ -6578,23 +6588,11 @@
                     continue;
                 }
 
-                if (currentSpan && (currentSpan.end - currentSpan.start) >= minSpanMs) {
-                    spans.push({
-                        ...currentSpan,
-                        avgMass: currentSpan.totalMass / Math.max(1, currentSpan.count),
-                        center: Math.round((currentSpan.start + currentSpan.end) / 2)
-                    });
-                }
+                flushSilenceSpan();
                 currentSpan = null;
             }
 
-            if (currentSpan && (currentSpan.end - currentSpan.start) >= minSpanMs) {
-                spans.push({
-                    ...currentSpan,
-                    avgMass: currentSpan.totalMass / Math.max(1, currentSpan.count),
-                    center: Math.round((currentSpan.start + currentSpan.end) / 2)
-                });
-            }
+            flushSilenceSpan();
 
             return spans;
         }

@@ -1311,7 +1311,7 @@ const AddonSettingsCard = ({ addon, isEnabled, onToggle, isExpanded, onExpandTog
     const normalizedZh = baseLang === 'zh'
       ? ((/tw|hant/i.test(storedLang) || storedLang === 'zh-TW') ? 'zh-TW' : 'zh-CN')
       : null;
-    return desc[storedLang] || (normalizedZh && desc[normalizedZh]) || desc[baseLang] || desc['en'] || Object.values(desc)[0] || '';
+    return desc[storedLang] || (normalizedZh && desc[normalizedZh]) || desc[baseLang] || desc.en || Object.values(desc)[0] || '';
   };
 
   // 아코디언 헤더 클릭 핸들러
@@ -1471,7 +1471,7 @@ const LyricsProviderCard = ({ provider, isEnabled, onToggle, isExpanded, onExpan
     const normalizedZh = baseLang === 'zh'
       ? ((/tw|hant/i.test(storedLang) || storedLang === 'zh-TW') ? 'zh-TW' : 'zh-CN')
       : null;
-    return desc[storedLang] || (normalizedZh && desc[normalizedZh]) || desc[baseLang] || desc['en'] || Object.values(desc)[0] || '';
+    return desc[storedLang] || (normalizedZh && desc[normalizedZh]) || desc[baseLang] || desc.en || Object.values(desc)[0] || '';
   };
 
   const handleHeaderClick = (e) => {
@@ -2752,7 +2752,7 @@ const DebugInfoPanel = () => {
         client: {
           clientId: Spicetify.LocalStorage.get("ivLyrics:user-hash") || "",
           platform: Utils.detectPlatform(),
-          language: CONFIG.visual["language"] || "en"
+          language: CONFIG.visual.language || "en"
         }
       };
     } catch (e) {
@@ -6687,7 +6687,7 @@ const getCurrentSettingsBackgroundMode = () => {
   if (CONFIG.visual["solid-background"]) return "solid-background";
   if (CONFIG.visual["blur-gradient-background"]) return "blur-gradient-background";
   if (CONFIG.visual["gradient-background"]) return "gradient-background";
-  if (CONFIG.visual["colorful"]) return "colorful";
+  if (CONFIG.visual.colorful) return "colorful";
   return "none";
 };
 

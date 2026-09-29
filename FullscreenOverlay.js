@@ -1323,7 +1323,7 @@ const FullscreenOverlay = (() => {
                         fill: isLiked ? "currentColor" : "none",
                         stroke: "currentColor",
                         strokeWidth: isLiked ? "0" : "1.5",
-                        dangerouslySetInnerHTML: { __html: Spicetify.SVGIcons["heart"] }
+                        dangerouslySetInnerHTML: { __html: Spicetify.SVGIcons.heart }
                     })
                 ),
                 // Shuffle

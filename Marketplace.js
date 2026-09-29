@@ -699,7 +699,7 @@ const MarketplacePage = (() => {
         const [showConfirm, setShowConfirm] = useState(false);
         const lang = window.I18n?.getCurrentLanguage?.() || 'en';
         const description = typeof addon.description === 'object'
-            ? (addon.description[lang] || addon.description['en'] || '')
+            ? (addon.description[lang] || addon.description.en || '')
             : (addon.description || '');
 
         const handleInstall = useCallback(async () => {

@@ -111,7 +111,7 @@
 
     function getLocalizedText(textObj, lang) {
         if (typeof textObj === 'string') return textObj;
-        return textObj[lang] || textObj['en'] || Object.values(textObj)[0] || '';
+        return textObj[lang] || textObj.en || Object.values(textObj)[0] || '';
     }
 
     function getSetting(key, defaultValue = null) {

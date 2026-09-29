@@ -110,7 +110,7 @@ const SongResearch = (() => {
         const configuredTargetLang = CONFIG.visual["translate:target-language"];
         const lang = configuredTargetLang && configuredTargetLang !== "auto"
             ? configuredTargetLang
-            : (window.I18n?.getCurrentLanguage?.() || CONFIG.visual["language"] || Spicetify.Locale?.getLocale()?.split("-")[0] || "en");
+            : (window.I18n?.getCurrentLanguage?.() || CONFIG.visual.language || Spicetify.Locale?.getLocale()?.split("-")[0] || "en");
         const schema = window.AIAddonManager?.RESEARCH_CACHE_VERSION || "research-v7";
         const cacheKey = `${schema}:${trackId}:${lang || "auto"}`;
 

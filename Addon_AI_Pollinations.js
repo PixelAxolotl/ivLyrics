@@ -124,7 +124,7 @@
 
     function getLocalizedText(textObj, lang) {
         if (typeof textObj === 'string') return textObj;
-        return textObj[lang] || textObj['en'] || Object.values(textObj)[0] || '';
+        return textObj[lang] || textObj.en || Object.values(textObj)[0] || '';
     }
 
     function getSetting(key, defaultValue = null) {
@@ -411,7 +411,7 @@
 
                     // API 키가 있으면 추가 (선택적)
                     if (apiKey) {
-                        headers['Authorization'] = `Bearer ${apiKey}`;
+                        headers.Authorization = `Bearer ${apiKey}`;
                     }
 
                     const response = await window.ivLyricsFetch(endpoint, {
@@ -546,7 +546,7 @@
                 try {
                     const endpoint = `${BASE_URL}/v1/chat/completions`;
                     const headers = { 'Content-Type': 'application/json' };
-                    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+                    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
 
                     const response = await window.ivLyricsFetch(endpoint, {
                         method: 'POST',

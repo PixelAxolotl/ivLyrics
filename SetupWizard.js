@@ -2210,7 +2210,7 @@ const SetupWizard = ({ onComplete }) => {
     if (typeof StorageManager !== "undefined" && typeof CONFIG !== "undefined") {
       // Alignment
       StorageManager.saveConfig("alignment", themeSettings.alignment);
-      CONFIG.visual["alignment"] = themeSettings.alignment;
+      CONFIG.visual.alignment = themeSettings.alignment;
 
       // Background - reset all first
       const bgKeys = ["colorful", "gradient-background", "blur-gradient-background", "solid-background", "video-background"];
@@ -2222,7 +2222,7 @@ const SetupWizard = ({ onComplete }) => {
       // Set selected background
       if (themeSettings.background === "colorful") {
         StorageManager.saveConfig("colorful", true);
-        CONFIG.visual["colorful"] = true;
+        CONFIG.visual.colorful = true;
       } else if (themeSettings.background === "gradient") {
         StorageManager.saveConfig("gradient-background", true);
         CONFIG.visual["gradient-background"] = true;

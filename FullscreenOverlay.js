@@ -1779,24 +1779,7 @@ const FullscreenOverlay = (() => {
 
         if (!show || !isFullscreen) return null;
 
-        return react.createElement("div", {
-            className: "fullscreen-queue-wrapper",
-            onMouseLeave: () => setIsHovered(false)
-        },
-            // Hover trigger area (투명한 오른쪽 영역)
-            react.createElement("div", {
-                className: "fullscreen-queue-trigger-area",
-                onMouseEnter: () => setIsHovered(true)
-            }),
-
-            // Queue panel (항상 렌더링, visible 클래스로 애니메이션 제어)
-            react.createElement("div", {
-                className: `fullscreen-queue-panel ${isHovered ? 'visible' : ''}`,
-                onMouseEnter: () => setIsHovered(true)
-            },
-                // Content
-                react.createElement("div", { className: "fullscreen-queue-content" },
-                    activeTab === 'queue' ? react.createElement(react.Fragment, null,
+        const renderQueueTabContent = () => react.createElement(react.Fragment, null,
                         // 현재 재생 중
                         currentTrack && react.createElement("div", { className: "fullscreen-queue-section" },
                             react.createElement("div", { className: "fullscreen-queue-section-title" },
@@ -1847,7 +1830,9 @@ const FullscreenOverlay = (() => {
                         nextTracks.length === 0 && react.createElement("div", { className: "fullscreen-queue-empty" },
                             I18n.t("fullscreen.queue.empty")
                         )
-                    ) : react.createElement(react.Fragment, null,
+        );
+
+        const renderRecentTabContent = () => react.createElement(react.Fragment, null,
                         // 최근 재생 곡들
                         recentTracks.length > 0 ? react.createElement("div", { className: "fullscreen-queue-list" },
                             recentTracks.map((track, idx) =>
@@ -1856,7 +1841,26 @@ const FullscreenOverlay = (() => {
                         ) : react.createElement("div", { className: "fullscreen-queue-empty" },
                             I18n.t("fullscreen.queue.noRecent")
                         )
-                    )
+        );
+
+        return react.createElement("div", {
+            className: "fullscreen-queue-wrapper",
+            onMouseLeave: () => setIsHovered(false)
+        },
+            // Hover trigger area (투명한 오른쪽 영역)
+            react.createElement("div", {
+                className: "fullscreen-queue-trigger-area",
+                onMouseEnter: () => setIsHovered(true)
+            }),
+
+            // Queue panel (항상 렌더링, visible 클래스로 애니메이션 제어)
+            react.createElement("div", {
+                className: `fullscreen-queue-panel ${isHovered ? 'visible' : ''}`,
+                onMouseEnter: () => setIsHovered(true)
+            },
+                // Content
+                react.createElement("div", { className: "fullscreen-queue-content" },
+                    activeTab === 'queue' ? renderQueueTabContent() : renderRecentTabContent()
                 ),
 
                 // Footer with tabs (하단에 탭 버튼)

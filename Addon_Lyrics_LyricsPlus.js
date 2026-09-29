@@ -604,7 +604,7 @@
             line.lyricsPlusSourceLineKey || line.lyricsPlusLineKey || `line-${line.sourceIndex ?? 0}`
         );
         const fragmentCount = plan.length - 1;
-        const fragments = plan.slice(0, -1).map((startIndex, fragmentIndex) => {
+        const buildSoloLineFragment = (startIndex, fragmentIndex) => {
             const endIndex = plan[fragmentIndex + 1];
             const fragmentSyllables = syllables.slice(startIndex, endIndex);
             const first = fragmentSyllables[0];
@@ -634,7 +634,8 @@
                 lyricsPlusFragmentIndex: fragmentIndex,
                 lyricsPlusFragmentCount: fragmentCount
             };
-        });
+        };
+        const fragments = plan.slice(0, -1).map(buildSoloLineFragment);
 
         const isSoloLineSplitSafe = () => {
         const flattenedSyllables = fragments.flatMap(fragment => fragment.syllables);

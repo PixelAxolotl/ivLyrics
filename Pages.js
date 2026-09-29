@@ -1975,42 +1975,46 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 
 	const footer = renderFooter();
 
-	const modalContributor = creatorProfile && !profileLoading && !profileError
-		? activeContributor
-		: {
-			key: "unverified-creator",
-			userHash: null,
-			name: copy.anonymous,
-			avatarUrl: null,
-			linked: false,
-			profileAvailable: false,
-			anonymous: true,
-			isPrivate: true
-		};
-	const modal = activeContributor
-		? react.createElement(SyncCreatorProfileModal, {
-			contributor: modalContributor,
-			profile: creatorProfile,
-			loading: profileLoading,
-			error: profileError,
-			likePending,
-			greetingPending,
-			loadMorePending: profileLoadingMore,
-			listRefreshing: profileListRefreshing,
-			onClose: closeProfile,
-			onToggleLike: handleToggleLike,
-			onSaveGreeting: handleSaveGreeting,
-			onLoadMore: handleLoadMore,
-			onTrackClick: handleTrackClick,
-			activeArtistFilter: profileArtistFilter,
-			onArtistFilterChange: handleArtistFilterChange,
-			supportInfo: activeContributor?.userHash ? supportByUserHash[activeContributor.userHash] : null,
-			decorationPending,
-			onSaveDecoration: handleSaveDecoration,
-			onResetDecoration: handleResetDecoration,
-			onRefreshSupport: handleRefreshSupport
-		})
-		: null;
+	const renderCreatorProfileModal = () => {
+		const modalContributor = creatorProfile && !profileLoading && !profileError
+			? activeContributor
+			: {
+				key: "unverified-creator",
+				userHash: null,
+				name: copy.anonymous,
+				avatarUrl: null,
+				linked: false,
+				profileAvailable: false,
+				anonymous: true,
+				isPrivate: true
+			};
+		return activeContributor
+			? react.createElement(SyncCreatorProfileModal, {
+				contributor: modalContributor,
+				profile: creatorProfile,
+				loading: profileLoading,
+				error: profileError,
+				likePending,
+				greetingPending,
+				loadMorePending: profileLoadingMore,
+				listRefreshing: profileListRefreshing,
+				onClose: closeProfile,
+				onToggleLike: handleToggleLike,
+				onSaveGreeting: handleSaveGreeting,
+				onLoadMore: handleLoadMore,
+				onTrackClick: handleTrackClick,
+				activeArtistFilter: profileArtistFilter,
+				onArtistFilterChange: handleArtistFilterChange,
+				supportInfo: activeContributor?.userHash ? supportByUserHash[activeContributor.userHash] : null,
+				decorationPending,
+				onSaveDecoration: handleSaveDecoration,
+				onResetDecoration: handleResetDecoration,
+				onRefreshSupport: handleRefreshSupport
+			})
+			: null;
+	};
+
+	const modal = renderCreatorProfileModal();
 
 	return react.createElement(
 		react.Fragment,

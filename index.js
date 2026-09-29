@@ -10380,6 +10380,43 @@ class LyricsContainer extends react.Component {
     };
     const { canAdjustTrackSync, quickSyncControlsEnabled, trackSyncAdjustPill } = computeTrackSyncAdjustPill();
 
+    const renderFullscreenOverlayChild = () => (
+        this.state.isFullscreen && !this.state.showMarketplace && !isSyncCreatorActive && window.FullscreenOverlay && react.createElement(window.FullscreenOverlay, {
+          coverUrl: this.state.coverUrl,
+          title: this.state.title,
+          artist: this.state.artist,
+          isFullscreen: this.state.isFullscreen,
+          currentLyricIndex: shouldHideFullscreenLyrics || suppressStaleLyricsPage ? 0 : this.state.currentLyricIndex || 0,
+          totalLyrics: shouldHideFullscreenLyrics || suppressStaleLyricsPage
+            ? 0
+            : Array.isArray(this.state.currentLyrics)
+              ? this.state.currentLyrics.length
+              : 0,
+          activeLyric: shouldHideFullscreenLyrics || suppressStaleLyricsPage
+            ? ""
+            : getPlainLyricsLineText(
+              Array.isArray(this.state.currentLyrics)
+                ? this.state.currentLyrics[this.state.currentLyricIndex || 0]
+                : null
+            ),
+          activeLyrics: shouldHideFullscreenLyrics || suppressStaleLyricsPage || !Array.isArray(this.state.currentLyrics)
+            ? []
+            : this.state.currentLyrics,
+          activeLyricsKaraoke: !shouldHideFullscreenLyrics && !suppressStaleLyricsPage && isKaraokeRenderMode(mode) && !!this.state.karaoke,
+          karaokeSource: this.state.karaokeSource,
+          lyricsSettingsRevision: this.reRenderLyricsPage,
+          translatedMetadata: this.state.translatedMetadata,
+          trackUri: this.state.uri,
+          trackAccent: vinylTrackAccent,
+          trackAccentUri: this.state.colorsUri || "",
+          presentationMode: fullscreenPresentation,
+          onFocusedLyricsChange: this.handleFocusedLyricsChange,
+          onPresentationModeChange: (nextPresentation) => {
+            this.setFullscreenPresentation(nextPresentation);
+          },
+          onExitFullscreen: this.toggleFullscreen
+        })
+    );
     const out = react.createElement(
       "div",
       {
@@ -10402,41 +10439,7 @@ class LyricsContainer extends react.Component {
         },
       },
       // Left panel for fullscreen mode
-      this.state.isFullscreen && !this.state.showMarketplace && !isSyncCreatorActive && window.FullscreenOverlay && react.createElement(window.FullscreenOverlay, {
-        coverUrl: this.state.coverUrl,
-        title: this.state.title,
-        artist: this.state.artist,
-        isFullscreen: this.state.isFullscreen,
-        currentLyricIndex: shouldHideFullscreenLyrics || suppressStaleLyricsPage ? 0 : this.state.currentLyricIndex || 0,
-        totalLyrics: shouldHideFullscreenLyrics || suppressStaleLyricsPage
-          ? 0
-          : Array.isArray(this.state.currentLyrics)
-            ? this.state.currentLyrics.length
-            : 0,
-        activeLyric: shouldHideFullscreenLyrics || suppressStaleLyricsPage
-          ? ""
-          : getPlainLyricsLineText(
-            Array.isArray(this.state.currentLyrics)
-              ? this.state.currentLyrics[this.state.currentLyricIndex || 0]
-              : null
-          ),
-        activeLyrics: shouldHideFullscreenLyrics || suppressStaleLyricsPage || !Array.isArray(this.state.currentLyrics)
-          ? []
-          : this.state.currentLyrics,
-        activeLyricsKaraoke: !shouldHideFullscreenLyrics && !suppressStaleLyricsPage && isKaraokeRenderMode(mode) && !!this.state.karaoke,
-        karaokeSource: this.state.karaokeSource,
-        lyricsSettingsRevision: this.reRenderLyricsPage,
-        translatedMetadata: this.state.translatedMetadata,
-        trackUri: this.state.uri,
-        trackAccent: vinylTrackAccent,
-        trackAccentUri: this.state.colorsUri || "",
-        presentationMode: fullscreenPresentation,
-        onFocusedLyricsChange: this.handleFocusedLyricsChange,
-        onPresentationModeChange: (nextPresentation) => {
-          this.setFullscreenPresentation(nextPresentation);
-        },
-        onExitFullscreen: this.toggleFullscreen
-      }),
+      renderFullscreenOverlayChild(),
       // Tab bar for mode switching
       topBarContent,
       // Update notification banner

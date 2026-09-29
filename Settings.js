@@ -876,163 +876,8 @@ const AccountSection = () => {
     }
   };
 
-  if (loading) {
-    return react.createElement(
-      "div",
-      {
-        className: "info-card",
-        style: {
-          padding: "20px",
-          background: "linear-gradient(145deg, rgba(88, 101, 242, 0.1) 0%, rgba(46, 51, 122, 0.16) 100%)",
-          border: "1px solid rgba(88, 101, 242, 0.22)",
-          borderRadius: "0 0 12px 12px",
-          marginBottom: "24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "110px",
-        },
-      },
-      react.createElement(
-        "span",
-        { style: { color: themeTokens.textSecondary, fontSize: "14px" } },
-        copy.loading
-      )
-    );
-  }
-
-  if (!accountInfo) {
-    return react.createElement(
-      "div",
-      {
-        className: "info-card",
-        style: {
-          padding: "20px",
-          background: "linear-gradient(145deg, rgba(88, 101, 242, 0.1) 0%, rgba(46, 51, 122, 0.16) 100%)",
-          border: "1px solid rgba(88, 101, 242, 0.22)",
-          borderRadius: "0 0 12px 12px",
-          backdropFilter: "blur(30px) saturate(150%)",
-          WebkitBackdropFilter: "blur(30px) saturate(150%)",
-          marginBottom: "24px",
-        },
-      },
-      react.createElement(
-        "div",
-        {
-          style: {
-            display: "flex",
-            alignItems: "center",
-            gap: "16px",
-            marginBottom: "16px",
-          },
-        },
-        react.createElement(
-          "div",
-          {
-            style: {
-              width: "52px",
-              height: "52px",
-              borderRadius: "16px",
-              background: "linear-gradient(135deg, #5865f2 0%, #7983f5 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              flexShrink: 0,
-            },
-          },
-          react.createElement(
-            "svg",
-            {
-              width: "24",
-              height: "24",
-              viewBox: "0 0 24 24",
-              fill: "currentColor",
-            },
-            react.createElement("path", {
-              d: "M20.317 4.369A19.791 19.791 0 0 0 15.126 3c-.23.408-.499.957-.682 1.384a18.27 18.27 0 0 0-4.888 0A13.67 13.67 0 0 0 8.874 3a19.736 19.736 0 0 0-5.19 1.368C.533 9.067-.321 13.65.106 18.168a19.9 19.9 0 0 0 6.357 3.208c.513-.693.97-1.425 1.36-2.197-.748-.284-1.462-.634-2.134-1.04.178-.13.353-.267.522-.408 4.118 1.88 8.59 1.88 12.66 0 .17.141.344.278.523.408-.673.407-1.388.757-2.136 1.041.39.771.847 1.503 1.36 2.196a19.873 19.873 0 0 0 6.36-3.209c.5-5.238-.854-9.78-3.16-13.799ZM8.02 15.331c-1.24 0-2.26-1.131-2.26-2.525 0-1.394 1-2.525 2.26-2.525 1.26 0 2.279 1.15 2.26 2.525 0 1.394-1 2.525-2.26 2.525Zm7.96 0c-1.24 0-2.26-1.131-2.26-2.525 0-1.394 1-2.525 2.26-2.525 1.26 0 2.279 1.15 2.26 2.525 0 1.394-1 2.525-2.26 2.525Z",
-            })
-          )
-        ),
-        react.createElement(
-          "div",
-          { style: { flex: 1 } },
-          react.createElement(
-            "h3",
-            {
-              style: {
-                margin: "0 0 4px",
-                fontSize: "17px",
-                color: themeTokens.textPrimary,
-                fontWeight: "700",
-              },
-            },
-            copy.provider
-          ),
-          react.createElement(
-            "p",
-            {
-              style: {
-                margin: 0,
-                fontSize: "13px",
-                color: themeTokens.textSecondary,
-              },
-            },
-            copy.description
-          )
-        )
-      ),
-      react.createElement(
-        "p",
-        {
-          style: {
-            margin: "0 0 16px",
-            fontSize: "13px",
-            color: themeTokens.textSecondary,
-            lineHeight: "1.7",
-          },
-        },
-        copy.info
-      ),
-      error &&
-        react.createElement(
-          "p",
-          {
-            style: {
-              margin: "0 0 12px",
-              fontSize: "12px",
-              color: "#f87171",
-            },
-          },
-          error
-        ),
-      react.createElement(
-        "button",
-        {
-          onClick: openLoginPage,
-          disabled: loginLoading || logoutLoading,
-          style: {
-            width: "100%",
-            padding: "12px 20px",
-            background: "linear-gradient(135deg, #5865f2 0%, #7983f5 100%)",
-            border: "none",
-            borderRadius: "10px",
-            color: "#ffffff",
-            fontSize: "14px",
-            fontWeight: "700",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-          },
-        },
-        loginLoading ? copy.loggingIn : copy.loginButton
-      )
-    );
-  }
-
-  return react.createElement(
+  const renderAccountLinkedCard = () =>
+react.createElement(
     "div",
     {
       className: "info-card",
@@ -1243,6 +1088,167 @@ const AccountSection = () => {
     react.createElement(CreatorPrivacySection, { userHash: Utils.getUserHash() }),
     react.createElement(SettingsBackup, { userHash: Utils.getUserHash() })
   );
+  const renderAccountUnlinkedCard = () =>
+react.createElement(
+      "div",
+      {
+        className: "info-card",
+        style: {
+          padding: "20px",
+          background: "linear-gradient(145deg, rgba(88, 101, 242, 0.1) 0%, rgba(46, 51, 122, 0.16) 100%)",
+          border: "1px solid rgba(88, 101, 242, 0.22)",
+          borderRadius: "0 0 12px 12px",
+          backdropFilter: "blur(30px) saturate(150%)",
+          WebkitBackdropFilter: "blur(30px) saturate(150%)",
+          marginBottom: "24px",
+        },
+      },
+      react.createElement(
+        "div",
+        {
+          style: {
+            display: "flex",
+            alignItems: "center",
+            gap: "16px",
+            marginBottom: "16px",
+          },
+        },
+        react.createElement(
+          "div",
+          {
+            style: {
+              width: "52px",
+              height: "52px",
+              borderRadius: "16px",
+              background: "linear-gradient(135deg, #5865f2 0%, #7983f5 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              flexShrink: 0,
+            },
+          },
+          react.createElement(
+            "svg",
+            {
+              width: "24",
+              height: "24",
+              viewBox: "0 0 24 24",
+              fill: "currentColor",
+            },
+            react.createElement("path", {
+              d: "M20.317 4.369A19.791 19.791 0 0 0 15.126 3c-.23.408-.499.957-.682 1.384a18.27 18.27 0 0 0-4.888 0A13.67 13.67 0 0 0 8.874 3a19.736 19.736 0 0 0-5.19 1.368C.533 9.067-.321 13.65.106 18.168a19.9 19.9 0 0 0 6.357 3.208c.513-.693.97-1.425 1.36-2.197-.748-.284-1.462-.634-2.134-1.04.178-.13.353-.267.522-.408 4.118 1.88 8.59 1.88 12.66 0 .17.141.344.278.523.408-.673.407-1.388.757-2.136 1.041.39.771.847 1.503 1.36 2.196a19.873 19.873 0 0 0 6.36-3.209c.5-5.238-.854-9.78-3.16-13.799ZM8.02 15.331c-1.24 0-2.26-1.131-2.26-2.525 0-1.394 1-2.525 2.26-2.525 1.26 0 2.279 1.15 2.26 2.525 0 1.394-1 2.525-2.26 2.525Zm7.96 0c-1.24 0-2.26-1.131-2.26-2.525 0-1.394 1-2.525 2.26-2.525 1.26 0 2.279 1.15 2.26 2.525 0 1.394-1 2.525-2.26 2.525Z",
+            })
+          )
+        ),
+        react.createElement(
+          "div",
+          { style: { flex: 1 } },
+          react.createElement(
+            "h3",
+            {
+              style: {
+                margin: "0 0 4px",
+                fontSize: "17px",
+                color: themeTokens.textPrimary,
+                fontWeight: "700",
+              },
+            },
+            copy.provider
+          ),
+          react.createElement(
+            "p",
+            {
+              style: {
+                margin: 0,
+                fontSize: "13px",
+                color: themeTokens.textSecondary,
+              },
+            },
+            copy.description
+          )
+        )
+      ),
+      react.createElement(
+        "p",
+        {
+          style: {
+            margin: "0 0 16px",
+            fontSize: "13px",
+            color: themeTokens.textSecondary,
+            lineHeight: "1.7",
+          },
+        },
+        copy.info
+      ),
+      error &&
+        react.createElement(
+          "p",
+          {
+            style: {
+              margin: "0 0 12px",
+              fontSize: "12px",
+              color: "#f87171",
+            },
+          },
+          error
+        ),
+      react.createElement(
+        "button",
+        {
+          onClick: openLoginPage,
+          disabled: loginLoading || logoutLoading,
+          style: {
+            width: "100%",
+            padding: "12px 20px",
+            background: "linear-gradient(135deg, #5865f2 0%, #7983f5 100%)",
+            border: "none",
+            borderRadius: "10px",
+            color: "#ffffff",
+            fontSize: "14px",
+            fontWeight: "700",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+          },
+        },
+        loginLoading ? copy.loggingIn : copy.loginButton
+      )
+    );
+  const renderAccountLoadingCard = () =>
+react.createElement(
+      "div",
+      {
+        className: "info-card",
+        style: {
+          padding: "20px",
+          background: "linear-gradient(145deg, rgba(88, 101, 242, 0.1) 0%, rgba(46, 51, 122, 0.16) 100%)",
+          border: "1px solid rgba(88, 101, 242, 0.22)",
+          borderRadius: "0 0 12px 12px",
+          marginBottom: "24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "110px",
+        },
+      },
+      react.createElement(
+        "span",
+        { style: { color: themeTokens.textSecondary, fontSize: "14px" } },
+        copy.loading
+      )
+    );
+  if (loading) {
+    return renderAccountLoadingCard();
+  }
+
+  if (!accountInfo) {
+    return renderAccountUnlinkedCard();
+  }
+
+  return renderAccountLinkedCard();
 };
 
 // AI Addon 개별 카드 컴포넌트 (아코디언 스타일 - LyricsProviderCard와 동일 스타일)

@@ -9113,6 +9113,7 @@ const ConfigModal = ({
       return () => window.removeEventListener("ivLyrics", handleConfigChange);
     }, []);
 
+    const buildModeSpecificItems = () => {
     const modeSpecificItems = [];
 
     if (
@@ -9209,6 +9210,9 @@ const ConfigModal = ({
         unit: "%",
       });
     }
+      return modeSpecificItems;
+    };
+    const modeSpecificItems = buildModeSpecificItems();
 
     return react.createElement(
       react.Fragment,

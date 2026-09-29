@@ -3300,46 +3300,7 @@ const FullscreenOverlay = (() => {
                 )
         );
 
-        return react.createElement(react.Fragment, null,
-            renderResearchConsentDialog(),
-            !tvModeEnabled && !tmiMode && PresentationSwitcher && react.createElement(PresentationSwitcher, {
-                activeMode: normalizedPresentationMode,
-                visible: true,
-                onChange: handlePresentationModeChange
-            }),
-            // TMI Overlay for TV Mode & Portrait Mode (rendered above everything when active)
-            (tvModeEnabled || isPortraitFullscreen) && tmiMode && react.createElement("div", {
-                className: "fullscreen-tv-tmi-overlay"
-            },
-                renderTmiModeView(false)
-            ),
-            // Bottom-left: TV Mode Song Info OR Context info
-            tvModeEnabled ? renderTvModeSongInfo()
-            : react.createElement("div", {
-                className: `fullscreen-bottom-left ${!uiVisible ? 'hidden' : ''}`
-            },
-                react.createElement(ContextInfo, { show: showContextInOverlay, showImage: showContextImage })
-            ),
-            // Top-right: Clock & Next track
-            react.createElement("div", {
-                className: `fullscreen-top-right ${!uiVisible ? 'hidden' : ''}`
-            },
-                react.createElement("div", {
-                    className: "fullscreen-clock-wrapper"
-                },
-                    react.createElement(Clock, {
-                        show: showClockInOverlay,
-                        showSeconds: clockShowSeconds,
-                        size: clockSizeInOverlay
-                    })
-                ),
-                react.createElement(NextTrackPreview, {
-                    show: showNextTrackInOverlay,
-                    secondsBeforeEnd: nextTrackSeconds
-                })
-            ),
-            // Portrait mode overlays (세로모드 전용 오버레이)
-            isPortraitFullscreen && react.createElement(react.Fragment, null,
+        const renderPortraitOverlays = () => react.createElement(react.Fragment, null,
                 // [상단 오버레이] 앨범아트 + 곡정보
                 (showAlbum || showInfo) && react.createElement("div", {
                     className: `portrait-overlay-top ${!uiVisible ? 'hidden' : ''} ${isLayoutReversed ? 'layout-reversed' : ''}`
@@ -3493,7 +3454,48 @@ const FullscreenOverlay = (() => {
                         showBackground: controlsBackground
                     })
                 )
+        );
+
+        return react.createElement(react.Fragment, null,
+            renderResearchConsentDialog(),
+            !tvModeEnabled && !tmiMode && PresentationSwitcher && react.createElement(PresentationSwitcher, {
+                activeMode: normalizedPresentationMode,
+                visible: true,
+                onChange: handlePresentationModeChange
+            }),
+            // TMI Overlay for TV Mode & Portrait Mode (rendered above everything when active)
+            (tvModeEnabled || isPortraitFullscreen) && tmiMode && react.createElement("div", {
+                className: "fullscreen-tv-tmi-overlay"
+            },
+                renderTmiModeView(false)
             ),
+            // Bottom-left: TV Mode Song Info OR Context info
+            tvModeEnabled ? renderTvModeSongInfo()
+            : react.createElement("div", {
+                className: `fullscreen-bottom-left ${!uiVisible ? 'hidden' : ''}`
+            },
+                react.createElement(ContextInfo, { show: showContextInOverlay, showImage: showContextImage })
+            ),
+            // Top-right: Clock & Next track
+            react.createElement("div", {
+                className: `fullscreen-top-right ${!uiVisible ? 'hidden' : ''}`
+            },
+                react.createElement("div", {
+                    className: "fullscreen-clock-wrapper"
+                },
+                    react.createElement(Clock, {
+                        show: showClockInOverlay,
+                        showSeconds: clockShowSeconds,
+                        size: clockSizeInOverlay
+                    })
+                ),
+                react.createElement(NextTrackPreview, {
+                    show: showNextTrackInOverlay,
+                    secondsBeforeEnd: nextTrackSeconds
+                })
+            ),
+            // Portrait mode overlays (세로모드 전용 오버레이)
+            isPortraitFullscreen && renderPortraitOverlays(),
             // Left panel (Album, Info & Controls) OR TMI View - Hidden in TV Mode & Portrait Mode
             !isPortraitFullscreen && isTwoColumn && !hideLeftPanel && !hideLeftPanelForTvMode && react.createElement("div", {
                 className: `lyrics-fullscreen-left-panel ${!uiVisible && showControlsInLeftPanel ? 'controls-hidden' : ''} ${tmiMode ? 'tmi-mode' : ''}`,

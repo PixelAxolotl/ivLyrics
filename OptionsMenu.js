@@ -2002,16 +2002,17 @@ const OptionsMenu = react.memo(
     );
 
     // 초기 선택 값 결정 (selected 또는 defaultValue에서)
-    const getInitialSelected = () => {
-      let initialItem = selected || defaultValue;
-      if (initialItem && typeof initialItem !== 'object') {
-        initialItem = optionByKey.get(initialItem);
-      } else if (initialItem && initialItem.key && !initialItem.value) {
-        const found = optionByKey.get(initialItem.key);
-        if (found) initialItem = found;
+    const resolveOptionItem = (candidate) => {
+      let item = candidate;
+      if (item && typeof item !== 'object') {
+        item = optionByKey.get(item);
+      } else if (item && item.key && !item.value) {
+        const found = optionByKey.get(item.key);
+        if (found) item = found;
       }
-      return initialItem;
+      return item;
     };
+    const getInitialSelected = () => resolveOptionItem(selected || defaultValue);
 
     // 내부 상태로 선택된 항목 관리
     const [selectedItem, setSelectedItem] = react.useState(getInitialSelected);
@@ -2022,13 +2023,7 @@ const OptionsMenu = react.memo(
     }, [selected, defaultValue, optionByKey]);
 
     // Resolve default item for display fallback
-    let defaultItem = defaultValue;
-    if (defaultValue && typeof defaultValue !== 'object') {
-      defaultItem = optionByKey.get(defaultValue);
-    } else if (defaultValue && defaultValue.key && !defaultValue.value) {
-      const found = optionByKey.get(defaultValue.key);
-      if (found) defaultItem = found;
-    }
+    const defaultItem = resolveOptionItem(defaultValue);
 
     // Determine display text
     const displayValue = selectedItem?.value || defaultItem?.value || (typeof defaultValue === 'string' ? defaultValue : "") || "";

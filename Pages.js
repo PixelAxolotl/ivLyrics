@@ -1336,7 +1336,7 @@ const SyncCreatorProfileModal = react.memo(({
 		renderCreatorProfileSections()
 	);
 
-	return react.createElement(
+	const renderCreatorProfileModalShell = () => react.createElement(
 		"div",
 		{
 			className: "lyrics-creator-profile-overlay",
@@ -1409,6 +1409,8 @@ const SyncCreatorProfileModal = react.memo(({
 			)
 		)
 	);
+
+	return renderCreatorProfileModalShell();
 });
 
 // CreditFooter implementing provider and contributor display

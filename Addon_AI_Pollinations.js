@@ -122,11 +122,6 @@
         return value && value !== path ? value : fallback;
     }
 
-    function getLocalizedText(textObj, lang) {
-        if (typeof textObj === 'string') return textObj;
-        return textObj[lang] || textObj.en || Object.values(textObj)[0] || '';
-    }
-
     function getSetting(key, defaultValue = null) {
         return window.AIAddonManager?.getAddonSetting(ADDON_INFO.id, key, defaultValue) ?? defaultValue;
     }
@@ -188,12 +183,6 @@
             throw new Error('[Pollinations.ai] App Key must be a publishable pk_ key. Never use sk_ as client_id.');
         }
         return clientId;
-    }
-
-    function normalizePollinationsUrl(url) {
-        if (!url) return `${AUTH_BASE_URL}/device`;
-        if (/^https?:\/\//i.test(url)) return url;
-        return `${AUTH_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
     }
 
     async function requestDeviceCode() {

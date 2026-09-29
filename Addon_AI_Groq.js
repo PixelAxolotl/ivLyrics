@@ -99,20 +99,9 @@
         }
     }
 
-    async function getModels() {
-        const apiKeys = getApiKeys();
-        if (apiKeys.length === 0) return [];
-        return await fetchAvailableModels(apiKeys[0]);
-    }
-
     // ============================================
     // Helper Functions
     // ============================================
-
-    function getLocalizedText(textObj, lang) {
-        if (typeof textObj === 'string') return textObj;
-        return textObj[lang] || textObj.en || Object.values(textObj)[0] || '';
-    }
 
     function getSetting(key, defaultValue = null) {
         return window.AIAddonManager?.getAddonSetting(ADDON_INFO.id, key, defaultValue) ?? defaultValue;

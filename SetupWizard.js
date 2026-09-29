@@ -1581,40 +1581,7 @@ const VideoTestStep = ({ onNext, onBack, onNeedHelper, onSkip }) => {
       )
     );
 
-  return react.createElement(
-    "div",
-    {
-      className: "wizard-step video-test-step",
-      style: wizardStepStyle,
-    },
-    react.createElement(
-      "h2",
-      { style: wizardTitleStyle },
-      I18n.t("setupWizard.videoTest.title")
-    ),
-    react.createElement(
-      "p",
-      { style: { ...wizardSubtitleStyle, marginBottom: "20px" } },
-      I18n.t("setupWizard.videoTest.subtitle")
-    ),
-    // YouTube Player container
-    react.createElement(
-      "div",
-      {
-        ref: playerContainerRef,
-        style: {
-          width: "100%",
-          maxWidth: "400px",
-          margin: "0 auto 20px",
-          aspectRatio: "16/9",
-          borderRadius: 0,
-          overflow: "hidden",
-          background: "rgba(0, 0, 0, 0.3)",
-          border: `1px solid ${WIZARD_COLORS.border}`,
-        },
-      }
-    ),
-    // Question section
+  const renderVideoTestQuestion = () =>
     react.createElement(
       "div",
       {
@@ -1675,7 +1642,43 @@ const VideoTestStep = ({ onNext, onBack, onNeedHelper, onSkip }) => {
           I18n.t("setupWizard.videoTest.no")
         )
       )
+    );
+
+  return react.createElement(
+    "div",
+    {
+      className: "wizard-step video-test-step",
+      style: wizardStepStyle,
+    },
+    react.createElement(
+      "h2",
+      { style: wizardTitleStyle },
+      I18n.t("setupWizard.videoTest.title")
     ),
+    react.createElement(
+      "p",
+      { style: { ...wizardSubtitleStyle, marginBottom: "20px" } },
+      I18n.t("setupWizard.videoTest.subtitle")
+    ),
+    // YouTube Player container
+    react.createElement(
+      "div",
+      {
+        ref: playerContainerRef,
+        style: {
+          width: "100%",
+          maxWidth: "400px",
+          margin: "0 auto 20px",
+          aspectRatio: "16/9",
+          borderRadius: 0,
+          overflow: "hidden",
+          background: "rgba(0, 0, 0, 0.3)",
+          border: `1px solid ${WIZARD_COLORS.border}`,
+        },
+      }
+    ),
+    // Question section
+    renderVideoTestQuestion(),
     // Helper required message (shown when loginRequired is true)
     loginRequired === true && renderVideoTestHelperMessage(),
     // Spacer

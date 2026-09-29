@@ -1454,6 +1454,7 @@ const VinylPlayerMode = (() => {
             trackTransition
         ]);
 
+        const computeModeLyricState = () => {
         const activeVinylLyric = String(activeLyric || "")
             .replace(/\s+/g, " ")
             .trim();
@@ -1488,6 +1489,9 @@ const VinylPlayerMode = (() => {
             Array.isArray(displayedSourceLine?.culturalNote)
                 ? displayedSourceLine.culturalNote.length > 0
                 : !!displayedSourceLine?.culturalNote;
+        return { ActiveLyricRenderer, transitionClass, displayedLyric, hasVisibleLyric, hasVisibleCulturalAnnotation };
+        };
+        const { ActiveLyricRenderer, transitionClass, displayedLyric, hasVisibleLyric, hasVisibleCulturalAnnotation } = computeModeLyricState();
 
         const renderLyricLayer = (snapshot) => {
             if (!snapshot) return null;

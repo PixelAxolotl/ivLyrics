@@ -497,6 +497,7 @@
                         throw new Error(`[Gemini] ${msg}`);
                     }
 
+                    const consumeGeminiStream = async () => {
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let sseBuffer = '';
@@ -579,6 +580,9 @@
                     }
 
                     return transformed;
+                    };
+
+                    return await consumeGeminiStream();
 
                 } catch (e) {
                     lastError = e;

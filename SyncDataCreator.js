@@ -6111,45 +6111,48 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 	// 키보드 이벤트 리스너 등록
 	useEffect(() => {
-		// 라인이 변경되었는지 확인
-		const lineChanged = prevLineIndexRef.current !== currentLineIndex;
-		if (lineChanged) {
-			prevLineIndexRef.current = currentLineIndex;
-		}
-		const targetChanged = prevKeyboardTargetRef.current !== activeParallelTargetId;
-		if (targetChanged) {
-			prevKeyboardTargetRef.current = activeParallelTargetId;
-		}
+		const resetKeyboardSyncStateForDependencyChange = () => {
+			// 라인이 변경되었는지 확인
+			const lineChanged = prevLineIndexRef.current !== currentLineIndex;
+			if (lineChanged) {
+				prevLineIndexRef.current = currentLineIndex;
+			}
+			const targetChanged = prevKeyboardTargetRef.current !== activeParallelTargetId;
+			if (targetChanged) {
+				prevKeyboardTargetRef.current = activeParallelTargetId;
+			}
 
-		// record 모드가 아니거나 라인이 변경되면 키보드 싱크 상태 초기화
-		const shouldReset = mode !== 'record' || lineChanged || targetChanged;
-		if (shouldReset) scoreInputRef.current = null;
-		if (shouldReset && recordingLockIndexRef.current >= 0) {
-			clearRecordingLock();
-		}
-		if (shouldReset && (isKeyboardSyncingRef.current || isKeyboardDraggingRef.current)) {
-			window.__ivLyricsDebugLog?.('[SyncDataCreator] Resetting keyboard sync state, mode:', mode, 'lineChanged:', lineChanged, 'targetChanged:', targetChanged);
-			// 진행 중인 키보드 싱크 초기화
-			isKeyboardSyncingRef.current = false;
-			keyboardCharIndexRef.current = -1;
-			charTimesRef.current = [];
-			pendingWordSyncRef.current = null; // 보간 대기 상태도 초기화
-			pendingSyllableSyncRef.current = null;
-			setDragStartTime(null);
-			setRecordingProgressIndex(-1);
-			// 드래그 모드도 초기화
-			if (isKeyboardDraggingRef.current) {
-				isKeyboardDraggingRef.current = false;
-				if (keyboardDragIntervalRef.current) {
-					clearInterval(keyboardDragIntervalRef.current);
-					keyboardDragIntervalRef.current = null;
+			// record 모드가 아니거나 라인이 변경되면 키보드 싱크 상태 초기화
+			const shouldReset = mode !== 'record' || lineChanged || targetChanged;
+			if (shouldReset) scoreInputRef.current = null;
+			if (shouldReset && recordingLockIndexRef.current >= 0) {
+				clearRecordingLock();
+			}
+			if (shouldReset && (isKeyboardSyncingRef.current || isKeyboardDraggingRef.current)) {
+				window.__ivLyricsDebugLog?.('[SyncDataCreator] Resetting keyboard sync state, mode:', mode, 'lineChanged:', lineChanged, 'targetChanged:', targetChanged);
+				// 진행 중인 키보드 싱크 초기화
+				isKeyboardSyncingRef.current = false;
+				keyboardCharIndexRef.current = -1;
+				charTimesRef.current = [];
+				pendingWordSyncRef.current = null; // 보간 대기 상태도 초기화
+				pendingSyllableSyncRef.current = null;
+				setDragStartTime(null);
+				setRecordingProgressIndex(-1);
+				// 드래그 모드도 초기화
+				if (isKeyboardDraggingRef.current) {
+					isKeyboardDraggingRef.current = false;
+					if (keyboardDragIntervalRef.current) {
+						clearInterval(keyboardDragIntervalRef.current);
+						keyboardDragIntervalRef.current = null;
+					}
+				}
+				if (keyboardDragWarmupTimerRef.current) {
+					clearTimeout(keyboardDragWarmupTimerRef.current);
+					keyboardDragWarmupTimerRef.current = null;
 				}
 			}
-			if (keyboardDragWarmupTimerRef.current) {
-				clearTimeout(keyboardDragWarmupTimerRef.current);
-				keyboardDragWarmupTimerRef.current = null;
-			}
-		}
+		};
+		resetKeyboardSyncStateForDependencyChange();
 
 		const finishKeyboardSync = () => {
 			if (!isKeyboardSyncingRef.current) return;

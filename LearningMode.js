@@ -1222,6 +1222,16 @@
         });
     };
 
+    const buildStudyRequestParams = ({ trackId, title, artist, provider, targetLang, difficulty, lines }) => ({
+        trackId,
+        title,
+        artist,
+        provider,
+        targetLang,
+        difficulty: normalizeStudyDifficulty(difficulty),
+        sourceLang: getSourceLanguage(lines)
+    });
+
     const startGenerationJob = ({
         normalizedLyrics,
         trackId,
@@ -1243,15 +1253,9 @@
 
         const jobId = (Number(activeGeneration.jobId) || 0) + 1;
         const limited = getLimitedLines(normalizedLyrics);
-        const requestParams = {
-            trackId,
-            title,
-            artist,
-            provider,
-            targetLang,
-            difficulty: normalizeStudyDifficulty(difficulty),
-            sourceLang: getSourceLanguage(limited.lines)
-        };
+        const requestParams = buildStudyRequestParams({
+            trackId, title, artist, provider, targetLang, difficulty, lines: limited.lines
+        });
 
         setGenerationState({
             jobId,
@@ -1444,15 +1448,9 @@
 
         const jobId = (Number(activeGeneration.jobId) || 0) + 1;
         const limited = getLimitedLines(normalizedLyrics);
-        const requestParams = {
-            trackId,
-            title,
-            artist,
-            provider,
-            targetLang,
-            difficulty: normalizeStudyDifficulty(difficulty),
-            sourceLang: getSourceLanguage(limited.lines)
-        };
+        const requestParams = buildStudyRequestParams({
+            trackId, title, artist, provider, targetLang, difficulty, lines: limited.lines
+        });
         const chunks = buildStudyChunks(limited.lines, QUIZ_CHUNK_LINES, QUIZ_CHUNK_CHARS)
             .filter((chunk) => chunk.length > 0);
         const requestTotal = Math.max(1, chunks.length);

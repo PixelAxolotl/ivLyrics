@@ -2262,6 +2262,32 @@
 
         return { body, selectedFlow, selectedSource, englishSearchFlow, englishMetadata, englishSearchError };
     }
+    // 트랙 컨텍스트(요청 헤더 + 기존 sync-data 기반 정보) 준비 로직은
+    // searchCandidates()와 getLyrics()에서 동일하다. 동일 로직을 헬퍼로 공유하되
+    // trackId/trackIsrc는 내부에서만 쓰이므로 그대로 지역 변수로 남긴다.
+    async function resolveLrclibTrackContext(info) {
+                const headers = { 'x-user-agent': `spicetify v${Spicetify.Config?.version || 'unknown'}` };
+                const trackId = window.LyricsService?.extractTrackId?.(info?.uri)
+                    || window.ivLyricsTrackIdentity?.extractTrackId?.(info?.uri)
+                    || '';
+                const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, info)
+                    || window.SyncDataService?.getTrackIsrc?.(trackId, info)
+                    || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);
+                let syncDataLineCharCounts = null;
+                let syncDataSource = null;
+
+                if (trackId && window.SyncDataService?.getSyncData) {
+                    try {
+                        const existingSyncData = await window.SyncDataService.getSyncData(trackId, ADDON_INFO.id, { ...info, isrc: trackIsrc });
+                        syncDataLineCharCounts = getSyncDataLineCharCounts(existingSyncData);
+                        syncDataSource = getSyncDataLrclibSource(existingSyncData);
+                    } catch (e) {
+                        window.__ivLyricsDebugLog?.('[LR-DEBUG] Failed to fetch sync-data for exact line matching:', e?.message || e);
+                    }
+                }
+
+        return { headers, syncDataLineCharCounts, syncDataSource };
+    }
     const LrclibLyricsAddon = {
         ...ADDON_INFO,  // 메타데이터 병합 (id, name, version 등)
 
@@ -2293,25 +2319,7 @@
                     };
                 }
 
-                const headers = { 'x-user-agent': `spicetify v${Spicetify.Config?.version || 'unknown'}` };
-                const trackId = window.LyricsService?.extractTrackId?.(info?.uri)
-                    || window.ivLyricsTrackIdentity?.extractTrackId?.(info?.uri)
-                    || '';
-                const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, info)
-                    || window.SyncDataService?.getTrackIsrc?.(trackId, info)
-                    || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);
-                let syncDataLineCharCounts = null;
-                let syncDataSource = null;
-
-                if (trackId && window.SyncDataService?.getSyncData) {
-                    try {
-                        const existingSyncData = await window.SyncDataService.getSyncData(trackId, ADDON_INFO.id, { ...info, isrc: trackIsrc });
-                        syncDataLineCharCounts = getSyncDataLineCharCounts(existingSyncData);
-                        syncDataSource = getSyncDataLrclibSource(existingSyncData);
-                    } catch (e) {
-                        window.__ivLyricsDebugLog?.('[LR-DEBUG] Failed to fetch sync-data for exact line matching:', e?.message || e);
-                    }
-                }
+                const { headers, syncDataLineCharCounts, syncDataSource } = await resolveLrclibTrackContext(info);
 
                 let sourceDirectLookupAttempted = false;
                 let cachedSourceDirectPreviewCandidate = null;
@@ -2670,25 +2678,7 @@
                     return result;
                 }
 
-                const headers = { 'x-user-agent': `spicetify v${Spicetify.Config?.version || 'unknown'}` };
-                const trackId = window.LyricsService?.extractTrackId?.(info?.uri)
-                    || window.ivLyricsTrackIdentity?.extractTrackId?.(info?.uri)
-                    || '';
-                const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, info)
-                    || window.SyncDataService?.getTrackIsrc?.(trackId, info)
-                    || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);
-                let syncDataLineCharCounts = null;
-                let syncDataSource = null;
-
-                if (trackId && window.SyncDataService?.getSyncData) {
-                    try {
-                        const existingSyncData = await window.SyncDataService.getSyncData(trackId, ADDON_INFO.id, { ...info, isrc: trackIsrc });
-                        syncDataLineCharCounts = getSyncDataLineCharCounts(existingSyncData);
-                        syncDataSource = getSyncDataLrclibSource(existingSyncData);
-                    } catch (e) {
-                        window.__ivLyricsDebugLog?.('[LR-DEBUG] Failed to fetch sync-data for exact line matching:', e?.message || e);
-                    }
-                }
+                const { headers, syncDataLineCharCounts, syncDataSource } = await resolveLrclibTrackContext(info);
 
                 if (getSyncDataLrclibId(syncDataSource)) {
                     const directCandidate = decorateDirectCandidate(

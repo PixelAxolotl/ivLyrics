@@ -62,6 +62,33 @@
         }
     }
 
+    // IndexedDB에 저장할 에드온 엔트리 생성 (install/update 공통 형태)
+    // metadata 마지막 4개 필드와 installedAt은 호출자가 계산해 overrides로 전달하며,
+    // updatedAt은 항상 마지막에 새로 생성한다.
+    function buildMarketplaceAddonEntry(id, code, addonInfo, overrides) {
+        return {
+            id,
+            code,
+            metadata: {
+                name: addonInfo.name,
+                type: addonInfo.type,
+                author: addonInfo.author,
+                version: addonInfo.version,
+                description: addonInfo.description,
+                preview: addonInfo.preview,
+                downloadUrl: addonInfo.downloadUrl,
+                updated: addonInfo.updated,
+                minAppVersion: addonInfo.minAppVersion,
+                source: overrides.source,
+                runtimeId: overrides.runtimeId,
+                sourceRepo: overrides.sourceRepo,
+                githubUrl: overrides.githubUrl
+            },
+            installedAt: overrides.installedAt,
+            updatedAt: new Date().toISOString()
+        };
+    }
+
     // ============================================
     // MarketplaceManager Class
     // ============================================
@@ -735,27 +762,13 @@
                 const code = await this._downloadAddonCode(downloadUrl);
 
                 // IndexedDB에 저장
-                const entry = {
-                    id,
-                    code,
-                    metadata: {
-                        name: addonInfo.name,
-                        type: addonInfo.type,
-                        author: addonInfo.author,
-                        version: addonInfo.version,
-                        description: addonInfo.description,
-                        preview: addonInfo.preview,
-                        downloadUrl: addonInfo.downloadUrl,
-                        updated: addonInfo.updated,
-                        minAppVersion: addonInfo.minAppVersion,
-                        source: addonInfo.source || 'marketplace',
-                        runtimeId: addonInfo.runtimeId || id,
-                        sourceRepo: addonInfo.sourceRepo || '',
-                        githubUrl: addonInfo.githubUrl || ''
-                    },
-                    installedAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                };
+                const entry = buildMarketplaceAddonEntry(id, code, addonInfo, {
+                    source: addonInfo.source || 'marketplace',
+                    runtimeId: addonInfo.runtimeId || id,
+                    sourceRepo: addonInfo.sourceRepo || '',
+                    githubUrl: addonInfo.githubUrl || '',
+                    installedAt: new Date().toISOString()
+                });
 
                 await this._dbPut(entry);
                 this._installedAddons.set(id, entry);
@@ -943,27 +956,13 @@
                 const code = await this._downloadAddonCode(addonInfo.downloadUrl);
 
                 // IndexedDB 업데이트
-                const entry = {
-                    id,
-                    code,
-                    metadata: {
-                        name: addonInfo.name,
-                        type: addonInfo.type,
-                        author: addonInfo.author,
-                        version: addonInfo.version,
-                        description: addonInfo.description,
-                        preview: addonInfo.preview,
-                        downloadUrl: addonInfo.downloadUrl,
-                        updated: addonInfo.updated,
-                        minAppVersion: addonInfo.minAppVersion,
-                        source: addonInfo.source || this._installedAddons.get(id)?.metadata?.source || 'marketplace',
-                        runtimeId: addonInfo.runtimeId || runtimeId,
-                        sourceRepo: addonInfo.sourceRepo || this._installedAddons.get(id)?.metadata?.sourceRepo || '',
-                        githubUrl: addonInfo.githubUrl || this._installedAddons.get(id)?.metadata?.githubUrl || ''
-                    },
-                    installedAt: this._installedAddons.get(id)?.installedAt || new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                };
+                const entry = buildMarketplaceAddonEntry(id, code, addonInfo, {
+                    source: addonInfo.source || this._installedAddons.get(id)?.metadata?.source || 'marketplace',
+                    runtimeId: addonInfo.runtimeId || runtimeId,
+                    sourceRepo: addonInfo.sourceRepo || this._installedAddons.get(id)?.metadata?.sourceRepo || '',
+                    githubUrl: addonInfo.githubUrl || this._installedAddons.get(id)?.metadata?.githubUrl || '',
+                    installedAt: this._installedAddons.get(id)?.installedAt || new Date().toISOString()
+                });
 
                 await this._dbPut(entry);
 

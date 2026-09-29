@@ -4544,6 +4544,66 @@ const resolveFadLyricsContainer = (domCache) => {
   return fadLyricsContainer;
 };
 
+// Computes the base lyrics colour CSS variables for the current render, mirroring
+// the original branch order in render(). Pure: reads only its inputs and CONFIG.
+// The default branch returns the passed baseLyricsStyleVariables object by
+// reference, exactly as before.
+const computeBaseLyricsStyleVariables = ({
+  isSyncCreatorActive,
+  isFADMode,
+  effectiveBackgroundMode,
+  colors,
+  baseLyricsStyleVariables,
+}) => {
+  if (isSyncCreatorActive) {
+    return {
+      "--lyrics-color-active": "var(--spice-text, #ffffff)",
+      "--lyrics-color-inactive": "var(--spice-subtext, rgba(255, 255, 255, 0.58))",
+      "--lyrics-color-background": "var(--spice-main, #121212)",
+      "--lyrics-highlight-background": "transparent",
+      "--lyrics-background-noise": "unset",
+    };
+  }
+  if (isFADMode) {
+    // Text colors will be set by FAD extension
+    // Disable colorful backgrounds in FAD mode
+    return {};
+  }
+  if (effectiveBackgroundMode === "colorful" && colors.background) {
+    const isLight = Utils.isColorLight(colors.background);
+    return {
+      "--lyrics-color-active": isLight ? "black" : "white",
+      "--lyrics-color-inactive": isLight
+        ? "rgba(0, 0, 0, 0.4)"
+        : "rgba(255, 255, 255, 0.4)",
+      "--lyrics-color-background": colors.background,
+      "--lyrics-highlight-background": colors.inactive,
+      "--lyrics-background-noise": CONFIG.visual.noise
+        ? "var(--background-noise)"
+        : "unset",
+    };
+  }
+  if (effectiveBackgroundMode === "solid-background") {
+    const isLight = Utils.isColorLight(
+      CONFIG.visual["solid-background-color"]
+    );
+    return {
+      "--lyrics-color-active": isLight ? "black" : "white",
+      "--lyrics-color-inactive": isLight
+        ? "rgba(0, 0, 0, 0.4)"
+        : "rgba(255, 255, 255, 0.4)",
+      "--lyrics-color-background": CONFIG.visual["solid-background-color"],
+      "--lyrics-highlight-background": isLight
+        ? "rgba(0, 0, 0, 0.1)"
+        : "rgba(255, 255, 255, 0.1)",
+      "--lyrics-background-noise": CONFIG.visual.noise
+        ? "var(--background-noise)"
+        : "unset",
+    };
+  }
+  return baseLyricsStyleVariables;
+};
+
 class LyricsContainer extends react.Component {
   constructor() {
     super();
@@ -9586,51 +9646,13 @@ class LyricsContainer extends react.Component {
         : "unset",
     };
 
-    if (isSyncCreatorActive) {
-      this.styleVariables = {
-        "--lyrics-color-active": "var(--spice-text, #ffffff)",
-        "--lyrics-color-inactive": "var(--spice-subtext, rgba(255, 255, 255, 0.58))",
-        "--lyrics-color-background": "var(--spice-main, #121212)",
-        "--lyrics-highlight-background": "transparent",
-        "--lyrics-background-noise": "unset",
-      };
-    } else if (this.state.isFADMode) {
-      // Text colors will be set by FAD extension
-      // Disable colorful backgrounds in FAD mode
-      this.styleVariables = {};
-    } else if (effectiveBackgroundMode === "colorful" && this.state.colors.background) {
-      const isLight = Utils.isColorLight(this.state.colors.background);
-      this.styleVariables = {
-        "--lyrics-color-active": isLight ? "black" : "white",
-        "--lyrics-color-inactive": isLight
-          ? "rgba(0, 0, 0, 0.4)"
-          : "rgba(255, 255, 255, 0.4)",
-        "--lyrics-color-background": this.state.colors.background,
-        "--lyrics-highlight-background": this.state.colors.inactive,
-        "--lyrics-background-noise": CONFIG.visual.noise
-          ? "var(--background-noise)"
-          : "unset",
-      };
-    } else if (effectiveBackgroundMode === "solid-background") {
-      const isLight = Utils.isColorLight(
-        CONFIG.visual["solid-background-color"]
-      );
-      this.styleVariables = {
-        "--lyrics-color-active": isLight ? "black" : "white",
-        "--lyrics-color-inactive": isLight
-          ? "rgba(0, 0, 0, 0.4)"
-          : "rgba(255, 255, 255, 0.4)",
-        "--lyrics-color-background": CONFIG.visual["solid-background-color"],
-        "--lyrics-highlight-background": isLight
-          ? "rgba(0, 0, 0, 0.1)"
-          : "rgba(255, 255, 255, 0.1)",
-        "--lyrics-background-noise": CONFIG.visual.noise
-          ? "var(--background-noise)"
-          : "unset",
-      };
-    } else {
-      this.styleVariables = baseLyricsStyleVariables;
-    }
+    this.styleVariables = computeBaseLyricsStyleVariables({
+      isSyncCreatorActive,
+      isFADMode: this.state.isFADMode,
+      effectiveBackgroundMode,
+      colors: this.state.colors,
+      baseLyricsStyleVariables,
+    });
 
     const backgroundStyle = {};
     const compositedBackgroundStyle = {

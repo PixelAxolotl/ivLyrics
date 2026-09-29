@@ -1652,34 +1652,19 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
         )
     ;
 
-    return react.createElement("div", {
-        style: {
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            overflow: "hidden",
-            zIndex: 0,
-            isolation: "isolate",
-        }
-    },
-        renderFallback(),
-
-
-        showStats && renderStatsPanel(),
-
-        // 헬퍼 모드: HTML5 video 태그
-        useHelper && react.createElement("video", {
+    const renderHelperVideo = () =>
+        react.createElement("video", {
             ref: videoRef,
             className: "ivlyrics-video-background-media",
             style: helperVideoStyle,
             muted: true,
             playsInline: true,
             loop: false,
-        }),
-        // 일반 모드: YouTube IFrame 컨테이너
-        !useHelper && react.createElement("div", {
+        })
+    ;
+
+    const renderYouTubeContainer = () =>
+        react.createElement("div", {
             ref: containerRef,
             className: "ivlyrics-video-background-media",
             style: {
@@ -1698,7 +1683,10 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                 filter: blurValue ? `blur(${blurValue}px)` : "none",
                 ...blurCompositeStyle,
             }
-        }),
+        })
+    ;
+
+    const renderBrightnessOverlay = () =>
         react.createElement("div", {
             style: {
                 position: "absolute",
@@ -1712,6 +1700,30 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                 pointerEvents: "none"
             }
         })
+    ;
+
+    return react.createElement("div", {
+        style: {
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            overflow: "hidden",
+            zIndex: 0,
+            isolation: "isolate",
+        }
+    },
+        renderFallback(),
+
+
+        showStats && renderStatsPanel(),
+
+        // 헬퍼 모드: HTML5 video 태그
+        useHelper && renderHelperVideo(),
+        // 일반 모드: YouTube IFrame 컨테이너
+        !useHelper && renderYouTubeContainer(),
+        renderBrightnessOverlay()
     );
 };
 

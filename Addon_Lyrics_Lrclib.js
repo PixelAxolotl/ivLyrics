@@ -2011,6 +2011,17 @@
                     }
 
                     const withinTolerance = item => item?.durationDiff <= LRCLIB_DURATION_TOLERANCE_SEC;
+                    // Every "best candidate" slot below prefers an in-tolerance
+                    // match and otherwise falls back to any match, else null. Share
+                    // that fixed two-pass lookup so the twelve slots stay identical.
+                    const pickWithTolerance = (list, matches) => list.find(item => withinTolerance(item) && matches(item))
+                        || list.find(matches)
+                        || null;
+                    const isSynced = item => item.syncedLyrics;
+                    const isPlain = item => item.plainLyrics;
+                    const isInstrumental = item => item.instrumental;
+                    const isPreferredSynced = item => item.preferredLyricsSource === 'synced';
+                    const isPreferredPlain = item => item.preferredLyricsSource === 'plain';
                     const sourceMatchedCandidates = rankedCandidates.filter(item => Number(item?.syncSourceMatchScore || 0) > 0);
                     const exactMatchCandidates = rankedCandidates.filter(item => item.syncLineExactMatch);
                     const nativeScriptCandidates = rankedCandidates.filter(item => hasOriginalLyricsScript(getCandidateLyricsText(item, item.preferredLyricsSource)));
@@ -2028,42 +2039,18 @@
                         rankedCandidates,
                         hasExactSyncLineMatch: exactMatchCandidates.length > 0,
                         usedFallbackQuery,
-                        bestSourceSyncedCandidate: sourceMatchedCandidates.find(item => withinTolerance(item) && item.syncedLyrics)
-                            || sourceMatchedCandidates.find(item => item.syncedLyrics)
-                            || null,
-                        bestSourcePlainCandidate: sourceMatchedCandidates.find(item => withinTolerance(item) && item.plainLyrics)
-                            || sourceMatchedCandidates.find(item => item.plainLyrics)
-                            || null,
-                        bestSourceInstrumentalCandidate: sourceMatchedCandidates.find(item => withinTolerance(item) && item.instrumental)
-                            || sourceMatchedCandidates.find(item => item.instrumental)
-                            || null,
-                        bestExactNativeSyncedCandidate: exactNativeScriptCandidates.find(item => withinTolerance(item) && item.preferredLyricsSource === 'synced')
-                            || exactNativeScriptCandidates.find(item => item.preferredLyricsSource === 'synced')
-                            || null,
-                        bestExactNativePlainCandidate: exactNativeScriptCandidates.find(item => withinTolerance(item) && item.preferredLyricsSource === 'plain')
-                            || exactNativeScriptCandidates.find(item => item.preferredLyricsSource === 'plain')
-                            || null,
-                        bestExactFallbackSyncedCandidate: exactFallbackScriptCandidates.find(item => withinTolerance(item) && item.preferredLyricsSource === 'synced')
-                            || exactFallbackScriptCandidates.find(item => item.preferredLyricsSource === 'synced')
-                            || null,
-                        bestExactFallbackPlainCandidate: exactFallbackScriptCandidates.find(item => withinTolerance(item) && item.preferredLyricsSource === 'plain')
-                            || exactFallbackScriptCandidates.find(item => item.preferredLyricsSource === 'plain')
-                            || null,
-                        bestNativeSyncedCandidate: orderedNativeScriptCandidates.find(item => withinTolerance(item) && item.syncedLyrics)
-                            || orderedNativeScriptCandidates.find(item => item.syncedLyrics)
-                            || null,
-                        bestNativePlainCandidate: orderedNativeScriptCandidates.find(item => withinTolerance(item) && item.plainLyrics)
-                            || orderedNativeScriptCandidates.find(item => item.plainLyrics)
-                            || null,
-                        bestFallbackSyncedCandidate: fallbackScriptCandidates.find(item => withinTolerance(item) && item.syncedLyrics)
-                            || fallbackScriptCandidates.find(item => item.syncedLyrics)
-                            || null,
-                        bestFallbackPlainCandidate: fallbackScriptCandidates.find(item => withinTolerance(item) && item.plainLyrics)
-                            || fallbackScriptCandidates.find(item => item.plainLyrics)
-                            || null,
-                        bestInstrumentalCandidate: rankedCandidates.find(item => withinTolerance(item) && item.instrumental)
-                            || rankedCandidates.find(item => item.instrumental)
-                            || null
+                        bestSourceSyncedCandidate: pickWithTolerance(sourceMatchedCandidates, isSynced),
+                        bestSourcePlainCandidate: pickWithTolerance(sourceMatchedCandidates, isPlain),
+                        bestSourceInstrumentalCandidate: pickWithTolerance(sourceMatchedCandidates, isInstrumental),
+                        bestExactNativeSyncedCandidate: pickWithTolerance(exactNativeScriptCandidates, isPreferredSynced),
+                        bestExactNativePlainCandidate: pickWithTolerance(exactNativeScriptCandidates, isPreferredPlain),
+                        bestExactFallbackSyncedCandidate: pickWithTolerance(exactFallbackScriptCandidates, isPreferredSynced),
+                        bestExactFallbackPlainCandidate: pickWithTolerance(exactFallbackScriptCandidates, isPreferredPlain),
+                        bestNativeSyncedCandidate: pickWithTolerance(orderedNativeScriptCandidates, isSynced),
+                        bestNativePlainCandidate: pickWithTolerance(orderedNativeScriptCandidates, isPlain),
+                        bestFallbackSyncedCandidate: pickWithTolerance(fallbackScriptCandidates, isSynced),
+                        bestFallbackPlainCandidate: pickWithTolerance(fallbackScriptCandidates, isPlain),
+                        bestInstrumentalCandidate: pickWithTolerance(rankedCandidates, isInstrumental)
                     };
                 };
 

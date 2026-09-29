@@ -9541,6 +9541,22 @@ const ConfigModal = ({
     );
   };
 
+  // 나우플레잉 패널 설정 변경: 설정 저장 후 config 이벤트와 미리보기 이벤트를 함께 발생
+  const handleNowPlayingPanelChange = (name, value) => {
+    CONFIG.visual[name] = value;
+    StorageManager.saveConfig(name, value);
+    window.dispatchEvent(
+      new CustomEvent("ivLyrics", {
+        detail: { type: "config", name, value },
+      })
+    );
+    window.dispatchEvent(
+      new CustomEvent("ivLyrics:panel-preview-update", {
+        detail: { name, value },
+      })
+    );
+  };
+
   return react.createElement(
     "div",
     {
@@ -12066,22 +12082,7 @@ const ConfigModal = ({
               labelPrefix: `${I18n.t("settingsAdvanced.nowPlayingPanel.translationFont.label") || "Translation Text"} · `,
             }),
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            // 패널 가사 업데이트 이벤트 발생
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-            // 미리보기 업데이트를 위한 이벤트
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics:panel-preview-update", {
-                detail: { name, value },
-              })
-            );
-          },
+          onChange: handleNowPlayingPanelChange,
         }),
         // 배경 설정 섹션
         react.createElement(SettingsSectionTitle, {
@@ -12136,20 +12137,7 @@ const ConfigModal = ({
               when: () => CONFIG.visual["panel-bg-type"] !== "transparent",
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics:panel-preview-update", {
-                detail: { name, value },
-              })
-            );
-          },
+          onChange: handleNowPlayingPanelChange,
         }),
         // Border 설정 섹션
         react.createElement(SettingsSectionTitle, {
@@ -12184,20 +12172,7 @@ const ConfigModal = ({
               when: () => CONFIG.visual["panel-border-enabled"] === true,
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics:panel-preview-update", {
-                detail: { name, value },
-              })
-            );
-          },
+          onChange: handleNowPlayingPanelChange,
         })
       ),
       // 디버그 탭

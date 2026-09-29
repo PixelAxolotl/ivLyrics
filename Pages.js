@@ -973,6 +973,83 @@ const SyncCreatorProfileModal = react.memo(({
 		}
 	}, [uiTheme]);
 
+	const renderCreatorProfileGreetingBlock = () => (
+			(greeting || canEditGreeting) && react.createElement(
+				"div",
+				{ className: "lyrics-creator-profile-greeting-block" },
+				canEditGreeting && isEditingGreeting
+					? react.createElement(
+							"div",
+							{ className: "lyrics-creator-profile-greeting-editor" },
+							react.createElement("textarea", {
+								className: "lyrics-creator-profile-greeting-input",
+								value: greetingDraft,
+								maxLength: 400,
+								rows: 4,
+								placeholder: copy.greetingPlaceholder,
+								disabled: greetingPending,
+								onChange: (event) => setGreetingDraft(event.currentTarget.value)
+							}),
+							react.createElement(
+								"div",
+								{ className: "lyrics-creator-profile-greeting-editor-bar" },
+								react.createElement("span", { className: "lyrics-creator-profile-greeting-count" }, `${greetingDraft.length}/400`),
+								react.createElement(
+									"div",
+									{ className: "lyrics-creator-profile-greeting-editor-actions" },
+									react.createElement(
+										"button",
+										{
+											type: "button",
+											className: "lyrics-creator-profile-greeting-cancel",
+											disabled: greetingPending,
+											onClick: () => {
+												setGreetingDraft(rawGreeting);
+												setIsEditingGreeting(false);
+											}
+										},
+										copy.cancelGreeting
+									),
+									react.createElement(
+										"button",
+										{
+											type: "button",
+											className: "lyrics-creator-profile-greeting-save",
+											disabled: greetingPending,
+											onClick: handleGreetingSave
+										},
+										greetingPending ? "..." : copy.saveGreeting
+									)
+								)
+							)
+						)
+					: react.createElement(
+							react.Fragment,
+							null,
+							greeting && react.createElement("p", { className: "lyrics-creator-profile-bio" }, greeting),
+							showGreetingTranslationStatus && react.createElement(
+								"p",
+								{
+									className: "lyrics-creator-profile-greeting-status",
+									role: "status"
+								},
+								getCreatorGreetingTranslatingMessage(greetingTranslationLocale)
+							),
+							canEditGreeting && react.createElement(
+								"button",
+								{
+									type: "button",
+									className: "lyrics-creator-profile-greeting-edit",
+									onClick: () => {
+										setGreetingDraft(rawGreeting);
+										setIsEditingGreeting(true);
+									}
+								},
+								greeting ? copy.editGreeting : copy.addGreeting
+							)
+						)
+			)
+	);
 	const renderCreatorProfileHero = () => (
 		react.createElement(
 			"div",
@@ -1096,81 +1173,7 @@ const SyncCreatorProfileModal = react.memo(({
 						)
 					)
 			),
-			(greeting || canEditGreeting) && react.createElement(
-				"div",
-				{ className: "lyrics-creator-profile-greeting-block" },
-				canEditGreeting && isEditingGreeting
-					? react.createElement(
-							"div",
-							{ className: "lyrics-creator-profile-greeting-editor" },
-							react.createElement("textarea", {
-								className: "lyrics-creator-profile-greeting-input",
-								value: greetingDraft,
-								maxLength: 400,
-								rows: 4,
-								placeholder: copy.greetingPlaceholder,
-								disabled: greetingPending,
-								onChange: (event) => setGreetingDraft(event.currentTarget.value)
-							}),
-							react.createElement(
-								"div",
-								{ className: "lyrics-creator-profile-greeting-editor-bar" },
-								react.createElement("span", { className: "lyrics-creator-profile-greeting-count" }, `${greetingDraft.length}/400`),
-								react.createElement(
-									"div",
-									{ className: "lyrics-creator-profile-greeting-editor-actions" },
-									react.createElement(
-										"button",
-										{
-											type: "button",
-											className: "lyrics-creator-profile-greeting-cancel",
-											disabled: greetingPending,
-											onClick: () => {
-												setGreetingDraft(rawGreeting);
-												setIsEditingGreeting(false);
-											}
-										},
-										copy.cancelGreeting
-									),
-									react.createElement(
-										"button",
-										{
-											type: "button",
-											className: "lyrics-creator-profile-greeting-save",
-											disabled: greetingPending,
-											onClick: handleGreetingSave
-										},
-										greetingPending ? "..." : copy.saveGreeting
-									)
-								)
-							)
-						)
-					: react.createElement(
-							react.Fragment,
-							null,
-							greeting && react.createElement("p", { className: "lyrics-creator-profile-bio" }, greeting),
-							showGreetingTranslationStatus && react.createElement(
-								"p",
-								{
-									className: "lyrics-creator-profile-greeting-status",
-									role: "status"
-								},
-								getCreatorGreetingTranslatingMessage(greetingTranslationLocale)
-							),
-							canEditGreeting && react.createElement(
-								"button",
-								{
-									type: "button",
-									className: "lyrics-creator-profile-greeting-edit",
-									onClick: () => {
-										setGreetingDraft(rawGreeting);
-										setIsEditingGreeting(true);
-									}
-								},
-								greeting ? copy.editGreeting : copy.addGreeting
-							)
-						)
-			),
+			renderCreatorProfileGreetingBlock(),
 			hasLoadedProfileData
 				? react.createElement(
 						"div",

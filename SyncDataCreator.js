@@ -11731,38 +11731,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			: ''
 	].filter(Boolean).join(' · ');
 
-	const renderHistoryPanel = () => react.createElement('section', {
-		ref: historyPanelRef,
-		className: 'sync-creator-history-panel',
-		style: {
-			...s.historyPanel,
-			maxHeight: 'calc(100% - 180px)',
-			...(historyPanelHeight ? {
-				flex: `0 0 ${Math.round(historyPanelHeight)}px`,
-				height: `${Math.round(historyPanelHeight)}px`
-			} : null)
-		},
-		'aria-busy': isRestoringCheckpoint ? 'true' : undefined,
-		'aria-label': I18n.t('syncCreator.historyTitle') || '작업 내역'
-	},
-		react.createElement('div', {
-			className: 'sync-creator-history-resize-handle',
-			style: s.historyResizeHandle,
-			role: 'separator',
-			tabIndex: 0,
-			'aria-orientation': 'horizontal',
-			'aria-label': I18n.t('syncCreator.historyResize') || '작업 내역 높이 조절',
-			'aria-valuemin': SYNC_CREATOR_HISTORY_MIN_HEIGHT,
-			'aria-valuemax': Math.round(getHistoryPanelHeightBounds().max),
-			'aria-valuenow': Math.round(historyPanelHeight || 190),
-			title: I18n.t('syncCreator.historyResizeHint') || '위아래로 드래그해 작업 내역 높이를 조절합니다.',
-			onPointerDown: handleHistoryResizePointerDown,
-			onPointerMove: handleHistoryResizePointerMove,
-			onPointerUp: finishHistoryResize,
-			onPointerCancel: finishHistoryResize,
-			onKeyDown: handleHistoryResizeKeyDown
-		}, react.createElement('span', { style: s.historyResizeGrip, 'aria-hidden': true })),
-		react.createElement('div', { style: s.historyHeader },
+	const renderHistoryPanel = () => {
+		const renderHistoryHeader = () => react.createElement('div', { style: s.historyHeader },
 			react.createElement('div', { style: s.historyTitleRow },
 				react.createElement('h3', { style: { ...s.historyTitle, margin: 0 } }, I18n.t('syncCreator.historyTitle') || '작업 내역'),
 				react.createElement('span', { style: s.historyCount }, sessionHistory.length),
@@ -11834,44 +11804,79 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					historySaveLabel
 				)
 			)
-		),
+		);
+
+		const renderHistoryEntry = (entry, index) => {
+			const isCurrent = entry.id === sessionHistoryCursorId;
+			const historyTimeLabel = formatHistoryTime(entry.createdAt);
+			return react.createElement('li', { key: entry.id, style: s.historyItem },
+				react.createElement('button', {
+					type: 'button',
+					className: `sync-creator-history-row${isCurrent ? ' is-current' : ''}`,
+					style: { ...s.historyButton, ...(isCurrent ? s.historyButtonActive : null) },
+					onClick: isCurrent ? undefined : () => restoreHistoryCheckpoint(entry.id),
+					disabled: isCurrent || isRestoringCheckpoint,
+					'aria-current': isCurrent ? 'step' : undefined,
+					'data-history-id': entry.id,
+					title: entry.lineText || getHistoryEntryLabel(entry)
+				},
+					react.createElement('span', { style: s.historyTimeline, 'aria-hidden': true },
+						sessionHistory.length > 1 && react.createElement('span', {
+							style: {
+								...s.historyLine,
+								top: index === 0 ? '50%' : '-7px',
+								bottom: index === sessionHistory.length - 1 ? '50%' : '-7px'
+							}
+						}),
+						react.createElement('span', { style: { ...s.historyDot, ...(isCurrent ? s.historyDotActive : null) } })
+					),
+					react.createElement('span', { style: s.historyContent },
+						react.createElement('span', { style: s.historyLabel }, getHistoryEntryLabel(entry)),
+						entry.lineText && react.createElement('span', { style: { ...s.historyText, display: 'block' } }, entry.lineText)
+					),
+					historyTimeLabel && react.createElement('time', {
+						style: s.historyTime,
+						dateTime: formatHistoryDateTime(entry.createdAt)
+					}, historyTimeLabel)
+				)
+			);
+		};
+
+		return react.createElement('section', {
+		ref: historyPanelRef,
+		className: 'sync-creator-history-panel',
+		style: {
+			...s.historyPanel,
+			maxHeight: 'calc(100% - 180px)',
+			...(historyPanelHeight ? {
+				flex: `0 0 ${Math.round(historyPanelHeight)}px`,
+				height: `${Math.round(historyPanelHeight)}px`
+			} : null)
+		},
+		'aria-busy': isRestoringCheckpoint ? 'true' : undefined,
+		'aria-label': I18n.t('syncCreator.historyTitle') || '작업 내역'
+	},
+		react.createElement('div', {
+			className: 'sync-creator-history-resize-handle',
+			style: s.historyResizeHandle,
+			role: 'separator',
+			tabIndex: 0,
+			'aria-orientation': 'horizontal',
+			'aria-label': I18n.t('syncCreator.historyResize') || '작업 내역 높이 조절',
+			'aria-valuemin': SYNC_CREATOR_HISTORY_MIN_HEIGHT,
+			'aria-valuemax': Math.round(getHistoryPanelHeightBounds().max),
+			'aria-valuenow': Math.round(historyPanelHeight || 190),
+			title: I18n.t('syncCreator.historyResizeHint') || '위아래로 드래그해 작업 내역 높이를 조절합니다.',
+			onPointerDown: handleHistoryResizePointerDown,
+			onPointerMove: handleHistoryResizePointerMove,
+			onPointerUp: finishHistoryResize,
+			onPointerCancel: finishHistoryResize,
+			onKeyDown: handleHistoryResizeKeyDown
+		}, react.createElement('span', { style: s.historyResizeGrip, 'aria-hidden': true })),
+		renderHistoryHeader(),
 		sessionHistory.length > 0
 			? react.createElement('ol', { ref: historyListRef, style: s.historyList },
-				sessionHistory.map((entry, index) => {
-					const isCurrent = entry.id === sessionHistoryCursorId;
-					const historyTimeLabel = formatHistoryTime(entry.createdAt);
-					return react.createElement('li', { key: entry.id, style: s.historyItem },
-						react.createElement('button', {
-							type: 'button',
-							className: `sync-creator-history-row${isCurrent ? ' is-current' : ''}`,
-							style: { ...s.historyButton, ...(isCurrent ? s.historyButtonActive : null) },
-							onClick: isCurrent ? undefined : () => restoreHistoryCheckpoint(entry.id),
-							disabled: isCurrent || isRestoringCheckpoint,
-							'aria-current': isCurrent ? 'step' : undefined,
-							'data-history-id': entry.id,
-							title: entry.lineText || getHistoryEntryLabel(entry)
-						},
-							react.createElement('span', { style: s.historyTimeline, 'aria-hidden': true },
-								sessionHistory.length > 1 && react.createElement('span', {
-									style: {
-										...s.historyLine,
-										top: index === 0 ? '50%' : '-7px',
-										bottom: index === sessionHistory.length - 1 ? '50%' : '-7px'
-									}
-								}),
-								react.createElement('span', { style: { ...s.historyDot, ...(isCurrent ? s.historyDotActive : null) } })
-							),
-							react.createElement('span', { style: s.historyContent },
-								react.createElement('span', { style: s.historyLabel }, getHistoryEntryLabel(entry)),
-								entry.lineText && react.createElement('span', { style: { ...s.historyText, display: 'block' } }, entry.lineText)
-							),
-							historyTimeLabel && react.createElement('time', {
-								style: s.historyTime,
-								dateTime: formatHistoryDateTime(entry.createdAt)
-							}, historyTimeLabel)
-						)
-					);
-				})
+				sessionHistory.map((entry, index) => renderHistoryEntry(entry, index))
 			)
 			: react.createElement('div', { style: s.historyEmpty },
 				I18n.t('syncCreator.historyEmpty') || '30초 자동 저장 또는 수동 저장 시 작업 상태가 여기에 기록됩니다.'
@@ -11883,6 +11888,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			'aria-atomic': 'true'
 		}, historyAnnouncement)
 	);
+	};
 
 	const renderRightRail = () => react.createElement('aside', { className: 'sync-creator-inspector-rail', style: s.rightRail },
 		react.createElement('div', { className: 'sync-creator-inspector-scroll', style: s.inspectorScroll },

@@ -2875,29 +2875,7 @@ const FullscreenOverlay = (() => {
 
         if (!isFullscreen) return null;
 
-        const renderFocusedLyricsView = () => react.createElement(react.Fragment, null,
-                react.createElement(VinylMode, {
-                track: liveVinylTrack,
-                albumRadius,
-                isClosing: lpModeClosing,
-                isPortraitLayout: isPortraitViewport,
-                presentationMode: normalizedPresentationMode,
-                controlsVisible: uiVisible,
-                onPresentationModeChange: handlePresentationModeChange,
-                isPlaying,
-                position,
-                duration,
-                interactionProps: albumInteractionProps,
-                activeLyric,
-                activeLyrics,
-                lyricsTrackUri: trackUri,
-                activeLineIndex: currentLyricIndex,
-                activeLyricsKaraoke,
-                karaokeSource,
-                lyricsSettingsRevision,
-                showStageControls: showControls,
-                showStageProgress: showProgress,
-                vinylSettings: {
+        const computeVinylSettings = () => ({
                     albumSize: CONFIG?.visual?.["fullscreen-vinyl-album-size"] ?? 100,
                     recordSize: CONFIG?.visual?.["fullscreen-vinyl-record-size"] ?? 100,
                     backgroundBlur: CONFIG?.visual?.["fullscreen-vinyl-background-blur"] ?? 0,
@@ -2942,7 +2920,31 @@ const FullscreenOverlay = (() => {
                     videoStageCulturalFontFamily: CONFIG?.visual?.["fullscreen-video-stage-cultural-font-family"] || CONFIG?.visual?.["cultural-annotations-vinyl-font-family"] || "Pretendard Variable",
                     videoStageLyricBackgroundColor: CONFIG?.visual?.["fullscreen-video-stage-lyric-background-color"] || "#000000",
                     videoStageLyricBackgroundOpacity: CONFIG?.visual?.["fullscreen-video-stage-lyric-background-opacity"] ?? 46
-                },
+        });
+
+        const renderFocusedLyricsView = () => react.createElement(react.Fragment, null,
+                react.createElement(VinylMode, {
+                track: liveVinylTrack,
+                albumRadius,
+                isClosing: lpModeClosing,
+                isPortraitLayout: isPortraitViewport,
+                presentationMode: normalizedPresentationMode,
+                controlsVisible: uiVisible,
+                onPresentationModeChange: handlePresentationModeChange,
+                isPlaying,
+                position,
+                duration,
+                interactionProps: albumInteractionProps,
+                activeLyric,
+                activeLyrics,
+                lyricsTrackUri: trackUri,
+                activeLineIndex: currentLyricIndex,
+                activeLyricsKaraoke,
+                karaokeSource,
+                lyricsSettingsRevision,
+                showStageControls: showControls,
+                showStageProgress: showProgress,
+                vinylSettings: computeVinylSettings(),
                 onPrevious: () => Spicetify.Player.back(),
                 onSeek: (nextPosition) => {
                     window.Utils?.clearSafePlayerProgressCorrection?.();

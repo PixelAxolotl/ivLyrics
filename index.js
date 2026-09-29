@@ -10356,25 +10356,29 @@ class LyricsContainer extends react.Component {
       return generationStatusStack;
     };
     const generationStatusStack = computeGenerationStatusStack();
-    const hasTrackSyncLyrics =
-      (isKaraokeRenderMode(mode) && Array.isArray(this.state.karaoke) && this.state.karaoke.length > 0) ||
-      (mode === SYNCED && Array.isArray(this.state.synced) && this.state.synced.length > 0);
-    const canAdjustTrackSync = hasTrackSyncLyrics &&
-      !suppressStaleLyricsPage &&
-      !this.state.showMarketplace &&
-      !shouldHideFullscreenLyrics &&
-      !isSyncCreatorActive &&
-      Boolean(renderTrackUri);
-    const quickSyncControlsEnabled =
-      CONFIG.visual["quick-sync-controls-enabled"] !== false;
-    const trackSyncAdjustPill = canAdjustTrackSync &&
-      quickSyncControlsEnabled &&
-      typeof TrackSyncAdjustPill !== "undefined"
-      ? react.createElement(TrackSyncAdjustPill, {
-        key: renderTrackUri,
-        trackUri: renderTrackUri,
-      })
-      : null;
+    const computeTrackSyncAdjustPill = () => {
+      const hasTrackSyncLyrics =
+        (isKaraokeRenderMode(mode) && Array.isArray(this.state.karaoke) && this.state.karaoke.length > 0) ||
+        (mode === SYNCED && Array.isArray(this.state.synced) && this.state.synced.length > 0);
+      const canAdjustTrackSync = hasTrackSyncLyrics &&
+        !suppressStaleLyricsPage &&
+        !this.state.showMarketplace &&
+        !shouldHideFullscreenLyrics &&
+        !isSyncCreatorActive &&
+        Boolean(renderTrackUri);
+      const quickSyncControlsEnabled =
+        CONFIG.visual["quick-sync-controls-enabled"] !== false;
+      const trackSyncAdjustPill = canAdjustTrackSync &&
+        quickSyncControlsEnabled &&
+        typeof TrackSyncAdjustPill !== "undefined"
+        ? react.createElement(TrackSyncAdjustPill, {
+          key: renderTrackUri,
+          trackUri: renderTrackUri,
+        })
+        : null;
+      return { canAdjustTrackSync, quickSyncControlsEnabled, trackSyncAdjustPill };
+    };
+    const { canAdjustTrackSync, quickSyncControlsEnabled, trackSyncAdjustPill } = computeTrackSyncAdjustPill();
 
     const out = react.createElement(
       "div",

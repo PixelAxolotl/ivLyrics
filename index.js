@@ -10450,6 +10450,19 @@ class LyricsContainer extends react.Component {
           onLoadingChange: this.handleVideoBackgroundLoadingChange
         })
     );
+    const renderStudyPanelChild = () => (
+        !this.state.showMarketplace &&
+        !shouldHideFullscreenLyrics &&
+        window.IvLyricsLearningMode?.StudyPanel &&
+        react.createElement(window.IvLyricsLearningMode.StudyPanel, {
+          trackUri: this.state.uri,
+          title: this.state.title,
+          artist: this.state.artist,
+          provider: this.state.provider,
+          lyrics: this.state.currentLyrics || [],
+          activeLineIndex: this.state.currentLyricIndex || 0,
+        })
+    );
     const out = react.createElement(
       "div",
       {
@@ -10762,17 +10775,7 @@ class LyricsContainer extends react.Component {
       ),
       cacheEditModal,
       !shouldHideFullscreenLyrics && !suppressStaleLyricsPage && activeLyricsPage,
-      !this.state.showMarketplace &&
-      !shouldHideFullscreenLyrics &&
-      window.IvLyricsLearningMode?.StudyPanel &&
-      react.createElement(window.IvLyricsLearningMode.StudyPanel, {
-        trackUri: this.state.uri,
-        title: this.state.title,
-        artist: this.state.artist,
-        provider: this.state.provider,
-        lyrics: this.state.currentLyrics || [],
-        activeLineIndex: this.state.currentLyricIndex || 0,
-      })
+      renderStudyPanelChild()
     );
 
     const dom = ensureReactDOM();

@@ -8788,74 +8788,76 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			if (!confirm(I18n.t('syncCreator.incompleteConfirm'))) return;
 		}
 
+		const normalizeSyncCreatorSubmissionLine = (line) => {
+			const speaker = normalizeSyncCreatorSpeaker(line.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
+			const kind = normalizeSyncCreatorKind(line.kind) || SYNC_CREATOR_DEFAULT_KIND;
+			const speakerFallback = sanitizeSyncCreatorSpeakerFallback(
+				speaker,
+				line['speaker-fallback'],
+				true,
+				line.speaker
+			);
+			const speakerColor = sanitizeSyncCreatorSpeakerColor(
+				speaker,
+				line['speaker-color'],
+				true,
+				speakerFallback
+			);
+			const nextLine = {
+				...line,
+				parallel: line.parallel ? sanitizeSyncCreatorParallel({
+					...line.parallel,
+					parts: Array.isArray(line.parallel.parts)
+						? line.parallel.parts.map(part => {
+							const partSpeaker = normalizeSyncCreatorSpeaker(part.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
+							const partSpeakerFallback = sanitizeSyncCreatorSpeakerFallback(
+								partSpeaker,
+								part['speaker-fallback'],
+								true,
+								part.speaker
+							);
+							const partSpeakerColor = sanitizeSyncCreatorSpeakerColor(
+								partSpeaker,
+								part['speaker-color'],
+								true,
+								partSpeakerFallback
+							);
+							const nextPart = {
+								...part,
+								speaker: partSpeaker,
+								kind: normalizeSyncCreatorKind(part.kind) || SYNC_CREATOR_DEFAULT_KIND
+							};
+							if (partSpeakerFallback) nextPart['speaker-fallback'] = partSpeakerFallback;
+							else delete nextPart['speaker-fallback'];
+							if (partSpeakerColor) nextPart['speaker-color'] = partSpeakerColor;
+							else delete nextPart['speaker-color'];
+							return nextPart;
+						})
+						: line.parallel.parts
+				}) : line.parallel
+			};
+
+			if (multiVocalMode || speaker !== SYNC_CREATOR_DEFAULT_SPEAKER) {
+				nextLine.speaker = speaker;
+			} else {
+				delete nextLine.speaker;
+			}
+			if (speakerFallback) nextLine['speaker-fallback'] = speakerFallback;
+			else delete nextLine['speaker-fallback'];
+			if (speakerColor) nextLine['speaker-color'] = speakerColor;
+			else delete nextLine['speaker-color'];
+			if (multiVocalMode || kind !== SYNC_CREATOR_DEFAULT_KIND) {
+				nextLine.kind = kind;
+			} else {
+				delete nextLine.kind;
+			}
+			return nextLine;
+		};
+
 		const syncDataToSubmit = attachSelectedLrclibSource({
 			...materializedSyncData,
 			...(trackDurationMs > 0 ? { trackDurationMs } : {}),
-			lines: materializedSyncData.lines.map(line => {
-				const speaker = normalizeSyncCreatorSpeaker(line.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
-				const kind = normalizeSyncCreatorKind(line.kind) || SYNC_CREATOR_DEFAULT_KIND;
-				const speakerFallback = sanitizeSyncCreatorSpeakerFallback(
-					speaker,
-					line['speaker-fallback'],
-					true,
-					line.speaker
-				);
-				const speakerColor = sanitizeSyncCreatorSpeakerColor(
-					speaker,
-					line['speaker-color'],
-					true,
-					speakerFallback
-				);
-				const nextLine = {
-					...line,
-					parallel: line.parallel ? sanitizeSyncCreatorParallel({
-						...line.parallel,
-						parts: Array.isArray(line.parallel.parts)
-							? line.parallel.parts.map(part => {
-								const partSpeaker = normalizeSyncCreatorSpeaker(part.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
-								const partSpeakerFallback = sanitizeSyncCreatorSpeakerFallback(
-									partSpeaker,
-									part['speaker-fallback'],
-									true,
-									part.speaker
-								);
-								const partSpeakerColor = sanitizeSyncCreatorSpeakerColor(
-									partSpeaker,
-									part['speaker-color'],
-									true,
-									partSpeakerFallback
-								);
-								const nextPart = {
-									...part,
-									speaker: partSpeaker,
-									kind: normalizeSyncCreatorKind(part.kind) || SYNC_CREATOR_DEFAULT_KIND
-								};
-								if (partSpeakerFallback) nextPart['speaker-fallback'] = partSpeakerFallback;
-								else delete nextPart['speaker-fallback'];
-								if (partSpeakerColor) nextPart['speaker-color'] = partSpeakerColor;
-								else delete nextPart['speaker-color'];
-								return nextPart;
-							})
-							: line.parallel.parts
-					}) : line.parallel
-				};
-
-				if (multiVocalMode || speaker !== SYNC_CREATOR_DEFAULT_SPEAKER) {
-					nextLine.speaker = speaker;
-				} else {
-					delete nextLine.speaker;
-				}
-				if (speakerFallback) nextLine['speaker-fallback'] = speakerFallback;
-				else delete nextLine['speaker-fallback'];
-				if (speakerColor) nextLine['speaker-color'] = speakerColor;
-				else delete nextLine['speaker-color'];
-				if (multiVocalMode || kind !== SYNC_CREATOR_DEFAULT_KIND) {
-					nextLine.kind = kind;
-				} else {
-					delete nextLine.kind;
-				}
-				return nextLine;
-			})
+			lines: materializedSyncData.lines.map(normalizeSyncCreatorSubmissionLine)
 		});
 		if (providerRef.current === 'lrclib' && !isCompleteSyncCreatorLrclibSource(syncDataToSubmit?.source)) {
 			Toast.error(I18n.t('syncCreator.lrclibIdInvalid') || 'Enter a valid LRCLIB ID.');

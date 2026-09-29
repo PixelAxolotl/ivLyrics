@@ -1130,7 +1130,6 @@ const Utils = {
         // Try to convert even if not fully initialized - it will return original text if not ready
         const result = window.FuriganaConverter.convertToFurigana(text);
         return result || text;
-      } else {
       }
       return text;
     } catch (error) {

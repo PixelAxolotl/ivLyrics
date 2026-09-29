@@ -7582,20 +7582,18 @@ const getKaraokeBounceValues = (position, isActive, startTime, endTime, attenuat
 			? smoothKaraokeMotion((position - profile.startTime) / profile.riseDuration)
 			: 1 - smoothKaraokeMotion((position - profile.endTime) / profile.releaseDuration);
 		scaleStrength = glowStrength = strength;
+	} else if (position < profile.endTime) {
+		const phase = Math.max(0, Math.min(1, (position - profile.startTime) / profile.riseDuration));
+		const phaseSpread = smoothing * phase * (1 - phase);
+		strength = smoothKaraokeMotion(phase + phaseSpread * 0.18);
+		scaleStrength = smoothKaraokeMotion(phase + phaseSpread * 0.28);
+		glowStrength = smoothKaraokeMotion(phase + phaseSpread * 0.08);
 	} else {
-		if (position < profile.endTime) {
-			const phase = Math.max(0, Math.min(1, (position - profile.startTime) / profile.riseDuration));
-			const phaseSpread = smoothing * phase * (1 - phase);
-			strength = smoothKaraokeMotion(phase + phaseSpread * 0.18);
-			scaleStrength = smoothKaraokeMotion(phase + phaseSpread * 0.28);
-			glowStrength = smoothKaraokeMotion(phase + phaseSpread * 0.08);
-		} else {
-			const phase = Math.max(0, Math.min(1, (position - profile.endTime) / profile.releaseDuration));
-			const phaseSpread = smoothing * phase * (1 - phase) * 0.16;
-			strength = 1 - smoothKaraokeRelease(phase, smoothing);
-			scaleStrength = 1 - smoothKaraokeRelease(phase + phaseSpread, smoothing);
-			glowStrength = 1 - smoothKaraokeRelease(phase - phaseSpread, smoothing);
-		}
+		const phase = Math.max(0, Math.min(1, (position - profile.endTime) / profile.releaseDuration));
+		const phaseSpread = smoothing * phase * (1 - phase) * 0.16;
+		strength = 1 - smoothKaraokeRelease(phase, smoothing);
+		scaleStrength = 1 - smoothKaraokeRelease(phase + phaseSpread, smoothing);
+		glowStrength = 1 - smoothKaraokeRelease(phase - phaseSpread, smoothing);
 	}
 	const offsetY = Math.round(-profile.amplitude * strength * 4) / 4;
 	const scale = Math.round((1 + profile.scaleAmount * scaleStrength) * 500) / 500;

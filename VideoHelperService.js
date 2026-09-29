@@ -218,7 +218,6 @@ const VideoHelperService = (() => {
                   if (videoUrl && videoUrl.startsWith('http')) {
                     window.__ivLyricsDebugLog?.("[VideoHelperService] Final buffer complete, URL:", videoUrl);
                     onComplete?.(videoUrl);
-                    return;
                   }
                 }
               } catch (e) {

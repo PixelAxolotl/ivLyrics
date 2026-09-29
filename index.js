@@ -3648,11 +3648,9 @@ const Prefetcher = {
 
         if (!lyrics || (!lyrics.synced && !lyrics.unsynced && !lyrics.karaoke)) {
           ivLyricsDebug(`[Prefetcher] No lyrics found for: ${trackInfo.title}`);
-        } else {
+        } else if (CONFIG.visual["prefetch-enabled"] !== false) {
           // 2단계: 가사 로드 완료 후 번역/발음 프리페치
-          if (CONFIG.visual["prefetch-enabled"] !== false) {
-            prefetchPromises.push(this._prefetchTranslations(trackInfo, lyrics));
-          }
+          prefetchPromises.push(this._prefetchTranslations(trackInfo, lyrics));
         }
 
         if (prefetchPromises.length > 0) {
@@ -7485,14 +7483,13 @@ class LyricsContainer extends react.Component {
           );
           ivLyricsDebug("[processMode] Gemini result sample:", result?.[0]);
           return result;
-        } else {
-          return await this.getTraditionalConversion(
-            lyricsState,
-            baseLyrics,
-            originalLanguage,
-            mode
-          );
         }
+        return await this.getTraditionalConversion(
+          lyricsState,
+          baseLyrics,
+          originalLanguage,
+          mode
+        );
       } catch (error) {
         if (!isActivePresentation()) {
           return null;

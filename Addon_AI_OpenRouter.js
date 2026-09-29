@@ -821,11 +821,7 @@
                 ? await callOpenRouterAPIStream(prompt, onLine, onStreamReset, undefined, parseLines)
                 : await callOpenRouterAPIRaw(prompt, undefined, parseLines);
 
-            if (wantSmartPhonetic) {
-                return { phonetic: lines };
-            } else {
-                return { translation: lines };
-            }
+            return wantSmartPhonetic ? { phonetic: lines } : { translation: lines };
         },
 
         async generateCharacterPronunciation({ lines, characterPronunciationPrompt }) {

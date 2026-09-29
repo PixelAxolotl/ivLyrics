@@ -1834,6 +1834,20 @@ const saveStorageKeys = (newKey) => {
     console.error("Failed to save storage keys:", e);
   }
 };
+// Seed an export key set from the known StorageKeys plus any keys captured in
+// the settings recovery snapshot. exportConfig and exportCloudConfig shared this
+// boilerplate; the only per-caller difference is the snapshot-read warning text.
+const buildExportKeySet = (snapshotWarning) => {
+  const exportKeys = new Set(StorageKeys);
+  try {
+    Object.keys(SettingsPersistence?.getSnapshot?.() || {}).forEach((key) => {
+      exportKeys.add(key);
+    });
+  } catch (error) {
+    console.warn(snapshotWarning, error);
+  }
+  return exportKeys;
+};
 const StorageManager = {
   get(key, defaultVal = true) {
     saveStorageKeys(key);
@@ -1916,14 +1930,9 @@ const StorageManager = {
 
   async exportConfig() {
     const config = {};
-    const exportKeys = new Set(StorageKeys);
-    try {
-      Object.keys(SettingsPersistence?.getSnapshot?.() || {}).forEach((key) => {
-        exportKeys.add(key);
-      });
-    } catch (error) {
-      console.warn("[ivLyrics] Failed to read the settings recovery snapshot.", error);
-    }
+    const exportKeys = buildExportKeySet(
+      "[ivLyrics] Failed to read the settings recovery snapshot."
+    );
 
     exportKeys.forEach((key) => {
       if (
@@ -1971,14 +1980,9 @@ const StorageManager = {
   },
   async exportCloudConfig() {
     const config = {};
-    const exportKeys = new Set(StorageKeys);
-    try {
-      Object.keys(SettingsPersistence?.getSnapshot?.() || {}).forEach((key) => {
-        exportKeys.add(key);
-      });
-    } catch (error) {
-      console.warn("[ivLyrics] Failed to read the cloud settings snapshot.", error);
-    }
+    const exportKeys = buildExportKeySet(
+      "[ivLyrics] Failed to read the cloud settings snapshot."
+    );
 
     exportKeys.forEach((key) => {
       if (!isCloudSyncSettingKey(key)) return;

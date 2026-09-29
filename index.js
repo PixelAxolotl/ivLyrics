@@ -10236,122 +10236,126 @@ class LyricsContainer extends react.Component {
     };
     const fullscreenClasses = computeFullscreenClasses();
 
-    const generationCompleteLabel = I18n.t("generationStatus.complete") || "완료!";
-    const generationStatusDefinitions = [
-      {
-        key: "lyrics",
-        label: I18n.t("syncCreator.loadLyrics") || "가사 불러오기",
-        description: I18n.t("syncCreator.loadingLyrics") || "가사를 불러오는 중...",
-      },
-      {
-        key: "translation",
-        label: I18n.t("menu.translationLabel") || I18n.t("notifications.requestingTranslation"),
-        description: I18n.t("notifications.requestingTranslation"),
-      },
-      {
-        key: "pronunciation",
-        label: I18n.t("menu.pronunciation") || I18n.t("notifications.requestingPronunciation"),
-        description: I18n.t("notifications.requestingPronunciation"),
-      },
-      {
-        key: "cultural-annotations",
-        label: I18n.t("generationStatus.culturalAnnotations") || "문화적 설명",
-        description: I18n.t("generationStatus.culturalAnnotationsLoading") || "문화적 설명을 생성하는 중...",
-      },
-      {
-        key: "video-background",
-        label: I18n.t("settings.videoBackground.label") || I18n.t("videoBackground.loading"),
-        description: I18n.t("videoBackground.loadingMessage"),
-      },
-    ];
-    const generationStatuses = generationStatusDefinitions
-      .map((definition) => {
-        const pill = this.state.generationPills?.[definition.key];
-        if (!pill || pill.phase === "idle") return null;
-
-        const isComplete = pill.phase === "complete" || pill.phase === "exiting";
-        const label = pill.label || definition.label;
-        return {
-          ...definition,
-          ...pill,
-          label,
-          completeLabel: generationCompleteLabel,
-          description: isComplete
-            ? `${label} ${generationCompleteLabel}`
-            : (pill.description || definition.description),
-        };
-      })
-      .filter(Boolean);
-    const generationStatusStack = generationStatuses.length > 0 &&
-      !isSyncCreatorActive &&
-      !isFullscreenMarketplace
-      ? react.createElement(
-        "div",
+    const computeGenerationStatusStack = () => {
+      const generationCompleteLabel = I18n.t("generationStatus.complete") || "완료!";
+      const generationStatusDefinitions = [
         {
-          className: "lyrics-generation-status-stack",
-          role: "status",
-          "aria-live": "polite",
-          "aria-atomic": "false",
+          key: "lyrics",
+          label: I18n.t("syncCreator.loadLyrics") || "가사 불러오기",
+          description: I18n.t("syncCreator.loadingLyrics") || "가사를 불러오는 중...",
         },
-        generationStatuses.map((status) => react.createElement(
+        {
+          key: "translation",
+          label: I18n.t("menu.translationLabel") || I18n.t("notifications.requestingTranslation"),
+          description: I18n.t("notifications.requestingTranslation"),
+        },
+        {
+          key: "pronunciation",
+          label: I18n.t("menu.pronunciation") || I18n.t("notifications.requestingPronunciation"),
+          description: I18n.t("notifications.requestingPronunciation"),
+        },
+        {
+          key: "cultural-annotations",
+          label: I18n.t("generationStatus.culturalAnnotations") || "문화적 설명",
+          description: I18n.t("generationStatus.culturalAnnotationsLoading") || "문화적 설명을 생성하는 중...",
+        },
+        {
+          key: "video-background",
+          label: I18n.t("settings.videoBackground.label") || I18n.t("videoBackground.loading"),
+          description: I18n.t("videoBackground.loadingMessage"),
+        },
+      ];
+      const generationStatuses = generationStatusDefinitions
+        .map((definition) => {
+          const pill = this.state.generationPills?.[definition.key];
+          if (!pill || pill.phase === "idle") return null;
+
+          const isComplete = pill.phase === "complete" || pill.phase === "exiting";
+          const label = pill.label || definition.label;
+          return {
+            ...definition,
+            ...pill,
+            label,
+            completeLabel: generationCompleteLabel,
+            description: isComplete
+              ? `${label} ${generationCompleteLabel}`
+              : (pill.description || definition.description),
+          };
+        })
+        .filter(Boolean);
+      const generationStatusStack = generationStatuses.length > 0 &&
+        !isSyncCreatorActive &&
+        !isFullscreenMarketplace
+        ? react.createElement(
           "div",
           {
-            key: status.key,
-            className: `lyrics-translation-loading-indicator is-${status.phase}`,
-            "data-kind": status.key,
-            "data-phase": status.phase,
-            dir: "auto",
+            className: "lyrics-generation-status-stack",
+            role: "status",
+            "aria-live": "polite",
+            "aria-atomic": "false",
           },
-          react.createElement(
-            "span",
+          generationStatuses.map((status) => react.createElement(
+            "div",
             {
-              className: "lyrics-generation-status-icon",
-              "aria-hidden": "true",
-            },
-            react.createElement("span", {
-              className: "lyrics-translation-loading-spinner",
-            }),
-            react.createElement(
-              "svg",
-              {
-                className: "lyrics-generation-status-check",
-                viewBox: "0 0 16 16",
-                fill: "none",
-              },
-              react.createElement("path", {
-                d: "M3.25 8.25 6.5 11.25 12.75 4.75",
-                stroke: "currentColor",
-                strokeWidth: "2.2",
-                strokeLinecap: "round",
-                strokeLinejoin: "round",
-              })
-            )
-          ),
-          react.createElement(
-            "span",
-            {
-              className: "lyrics-translation-loading-label",
-              "aria-hidden": "true",
+              key: status.key,
+              className: `lyrics-translation-loading-indicator is-${status.phase}`,
+              "data-kind": status.key,
+              "data-phase": status.phase,
+              dir: "auto",
             },
             react.createElement(
               "span",
-              { className: "lyrics-generation-status-loading-label" },
-              status.label
+              {
+                className: "lyrics-generation-status-icon",
+                "aria-hidden": "true",
+              },
+              react.createElement("span", {
+                className: "lyrics-translation-loading-spinner",
+              }),
+              react.createElement(
+                "svg",
+                {
+                  className: "lyrics-generation-status-check",
+                  viewBox: "0 0 16 16",
+                  fill: "none",
+                },
+                react.createElement("path", {
+                  d: "M3.25 8.25 6.5 11.25 12.75 4.75",
+                  stroke: "currentColor",
+                  strokeWidth: "2.2",
+                  strokeLinecap: "round",
+                  strokeLinejoin: "round",
+                })
+              )
             ),
             react.createElement(
               "span",
-              { className: "lyrics-generation-status-complete-label" },
-              status.completeLabel
+              {
+                className: "lyrics-translation-loading-label",
+                "aria-hidden": "true",
+              },
+              react.createElement(
+                "span",
+                { className: "lyrics-generation-status-loading-label" },
+                status.label
+              ),
+              react.createElement(
+                "span",
+                { className: "lyrics-generation-status-complete-label" },
+                status.completeLabel
+              )
+            ),
+            react.createElement(
+              "span",
+              { className: "lyrics-generation-status-description" },
+              status.description
             )
-          ),
-          react.createElement(
-            "span",
-            { className: "lyrics-generation-status-description" },
-            status.description
-          )
-        ))
-      )
-      : null;
+          ))
+        )
+        : null;
+      return generationStatusStack;
+    };
+    const generationStatusStack = computeGenerationStatusStack();
     const hasTrackSyncLyrics =
       (isKaraokeRenderMode(mode) && Array.isArray(this.state.karaoke) && this.state.karaoke.length > 0) ||
       (mode === SYNCED && Array.isArray(this.state.synced) && this.state.synced.length > 0);

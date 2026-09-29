@@ -3098,6 +3098,42 @@ const FullscreenOverlay = (() => {
             }, line.value));
         };
 
+        // TMI 로딩/전체 뷰 선택은 축소 오버레이와 전체 좌측 패널 두 곳에서 동일하다.
+        // 유일한 차이인 메타데이터 표시 모드 폭(includeCompositeModes)만 인자로 받는다.
+        // 컴포넌트가 아니라 createElement 서브트리를 반환하는 순수 렌더 헬퍼이므로
+        // 두 호출부에서 같은 위치에 그대로 끼워 넣어 요소 정체성을 바꾸지 않는다.
+        const renderTmiModeView = (includeCompositeModes) => (
+            tmiLoading && !tmiData ?
+                react.createElement(window.SongInfoTMI?.TMILoadingView || 'div', {
+                    onClose: closeTmiMode,
+                    tmiScale,
+                    webSearchFallback: tmiWebSearchFallback
+                }) :
+                react.createElement(window.SongInfoTMI?.TMIFullView || 'div', {
+                    info: tmiData,
+                    isGenerating: tmiLoading,
+                    webSearchFallback: tmiWebSearchFallback,
+                    onClose: closeTmiMode,
+                    tmiScale,
+                    trackName: (() => {
+                        const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
+                        const original = title || Spicetify.Player.data?.item?.metadata?.title;
+                        const trans = translatedMetadata?.translated?.title;
+                        const rom = translatedMetadata?.romanized?.title;
+                        return resolveTmiMetadataName(mode, original, trans, rom, includeCompositeModes);
+                    })(),
+                    artistName: (() => {
+                        const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
+                        const original = artist || Spicetify.Player.data?.item?.metadata?.artist_name;
+                        const trans = translatedMetadata?.translated?.artist;
+                        const rom = translatedMetadata?.romanized?.artist;
+                        return resolveTmiMetadataName(mode, original, trans, rom, includeCompositeModes);
+                    })(),
+                    coverUrl: coverUrl || Spicetify.Player.data?.item?.metadata?.image_url,
+                    onRegenerate: handleRegenerate
+                })
+        );
+
         // In TV mode, hide the left panel (album/info shown at bottom-left instead)
         const hideLeftPanelForTvMode = tvModeEnabled;
         const PresentationSwitcher = VinylMode?.PresentationSwitcher;
@@ -3113,35 +3149,7 @@ const FullscreenOverlay = (() => {
             (tvModeEnabled || isPortraitFullscreen) && tmiMode && react.createElement("div", {
                 className: "fullscreen-tv-tmi-overlay"
             },
-                tmiLoading && !tmiData ?
-                    react.createElement(window.SongInfoTMI?.TMILoadingView || 'div', {
-                        onClose: closeTmiMode,
-                        tmiScale,
-                        webSearchFallback: tmiWebSearchFallback
-                    }) :
-                    react.createElement(window.SongInfoTMI?.TMIFullView || 'div', {
-                        info: tmiData,
-                        isGenerating: tmiLoading,
-                        webSearchFallback: tmiWebSearchFallback,
-                        onClose: closeTmiMode,
-                        tmiScale,
-                        trackName: (() => {
-                            const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
-                            const original = title || Spicetify.Player.data?.item?.metadata?.title;
-                            const trans = translatedMetadata?.translated?.title;
-                            const rom = translatedMetadata?.romanized?.title;
-                            return resolveTmiMetadataName(mode, original, trans, rom, false);
-                        })(),
-                        artistName: (() => {
-                            const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
-                            const original = artist || Spicetify.Player.data?.item?.metadata?.artist_name;
-                            const trans = translatedMetadata?.translated?.artist;
-                            const rom = translatedMetadata?.romanized?.artist;
-                            return resolveTmiMetadataName(mode, original, trans, rom, false);
-                        })(),
-                        coverUrl: coverUrl || Spicetify.Player.data?.item?.metadata?.image_url,
-                        onRegenerate: handleRegenerate
-                    })
+                renderTmiModeView(false)
             ),
             // Bottom-left: TV Mode Song Info OR Context info
             tvModeEnabled ? react.createElement(react.Fragment, null,
@@ -3476,37 +3484,7 @@ const FullscreenOverlay = (() => {
             },
                 // TMI Mode View
                 tmiMode ? (
-                    tmiLoading && !tmiData ?
-                        react.createElement(window.SongInfoTMI?.TMILoadingView || 'div', {
-                            onClose: closeTmiMode,
-                            tmiScale,
-                            webSearchFallback: tmiWebSearchFallback
-                        }) :
-                        react.createElement(window.SongInfoTMI?.TMIFullView || 'div', {
-                            info: tmiData,
-                            isGenerating: tmiLoading,
-                            webSearchFallback: tmiWebSearchFallback,
-                            onClose: closeTmiMode,
-                            tmiScale,
-                            trackName: (() => {
-                                const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
-                                const original = title || Spicetify.Player.data?.item?.metadata?.title;
-                                const trans = translatedMetadata?.translated?.title;
-                                const rom = translatedMetadata?.romanized?.title;
-
-                                return resolveTmiMetadataName(mode, original, trans, rom, true);
-                            })(),
-                            artistName: (() => {
-                                const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
-                                const original = artist || Spicetify.Player.data?.item?.metadata?.artist_name;
-                                const trans = translatedMetadata?.translated?.artist;
-                                const rom = translatedMetadata?.romanized?.artist;
-
-                                return resolveTmiMetadataName(mode, original, trans, rom, true);
-                            })(),
-                            coverUrl: coverUrl || Spicetify.Player.data?.item?.metadata?.image_url,
-                            onRegenerate: handleRegenerate
-                        })
+                    renderTmiModeView(true)
                 ) :
                     // Normal Mode
                     react.createElement("div", {

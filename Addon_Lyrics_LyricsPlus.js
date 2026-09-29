@@ -829,6 +829,7 @@
             || payloadType === 'unsynced';
         const inferTypeFromContent = !isWordType && !isLineType && !isPlainType;
         const hasCompleteTiming = timedLines.length === parsedLines.length;
+        const computeKaraoke = () => {
         const hasCompleteWordTiming = hasCompleteTiming
             && (isWordType || inferTypeFromContent)
             && timedLines.every(line => line.hasWordTiming);
@@ -853,6 +854,9 @@
                 return karaokeLine;
             })
             : null;
+        return karaoke;
+        };
+        const karaoke = computeKaraoke();
 
         const synced = hasCompleteTiming && !isPlainType ? timedLines.map(line => ({
             startTime: line.startTime,

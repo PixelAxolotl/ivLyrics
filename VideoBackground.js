@@ -112,6 +112,34 @@ const computeVideoSyncState = ({ firstLyricTime, videoInfo, trackOffsetMs }) => 
     });
 };
 
+// loadVideoInfo에서 커뮤니티 YouTube 조회 API URL을 조립하는 순수 계산 부분.
+// setState/isMounted 같은 부작용 없이 입력만으로 최종 URL 문자열을 만든다.
+// searchParams 설정 순서와 shouldBypassServerCache 호출 위치는 원본과 동일하게 유지한다.
+const buildYouTubeVideoApiUrl = ({ trackIsrc, trackId, spotifyData, clientVersion }) => {
+    const useCommunity = true;
+    const youtubeApiUrl = new URL('https://ivlis.kr/ivLyrics/openvideo/youtube');
+    youtubeApiUrl.searchParams.set('isrc', trackIsrc);
+    youtubeApiUrl.searchParams.set('trackId', trackId);
+    youtubeApiUrl.searchParams.set('useCommunity', useCommunity ? "true" : "false");
+    youtubeApiUrl.searchParams.set('client', 'ivLyrics');
+    youtubeApiUrl.searchParams.set('clientVersion', clientVersion);
+    youtubeApiUrl.searchParams.set('requestVersion', '2');
+
+    if (spotifyData?.name) {
+        youtubeApiUrl.searchParams.set('trackName', spotifyData.name);
+        if (spotifyData.artists?.length) {
+            youtubeApiUrl.searchParams.set('trackArtists', spotifyData.artists.join(', '));
+        }
+        if (spotifyData.album || spotifyData.albumName) {
+            youtubeApiUrl.searchParams.set('album', spotifyData.album || spotifyData.albumName);
+        }
+    }
+    if (window.SyncDataService?.shouldBypassServerCache?.(trackIsrc)) {
+        youtubeApiUrl.searchParams.set('bypassCache', '1');
+    }
+    return youtubeApiUrl.toString();
+};
+
 const syncYouTubePlayerTimeline = ({
     player,
     targetVideoTime,
@@ -670,28 +698,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                     (typeof Utils !== "undefined" && Utils.currentVersion) ||
                     window.CONFIG?.version ||
                     "unknown";
-                const useCommunity = true;
-                const youtubeApiUrl = new URL('https://ivlis.kr/ivLyrics/openvideo/youtube');
-                youtubeApiUrl.searchParams.set('isrc', trackIsrc);
-                youtubeApiUrl.searchParams.set('trackId', trackId);
-                youtubeApiUrl.searchParams.set('useCommunity', useCommunity ? "true" : "false");
-                youtubeApiUrl.searchParams.set('client', 'ivLyrics');
-                youtubeApiUrl.searchParams.set('clientVersion', clientVersion);
-                youtubeApiUrl.searchParams.set('requestVersion', '2');
-
-                if (spotifyData?.name) {
-                    youtubeApiUrl.searchParams.set('trackName', spotifyData.name);
-                    if (spotifyData.artists?.length) {
-                        youtubeApiUrl.searchParams.set('trackArtists', spotifyData.artists.join(', '));
-                    }
-                    if (spotifyData.album || spotifyData.albumName) {
-                        youtubeApiUrl.searchParams.set('album', spotifyData.album || spotifyData.albumName);
-                    }
-                }
-                if (window.SyncDataService?.shouldBypassServerCache?.(trackIsrc)) {
-                    youtubeApiUrl.searchParams.set('bypassCache', '1');
-                }
-                const youtubeUrl = youtubeApiUrl.toString();
+                const youtubeUrl = buildYouTubeVideoApiUrl({ trackIsrc, trackId, spotifyData, clientVersion });
 
                 // API 요청 로깅
                 let logId = null;

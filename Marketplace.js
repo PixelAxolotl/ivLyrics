@@ -1288,9 +1288,7 @@ const MarketplacePage = (() => {
                     )
         );
 
-        const renderMarketplaceBrowseLayout = () => react.createElement('div', { className: 'ivlyrics-marketplace-container' },
-                react.createElement('div', { className: 'ivlyrics-marketplace-top' },
-                    renderMarketplaceBrowseHeader(),
+        const renderMarketplacePrimaryTabs = () => (
                     react.createElement('div', {
                         className: 'ivlyrics-marketplace-primary-tabs',
                         role: 'tablist',
@@ -1311,7 +1309,10 @@ const MarketplacePage = (() => {
                                 className: 'ivlyrics-marketplace-primary-tab-count'
                             }, tab.count)
                         ))
-                    ),
+                    )
+        );
+
+        const renderMarketplaceFilterTabs = () => (
                     react.createElement('div', { className: 'ivlyrics-marketplace-filter-tabs' },
                         [
                             { key: FILTER_ALL, label: I18n.t('marketplace.filterAll') },
@@ -1324,6 +1325,13 @@ const MarketplacePage = (() => {
                             onClick: () => setFilter(tab.key)
                         }, tab.label))
                     )
+        );
+
+        const renderMarketplaceBrowseLayout = () => react.createElement('div', { className: 'ivlyrics-marketplace-container' },
+                react.createElement('div', { className: 'ivlyrics-marketplace-top' },
+                    renderMarketplaceBrowseHeader(),
+                    renderMarketplacePrimaryTabs(),
+                    renderMarketplaceFilterTabs()
                 ),
                 react.createElement('div', { className: 'ivlyrics-marketplace-notice' },
                     react.createElement('svg', {

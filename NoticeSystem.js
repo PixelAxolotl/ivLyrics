@@ -396,15 +396,7 @@ const NoticeModal = ({ notices, onClose }) => {
             'button:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
         )).filter((element) => !element.hidden && element.getAttribute("aria-hidden") !== "true");
 
-        const handleKeydown = (event) => {
-            if (event.key === "Escape" && isDismissible) {
-                event.preventDefault();
-                handleClose();
-                return;
-            }
-
-            if (event.key !== "Tab") return;
-
+        const handleTabKey = (event) => {
             const focusable = getFocusableElements();
             if (!focusable.length) {
                 event.preventDefault();
@@ -424,6 +416,18 @@ const NoticeModal = ({ notices, onClose }) => {
                 event.preventDefault();
                 first.focus();
             }
+        };
+
+        const handleKeydown = (event) => {
+            if (event.key === "Escape" && isDismissible) {
+                event.preventDefault();
+                handleClose();
+                return;
+            }
+
+            if (event.key !== "Tab") return;
+
+            handleTabKey(event);
         };
 
         document.addEventListener("keydown", handleKeydown);

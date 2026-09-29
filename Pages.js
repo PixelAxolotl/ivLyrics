@@ -973,6 +973,50 @@ const SyncCreatorProfileModal = react.memo(({
 		}
 	}, [uiTheme]);
 
+	const renderCreatorProfileDecorationPanel = () => (
+			isOwnProfile && react.createElement(
+				"div",
+				{
+					id: "lyrics-creator-decoration-panel",
+					className: "lyrics-creator-decoration-panel",
+					hidden: !isDecorationEditorOpen
+				},
+				supportTier !== "none"
+					? react.createElement(CreatorDecorationEditor, {
+						displayName,
+						tier: supportTier,
+						decoration: supportInfo?.decoration || null,
+						pending: decorationPending,
+						onSave: onSaveDecoration,
+						onReset: onResetDecoration,
+						onRefresh: onRefreshSupport
+					})
+					: react.createElement(
+						"section",
+						{ className: "lyrics-creator-decoration-editor is-role-missing", "aria-label": copy.nicknameStyle },
+						react.createElement(
+							"div",
+							{ className: "lyrics-creator-decoration-heading" },
+							react.createElement(
+								"div",
+								null,
+								react.createElement("h3", null, copy.nicknameStyle),
+								react.createElement("p", null, copy.supportRoleNotFound)
+							),
+							react.createElement(
+								"button",
+								{
+									type: "button",
+									className: "lyrics-creator-decoration-refresh-role",
+									disabled: decorationPending,
+									onClick: onRefreshSupport
+								},
+								copy.refreshSupportRole
+							)
+						)
+					)
+			)
+	);
 	const renderCreatorProfileStats = () => (
 			hasLoadedProfileData
 				? react.createElement(
@@ -1161,48 +1205,7 @@ const SyncCreatorProfileModal = react.memo(({
 					)
 				)
 				),
-			isOwnProfile && react.createElement(
-				"div",
-				{
-					id: "lyrics-creator-decoration-panel",
-					className: "lyrics-creator-decoration-panel",
-					hidden: !isDecorationEditorOpen
-				},
-				supportTier !== "none"
-					? react.createElement(CreatorDecorationEditor, {
-						displayName,
-						tier: supportTier,
-						decoration: supportInfo?.decoration || null,
-						pending: decorationPending,
-						onSave: onSaveDecoration,
-						onReset: onResetDecoration,
-						onRefresh: onRefreshSupport
-					})
-					: react.createElement(
-						"section",
-						{ className: "lyrics-creator-decoration-editor is-role-missing", "aria-label": copy.nicknameStyle },
-						react.createElement(
-							"div",
-							{ className: "lyrics-creator-decoration-heading" },
-							react.createElement(
-								"div",
-								null,
-								react.createElement("h3", null, copy.nicknameStyle),
-								react.createElement("p", null, copy.supportRoleNotFound)
-							),
-							react.createElement(
-								"button",
-								{
-									type: "button",
-									className: "lyrics-creator-decoration-refresh-role",
-									disabled: decorationPending,
-									onClick: onRefreshSupport
-								},
-								copy.refreshSupportRole
-							)
-						)
-					)
-			),
+			renderCreatorProfileDecorationPanel(),
 			renderCreatorProfileGreetingBlock(),
 			renderCreatorProfileStats()
 		)

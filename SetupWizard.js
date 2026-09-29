@@ -1515,6 +1515,70 @@ const VideoTestStep = ({ onNext, onBack, onNeedHelper, onSkip }) => {
     };
   }, []);
 
+  const renderVideoTestHelperMessage = () => react.createElement(
+      "div",
+      {
+        style: {
+          textAlign: "center",
+          padding: "16px 20px",
+          background: WIZARD_COLORS.warningSurface,
+          borderRadius: 0,
+          border: `1px solid ${WIZARD_COLORS.warningBorder}`,
+          marginBottom: "16px",
+        },
+      },
+      react.createElement(
+        "p",
+        {
+          style: {
+            fontSize: "14px",
+            fontWeight: "600",
+            color: WIZARD_COLORS.warningText,
+            marginBottom: "8px",
+          },
+        },
+        I18n.t("setupWizard.videoTest.helperRequired")
+      ),
+      react.createElement(
+        "p",
+        {
+          style: {
+            fontSize: "12px",
+            color: WIZARD_COLORS.muted,
+            marginBottom: "16px",
+          },
+        },
+        I18n.t("setupWizard.videoTest.helperDesc")
+      ),
+      react.createElement(
+        WizardButton,
+        {
+          onClick: handleInstallHelper,
+          variant: "secondary",
+          style: {
+            padding: "12px 24px",
+            fontSize: "13px",
+            fontWeight: "600",
+            color: WIZARD_COLORS.warningText,
+            background: WIZARD_COLORS.warningSurface,
+            borderColor: WIZARD_COLORS.warningBorder,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            marginBottom: "12px",
+          },
+        },
+        react.createElement("svg", {
+          width: 16,
+          height: 16,
+          viewBox: "0 0 24 24",
+          fill: "currentColor",
+          dangerouslySetInnerHTML: { __html: WizardIcons.externalLink },
+        }),
+        I18n.t("setupWizard.videoTest.installHelper")
+      )
+    );
+
   return react.createElement(
     "div",
     {
@@ -1611,70 +1675,7 @@ const VideoTestStep = ({ onNext, onBack, onNeedHelper, onSkip }) => {
       )
     ),
     // Helper required message (shown when loginRequired is true)
-    loginRequired === true &&
-    react.createElement(
-      "div",
-      {
-        style: {
-          textAlign: "center",
-          padding: "16px 20px",
-          background: WIZARD_COLORS.warningSurface,
-          borderRadius: 0,
-          border: `1px solid ${WIZARD_COLORS.warningBorder}`,
-          marginBottom: "16px",
-        },
-      },
-      react.createElement(
-        "p",
-        {
-          style: {
-            fontSize: "14px",
-            fontWeight: "600",
-            color: WIZARD_COLORS.warningText,
-            marginBottom: "8px",
-          },
-        },
-        I18n.t("setupWizard.videoTest.helperRequired")
-      ),
-      react.createElement(
-        "p",
-        {
-          style: {
-            fontSize: "12px",
-            color: WIZARD_COLORS.muted,
-            marginBottom: "16px",
-          },
-        },
-        I18n.t("setupWizard.videoTest.helperDesc")
-      ),
-      react.createElement(
-        WizardButton,
-        {
-          onClick: handleInstallHelper,
-          variant: "secondary",
-          style: {
-            padding: "12px 24px",
-            fontSize: "13px",
-            fontWeight: "600",
-            color: WIZARD_COLORS.warningText,
-            background: WIZARD_COLORS.warningSurface,
-            borderColor: WIZARD_COLORS.warningBorder,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            marginBottom: "12px",
-          },
-        },
-        react.createElement("svg", {
-          width: 16,
-          height: 16,
-          viewBox: "0 0 24 24",
-          fill: "currentColor",
-          dangerouslySetInnerHTML: { __html: WizardIcons.externalLink },
-        }),
-        I18n.t("setupWizard.videoTest.installHelper")
-      )
-    ),
+    loginRequired === true && renderVideoTestHelperMessage(),
     // Spacer
     react.createElement("div", { style: { flex: 1 } }),
     react.createElement(WizardNavigation, {

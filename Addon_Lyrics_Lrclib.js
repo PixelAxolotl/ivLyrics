@@ -2106,159 +2106,58 @@
                     return englishSearchFlow;
                 };
 
+                // A single ladder rung: adopt `flow[candidateProp]` as the chosen
+                // body if nothing has been selected yet. `flow` is `primarySearchFlow`
+                // (always present) or the lazily-built `englishSearchFlow` (may be
+                // null). Behaviour matches the original `if (!body && flow?.prop)`
+                // rungs, including the `else if` chain (each later rung already ran
+                // only while `body` was still null).
+                const selectFromFlow = (flow, candidateProp, source) => {
+                    if (body || !flow || !flow[candidateProp]) return;
+                    body = flow[candidateProp];
+                    selectedFlow = flow;
+                    selectedSource = source;
+                };
+                // English rungs need the flow resolved first. `ensure` mirrors the
+                // original rungs that awaited `ensureEnglishSearchFlow()` before the
+                // check; later english rungs reused the already-resolved flow.
+                const selectFromEnglish = async (candidateProp, source, ensure) => {
+                    if (body) return;
+                    if (ensure) await ensureEnglishSearchFlow();
+                    selectFromFlow(englishSearchFlow, candidateProp, source);
+                };
+
                 if (syncDataSource) {
-                    if (primarySearchFlow.bestSourceSyncedCandidate) {
-                        body = primarySearchFlow.bestSourceSyncedCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-source-synced';
-                    }
-
-                    if (!body) {
-                        await ensureEnglishSearchFlow();
-                        if (englishSearchFlow?.bestSourceSyncedCandidate) {
-                            body = englishSearchFlow.bestSourceSyncedCandidate;
-                            selectedFlow = englishSearchFlow;
-                            selectedSource = 'english-source-synced';
-                        }
-                    }
-
-                    if (!body && primarySearchFlow.bestSourcePlainCandidate) {
-                        body = primarySearchFlow.bestSourcePlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-source-plain';
-                    }
-
-                    if (!body && englishSearchFlow?.bestSourcePlainCandidate) {
-                        body = englishSearchFlow.bestSourcePlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-source-plain';
-                    }
-
-                    if (!body && primarySearchFlow.bestSourceInstrumentalCandidate) {
-                        body = primarySearchFlow.bestSourceInstrumentalCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-source-instrumental';
-                    }
-
-                    if (!body && englishSearchFlow?.bestSourceInstrumentalCandidate) {
-                        body = englishSearchFlow.bestSourceInstrumentalCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-source-instrumental';
-                    }
+                    selectFromFlow(primarySearchFlow, 'bestSourceSyncedCandidate', 'primary-source-synced');
+                    await selectFromEnglish('bestSourceSyncedCandidate', 'english-source-synced', true);
+                    selectFromFlow(primarySearchFlow, 'bestSourcePlainCandidate', 'primary-source-plain');
+                    await selectFromEnglish('bestSourcePlainCandidate', 'english-source-plain', false);
+                    selectFromFlow(primarySearchFlow, 'bestSourceInstrumentalCandidate', 'primary-source-instrumental');
+                    await selectFromEnglish('bestSourceInstrumentalCandidate', 'english-source-instrumental', false);
                 }
 
                 if (shouldPreferExactSyncLineMatch) {
-                    if (!body && primarySearchFlow.bestExactNativeSyncedCandidate) {
-                        body = primarySearchFlow.bestExactNativeSyncedCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-exact-native-synced';
-                    }
-
-                    if (!body) {
-                        await ensureEnglishSearchFlow();
-                        if (englishSearchFlow?.bestExactNativeSyncedCandidate) {
-                            body = englishSearchFlow.bestExactNativeSyncedCandidate;
-                            selectedFlow = englishSearchFlow;
-                            selectedSource = 'english-exact-native-synced';
-                        }
-                    }
-
-                    if (!body && primarySearchFlow.bestExactNativePlainCandidate) {
-                        body = primarySearchFlow.bestExactNativePlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-exact-native-plain';
-                    }
-
-                    if (!body && englishSearchFlow?.bestExactNativePlainCandidate) {
-                        body = englishSearchFlow.bestExactNativePlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-exact-native-plain';
-                    }
-
-                    if (!body && primarySearchFlow.bestExactFallbackSyncedCandidate) {
-                        body = primarySearchFlow.bestExactFallbackSyncedCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-exact-fallback-synced';
-                    }
-
-                    if (!body && englishSearchFlow?.bestExactFallbackSyncedCandidate) {
-                        body = englishSearchFlow.bestExactFallbackSyncedCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-exact-fallback-synced';
-                    }
-
-                    if (!body && primarySearchFlow.bestExactFallbackPlainCandidate) {
-                        body = primarySearchFlow.bestExactFallbackPlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-exact-fallback-plain';
-                    }
-
-                    if (!body && englishSearchFlow?.bestExactFallbackPlainCandidate) {
-                        body = englishSearchFlow.bestExactFallbackPlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-exact-fallback-plain';
-                    }
+                    selectFromFlow(primarySearchFlow, 'bestExactNativeSyncedCandidate', 'primary-exact-native-synced');
+                    await selectFromEnglish('bestExactNativeSyncedCandidate', 'english-exact-native-synced', true);
+                    selectFromFlow(primarySearchFlow, 'bestExactNativePlainCandidate', 'primary-exact-native-plain');
+                    await selectFromEnglish('bestExactNativePlainCandidate', 'english-exact-native-plain', false);
+                    selectFromFlow(primarySearchFlow, 'bestExactFallbackSyncedCandidate', 'primary-exact-fallback-synced');
+                    await selectFromEnglish('bestExactFallbackSyncedCandidate', 'english-exact-fallback-synced', false);
+                    selectFromFlow(primarySearchFlow, 'bestExactFallbackPlainCandidate', 'primary-exact-fallback-plain');
+                    await selectFromEnglish('bestExactFallbackPlainCandidate', 'english-exact-fallback-plain', false);
                 }
 
-                if (!body) {
-                    body = primarySearchFlow.bestNativeSyncedCandidate;
-                    if (body) {
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-native-synced';
-                    }
-                }
+                selectFromFlow(primarySearchFlow, 'bestNativeSyncedCandidate', 'primary-native-synced');
+                await selectFromEnglish('bestNativeSyncedCandidate', 'english-native-synced', true);
 
-                if (!body) {
-                    await ensureEnglishSearchFlow();
-                    if (englishSearchFlow?.bestNativeSyncedCandidate) {
-                        body = englishSearchFlow.bestNativeSyncedCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-native-synced';
-                    }
-                }
-
-                if (!body) {
-                    if (primarySearchFlow.bestNativePlainCandidate) {
-                        body = primarySearchFlow.bestNativePlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-native-plain';
-                    }
-                    else if (englishSearchFlow?.bestNativePlainCandidate) {
-                        body = englishSearchFlow.bestNativePlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-native-plain';
-                    }
-                    else if (primarySearchFlow.bestFallbackSyncedCandidate) {
-                        body = primarySearchFlow.bestFallbackSyncedCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-fallback-synced';
-                    }
-                    else if (englishSearchFlow?.bestFallbackSyncedCandidate) {
-                        body = englishSearchFlow.bestFallbackSyncedCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-fallback-synced';
-                    }
-                    else if (primarySearchFlow.bestFallbackPlainCandidate) {
-                        body = primarySearchFlow.bestFallbackPlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-fallback-plain';
-                    }
-                    else if (englishSearchFlow?.bestFallbackPlainCandidate) {
-                        body = englishSearchFlow.bestFallbackPlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-fallback-plain';
-                    }
-                    else if (primarySearchFlow.bestInstrumentalCandidate) {
-                        body = primarySearchFlow.bestInstrumentalCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-instrumental';
-                    }
-                    else if (englishSearchFlow?.bestInstrumentalCandidate) {
-                        body = englishSearchFlow.bestInstrumentalCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-instrumental';
-                    }
-                }
+                selectFromFlow(primarySearchFlow, 'bestNativePlainCandidate', 'primary-native-plain');
+                await selectFromEnglish('bestNativePlainCandidate', 'english-native-plain', false);
+                selectFromFlow(primarySearchFlow, 'bestFallbackSyncedCandidate', 'primary-fallback-synced');
+                await selectFromEnglish('bestFallbackSyncedCandidate', 'english-fallback-synced', false);
+                selectFromFlow(primarySearchFlow, 'bestFallbackPlainCandidate', 'primary-fallback-plain');
+                await selectFromEnglish('bestFallbackPlainCandidate', 'english-fallback-plain', false);
+                selectFromFlow(primarySearchFlow, 'bestInstrumentalCandidate', 'primary-instrumental');
+                await selectFromEnglish('bestInstrumentalCandidate', 'english-instrumental', false);
 
         return { body, selectedFlow, selectedSource, englishSearchFlow, englishMetadata, englishSearchError };
     }

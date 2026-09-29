@@ -8239,23 +8239,26 @@ class LyricsContainer extends react.Component {
 
       if (cached) {
         // Fix cached items if they have double-encoded JSON structure
-        const targetField = wantSmartPhonetic ? 'phonetic' : 'translation';
+        const fixDoubleEncodedCachedTranslation = () => {
+          const targetField = wantSmartPhonetic ? 'phonetic' : 'translation';
 
-        if (cached[targetField] && Array.isArray(cached[targetField]) &&
-          cached[targetField].length === 1 && typeof cached[targetField][0] === 'string' &&
-          cached[targetField][0].trim().startsWith('{')) {
-          try {
-            const parsed = JSON.parse(cached[targetField][0]);
-            if (wantSmartPhonetic && Array.isArray(parsed.phonetic)) {
-              cached.phonetic = parsed.phonetic;
-            } else if (!wantSmartPhonetic && Array.isArray(parsed.translation)) {
-              cached.translation = parsed.translation;
-            } else if (parsed.translation && Array.isArray(parsed.translation)) {
-              // Fallback
-              cached[targetField] = parsed.translation;
-            }
-          } catch (e) { }
-        }
+          if (cached[targetField] && Array.isArray(cached[targetField]) &&
+            cached[targetField].length === 1 && typeof cached[targetField][0] === 'string' &&
+            cached[targetField][0].trim().startsWith('{')) {
+            try {
+              const parsed = JSON.parse(cached[targetField][0]);
+              if (wantSmartPhonetic && Array.isArray(parsed.phonetic)) {
+                cached.phonetic = parsed.phonetic;
+              } else if (!wantSmartPhonetic && Array.isArray(parsed.translation)) {
+                cached.translation = parsed.translation;
+              } else if (parsed.translation && Array.isArray(parsed.translation)) {
+                // Fallback
+                cached[targetField] = parsed.translation;
+              }
+            } catch (e) { }
+          }
+        };
+        fixDoubleEncodedCachedTranslation();
 
         return resolve(cached);
       }
@@ -8362,24 +8365,28 @@ class LyricsContainer extends react.Component {
         if (!outText) throw new Error("Empty result from Gemini.");
 
         // Handle nested JSON packaging (API issue workaround)
-        if (Array.isArray(outText) && outText.length === 1 && typeof outText[0] === 'string') {
-          try {
-            if (outText[0].trim().startsWith('{')) {
-              const parsed = JSON.parse(outText[0]);
-              if (wantSmartPhonetic && Array.isArray(parsed.phonetic)) {
-                outText = parsed.phonetic;
-              } else if (!wantSmartPhonetic && Array.isArray(parsed.translation)) {
-                outText = parsed.translation;
-              } else if (parsed.translation && Array.isArray(parsed.translation)) {
-                // Fallback: request was phonetic but response came as translation?
-                // or just general structure match
-                outText = parsed.translation;
+        const unwrapNestedJsonOutput = (value) => {
+          if (Array.isArray(value) && value.length === 1 && typeof value[0] === 'string') {
+            try {
+              if (value[0].trim().startsWith('{')) {
+                const parsed = JSON.parse(value[0]);
+                if (wantSmartPhonetic && Array.isArray(parsed.phonetic)) {
+                  value = parsed.phonetic;
+                } else if (!wantSmartPhonetic && Array.isArray(parsed.translation)) {
+                  value = parsed.translation;
+                } else if (parsed.translation && Array.isArray(parsed.translation)) {
+                  // Fallback: request was phonetic but response came as translation?
+                  // or just general structure match
+                  value = parsed.translation;
+                }
               }
+            } catch (e) {
+              // Not valid JSON, process as standard array
             }
-          } catch (e) {
-            // Not valid JSON, process as standard array
           }
-        }
+          return value;
+        };
+        outText = unwrapNestedJsonOutput(outText);
 
         // Handle both array and string formats
         let lines;

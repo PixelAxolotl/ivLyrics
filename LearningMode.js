@@ -2497,60 +2497,7 @@
                 )
         );
 
-        const renderQuizTab = () => react.createElement("div", { className: "ivlyrics-study-section ivlyrics-study-quiz-stage" },
-                react.createElement("div", { className: "ivlyrics-study-quiz-tools" },
-                    react.createElement("div", { className: "ivlyrics-study-quiz-difficulty" },
-                        react.createElement("span", null, t("difficulty", "난이도")),
-                        react.createElement("div", { className: "ivlyrics-study-difficulty-options compact" },
-                            difficultyOptions.map((item) => react.createElement("button", {
-                                key: `quiz-${item.id}`,
-                                type: "button",
-                                className: quizDifficulty === item.id ? "active" : "",
-                                onClick: () => setQuizDifficulty(item.id),
-                                disabled: status === "loading"
-                            }, item.label))
-                        )
-                    ),
-                    react.createElement("button", {
-                        type: "button",
-                        className: "ivlyrics-study-secondary subtle",
-                        onClick: regenerateQuiz,
-                        disabled: status === "loading" || !hasLyrics
-                    }, t("quizRegenerate", "새 문제 만들기"))
-                ),
-                totalQuiz > 0 && react.createElement("div", { className: "ivlyrics-study-quiz-topline" },
-                    react.createElement("div", null,
-                        react.createElement("span", { className: "ivlyrics-study-quiz-badge" },
-                            quizFinished
-                                ? t("quizResult", "결과")
-                                : getQuizTypeLabel(currentQuiz?.type)
-                        ),
-                        react.createElement("span", null,
-                            quizFinished
-                                ? t("quizResult", "결과")
-                                : t("quizStep", "{current}/{total} 문제")
-                                    .replace("{current}", currentQuizIndex + 1)
-                                    .replace("{total}", totalQuiz)
-                        )
-                    ),
-                    react.createElement("div", { className: "ivlyrics-study-quiz-score-row" },
-                        react.createElement("span", { className: "correct" }, `✓ ${correctCount}`),
-                        react.createElement("span", { className: "wrong" }, `× ${wrongQuizCount}`)
-                    ),
-                    react.createElement("div", { className: "ivlyrics-study-quiz-progress" },
-                        react.createElement("div", { style: { width: `${quizProgressPercent}%` } })
-                    )
-                ),
-                totalQuiz === 0 && react.createElement(EmptyState, null,
-                    react.createElement("p", null, t("noQuiz", "생성된 퀴즈가 없습니다.")),
-                    react.createElement("button", {
-                        type: "button",
-                        className: "ivlyrics-study-primary",
-                        onClick: regenerateQuiz,
-                        disabled: status === "loading"
-                    }, t("quizRegenerate", "새 문제 만들기"))
-                ),
-                quizFinished && totalQuiz > 0 && react.createElement("section", {
+        const renderQuizResultSection = () => react.createElement("section", {
                     className: "ivlyrics-study-card ivlyrics-study-quiz-result"
                 },
                     react.createElement("div", { className: "ivlyrics-study-result-hero" },
@@ -2638,7 +2585,62 @@
                             onClick: resetQuiz
                         }, t("quizRetry", "다시 풀기"))
                     )
+                );
+
+        const renderQuizTab = () => react.createElement("div", { className: "ivlyrics-study-section ivlyrics-study-quiz-stage" },
+                react.createElement("div", { className: "ivlyrics-study-quiz-tools" },
+                    react.createElement("div", { className: "ivlyrics-study-quiz-difficulty" },
+                        react.createElement("span", null, t("difficulty", "난이도")),
+                        react.createElement("div", { className: "ivlyrics-study-difficulty-options compact" },
+                            difficultyOptions.map((item) => react.createElement("button", {
+                                key: `quiz-${item.id}`,
+                                type: "button",
+                                className: quizDifficulty === item.id ? "active" : "",
+                                onClick: () => setQuizDifficulty(item.id),
+                                disabled: status === "loading"
+                            }, item.label))
+                        )
+                    ),
+                    react.createElement("button", {
+                        type: "button",
+                        className: "ivlyrics-study-secondary subtle",
+                        onClick: regenerateQuiz,
+                        disabled: status === "loading" || !hasLyrics
+                    }, t("quizRegenerate", "새 문제 만들기"))
                 ),
+                totalQuiz > 0 && react.createElement("div", { className: "ivlyrics-study-quiz-topline" },
+                    react.createElement("div", null,
+                        react.createElement("span", { className: "ivlyrics-study-quiz-badge" },
+                            quizFinished
+                                ? t("quizResult", "결과")
+                                : getQuizTypeLabel(currentQuiz?.type)
+                        ),
+                        react.createElement("span", null,
+                            quizFinished
+                                ? t("quizResult", "결과")
+                                : t("quizStep", "{current}/{total} 문제")
+                                    .replace("{current}", currentQuizIndex + 1)
+                                    .replace("{total}", totalQuiz)
+                        )
+                    ),
+                    react.createElement("div", { className: "ivlyrics-study-quiz-score-row" },
+                        react.createElement("span", { className: "correct" }, `✓ ${correctCount}`),
+                        react.createElement("span", { className: "wrong" }, `× ${wrongQuizCount}`)
+                    ),
+                    react.createElement("div", { className: "ivlyrics-study-quiz-progress" },
+                        react.createElement("div", { style: { width: `${quizProgressPercent}%` } })
+                    )
+                ),
+                totalQuiz === 0 && react.createElement(EmptyState, null,
+                    react.createElement("p", null, t("noQuiz", "생성된 퀴즈가 없습니다.")),
+                    react.createElement("button", {
+                        type: "button",
+                        className: "ivlyrics-study-primary",
+                        onClick: regenerateQuiz,
+                        disabled: status === "loading"
+                    }, t("quizRegenerate", "새 문제 만들기"))
+                ),
+                quizFinished && totalQuiz > 0 && renderQuizResultSection(),
                 currentQuiz && !quizFinished && react.createElement("section", {
                     key: currentQuiz.id || currentQuizIndex,
                     className: [

@@ -1424,6 +1424,16 @@
 
     // IndexedDB 기반 로컬 캐시 시스템
     // ============================================
+    const awaitIdbRequest = (request) => new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+
+    const awaitIdbTransaction = (tx) => new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+
     const LyricsCache = {
         DB_NAME: 'ivLyricsCache',
         DB_VERSION: 7,
@@ -1617,11 +1627,7 @@
                 const store = tx.objectStore('lyrics');
                 const cacheKey = this._getLyricsKey(trackId, provider);
 
-                const result = await new Promise((resolve, reject) => {
-                    const request = store.get(cacheKey);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
+                const result = await awaitIdbRequest(store.get(cacheKey));
 
                 if (result && !this._isExpired(result.cachedAt, 'lyrics')) {
                     return redactLyricsCacheDataForPersistence(result.data);
@@ -1649,10 +1655,7 @@
                     cachedAt: Date.now()
                 }));
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
+                await awaitIdbTransaction(tx);
 
                 this._scheduleSizeEnforcement();
                 return true;
@@ -1681,11 +1684,7 @@
                 const store = tx.objectStore('translations');
                 const cacheKey = this._getTranslationKey(trackId, lang, isPhonetic, provider, sourceHash);
 
-                const result = await new Promise((resolve, reject) => {
-                    const request = store.get(cacheKey);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
+                const result = await awaitIdbRequest(store.get(cacheKey));
 
                 const type = isPhonetic ? 'phonetic' : 'translation';
                 if (result && !this._isExpired(result.cachedAt, type)) {
@@ -1717,10 +1716,7 @@
                     cachedAt: Date.now()
                 }));
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
+                await awaitIdbTransaction(tx);
 
                 this._scheduleSizeEnforcement();
                 return true;
@@ -1746,11 +1742,7 @@
                     provider,
                     sourceHash
                 );
-                const result = await new Promise((resolve, reject) => {
-                    const request = store.get(cacheKey);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
+                const result = await awaitIdbRequest(store.get(cacheKey));
 
                 if (result && !this._isExpired(result.cachedAt, 'cultural')) {
                     return result.data;
@@ -1786,10 +1778,7 @@
                     cachedAt: Date.now()
                 }));
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
+                await awaitIdbTransaction(tx);
                 this._scheduleSizeEnforcement();
                 return true;
             } catch (error) {
@@ -1841,11 +1830,7 @@
                 const store = tx.objectStore('metadata');
                 const cacheKey = `${trackId}:${lang}`;
 
-                const result = await new Promise((resolve, reject) => {
-                    const request = store.get(cacheKey);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
+                const result = await awaitIdbRequest(store.get(cacheKey));
 
                 if (result && !this._isExpired(result.cachedAt, 'metadata')) {
                     return result.data;
@@ -1873,10 +1858,7 @@
                     cachedAt: Date.now()
                 }));
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
+                await awaitIdbTransaction(tx);
 
                 this._scheduleSizeEnforcement();
                 return true;
@@ -1892,11 +1874,7 @@
                 const tx = db.transaction('youtube', 'readonly');
                 const store = tx.objectStore('youtube');
 
-                const result = await new Promise((resolve, reject) => {
-                    const request = store.get(trackId);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
+                const result = await awaitIdbRequest(store.get(trackId));
 
                 if (result && !this._isExpired(result.cachedAt, 'youtube')) {
                     return result.data;
@@ -1921,10 +1899,7 @@
                     cachedAt: Date.now()
                 }));
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
+                await awaitIdbTransaction(tx);
 
                 this._scheduleSizeEnforcement();
                 return true;
@@ -1945,11 +1920,7 @@
                 const tx = db.transaction('sync', 'readonly');
                 const store = tx.objectStore('sync');
 
-                const result = await new Promise((resolve, reject) => {
-                    const request = store.get(trackId);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
+                const result = await awaitIdbRequest(store.get(trackId));
 
                 if (result && !this._isExpired(result.cachedAt, 'sync')) {
                     return result.data;
@@ -1979,10 +1950,7 @@
                     cachedAt: Date.now()
                 }));
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
+                await awaitIdbTransaction(tx);
 
                 this._scheduleSizeEnforcement();
                 return true;
@@ -2005,10 +1973,7 @@
 
                 store.delete(trackId);
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
+                await awaitIdbTransaction(tx);
 
                 return true;
             } catch (error) {
@@ -2029,11 +1994,7 @@
                 const store = tx.objectStore('tmi');
                 const cacheKey = `${trackId}:${lang}`;
 
-                const result = await new Promise((resolve, reject) => {
-                    const request = store.get(cacheKey);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
+                const result = await awaitIdbRequest(store.get(cacheKey));
 
                 if (result && !this._isExpired(result.cachedAt, 'tmi')) {
                     return result.data;
@@ -2066,10 +2027,7 @@
                     cachedAt: Date.now()
                 }));
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
+                await awaitIdbTransaction(tx);
 
                 this._scheduleSizeEnforcement();
                 return true;

@@ -5422,6 +5422,33 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         const container = document.createElement('div');
         container.className = PANEL_CONTAINER_CLASS;
 
+        const placeLyricsContainer = () => {
+            const contextItemInfo = panel.querySelector('.main-nowPlayingView-contextItemInfo');
+
+            if (contextItemInfo && contextItemInfo.parentElement) {
+                // contextItemInfo 바로 다음에 삽입
+                const parent = contextItemInfo.parentElement;
+                const nextSibling = contextItemInfo.nextElementSibling;
+                if (nextSibling) {
+                    parent.insertBefore(container, nextSibling);
+                } else {
+                    parent.appendChild(container);
+                }
+                panelDebug("[NowPlayingPanelLyrics] Inserted after contextItemInfo");
+            } else {
+                // 폴백: 관련 뮤직비디오 섹션 앞에 삽입
+                const relatedSection = panel.querySelector('.main-nowPlayingView-section');
+                if (relatedSection && relatedSection.parentElement) {
+                    relatedSection.parentElement.insertBefore(container, relatedSection);
+                    panelDebug("[NowPlayingPanelLyrics] Inserted before related section");
+                } else {
+                    // 최종 폴백: 패널 끝에 삽입
+                    panel.appendChild(container);
+                    panelDebug("[NowPlayingPanelLyrics] Used fallback - appended to panel");
+                }
+            }
+        };
+
         // 곡 정보 (곡명, 아티스트) 바로 **아래**에 삽입
         // Now Playing 패널 구조:
         // main-nowPlayingView-nowPlayingGrid
@@ -5433,30 +5460,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         // 가사는 main-nowPlayingView-contextItemInfo 바로 **다음**에 삽입해야 함
 
         // contextItemInfo 찾기 (곡제목, 아티스트, 버튼들을 포함하는 컨테이너)
-        const contextItemInfo = panel.querySelector('.main-nowPlayingView-contextItemInfo');
-
-        if (contextItemInfo && contextItemInfo.parentElement) {
-            // contextItemInfo 바로 다음에 삽입
-            const parent = contextItemInfo.parentElement;
-            const nextSibling = contextItemInfo.nextElementSibling;
-            if (nextSibling) {
-                parent.insertBefore(container, nextSibling);
-            } else {
-                parent.appendChild(container);
-            }
-            panelDebug("[NowPlayingPanelLyrics] Inserted after contextItemInfo");
-        } else {
-            // 폴백: 관련 뮤직비디오 섹션 앞에 삽입
-            const relatedSection = panel.querySelector('.main-nowPlayingView-section');
-            if (relatedSection && relatedSection.parentElement) {
-                relatedSection.parentElement.insertBefore(container, relatedSection);
-                panelDebug("[NowPlayingPanelLyrics] Inserted before related section");
-            } else {
-                // 최종 폴백: 패널 끝에 삽입
-                panel.appendChild(container);
-                panelDebug("[NowPlayingPanelLyrics] Used fallback - appended to panel");
-            }
-        }
+        placeLyricsContainer();
 
         if (renderPanelLyricsIntoContainer(container)) {
             panelDebug("[NowPlayingPanelLyrics] Panel lyrics inserted successfully");

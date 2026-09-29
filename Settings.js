@@ -10376,6 +10376,76 @@ react.createElement(OptionList, {
             );
           },
         });
+  const renderAppearanceLivePreviewSection = () =>
+react.createElement(
+          "div",
+          {
+            className: "settings-live-preview-sticky",
+          },
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.livePreview.title"),
+            subtitle: I18n.t("settingsAdvanced.livePreview.subtitle"),
+            sectionKey: "live-preview",
+          }),
+          react.createElement(
+            "div",
+            {
+              className: "font-preview-container",
+            },
+            react.createElement(
+              "div",
+              {
+                className: "font-preview settings-live-preview-lyrics lyrics-lyricsContainer-LyricsContainer",
+                id: "settings-live-lyrics-preview",
+                style: getSettingsLyricsPreviewStyle(),
+                "data-furigana-enabled": CONFIG.visual["furigana-enabled"] === true
+                  ? "true"
+                  : "false",
+              },
+              react.createElement(
+                "div",
+                {
+                  className: `settings-live-preview-stage lyrics-lyricsContainer-SyncedLyricsPage is-karaoke${CONFIG.visual["karaoke-line-transition"] ? " karaoke-line-transition-enabled" : ""}`,
+                },
+                react.createElement(
+                  "div",
+                  { className: "settings-live-preview-line lyrics-lyricsContainer-SyncedLyrics" },
+                  react.createElement(
+                    "div",
+                    {
+                      className: "lyrics-lyricsContainer-LyricsLine lyrics-lyricsContainer-LyricsLine-active",
+                      style: {
+                        "--position-index": 0,
+                        "--offset": "0px",
+                        "--animation-index": 0,
+                      },
+                    },
+                    react.createElement(
+                      "p",
+                      null,
+                      react.createElement(KaraokeLine, {
+                        line: SETTINGS_LYRICS_PREVIEW_LINE,
+                        position: SETTINGS_LYRICS_PREVIEW_LINE.endTime,
+                        isActive: true,
+                        furiganaMapOverride: SETTINGS_LYRICS_PREVIEW_FURIGANA,
+                      })
+                    ),
+                    react.createElement(
+                      "p",
+                      { className: "lyrics-lyricsContainer-LyricsLine-phonetic" },
+                      I18n.t("settingsAdvanced.livePreview.sampleTextPhonetic")
+                    ),
+                    react.createElement(
+                      "p",
+                      { className: "lyrics-lyricsContainer-LyricsLine-translation" },
+                      I18n.t("settingsAdvanced.livePreview.sampleText")
+                    )
+                  )
+                )
+              )
+            )
+          )
+        );
   const renderAppearanceTab = () =>
 react.createElement(
         "div",
@@ -10500,75 +10570,7 @@ react.createElement(
           className: "settings-live-preview-spacer",
           "aria-hidden": "true",
         }),
-        react.createElement(
-          "div",
-          {
-            className: "settings-live-preview-sticky",
-          },
-          react.createElement(SettingsSectionTitle, {
-            title: I18n.t("settingsAdvanced.livePreview.title"),
-            subtitle: I18n.t("settingsAdvanced.livePreview.subtitle"),
-            sectionKey: "live-preview",
-          }),
-          react.createElement(
-            "div",
-            {
-              className: "font-preview-container",
-            },
-            react.createElement(
-              "div",
-              {
-                className: "font-preview settings-live-preview-lyrics lyrics-lyricsContainer-LyricsContainer",
-                id: "settings-live-lyrics-preview",
-                style: getSettingsLyricsPreviewStyle(),
-                "data-furigana-enabled": CONFIG.visual["furigana-enabled"] === true
-                  ? "true"
-                  : "false",
-              },
-              react.createElement(
-                "div",
-                {
-                  className: `settings-live-preview-stage lyrics-lyricsContainer-SyncedLyricsPage is-karaoke${CONFIG.visual["karaoke-line-transition"] ? " karaoke-line-transition-enabled" : ""}`,
-                },
-                react.createElement(
-                  "div",
-                  { className: "settings-live-preview-line lyrics-lyricsContainer-SyncedLyrics" },
-                  react.createElement(
-                    "div",
-                    {
-                      className: "lyrics-lyricsContainer-LyricsLine lyrics-lyricsContainer-LyricsLine-active",
-                      style: {
-                        "--position-index": 0,
-                        "--offset": "0px",
-                        "--animation-index": 0,
-                      },
-                    },
-                    react.createElement(
-                      "p",
-                      null,
-                      react.createElement(KaraokeLine, {
-                        line: SETTINGS_LYRICS_PREVIEW_LINE,
-                        position: SETTINGS_LYRICS_PREVIEW_LINE.endTime,
-                        isActive: true,
-                        furiganaMapOverride: SETTINGS_LYRICS_PREVIEW_FURIGANA,
-                      })
-                    ),
-                    react.createElement(
-                      "p",
-                      { className: "lyrics-lyricsContainer-LyricsLine-phonetic" },
-                      I18n.t("settingsAdvanced.livePreview.sampleTextPhonetic")
-                    ),
-                    react.createElement(
-                      "p",
-                      { className: "lyrics-lyricsContainer-LyricsLine-translation" },
-                      I18n.t("settingsAdvanced.livePreview.sampleText")
-                    )
-                  )
-                )
-              )
-            )
-          )
-        ),
+        renderAppearanceLivePreviewSection(),
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("sections.motion"),
           subtitle: I18n.t("settings.reduceMotion.desc"),

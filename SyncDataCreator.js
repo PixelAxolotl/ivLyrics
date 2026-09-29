@@ -1190,6 +1190,24 @@ const normalizeSyncCreatorKind = (value) => (
 	SYNC_CREATOR_KIND_LABELS.has(value) ? value : ''
 );
 
+// Shared field-value normaliser for the per-line and per-part meta editors:
+// dispatches on the meta field name to the matching sanitiser, falling back to
+// a trimmed string. Pure function of (field, value).
+const normalizeSyncCreatorMetaFieldValue = (field, value) => {
+	switch (field) {
+		case 'speaker':
+			return normalizeSyncCreatorSpeaker(value);
+		case 'speaker-color':
+			return normalizeSyncCreatorSpeakerColor(value);
+		case 'speaker-fallback':
+			return normalizeSyncCreatorSpeakerFallback(value);
+		case 'kind':
+			return normalizeSyncCreatorKind(value);
+		default:
+			return String(value || '').trim();
+	}
+};
+
 const getSyncCreatorStyleRangeSpeakerMeta = (range = {}) => {
 	const sourceSpeaker = range?.speaker;
 	const speaker = normalizeSyncCreatorSpeaker(sourceSpeaker);
@@ -6979,15 +6997,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	}, [syncData, lineCharOffsets, currentLineIndex, claimSessionForLocalEditing, clearRecordingLock]);
 
 	const updateParallelPartMeta = useCallback((partId, field, value) => {
-		const safeValue = field === 'speaker'
-			? normalizeSyncCreatorSpeaker(value)
-			: field === 'speaker-color'
-				? normalizeSyncCreatorSpeakerColor(value)
-			: field === 'speaker-fallback'
-				? normalizeSyncCreatorSpeakerFallback(value)
-			: field === 'kind'
-				? normalizeSyncCreatorKind(value)
-				: String(value || '').trim();
+		const safeValue = normalizeSyncCreatorMetaFieldValue(field, value);
 		const shouldDelete = (field === 'speaker-color' || field === 'speaker-fallback') && !safeValue;
 		if (!partId || !field || (!safeValue && !shouldDelete)) return;
 		claimSessionForLocalEditing();
@@ -7029,15 +7039,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	}, [lineCharOffsets, currentLineIndex, claimSessionForLocalEditing]);
 
 	const updateCurrentLineMeta = useCallback((field, value) => {
-		const safeValue = field === 'speaker'
-			? normalizeSyncCreatorSpeaker(value)
-			: field === 'speaker-color'
-				? normalizeSyncCreatorSpeakerColor(value)
-			: field === 'speaker-fallback'
-				? normalizeSyncCreatorSpeakerFallback(value)
-			: field === 'kind'
-				? normalizeSyncCreatorKind(value)
-				: String(value || '').trim();
+		const safeValue = normalizeSyncCreatorMetaFieldValue(field, value);
 		const shouldDelete = (field === 'speaker-color' || field === 'speaker-fallback') && !safeValue;
 		if (!field || (!safeValue && !shouldDelete)) return;
 		claimSessionForLocalEditing();

@@ -10692,57 +10692,8 @@ react.createElement(
         })
       );
 
-  const renderAdvancedTab = () =>
-react.createElement(
-        "div",
-        {
-          className: `tab-content ${activeTab === "advanced" ? "active" : ""}`,
-          "data-tab-id": "advanced",
-        },
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.languageDetection.title"),
-          subtitle: I18n.t("settingsAdvanced.languageDetection.subtitle"),
-          sectionKey: "language-detection",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.languageDetection.japaneseThreshold.label"),
-              info: I18n.t("settingsAdvanced.languageDetection.japaneseThreshold.desc"),
-              key: "ja-detect-threshold",
-              type: ConfigSliderRange,
-              min: thresholdSizeLimit.min,
-              max: thresholdSizeLimit.max,
-              step: thresholdSizeLimit.step,
-              unit: "%",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.languageDetection.chineseThreshold.label"),
-              info: I18n.t("settingsAdvanced.languageDetection.chineseThreshold.desc"),
-              key: "hans-detect-threshold",
-              type: ConfigSliderRange,
-              min: thresholdSizeLimit.min,
-              max: thresholdSizeLimit.max,
-              step: thresholdSizeLimit.step,
-              unit: "%",
-            },
-          ],
-          onChange: handleVisualConfigChange,
-        }),
-
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.cloudSync.title"),
-          subtitle: I18n.t("settingsAdvanced.cloudSync.monthlyRequired"),
-          sectionKey: "cloud-sync",
-        }),
-        react.createElement(ConfigCloudSync),
-
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.exportImport.title"),
-          subtitle: I18n.t("settingsAdvanced.exportImport.subtitle"),
-          sectionKey: "export-import",
-        }),
-        react.createElement(OptionList, {
+  const renderAdvancedExportImportSection = () =>
+react.createElement(OptionList, {
           items: [
             {
               desc: I18n.t("settingsAdvanced.exportImport.export.label"),
@@ -10967,21 +10918,9 @@ react.createElement(
             },
           ],
           onChange: () => { },
-        }),
-
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.settingsPresets.title"),
-          subtitle: I18n.t("settingsAdvanced.settingsPresets.subtitle"),
-          sectionKey: "settings-presets",
-        }),
-        react.createElement(ConfigSettingsPresets),
-
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.dbExportImport.title"),
-          subtitle: I18n.t("settingsAdvanced.dbExportImport.subtitle"),
-          sectionKey: "db-export-import",
-        }),
-        react.createElement(OptionList, {
+        });
+  const renderAdvancedDbExportImportSection = () =>
+react.createElement(OptionList, {
           items: [
             {
               desc: I18n.t("settingsAdvanced.dbExportImport.export.label"),
@@ -11203,7 +11142,72 @@ react.createElement(
             },
           ],
           onChange: () => { },
+        });
+  const renderAdvancedTab = () =>
+react.createElement(
+        "div",
+        {
+          className: `tab-content ${activeTab === "advanced" ? "active" : ""}`,
+          "data-tab-id": "advanced",
+        },
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.languageDetection.title"),
+          subtitle: I18n.t("settingsAdvanced.languageDetection.subtitle"),
+          sectionKey: "language-detection",
         }),
+        react.createElement(OptionList, {
+          items: [
+            {
+              desc: I18n.t("settingsAdvanced.languageDetection.japaneseThreshold.label"),
+              info: I18n.t("settingsAdvanced.languageDetection.japaneseThreshold.desc"),
+              key: "ja-detect-threshold",
+              type: ConfigSliderRange,
+              min: thresholdSizeLimit.min,
+              max: thresholdSizeLimit.max,
+              step: thresholdSizeLimit.step,
+              unit: "%",
+            },
+            {
+              desc: I18n.t("settingsAdvanced.languageDetection.chineseThreshold.label"),
+              info: I18n.t("settingsAdvanced.languageDetection.chineseThreshold.desc"),
+              key: "hans-detect-threshold",
+              type: ConfigSliderRange,
+              min: thresholdSizeLimit.min,
+              max: thresholdSizeLimit.max,
+              step: thresholdSizeLimit.step,
+              unit: "%",
+            },
+          ],
+          onChange: handleVisualConfigChange,
+        }),
+
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.cloudSync.title"),
+          subtitle: I18n.t("settingsAdvanced.cloudSync.monthlyRequired"),
+          sectionKey: "cloud-sync",
+        }),
+        react.createElement(ConfigCloudSync),
+
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.exportImport.title"),
+          subtitle: I18n.t("settingsAdvanced.exportImport.subtitle"),
+          sectionKey: "export-import",
+        }),
+        renderAdvancedExportImportSection(),
+
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.settingsPresets.title"),
+          subtitle: I18n.t("settingsAdvanced.settingsPresets.subtitle"),
+          sectionKey: "settings-presets",
+        }),
+        react.createElement(ConfigSettingsPresets),
+
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.dbExportImport.title"),
+          subtitle: I18n.t("settingsAdvanced.dbExportImport.subtitle"),
+          sectionKey: "db-export-import",
+        }),
+        renderAdvancedDbExportImportSection(),
 
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.resetSettings.title"),

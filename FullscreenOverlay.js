@@ -2973,6 +2973,72 @@ const FullscreenOverlay = (() => {
             return original;
         };
 
+        // Normal-mode 좌측 패널의 제목/아티스트 렌더는 동일한 switch(mode) 구조로
+        // "원어/번역/발음" div들을 push한다. 제목과 아티스트는 className 접두사·key 접두사·
+        // 보조 줄 폰트 크기만 다르므로, 그 값들을 인자로 받아 동일 로직을 재사용한다.
+        // 반환 요소(div key/className/style/자식)는 두 원본과 바이트 단위로 동일하다.
+        const buildOverlayMetadataLines = ({
+            mode,
+            original,
+            translated,
+            romanized,
+            applyTrim,
+            keyPrefix,
+            mainClass,
+            translatedClass,
+            romanizedClass,
+            mainSize,
+            translatedSize,
+            romanizedSize,
+            includeRomanizedInAll,
+        }) => {
+            const elements = [];
+            const pushLine = (key, className, size, value) => {
+                elements.push(react.createElement("div", {
+                    key,
+                    className,
+                    style: { fontSize: `${size}px` }
+                }, applyTrim(value)));
+            };
+
+            switch (mode) {
+                case "translated":
+                    pushLine(`${keyPrefix}-main`, mainClass, mainSize, translated || original);
+                    break;
+
+                case "romanized":
+                    pushLine(`${keyPrefix}-main`, mainClass, mainSize, romanized || original);
+                    break;
+
+                case "original-translated":
+                    pushLine(`${keyPrefix}-original`, mainClass, mainSize, original);
+                    if (translated && translated !== original) {
+                        pushLine(`${keyPrefix}-translated`, translatedClass, translatedSize, translated);
+                    }
+                    break;
+
+                case "original-romanized":
+                    pushLine(`${keyPrefix}-original`, mainClass, mainSize, original);
+                    if (romanized && romanized !== original) {
+                        pushLine(`${keyPrefix}-romanized`, romanizedClass, romanizedSize, romanized);
+                    }
+                    break;
+
+                case "all":
+                default:
+                    pushLine(`${keyPrefix}-original`, mainClass, mainSize, original);
+                    if (translated && translated !== original) {
+                        pushLine(`${keyPrefix}-translated`, translatedClass, translatedSize, translated);
+                    }
+                    if (includeRomanizedInAll && romanized && romanized !== original && romanized !== translated) {
+                        pushLine(`${keyPrefix}-romanized`, romanizedClass, romanizedSize, romanized);
+                    }
+                    break;
+            }
+
+            return elements;
+        };
+
         const resolveTvMetadataLines = (mode, originalValue, translatedValue, romanizedValue) => {
             const values = {
                 original: getNonEmptyString(originalValue),
@@ -3479,88 +3545,25 @@ const FullscreenOverlay = (() => {
                                     const originalTitle = title || Spicetify.Player.data?.item?.metadata?.title;
                                     const translatedTitle = translatedMetadata?.translated?.title;
                                     const romanizedTitle = translatedMetadata?.romanized?.title;
-                                    const elements = [];
 
                                     // Apply trimTitle if enabled
                                     const applyTrim = (text) => trimTitleEnabled ? trimTitle(text) : text;
 
-                                    switch (mode) {
-                                        case "translated":
-                                            // 번역만 표시 (없으면 원어)
-                                            elements.push(react.createElement("div", {
-                                                key: "title-main",
-                                                className: "lyrics-fullscreen-title",
-                                                style: { fontSize: `${titleSize}px` }
-                                            }, applyTrim(translatedTitle || originalTitle)));
-                                            break;
-
-                                        case "romanized":
-                                            // 발음만 표시 (없으면 원어)
-                                            elements.push(react.createElement("div", {
-                                                key: "title-main",
-                                                className: "lyrics-fullscreen-title",
-                                                style: { fontSize: `${titleSize}px` }
-                                            }, applyTrim(romanizedTitle || originalTitle)));
-                                            break;
-
-                                        case "original-translated":
-                                            // 원어 + 번역
-                                            elements.push(react.createElement("div", {
-                                                key: "title-original",
-                                                className: "lyrics-fullscreen-title",
-                                                style: { fontSize: `${titleSize}px` }
-                                            }, applyTrim(originalTitle)));
-                                            if (translatedTitle && translatedTitle !== originalTitle) {
-                                                elements.push(react.createElement("div", {
-                                                    key: "title-translated",
-                                                    className: "lyrics-fullscreen-title-translated",
-                                                    style: { fontSize: `${Math.round(titleSize * 0.6)}px` }
-                                                }, applyTrim(translatedTitle)));
-                                            }
-                                            break;
-
-                                        case "original-romanized":
-                                            // 원어 + 발음
-                                            elements.push(react.createElement("div", {
-                                                key: "title-original",
-                                                className: "lyrics-fullscreen-title",
-                                                style: { fontSize: `${titleSize}px` }
-                                            }, applyTrim(originalTitle)));
-                                            if (romanizedTitle && romanizedTitle !== originalTitle) {
-                                                elements.push(react.createElement("div", {
-                                                    key: "title-romanized",
-                                                    className: "lyrics-fullscreen-title-romanized",
-                                                    style: { fontSize: `${Math.round(titleSize * 0.5)}px` }
-                                                }, applyTrim(romanizedTitle)));
-                                            }
-                                            break;
-
-                                        case "all":
-                                        default:
-                                            // 모두 표시 (원어 + 번역 + 발음)
-                                            elements.push(react.createElement("div", {
-                                                key: "title-original",
-                                                className: "lyrics-fullscreen-title",
-                                                style: { fontSize: `${titleSize}px` }
-                                            }, applyTrim(originalTitle)));
-                                            if (translatedTitle && translatedTitle !== originalTitle) {
-                                                elements.push(react.createElement("div", {
-                                                    key: "title-translated",
-                                                    className: "lyrics-fullscreen-title-translated",
-                                                    style: { fontSize: `${Math.round(titleSize * 0.6)}px` }
-                                                }, applyTrim(translatedTitle)));
-                                            }
-                                            if (romanizedTitle && romanizedTitle !== originalTitle && romanizedTitle !== translatedTitle) {
-                                                elements.push(react.createElement("div", {
-                                                    key: "title-romanized",
-                                                    className: "lyrics-fullscreen-title-romanized",
-                                                    style: { fontSize: `${Math.round(titleSize * 0.5)}px` }
-                                                }, applyTrim(romanizedTitle)));
-                                            }
-                                            break;
-                                    }
-
-                                    return elements;
+                                    return buildOverlayMetadataLines({
+                                        mode,
+                                        original: originalTitle,
+                                        translated: translatedTitle,
+                                        romanized: romanizedTitle,
+                                        applyTrim,
+                                        keyPrefix: "title",
+                                        mainClass: "lyrics-fullscreen-title",
+                                        translatedClass: "lyrics-fullscreen-title-translated",
+                                        romanizedClass: "lyrics-fullscreen-title-romanized",
+                                        mainSize: titleSize,
+                                        translatedSize: Math.round(titleSize * 0.6),
+                                        romanizedSize: Math.round(titleSize * 0.5),
+                                        includeRomanizedInAll: true,
+                                    });
                                 })()
                             ),
                             // Artist (based on display mode)
@@ -3570,76 +3573,25 @@ const FullscreenOverlay = (() => {
                                     const originalArtist = artist || Spicetify.Player.data?.item?.metadata?.artist_name;
                                     const translatedArtist = translatedMetadata?.translated?.artist;
                                     const romanizedArtist = translatedMetadata?.romanized?.artist;
-                                    const elements = [];
 
                                     // Apply trimTitle if enabled
                                     const applyTrim = (text) => trimTitleEnabled ? trimTitle(text) : text;
 
-                                    switch (mode) {
-                                        case "translated":
-                                            elements.push(react.createElement("div", {
-                                                key: "artist-main",
-                                                className: "lyrics-fullscreen-artist",
-                                                style: { fontSize: `${artistSize}px` }
-                                            }, applyTrim(translatedArtist || originalArtist)));
-                                            break;
-
-                                        case "romanized":
-                                            elements.push(react.createElement("div", {
-                                                key: "artist-main",
-                                                className: "lyrics-fullscreen-artist",
-                                                style: { fontSize: `${artistSize}px` }
-                                            }, applyTrim(romanizedArtist || originalArtist)));
-                                            break;
-
-                                        case "original-translated":
-                                            elements.push(react.createElement("div", {
-                                                key: "artist-original",
-                                                className: "lyrics-fullscreen-artist",
-                                                style: { fontSize: `${artistSize}px` }
-                                            }, applyTrim(originalArtist)));
-                                            if (translatedArtist && translatedArtist !== originalArtist) {
-                                                elements.push(react.createElement("div", {
-                                                    key: "artist-translated",
-                                                    className: "lyrics-fullscreen-artist-translated",
-                                                    style: { fontSize: `${Math.round(artistSize * 0.8)}px` }
-                                                }, applyTrim(translatedArtist)));
-                                            }
-                                            break;
-
-                                        case "original-romanized":
-                                            elements.push(react.createElement("div", {
-                                                key: "artist-original",
-                                                className: "lyrics-fullscreen-artist",
-                                                style: { fontSize: `${artistSize}px` }
-                                            }, applyTrim(originalArtist)));
-                                            if (romanizedArtist && romanizedArtist !== originalArtist) {
-                                                elements.push(react.createElement("div", {
-                                                    key: "artist-romanized",
-                                                    className: "lyrics-fullscreen-artist-romanized",
-                                                    style: { fontSize: `${Math.round(artistSize * 0.8)}px` }
-                                                }, applyTrim(romanizedArtist)));
-                                            }
-                                            break;
-
-                                        case "all":
-                                        default:
-                                            elements.push(react.createElement("div", {
-                                                key: "artist-original",
-                                                className: "lyrics-fullscreen-artist",
-                                                style: { fontSize: `${artistSize}px` }
-                                            }, applyTrim(originalArtist)));
-                                            if (translatedArtist && translatedArtist !== originalArtist) {
-                                                elements.push(react.createElement("div", {
-                                                    key: "artist-translated",
-                                                    className: "lyrics-fullscreen-artist-translated",
-                                                    style: { fontSize: `${Math.round(artistSize * 0.8)}px` }
-                                                }, applyTrim(translatedArtist)));
-                                            }
-                                            break;
-                                    }
-
-                                    return elements;
+                                    return buildOverlayMetadataLines({
+                                        mode,
+                                        original: originalArtist,
+                                        translated: translatedArtist,
+                                        romanized: romanizedArtist,
+                                        applyTrim,
+                                        keyPrefix: "artist",
+                                        mainClass: "lyrics-fullscreen-artist",
+                                        translatedClass: "lyrics-fullscreen-artist-translated",
+                                        romanizedClass: "lyrics-fullscreen-artist-romanized",
+                                        mainSize: artistSize,
+                                        translatedSize: Math.round(artistSize * 0.8),
+                                        romanizedSize: Math.round(artistSize * 0.8),
+                                        includeRomanizedInAll: false,
+                                    });
                                 })()
                             ),
                             // Album name (optional)

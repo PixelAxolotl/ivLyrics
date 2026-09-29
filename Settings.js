@@ -7012,590 +7012,614 @@ const ConfigModal = ({
 
   // 검색 가능한 설정 항목 정의
   // i18nKeys: 모든 언어의 번역을 검색 대상에 포함시키기 위한 i18n 키 경로 배열
-  const searchableSettings = react.useMemo(() => [
+  const searchableSettings = react.useMemo(() => {
     // 일반 탭 - 언어
-    {
-      section: I18n.t("tabs.general"),
-      sectionKey: "general",
-      settingKey: "language",
-      name: I18n.t("settings.language.label"),
-      desc: I18n.t("settings.language.desc"),
-      i18nKeys: ["tabs.general", "settings.language.label", "settings.language.desc"]
-    },
+    const buildGeneralLanguageSettings = () => [
+      {
+        section: I18n.t("tabs.general"),
+        sectionKey: "general",
+        settingKey: "language",
+        name: I18n.t("settings.language.label"),
+        desc: I18n.t("settings.language.desc"),
+        i18nKeys: ["tabs.general", "settings.language.label", "settings.language.desc"]
+      },
+    ];
     // 일반 탭 - 시각 효과
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "alignment",
-      name: I18n.t("settings.alignment.label"),
-      desc: I18n.t("settings.alignment.desc"),
-      i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.alignment.label", "settings.alignment.desc"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "noise",
-      name: I18n.t("settings.noise.label"),
-      desc: I18n.t("settings.noise.desc"),
-      i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.noise.label", "settings.noise.desc"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "reduce-motion",
-      name: I18n.t("settings.reduceMotion.label"),
-      desc: I18n.t("settings.reduceMotion.desc"),
-      i18nKeys: ["tabs.appearance", "sections.motion", "settings.reduceMotion.label", "settings.reduceMotion.desc"]
-    },
-    {
-      section: I18n.t("tabs.performance"),
-      sectionKey: "performance",
-      settingKey: "performance-frame-rate",
-      name: I18n.t("settingsAdvanced.performance.frameRate.label"),
-      desc: I18n.t("settingsAdvanced.performance.frameRate.desc"),
-      i18nKeys: ["tabs.performance", "settingsAdvanced.performance.rendering.title", "settingsAdvanced.performance.frameRate.label", "settingsAdvanced.performance.frameRate.desc"]
-    },
-    {
-      section: I18n.t("tabs.performance"),
-      sectionKey: "performance",
-      settingKey: "karaoke-line-transition",
-      name: I18n.t("settingsAdvanced.karaokeMode.lineTransition.label"),
-      desc: I18n.t("settingsAdvanced.karaokeMode.lineTransition.desc"),
-      i18nKeys: ["tabs.performance", "settingsAdvanced.performance.rendering.title", "settingsAdvanced.karaokeMode.lineTransition.label", "settingsAdvanced.karaokeMode.lineTransition.desc"]
-    },
-    {
-      section: I18n.t("tabs.performance"),
-      sectionKey: "performance",
-      settingKey: "karaoke-text-effects",
-      name: I18n.t("settingsAdvanced.performance.textEffects.label"),
-      desc: I18n.t("settingsAdvanced.performance.textEffects.desc"),
-      i18nKeys: ["tabs.performance", "settingsAdvanced.performance.rendering.title", "settingsAdvanced.performance.textEffects.label", "settingsAdvanced.performance.textEffects.desc"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "colorful",
-      name: I18n.t("settings.colorful.label"),
-      desc: I18n.t("settings.colorful.desc"),
-      i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.colorful.label", "settings.colorful.desc"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "gradient-background",
-      name: I18n.t("settings.gradientBackground.label"),
-      desc: I18n.t("settings.gradientBackground.desc"),
-      i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.gradientBackground.label", "settings.gradientBackground.desc"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "solid-background",
-      name: I18n.t("settings.solidBackground.label"),
-      desc: I18n.t("settings.solidBackground.desc"),
-      i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.solidBackground.label", "settings.solidBackground.desc"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "video-background",
-      name: I18n.t("settings.videoBackground.label"),
-      desc: I18n.t("settings.videoBackground.desc"),
-      i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.videoBackground.label", "settings.videoBackground.desc"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "background-brightness",
-      name: I18n.t("settings.backgroundBrightness.label"),
-      desc: I18n.t("settings.backgroundBrightness.desc"),
-      i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.backgroundBrightness.label", "settings.backgroundBrightness.desc"]
-    },
+    const buildAppearanceVisualSettings = () => [
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "alignment",
+        name: I18n.t("settings.alignment.label"),
+        desc: I18n.t("settings.alignment.desc"),
+        i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.alignment.label", "settings.alignment.desc"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "noise",
+        name: I18n.t("settings.noise.label"),
+        desc: I18n.t("settings.noise.desc"),
+        i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.noise.label", "settings.noise.desc"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "reduce-motion",
+        name: I18n.t("settings.reduceMotion.label"),
+        desc: I18n.t("settings.reduceMotion.desc"),
+        i18nKeys: ["tabs.appearance", "sections.motion", "settings.reduceMotion.label", "settings.reduceMotion.desc"]
+      },
+      {
+        section: I18n.t("tabs.performance"),
+        sectionKey: "performance",
+        settingKey: "performance-frame-rate",
+        name: I18n.t("settingsAdvanced.performance.frameRate.label"),
+        desc: I18n.t("settingsAdvanced.performance.frameRate.desc"),
+        i18nKeys: ["tabs.performance", "settingsAdvanced.performance.rendering.title", "settingsAdvanced.performance.frameRate.label", "settingsAdvanced.performance.frameRate.desc"]
+      },
+      {
+        section: I18n.t("tabs.performance"),
+        sectionKey: "performance",
+        settingKey: "karaoke-line-transition",
+        name: I18n.t("settingsAdvanced.karaokeMode.lineTransition.label"),
+        desc: I18n.t("settingsAdvanced.karaokeMode.lineTransition.desc"),
+        i18nKeys: ["tabs.performance", "settingsAdvanced.performance.rendering.title", "settingsAdvanced.karaokeMode.lineTransition.label", "settingsAdvanced.karaokeMode.lineTransition.desc"]
+      },
+      {
+        section: I18n.t("tabs.performance"),
+        sectionKey: "performance",
+        settingKey: "karaoke-text-effects",
+        name: I18n.t("settingsAdvanced.performance.textEffects.label"),
+        desc: I18n.t("settingsAdvanced.performance.textEffects.desc"),
+        i18nKeys: ["tabs.performance", "settingsAdvanced.performance.rendering.title", "settingsAdvanced.performance.textEffects.label", "settingsAdvanced.performance.textEffects.desc"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "colorful",
+        name: I18n.t("settings.colorful.label"),
+        desc: I18n.t("settings.colorful.desc"),
+        i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.colorful.label", "settings.colorful.desc"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "gradient-background",
+        name: I18n.t("settings.gradientBackground.label"),
+        desc: I18n.t("settings.gradientBackground.desc"),
+        i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.gradientBackground.label", "settings.gradientBackground.desc"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "solid-background",
+        name: I18n.t("settings.solidBackground.label"),
+        desc: I18n.t("settings.solidBackground.desc"),
+        i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.solidBackground.label", "settings.solidBackground.desc"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "video-background",
+        name: I18n.t("settings.videoBackground.label"),
+        desc: I18n.t("settings.videoBackground.desc"),
+        i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.videoBackground.label", "settings.videoBackground.desc"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "background-brightness",
+        name: I18n.t("settings.backgroundBrightness.label"),
+        desc: I18n.t("settings.backgroundBrightness.desc"),
+        i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.backgroundBrightness.label", "settings.backgroundBrightness.desc"]
+      },
+    ];
     // 일반 탭 - 데스크탑 오버레이
-    {
-      section: I18n.t("tabs.general"),
-      sectionKey: "general",
-      settingKey: "overlay-enabled",
-      name: I18n.t("overlay.enabled.label"),
-      desc: I18n.t("overlay.enabled.desc"),
-      i18nKeys: ["tabs.general", "overlay.enabled.label", "overlay.enabled.desc"]
-    },
-    {
-      section: I18n.t("tabs.general"),
-      sectionKey: "general",
-      settingKey: "overlay-trim-metadata",
-      name: I18n.t("overlay.trimMetadata.label"),
-      desc: I18n.t("overlay.trimMetadata.desc"),
-      i18nKeys: ["tabs.general", "sections.desktopOverlay", "overlay.trimMetadata.label", "overlay.trimMetadata.desc"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "sync-mode",
-      name: I18n.t("settingsAdvanced.syncMode.title"),
-      desc: I18n.t("settingsAdvanced.syncMode.subtitle"),
-      i18nKeys: ["tabs.appearance", "settingsAdvanced.syncMode.title", "settingsAdvanced.syncMode.subtitle", "sections.visualEffects"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "multi-vocal-colors",
-      name: I18n.t("settingsAdvanced.multiVocalColors.title"),
-      desc: I18n.t("settingsAdvanced.multiVocalColors.subtitle"),
-      i18nKeys: [
-        "tabs.appearance",
-        "settingsAdvanced.multiVocalColors.title",
-        "settingsAdvanced.multiVocalColors.subtitle",
-        "settingsAdvanced.multiVocalColors.description",
-        "settingsAdvanced.multiVocalColors.useCreatorColors.label",
-        "settingsAdvanced.multiVocalColors.useCreatorColors.desc",
-      ],
-      keywords: ["multi vocal speaker color male female duet karaoke creator custom sync data"]
-    },
+    const buildGeneralOverlaySettings = () => [
+      {
+        section: I18n.t("tabs.general"),
+        sectionKey: "general",
+        settingKey: "overlay-enabled",
+        name: I18n.t("overlay.enabled.label"),
+        desc: I18n.t("overlay.enabled.desc"),
+        i18nKeys: ["tabs.general", "overlay.enabled.label", "overlay.enabled.desc"]
+      },
+      {
+        section: I18n.t("tabs.general"),
+        sectionKey: "general",
+        settingKey: "overlay-trim-metadata",
+        name: I18n.t("overlay.trimMetadata.label"),
+        desc: I18n.t("overlay.trimMetadata.desc"),
+        i18nKeys: ["tabs.general", "sections.desktopOverlay", "overlay.trimMetadata.label", "overlay.trimMetadata.desc"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "sync-mode",
+        name: I18n.t("settingsAdvanced.syncMode.title"),
+        desc: I18n.t("settingsAdvanced.syncMode.subtitle"),
+        i18nKeys: ["tabs.appearance", "settingsAdvanced.syncMode.title", "settingsAdvanced.syncMode.subtitle", "sections.visualEffects"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "multi-vocal-colors",
+        name: I18n.t("settingsAdvanced.multiVocalColors.title"),
+        desc: I18n.t("settingsAdvanced.multiVocalColors.subtitle"),
+        i18nKeys: [
+          "tabs.appearance",
+          "settingsAdvanced.multiVocalColors.title",
+          "settingsAdvanced.multiVocalColors.subtitle",
+          "settingsAdvanced.multiVocalColors.description",
+          "settingsAdvanced.multiVocalColors.useCreatorColors.label",
+          "settingsAdvanced.multiVocalColors.useCreatorColors.desc",
+        ],
+        keywords: ["multi vocal speaker color male female duet karaoke creator custom sync data"]
+      },
 
+    ];
     // 외관 탭
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "original-style",
-      name: I18n.t("settingsAdvanced.originalStyle.title"),
-      desc: I18n.t("settingsAdvanced.originalStyle.subtitle"),
-      i18nKeys: ["tabs.appearance", "settingsAdvanced.originalStyle.title", "settingsAdvanced.originalStyle.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "pronunciation-style",
-      name: I18n.t("settingsAdvanced.pronunciationStyle.title"),
-      desc: I18n.t("settingsAdvanced.pronunciationStyle.subtitle"),
-      i18nKeys: ["tabs.appearance", "settingsAdvanced.pronunciationStyle.title", "settingsAdvanced.pronunciationStyle.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "translation-style",
-      name: I18n.t("settingsAdvanced.translationStyle.title"),
-      desc: I18n.t("settingsAdvanced.translationStyle.subtitle"),
-      i18nKeys: ["tabs.appearance", "settingsAdvanced.translationStyle.title", "settingsAdvanced.translationStyle.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "furigana-style",
-      name: I18n.t("settingsAdvanced.furiganaStyle.title"),
-      desc: I18n.t("settingsAdvanced.furiganaStyle.subtitle"),
-      i18nKeys: ["tabs.appearance", "settingsAdvanced.furiganaStyle.title", "settingsAdvanced.furiganaStyle.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "text-shadow",
-      name: I18n.t("settingsAdvanced.textShadow.title"),
-      desc: I18n.t("settingsAdvanced.textShadow.subtitle"),
-      i18nKeys: ["tabs.appearance", "settingsAdvanced.textShadow.title", "settingsAdvanced.textShadow.subtitle"]
-    },
+    const buildAppearanceTabSettings = () => [
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "original-style",
+        name: I18n.t("settingsAdvanced.originalStyle.title"),
+        desc: I18n.t("settingsAdvanced.originalStyle.subtitle"),
+        i18nKeys: ["tabs.appearance", "settingsAdvanced.originalStyle.title", "settingsAdvanced.originalStyle.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "pronunciation-style",
+        name: I18n.t("settingsAdvanced.pronunciationStyle.title"),
+        desc: I18n.t("settingsAdvanced.pronunciationStyle.subtitle"),
+        i18nKeys: ["tabs.appearance", "settingsAdvanced.pronunciationStyle.title", "settingsAdvanced.pronunciationStyle.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "translation-style",
+        name: I18n.t("settingsAdvanced.translationStyle.title"),
+        desc: I18n.t("settingsAdvanced.translationStyle.subtitle"),
+        i18nKeys: ["tabs.appearance", "settingsAdvanced.translationStyle.title", "settingsAdvanced.translationStyle.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "furigana-style",
+        name: I18n.t("settingsAdvanced.furiganaStyle.title"),
+        desc: I18n.t("settingsAdvanced.furiganaStyle.subtitle"),
+        i18nKeys: ["tabs.appearance", "settingsAdvanced.furiganaStyle.title", "settingsAdvanced.furiganaStyle.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "text-shadow",
+        name: I18n.t("settingsAdvanced.textShadow.title"),
+        desc: I18n.t("settingsAdvanced.textShadow.subtitle"),
+        i18nKeys: ["tabs.appearance", "settingsAdvanced.textShadow.title", "settingsAdvanced.textShadow.subtitle"]
+      },
 
+    ];
     // 동작 탭
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "auto-scroll",
-      name: I18n.t("settings.autoScroll.label"),
-      desc: I18n.t("settings.autoScroll.desc"),
-      i18nKeys: ["tabs.behavior", "settings.autoScroll.label", "settings.autoScroll.desc"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "animation",
-      name: I18n.t("settings.animation.label"),
-      desc: I18n.t("settings.animation.desc"),
-      i18nKeys: ["tabs.behavior", "settings.animation.label", "settings.animation.desc"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "karaoke",
-      name: I18n.t("settings.karaoke.label"),
-      desc: I18n.t("settings.karaoke.desc"),
-      i18nKeys: ["tabs.behavior", "settings.karaoke.label", "settings.karaoke.desc"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "blur-inactive",
-      name: I18n.t("settings.blurInactive.label"),
-      desc: I18n.t("settings.blurInactive.desc"),
-      i18nKeys: ["tabs.behavior", "settings.blurInactive.label", "settings.blurInactive.desc"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "synced-fallback",
-      name: I18n.t("settings.syncedAsFallback.label"),
-      desc: I18n.t("settings.syncedAsFallback.desc"),
-      i18nKeys: ["tabs.behavior", "settings.syncedAsFallback.label", "settings.syncedAsFallback.desc"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "unsynced-fallback",
-      name: I18n.t("settings.unsyncedAsFallback.label"),
-      desc: I18n.t("settings.unsyncedAsFallback.desc"),
-      i18nKeys: ["tabs.behavior", "settings.unsyncedAsFallback.label", "settings.unsyncedAsFallback.desc"]
-    },
+    const buildBehaviorTabSettings = () => [
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "auto-scroll",
+        name: I18n.t("settings.autoScroll.label"),
+        desc: I18n.t("settings.autoScroll.desc"),
+        i18nKeys: ["tabs.behavior", "settings.autoScroll.label", "settings.autoScroll.desc"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "animation",
+        name: I18n.t("settings.animation.label"),
+        desc: I18n.t("settings.animation.desc"),
+        i18nKeys: ["tabs.behavior", "settings.animation.label", "settings.animation.desc"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "karaoke",
+        name: I18n.t("settings.karaoke.label"),
+        desc: I18n.t("settings.karaoke.desc"),
+        i18nKeys: ["tabs.behavior", "settings.karaoke.label", "settings.karaoke.desc"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "blur-inactive",
+        name: I18n.t("settings.blurInactive.label"),
+        desc: I18n.t("settings.blurInactive.desc"),
+        i18nKeys: ["tabs.behavior", "settings.blurInactive.label", "settings.blurInactive.desc"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "synced-fallback",
+        name: I18n.t("settings.syncedAsFallback.label"),
+        desc: I18n.t("settings.syncedAsFallback.desc"),
+        i18nKeys: ["tabs.behavior", "settings.syncedAsFallback.label", "settings.syncedAsFallback.desc"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "unsynced-fallback",
+        name: I18n.t("settings.unsyncedAsFallback.label"),
+        desc: I18n.t("settings.unsyncedAsFallback.desc"),
+        i18nKeys: ["tabs.behavior", "settings.unsyncedAsFallback.label", "settings.unsyncedAsFallback.desc"]
+      },
 
+    ];
     // 고급 탭
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "playback",
-      name: I18n.t("settingsAdvanced.playback.title"),
-      desc: I18n.t("settingsAdvanced.playback.subtitle"),
-      i18nKeys: ["tabs.behavior", "settingsAdvanced.playback.title", "settingsAdvanced.playback.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "quick-sync-controls-enabled",
-      name: I18n.t("settingsAdvanced.playback.quickSyncControls.label"),
-      desc: I18n.t("settingsAdvanced.playback.quickSyncControls.info"),
-      i18nKeys: [
-        "tabs.behavior",
-        "settingsAdvanced.playback.quickSyncControls.label",
-        "settingsAdvanced.playback.quickSyncControls.info",
-      ]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "sync-creator-settings",
-      name: getSettingsText("settings.syncCreatorSettings.title", "Sync Creator Settings"),
-      desc: getSettingsText("settings.syncCreatorSettings.subtitle", "Configure Sync Creator keyboard behavior and recording shortcuts."),
-      i18nKeys: [
-        "tabs.behavior",
-        "settings.syncCreatorSettings.title",
-        "settings.syncCreatorSettings.subtitle",
-        "settings.syncCreatorSettings.autoBoundaryChars.label",
-        "settings.syncCreatorSettings.autoBoundaryChars.desc",
-        "settings.syncCreatorSettings.fillCurve.label",
-        "settings.syncCreatorSettings.fillCurve.desc",
-        "settings.syncCreatorSettings.fillCurve.reset"
-      ],
-      keywords: ["sync creator shortcuts hotkeys keybinds karaoke recording syllable word character drag slash punctuation space special characters fill curve graph correction easing quadratic"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "karaoke-mode",
-      name: I18n.t("settingsAdvanced.karaokeMode.title"),
-      desc: I18n.t("settingsAdvanced.karaokeMode.subtitle"),
-      i18nKeys: ["tabs.behavior", "settingsAdvanced.karaokeMode.title", "settingsAdvanced.karaokeMode.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "prefetch",
-      name: I18n.t("settingsAdvanced.prefetch.title"),
-      desc: I18n.t("settingsAdvanced.prefetch.subtitle"),
-      i18nKeys: ["tabs.behavior", "settingsAdvanced.prefetch.title", "settingsAdvanced.prefetch.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "cache-management",
-      name: I18n.t("settingsAdvanced.cacheManagement.title"),
-      desc: I18n.t("settingsAdvanced.cacheManagement.subtitle"),
-      i18nKeys: ["tabs.behavior", "settingsAdvanced.cacheManagement.title", "settingsAdvanced.cacheManagement.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "lyrics-helper",
-      name: I18n.t("settings.lyricsHelper.sectionTitle") || "Helper Integration",
-      desc:
-        I18n.t("settings.lyricsHelper.sectionSubtitle") ||
-        "Send lyrics to external helper applications",
-      i18nKeys: ["tabs.behavior", "settings.lyricsHelper.sectionTitle", "settings.lyricsHelper.sectionSubtitle"]
-    },
-    {
-      section: I18n.t("tabs.advanced"),
-      sectionKey: "advanced",
-      settingKey: "language-detection",
-      name: I18n.t("settingsAdvanced.languageDetection.title"),
-      desc: I18n.t("settingsAdvanced.languageDetection.subtitle"),
-      i18nKeys: ["tabs.advanced", "settingsAdvanced.languageDetection.title", "settingsAdvanced.languageDetection.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.advanced"),
-      sectionKey: "advanced",
-      settingKey: "cloud-sync",
-      name: I18n.t("settingsAdvanced.cloudSync.title"),
-      desc: I18n.t("settingsAdvanced.cloudSync.monthlyRequired"),
-      i18nKeys: ["tabs.advanced", "settingsAdvanced.cloudSync.title", "settingsAdvanced.cloudSync.monthlyRequired"]
-    },
-    {
-      section: I18n.t("tabs.advanced"),
-      sectionKey: "advanced",
-      settingKey: "export-import",
-      name: I18n.t("settingsAdvanced.exportImport.title"),
-      desc: I18n.t("settingsAdvanced.exportImport.subtitle"),
-      i18nKeys: ["tabs.advanced", "settingsAdvanced.exportImport.title", "settingsAdvanced.exportImport.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.advanced"),
-      sectionKey: "advanced",
-      settingKey: "settings-presets",
-      name: I18n.t("settingsAdvanced.settingsPresets.title"),
-      desc: I18n.t("settingsAdvanced.settingsPresets.subtitle"),
-      i18nKeys: ["tabs.advanced", "settingsAdvanced.settingsPresets.title", "settingsAdvanced.settingsPresets.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.advanced"),
-      sectionKey: "advanced",
-      settingKey: "db-export-import",
-      name: I18n.t("settingsAdvanced.dbExportImport.title"),
-      desc: I18n.t("settingsAdvanced.dbExportImport.subtitle"),
-      i18nKeys: ["tabs.advanced", "settingsAdvanced.dbExportImport.title", "settingsAdvanced.dbExportImport.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.advanced"),
-      sectionKey: "advanced",
-      settingKey: "reset-settings",
-      name: I18n.t("settingsAdvanced.resetSettings.title"),
-      desc: I18n.t("settingsAdvanced.resetSettings.subtitle"),
-      i18nKeys: ["tabs.advanced", "settingsAdvanced.resetSettings.title", "settingsAdvanced.resetSettings.subtitle"]
-    },
+    const buildAdvancedTabSettings = () => [
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "playback",
+        name: I18n.t("settingsAdvanced.playback.title"),
+        desc: I18n.t("settingsAdvanced.playback.subtitle"),
+        i18nKeys: ["tabs.behavior", "settingsAdvanced.playback.title", "settingsAdvanced.playback.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "quick-sync-controls-enabled",
+        name: I18n.t("settingsAdvanced.playback.quickSyncControls.label"),
+        desc: I18n.t("settingsAdvanced.playback.quickSyncControls.info"),
+        i18nKeys: [
+          "tabs.behavior",
+          "settingsAdvanced.playback.quickSyncControls.label",
+          "settingsAdvanced.playback.quickSyncControls.info",
+        ]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "sync-creator-settings",
+        name: getSettingsText("settings.syncCreatorSettings.title", "Sync Creator Settings"),
+        desc: getSettingsText("settings.syncCreatorSettings.subtitle", "Configure Sync Creator keyboard behavior and recording shortcuts."),
+        i18nKeys: [
+          "tabs.behavior",
+          "settings.syncCreatorSettings.title",
+          "settings.syncCreatorSettings.subtitle",
+          "settings.syncCreatorSettings.autoBoundaryChars.label",
+          "settings.syncCreatorSettings.autoBoundaryChars.desc",
+          "settings.syncCreatorSettings.fillCurve.label",
+          "settings.syncCreatorSettings.fillCurve.desc",
+          "settings.syncCreatorSettings.fillCurve.reset"
+        ],
+        keywords: ["sync creator shortcuts hotkeys keybinds karaoke recording syllable word character drag slash punctuation space special characters fill curve graph correction easing quadratic"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "karaoke-mode",
+        name: I18n.t("settingsAdvanced.karaokeMode.title"),
+        desc: I18n.t("settingsAdvanced.karaokeMode.subtitle"),
+        i18nKeys: ["tabs.behavior", "settingsAdvanced.karaokeMode.title", "settingsAdvanced.karaokeMode.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "prefetch",
+        name: I18n.t("settingsAdvanced.prefetch.title"),
+        desc: I18n.t("settingsAdvanced.prefetch.subtitle"),
+        i18nKeys: ["tabs.behavior", "settingsAdvanced.prefetch.title", "settingsAdvanced.prefetch.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "cache-management",
+        name: I18n.t("settingsAdvanced.cacheManagement.title"),
+        desc: I18n.t("settingsAdvanced.cacheManagement.subtitle"),
+        i18nKeys: ["tabs.behavior", "settingsAdvanced.cacheManagement.title", "settingsAdvanced.cacheManagement.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "lyrics-helper",
+        name: I18n.t("settings.lyricsHelper.sectionTitle") || "Helper Integration",
+        desc:
+          I18n.t("settings.lyricsHelper.sectionSubtitle") ||
+          "Send lyrics to external helper applications",
+        i18nKeys: ["tabs.behavior", "settings.lyricsHelper.sectionTitle", "settings.lyricsHelper.sectionSubtitle"]
+      },
+      {
+        section: I18n.t("tabs.advanced"),
+        sectionKey: "advanced",
+        settingKey: "language-detection",
+        name: I18n.t("settingsAdvanced.languageDetection.title"),
+        desc: I18n.t("settingsAdvanced.languageDetection.subtitle"),
+        i18nKeys: ["tabs.advanced", "settingsAdvanced.languageDetection.title", "settingsAdvanced.languageDetection.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.advanced"),
+        sectionKey: "advanced",
+        settingKey: "cloud-sync",
+        name: I18n.t("settingsAdvanced.cloudSync.title"),
+        desc: I18n.t("settingsAdvanced.cloudSync.monthlyRequired"),
+        i18nKeys: ["tabs.advanced", "settingsAdvanced.cloudSync.title", "settingsAdvanced.cloudSync.monthlyRequired"]
+      },
+      {
+        section: I18n.t("tabs.advanced"),
+        sectionKey: "advanced",
+        settingKey: "export-import",
+        name: I18n.t("settingsAdvanced.exportImport.title"),
+        desc: I18n.t("settingsAdvanced.exportImport.subtitle"),
+        i18nKeys: ["tabs.advanced", "settingsAdvanced.exportImport.title", "settingsAdvanced.exportImport.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.advanced"),
+        sectionKey: "advanced",
+        settingKey: "settings-presets",
+        name: I18n.t("settingsAdvanced.settingsPresets.title"),
+        desc: I18n.t("settingsAdvanced.settingsPresets.subtitle"),
+        i18nKeys: ["tabs.advanced", "settingsAdvanced.settingsPresets.title", "settingsAdvanced.settingsPresets.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.advanced"),
+        sectionKey: "advanced",
+        settingKey: "db-export-import",
+        name: I18n.t("settingsAdvanced.dbExportImport.title"),
+        desc: I18n.t("settingsAdvanced.dbExportImport.subtitle"),
+        i18nKeys: ["tabs.advanced", "settingsAdvanced.dbExportImport.title", "settingsAdvanced.dbExportImport.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.advanced"),
+        sectionKey: "advanced",
+        settingKey: "reset-settings",
+        name: I18n.t("settingsAdvanced.resetSettings.title"),
+        desc: I18n.t("settingsAdvanced.resetSettings.subtitle"),
+        i18nKeys: ["tabs.advanced", "settingsAdvanced.resetSettings.title", "settingsAdvanced.resetSettings.subtitle"]
+      },
 
+    ];
     // 전체화면 탭
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "fullscreen-mode",
-      name: I18n.t("settingsAdvanced.fullscreenMode.title"),
-      desc: I18n.t("settingsAdvanced.fullscreenMode.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.fullscreenMode.title", "settingsAdvanced.fullscreenMode.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "vinyl-mode",
-      name: I18n.t("vinyl.mode"),
-      desc: I18n.t("vinyl.settings.subtitle"),
-      i18nKeys: [
-        "tabs.fullscreen",
-        "vinyl.mode",
-        "vinyl.settings.subtitle",
-        "vinyl.presentation.settingsTitle",
-        "vinyl.presentation.settingsDescription",
-        "vinyl.presentation.vinylLabel",
-        "vinyl.presentation.compactLabel",
-        "vinyl.presentation.videoLabel",
-        "vinyl.settings.backgroundBlurLabel",
-        "vinyl.settings.backgroundBlurDesc"
-      ]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "normal-mode",
-      name: I18n.t("settingsAdvanced.normalMode.title"),
-      desc: I18n.t("settingsAdvanced.normalMode.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.normalMode.title", "settingsAdvanced.normalMode.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "tv-mode",
-      name: I18n.t("settingsAdvanced.tvMode.title"),
-      desc: I18n.t("settingsAdvanced.tvMode.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.tvMode.title", "settingsAdvanced.tvMode.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "metadata-display",
-      name: I18n.t("settingsAdvanced.metadataDisplay.title"),
-      desc: I18n.t("settingsAdvanced.metadataDisplay.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.metadataDisplay.title", "settingsAdvanced.metadataDisplay.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "fullscreen-style",
-      name: I18n.t("settingsAdvanced.fullscreenStyle.title"),
-      desc: I18n.t("settingsAdvanced.fullscreenStyle.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.fullscreenStyle.title", "settingsAdvanced.fullscreenStyle.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "fullscreen-ui",
-      name: I18n.t("settingsAdvanced.fullscreenUI.title"),
-      desc: I18n.t("settingsAdvanced.fullscreenUI.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.fullscreenUI.title", "settingsAdvanced.fullscreenUI.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "controller-style",
-      name: I18n.t("settingsAdvanced.controllerStyle.title"),
-      desc: I18n.t("settingsAdvanced.controllerStyle.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.controllerStyle.title", "settingsAdvanced.controllerStyle.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "auto-hide",
-      name: I18n.t("settingsAdvanced.autoHide.title"),
-      desc: I18n.t("settingsAdvanced.autoHide.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.autoHide.title", "settingsAdvanced.autoHide.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "tmi-style",
-      name: I18n.t("settingsAdvanced.tmiStyle.title"),
-      desc: I18n.t("settingsAdvanced.tmiStyle.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.tmiStyle.title", "settingsAdvanced.tmiStyle.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.nowplaying"),
-      sectionKey: "nowplaying",
-      settingKey: "panel-lyrics-general",
-      name: I18n.t("settingsAdvanced.nowPlayingPanel.title"),
-      desc: I18n.t("settingsAdvanced.nowPlayingPanel.subtitle"),
-      i18nKeys: ["tabs.nowplaying", "settingsAdvanced.nowPlayingPanel.title", "settingsAdvanced.nowPlayingPanel.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.nowplaying"),
-      sectionKey: "nowplaying",
-      settingKey: "panel-background",
-      name: I18n.t("settingsAdvanced.nowPlayingPanel.background.title"),
-      desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.subtitle"),
-      i18nKeys: ["tabs.nowplaying", "settingsAdvanced.nowPlayingPanel.background.title", "settingsAdvanced.nowPlayingPanel.background.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.nowplaying"),
-      sectionKey: "nowplaying",
-      settingKey: "panel-border",
-      name: I18n.t("settingsAdvanced.nowPlayingPanel.border.title"),
-      desc: I18n.t("settingsAdvanced.nowPlayingPanel.border.subtitle"),
-      i18nKeys: ["tabs.nowplaying", "settingsAdvanced.nowPlayingPanel.border.title", "settingsAdvanced.nowPlayingPanel.border.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
-      sectionKey: "lyrics-providers",
-      settingKey: "lyrics-providers",
-      name: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
-      desc: I18n.t("settings.lyricsProviders.description") || "Choose and order lyrics providers",
-      i18nKeys: ["tabs.lyricsProviders", "settings.lyricsProviders.title", "settings.lyricsProviders.description"]
-    },
-    {
-      section: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
-      sectionKey: "lyrics-providers",
-      settingKey: "prefer-sync-data-provider",
-      name: I18n.t("settings.lyricsProviders.preferSyncDataProvider.label") || "Prioritize providers with sync data",
-      desc: I18n.t("settings.lyricsProviders.preferSyncDataProvider.desc") || "Try the matching lyrics provider first when sync data is available",
-      i18nKeys: [
-        "tabs.lyricsProviders",
-        "settings.lyricsProviders.preferSyncDataProvider.label",
-        "settings.lyricsProviders.preferSyncDataProvider.desc"
-      ]
-    },
-    {
-      section: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
-      sectionKey: "lyrics-providers",
-      settingKey: "prefer-lyrics-type-over-provider-order",
-      name: I18n.t("settings.lyricsProviders.preferLyricsTypeOverProviderOrder.label") || "Prioritize lyrics type over provider order",
-      desc: I18n.t("settings.lyricsProviders.preferLyricsTypeOverProviderOrder.desc") || "Try karaoke across all providers before synced and plain lyrics",
-      i18nKeys: [
-        "tabs.lyricsProviders",
-        "settings.lyricsProviders.preferLyricsTypeOverProviderOrder.label",
-        "settings.lyricsProviders.preferLyricsTypeOverProviderOrder.desc"
-      ]
-    },
-    {
-      section: I18n.t("tabs.aiProviders"),
-      sectionKey: "ai-providers",
-      settingKey: "ai-providers",
-      name: I18n.t("tabs.aiProviders"),
-      desc: I18n.t("settings.aiProviders.description") || "Configure AI providers and capabilities",
-      i18nKeys: [
-        "tabs.aiProviders",
-        "settings.aiProviders.title",
-        "settings.aiProviders.description",
-        "settings.aiProviders.translationStyle.title",
-        "settings.aiProviders.translationStyle.description",
-        "settings.aiProviders.translationStyle.natural.label",
-        "settings.aiProviders.translationStyle.literal.label",
-        "settings.aiProviders.translationStyle.adaptive.label",
-        "settings.aiProviders.retryCount.label",
-        "settings.aiProviders.retryCount.description"
-      ]
-    },
-    {
-      section: I18n.t("tabs.aiProviders"),
-      sectionKey: "ai-providers",
-      settingKey: "ai-provider-retry-count",
-      name: I18n.t("settings.aiProviders.retryCount.label") || "Retries per provider",
-      desc: I18n.t("settings.aiProviders.retryCount.description")
-        || "Number of additional attempts after a failed request. Set to 0 to switch to the next provider immediately.",
-      i18nKeys: [
-        "tabs.aiProviders",
-        "settings.aiProviders.retryCount.label",
-        "settings.aiProviders.retryCount.description"
-      ]
-    },
-    {
-      section: I18n.t("tabs.about"),
-      sectionKey: "about",
-      settingKey: "about-account",
-      name: I18n.t("settingsAdvanced.aboutTab.account.title"),
-      desc: I18n.t("settingsAdvanced.aboutTab.account.subtitle"),
-      i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.account.title", "settingsAdvanced.aboutTab.account.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.about"),
-      sectionKey: "about",
-      settingKey: "about-app-info",
-      name: I18n.t("settingsAdvanced.aboutTab.appInfo.title"),
-      desc: I18n.t("settingsAdvanced.aboutTab.subtitle"),
-      i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.appInfo.title", "settingsAdvanced.aboutTab.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.about"),
-      sectionKey: "about",
-      settingKey: "about-client-info",
-      name: I18n.t("settingsAdvanced.aboutTab.clientInfo.title"),
-      desc: I18n.t("settingsAdvanced.aboutTab.clientInfo.subtitle"),
-      i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.clientInfo.title", "settingsAdvanced.aboutTab.clientInfo.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.about"),
-      sectionKey: "about",
-      settingKey: "about-update",
-      name: I18n.t("settingsAdvanced.aboutTab.update.title"),
-      desc: I18n.t("settingsAdvanced.aboutTab.update.subtitle"),
-      i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.update.title", "settingsAdvanced.aboutTab.update.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.about"),
-      sectionKey: "about",
-      settingKey: "about-patch-notes",
-      name: I18n.t("settingsAdvanced.aboutTab.patchNotes.title"),
-      desc: I18n.t("settingsAdvanced.aboutTab.patchNotes.subtitle"),
-      i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.patchNotes.title", "settingsAdvanced.aboutTab.patchNotes.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.debug"),
-      sectionKey: "debug",
-      settingKey: "debug-overview",
-      name: I18n.t("settingsAdvanced.debugTab.title"),
-      desc: I18n.t("settingsAdvanced.debugTab.subtitle"),
-      i18nKeys: ["tabs.debug", "settingsAdvanced.debugTab.title", "settingsAdvanced.debugTab.subtitle"]
-    },
-  ], []);
+    const buildFullscreenTabSettings = () => [
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "fullscreen-mode",
+        name: I18n.t("settingsAdvanced.fullscreenMode.title"),
+        desc: I18n.t("settingsAdvanced.fullscreenMode.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.fullscreenMode.title", "settingsAdvanced.fullscreenMode.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "vinyl-mode",
+        name: I18n.t("vinyl.mode"),
+        desc: I18n.t("vinyl.settings.subtitle"),
+        i18nKeys: [
+          "tabs.fullscreen",
+          "vinyl.mode",
+          "vinyl.settings.subtitle",
+          "vinyl.presentation.settingsTitle",
+          "vinyl.presentation.settingsDescription",
+          "vinyl.presentation.vinylLabel",
+          "vinyl.presentation.compactLabel",
+          "vinyl.presentation.videoLabel",
+          "vinyl.settings.backgroundBlurLabel",
+          "vinyl.settings.backgroundBlurDesc"
+        ]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "normal-mode",
+        name: I18n.t("settingsAdvanced.normalMode.title"),
+        desc: I18n.t("settingsAdvanced.normalMode.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.normalMode.title", "settingsAdvanced.normalMode.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "tv-mode",
+        name: I18n.t("settingsAdvanced.tvMode.title"),
+        desc: I18n.t("settingsAdvanced.tvMode.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.tvMode.title", "settingsAdvanced.tvMode.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "metadata-display",
+        name: I18n.t("settingsAdvanced.metadataDisplay.title"),
+        desc: I18n.t("settingsAdvanced.metadataDisplay.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.metadataDisplay.title", "settingsAdvanced.metadataDisplay.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "fullscreen-style",
+        name: I18n.t("settingsAdvanced.fullscreenStyle.title"),
+        desc: I18n.t("settingsAdvanced.fullscreenStyle.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.fullscreenStyle.title", "settingsAdvanced.fullscreenStyle.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "fullscreen-ui",
+        name: I18n.t("settingsAdvanced.fullscreenUI.title"),
+        desc: I18n.t("settingsAdvanced.fullscreenUI.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.fullscreenUI.title", "settingsAdvanced.fullscreenUI.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "controller-style",
+        name: I18n.t("settingsAdvanced.controllerStyle.title"),
+        desc: I18n.t("settingsAdvanced.controllerStyle.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.controllerStyle.title", "settingsAdvanced.controllerStyle.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "auto-hide",
+        name: I18n.t("settingsAdvanced.autoHide.title"),
+        desc: I18n.t("settingsAdvanced.autoHide.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.autoHide.title", "settingsAdvanced.autoHide.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "tmi-style",
+        name: I18n.t("settingsAdvanced.tmiStyle.title"),
+        desc: I18n.t("settingsAdvanced.tmiStyle.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.tmiStyle.title", "settingsAdvanced.tmiStyle.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.nowplaying"),
+        sectionKey: "nowplaying",
+        settingKey: "panel-lyrics-general",
+        name: I18n.t("settingsAdvanced.nowPlayingPanel.title"),
+        desc: I18n.t("settingsAdvanced.nowPlayingPanel.subtitle"),
+        i18nKeys: ["tabs.nowplaying", "settingsAdvanced.nowPlayingPanel.title", "settingsAdvanced.nowPlayingPanel.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.nowplaying"),
+        sectionKey: "nowplaying",
+        settingKey: "panel-background",
+        name: I18n.t("settingsAdvanced.nowPlayingPanel.background.title"),
+        desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.subtitle"),
+        i18nKeys: ["tabs.nowplaying", "settingsAdvanced.nowPlayingPanel.background.title", "settingsAdvanced.nowPlayingPanel.background.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.nowplaying"),
+        sectionKey: "nowplaying",
+        settingKey: "panel-border",
+        name: I18n.t("settingsAdvanced.nowPlayingPanel.border.title"),
+        desc: I18n.t("settingsAdvanced.nowPlayingPanel.border.subtitle"),
+        i18nKeys: ["tabs.nowplaying", "settingsAdvanced.nowPlayingPanel.border.title", "settingsAdvanced.nowPlayingPanel.border.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
+        sectionKey: "lyrics-providers",
+        settingKey: "lyrics-providers",
+        name: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
+        desc: I18n.t("settings.lyricsProviders.description") || "Choose and order lyrics providers",
+        i18nKeys: ["tabs.lyricsProviders", "settings.lyricsProviders.title", "settings.lyricsProviders.description"]
+      },
+      {
+        section: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
+        sectionKey: "lyrics-providers",
+        settingKey: "prefer-sync-data-provider",
+        name: I18n.t("settings.lyricsProviders.preferSyncDataProvider.label") || "Prioritize providers with sync data",
+        desc: I18n.t("settings.lyricsProviders.preferSyncDataProvider.desc") || "Try the matching lyrics provider first when sync data is available",
+        i18nKeys: [
+          "tabs.lyricsProviders",
+          "settings.lyricsProviders.preferSyncDataProvider.label",
+          "settings.lyricsProviders.preferSyncDataProvider.desc"
+        ]
+      },
+      {
+        section: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
+        sectionKey: "lyrics-providers",
+        settingKey: "prefer-lyrics-type-over-provider-order",
+        name: I18n.t("settings.lyricsProviders.preferLyricsTypeOverProviderOrder.label") || "Prioritize lyrics type over provider order",
+        desc: I18n.t("settings.lyricsProviders.preferLyricsTypeOverProviderOrder.desc") || "Try karaoke across all providers before synced and plain lyrics",
+        i18nKeys: [
+          "tabs.lyricsProviders",
+          "settings.lyricsProviders.preferLyricsTypeOverProviderOrder.label",
+          "settings.lyricsProviders.preferLyricsTypeOverProviderOrder.desc"
+        ]
+      },
+      {
+        section: I18n.t("tabs.aiProviders"),
+        sectionKey: "ai-providers",
+        settingKey: "ai-providers",
+        name: I18n.t("tabs.aiProviders"),
+        desc: I18n.t("settings.aiProviders.description") || "Configure AI providers and capabilities",
+        i18nKeys: [
+          "tabs.aiProviders",
+          "settings.aiProviders.title",
+          "settings.aiProviders.description",
+          "settings.aiProviders.translationStyle.title",
+          "settings.aiProviders.translationStyle.description",
+          "settings.aiProviders.translationStyle.natural.label",
+          "settings.aiProviders.translationStyle.literal.label",
+          "settings.aiProviders.translationStyle.adaptive.label",
+          "settings.aiProviders.retryCount.label",
+          "settings.aiProviders.retryCount.description"
+        ]
+      },
+      {
+        section: I18n.t("tabs.aiProviders"),
+        sectionKey: "ai-providers",
+        settingKey: "ai-provider-retry-count",
+        name: I18n.t("settings.aiProviders.retryCount.label") || "Retries per provider",
+        desc: I18n.t("settings.aiProviders.retryCount.description")
+          || "Number of additional attempts after a failed request. Set to 0 to switch to the next provider immediately.",
+        i18nKeys: [
+          "tabs.aiProviders",
+          "settings.aiProviders.retryCount.label",
+          "settings.aiProviders.retryCount.description"
+        ]
+      },
+      {
+        section: I18n.t("tabs.about"),
+        sectionKey: "about",
+        settingKey: "about-account",
+        name: I18n.t("settingsAdvanced.aboutTab.account.title"),
+        desc: I18n.t("settingsAdvanced.aboutTab.account.subtitle"),
+        i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.account.title", "settingsAdvanced.aboutTab.account.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.about"),
+        sectionKey: "about",
+        settingKey: "about-app-info",
+        name: I18n.t("settingsAdvanced.aboutTab.appInfo.title"),
+        desc: I18n.t("settingsAdvanced.aboutTab.subtitle"),
+        i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.appInfo.title", "settingsAdvanced.aboutTab.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.about"),
+        sectionKey: "about",
+        settingKey: "about-client-info",
+        name: I18n.t("settingsAdvanced.aboutTab.clientInfo.title"),
+        desc: I18n.t("settingsAdvanced.aboutTab.clientInfo.subtitle"),
+        i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.clientInfo.title", "settingsAdvanced.aboutTab.clientInfo.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.about"),
+        sectionKey: "about",
+        settingKey: "about-update",
+        name: I18n.t("settingsAdvanced.aboutTab.update.title"),
+        desc: I18n.t("settingsAdvanced.aboutTab.update.subtitle"),
+        i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.update.title", "settingsAdvanced.aboutTab.update.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.about"),
+        sectionKey: "about",
+        settingKey: "about-patch-notes",
+        name: I18n.t("settingsAdvanced.aboutTab.patchNotes.title"),
+        desc: I18n.t("settingsAdvanced.aboutTab.patchNotes.subtitle"),
+        i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.patchNotes.title", "settingsAdvanced.aboutTab.patchNotes.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.debug"),
+        sectionKey: "debug",
+        settingKey: "debug-overview",
+        name: I18n.t("settingsAdvanced.debugTab.title"),
+        desc: I18n.t("settingsAdvanced.debugTab.subtitle"),
+        i18nKeys: ["tabs.debug", "settingsAdvanced.debugTab.title", "settingsAdvanced.debugTab.subtitle"]
+      },
+    ];
+
+    return [
+      ...buildGeneralLanguageSettings(),
+      ...buildAppearanceVisualSettings(),
+      ...buildGeneralOverlaySettings(),
+      ...buildAppearanceTabSettings(),
+      ...buildBehaviorTabSettings(),
+      ...buildAdvancedTabSettings(),
+      ...buildFullscreenTabSettings(),
+    ];
+  }, []);
 
   const [discoveredSearchSettings, setDiscoveredSearchSettings] = react.useState([]);
   const discoveredSearchSignatureRef = react.useRef("");

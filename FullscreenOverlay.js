@@ -1609,6 +1609,26 @@ const FullscreenOverlay = (() => {
 
                     // 다음 곡들 (최대 15곡) - Unknown 트랙 이후 필터링
                     const next = [];
+                    // 큐/최근 항목에서 contextTrack·metadata·식별자(uri/uid/contextUri)를 동일한 규칙으로 추출한다.
+                    const resolveQueueTrackFields = (track) => {
+                        const contextTrack = track?.contextTrack || track || {};
+                        const meta = contextTrack.metadata || track?.metadata || {};
+                        return {
+                            meta,
+                            ids: {
+                                uri: contextTrack.uri || track?.uri || "",
+                                uid: contextTrack.uid || track?.uid || "",
+                                contextUri:
+                                    contextTrack.contextUri ||
+                                    contextTrack.context_uri ||
+                                    contextTrack.context?.uri ||
+                                    track?.contextUri ||
+                                    track?.context_uri ||
+                                    track?.context?.uri ||
+                                    ""
+                            }
+                        };
+                    };
                     const appendNextTracks = (items, source, allowContextPlayback = true) => {
                         if (!Array.isArray(items) || next.length >= 15) {
                             return false;
@@ -1616,26 +1636,14 @@ const FullscreenOverlay = (() => {
 
                         // Unknown 트랙의 인덱스 찾기 (컨텍스트 끝 마커)
                         for (const track of items) {
-                            const contextTrack = track?.contextTrack || track || {};
-                            const meta = contextTrack.metadata || track?.metadata || {};
+                            const { meta, ids } = resolveQueueTrackFields(track);
                             if (isUnknownTrackMetadata(meta)) {
                                 return true;
                             }
 
                             next.push(createQueueTrackInfo(
                                 meta,
-                                {
-                                    uri: contextTrack.uri || track?.uri || "",
-                                    uid: contextTrack.uid || track?.uid || "",
-                                    contextUri:
-                                        contextTrack.contextUri ||
-                                        contextTrack.context_uri ||
-                                        contextTrack.context?.uri ||
-                                        track?.contextUri ||
-                                        track?.context_uri ||
-                                        track?.context?.uri ||
-                                        ""
-                                },
+                                ids,
                                 {
                                     source,
                                     fallbackContextUri: currentContextUri,
@@ -1669,22 +1677,10 @@ const FullscreenOverlay = (() => {
                         const prev = [];
                         for (let i = prevSource.length - 1; i >= 0 && prev.length < 10; i--) {
                             const track = prevSource[i];
-                            const contextTrack = track?.contextTrack || track || {};
-                            const meta = contextTrack.metadata || track?.metadata || {};
+                            const { meta, ids } = resolveQueueTrackFields(track);
                             prev.push(createQueueTrackInfo(
                                 meta,
-                                {
-                                    uri: contextTrack.uri || track?.uri || "",
-                                    uid: contextTrack.uid || track?.uid || "",
-                                    contextUri:
-                                        contextTrack.contextUri ||
-                                        contextTrack.context_uri ||
-                                        contextTrack.context?.uri ||
-                                        track?.contextUri ||
-                                        track?.context_uri ||
-                                        track?.context?.uri ||
-                                        ""
-                                },
+                                ids,
                                 {
                                     source: "recent",
                                     fallbackContextUri: currentContextUri,

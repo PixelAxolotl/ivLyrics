@@ -2173,6 +2173,16 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		ranges.push({ start: lineStart + start, end: lineStart + end });
 	};
 
+	const pushSyncCreatorHiddenIndex = (hiddenRanges, lineStart, index) => {
+		const previous = hiddenRanges[hiddenRanges.length - 1];
+		const absoluteIndex = lineStart + index;
+		if (previous && previous.end + 1 === absoluteIndex) {
+			previous.end = absoluteIndex;
+		} else {
+			hiddenRanges.push({ start: absoluteIndex, end: absoluteIndex });
+		}
+	};
+
 	const normalizeSyncCreatorHiddenRanges = (ranges) => {
 		if (!Array.isArray(ranges)) return [];
 		const normalizedRanges = ranges
@@ -2555,15 +2565,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			let partIndex = 0;
 			let runStart = null;
 
-			const pushHidden = (index) => {
-				const previous = hiddenRanges[hiddenRanges.length - 1];
-				const absoluteIndex = lineStart + index;
-				if (previous && previous.end + 1 === absoluteIndex) {
-					previous.end = absoluteIndex;
-				} else {
-					hiddenRanges.push({ start: absoluteIndex, end: absoluteIndex });
-				}
-			};
+			const pushHidden = (index) => pushSyncCreatorHiddenIndex(hiddenRanges, lineStart, index);
 
 			const flushRun = (endIndex) => {
 				if (runStart !== null && endIndex >= runStart) {
@@ -2660,15 +2662,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			runPart = null;
 		};
 
-		const pushHidden = (index) => {
-			const previous = hiddenRanges[hiddenRanges.length - 1];
-			const absoluteIndex = lineStart + index;
-			if (previous && previous.end + 1 === absoluteIndex) {
-				previous.end = absoluteIndex;
-			} else {
-				hiddenRanges.push({ start: absoluteIndex, end: absoluteIndex });
-			}
-		};
+		const pushHidden = (index) => pushSyncCreatorHiddenIndex(hiddenRanges, lineStart, index);
 
 		for (let index = 0; index < chars.length; index++) {
 			const char = chars[index] || '';
@@ -2736,15 +2730,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const hiddenRanges = [];
 		const parts = [];
 
-		const pushHidden = (index) => {
-			const absoluteIndex = lineStart + index;
-			const previous = hiddenRanges[hiddenRanges.length - 1];
-			if (previous && previous.end + 1 === absoluteIndex) {
-				previous.end = absoluteIndex;
-			} else {
-				hiddenRanges.push({ start: absoluteIndex, end: absoluteIndex });
-			}
-		};
+		const pushHidden = (index) => pushSyncCreatorHiddenIndex(hiddenRanges, lineStart, index);
 
 		const boundaries = [0, ...normalizedSplitPoints, chars.length];
 		for (let boundaryIndex = 0; boundaryIndex < boundaries.length - 1; boundaryIndex++) {

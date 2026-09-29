@@ -329,22 +329,34 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
         isHolding: false,
         primePending: false,
     });
-    const brightnessValue = Math.min(Math.max(Number(brightness) || 0, 0), 100);
-    const brightnessRatio = brightnessValue / 100;
-    const blurValue = Math.min(Math.max(Number(blurAmount) || 0, 0), 80);
-    const useCoverMode = coverMode === true;
-    const videoScaleValue = Math.min(Math.max(Number(videoScale) || 105, 50), 200);
-    const videoScaleRatio = videoScaleValue / 100;
-    const videoScaleTransform = videoScaleRatio !== 1 ? ` scale(${videoScaleRatio})` : "";
-    const blurCompositeStyle = blurValue ? {
-        willChange: "filter, transform, opacity",
-        backfaceVisibility: "hidden",
-        WebkitBackfaceVisibility: "hidden",
-        contain: "paint",
-    } : {};
-    const videoTransform = useCoverMode
-        ? `translate3d(-50%, -50%, 0)${videoScaleTransform}`
-        : (blurValue || videoScaleTransform ? `translateZ(0)${videoScaleTransform}` : undefined);
+    const computeVideoBackgroundTransform = () => {
+        const brightnessValue = Math.min(Math.max(Number(brightness) || 0, 0), 100);
+        const brightnessRatio = brightnessValue / 100;
+        const blurValue = Math.min(Math.max(Number(blurAmount) || 0, 0), 80);
+        const useCoverMode = coverMode === true;
+        const videoScaleValue = Math.min(Math.max(Number(videoScale) || 105, 50), 200);
+        const videoScaleRatio = videoScaleValue / 100;
+        const videoScaleTransform = videoScaleRatio !== 1 ? ` scale(${videoScaleRatio})` : "";
+        const blurCompositeStyle = blurValue ? {
+            willChange: "filter, transform, opacity",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+            contain: "paint",
+        } : {};
+        const videoTransform = useCoverMode
+            ? `translate3d(-50%, -50%, 0)${videoScaleTransform}`
+            : (blurValue || videoScaleTransform ? `translateZ(0)${videoScaleTransform}` : undefined);
+        return {
+            brightnessValue, brightnessRatio, blurValue, useCoverMode,
+            videoScaleValue, videoScaleRatio, videoScaleTransform,
+            blurCompositeStyle, videoTransform
+        };
+    };
+    const {
+        brightnessValue, brightnessRatio, blurValue, useCoverMode,
+        videoScaleValue, videoScaleRatio, videoScaleTransform,
+        blurCompositeStyle, videoTransform
+    } = computeVideoBackgroundTransform();
 
     const albumArtUrl =
         Spicetify.Player.data?.item?.metadata?.image_xlarge_url ||

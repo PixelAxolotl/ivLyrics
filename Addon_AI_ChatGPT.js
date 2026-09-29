@@ -1161,21 +1161,20 @@
                 const isModelInList = availableModels.find(m => m.id === model);
                 const hasApiKey = getApiKeys().length > 0;
 
-                return React.createElement('div', { className: 'ai-addon-settings chatgpt-settings' },
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                const renderApiKeyRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, aiText('apiKey', 'API Key(s)')),
                         React.createElement('div', { className: 'ai-addon-input-group' },
                             React.createElement('input', { type: 'text', value: apiKeys, onChange: handleApiKeyChange, placeholder: 'sk-... (multiple: ["key1", "key2"])' }),
                             React.createElement('button', { onClick: () => window.open(ADDON_INFO.apiKeyUrl, '_blank'), className: 'ai-addon-btn-secondary' }, aiText('getApiKey', 'Get API Key'))
                         ),
                         React.createElement('small', null, aiText('apiKeyDesc', 'Enter an API key or JSON array.'))
-                    ),
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderBaseUrlRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, aiText('baseUrl', 'Base URL')),
                         React.createElement('input', { type: 'text', value: baseUrl, onChange: handleBaseUrlChange, placeholder: DEFAULT_OPENAI_BASE_URL }),
                         React.createElement('small', null, 'Change this to use OpenAI-compatible APIs')
-                    ),
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderModelRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, aiText('model', 'Model')),
                         React.createElement('div', { className: 'ai-addon-input-group' },
                             React.createElement('select', {
@@ -1204,22 +1203,29 @@
                             }, modelsLoading ? '...' : '↻')
                         ),
                         availableModels.length > 0 && React.createElement('small', null, `${aiText('model', 'Model')}: ${availableModels.length}`)
-                    ),
-                    (!isModelInList || customModel) &&
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderCustomModelRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, aiText('modelId', 'Custom Model ID')),
                         React.createElement('input', { type: 'text', value: customModel, onChange: handleCustomModelChange, placeholder: 'e.g., gpt-4-turbo' })
-                    ),
-                    React.createElement(FallbackProvidersSection),
-                    // Advanced API Parameters
-                    React.createElement(AdvancedParamsSection)
-                    ,
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderTestRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('button', { onClick: handleTest, className: 'ai-addon-btn-primary' }, aiText('testConnection', 'Test Connection')),
                         testStatus && React.createElement('span', {
                             className: `ai-addon-test-status ${testStatus.startsWith('✓') ? 'success' : testStatus.startsWith('✗') ? 'error' : ''}`
                         }, testStatus)
-                    )
+                    );
+
+                return React.createElement('div', { className: 'ai-addon-settings chatgpt-settings' },
+                    renderApiKeyRow(),
+                    renderBaseUrlRow(),
+                    renderModelRow(),
+                    (!isModelInList || customModel) &&
+                    renderCustomModelRow(),
+                    React.createElement(FallbackProvidersSection),
+                    // Advanced API Parameters
+                    React.createElement(AdvancedParamsSection)
+                    ,
+                    renderTestRow()
                 );
             };
 

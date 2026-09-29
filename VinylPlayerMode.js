@@ -206,20 +206,21 @@ const VinylPlayerMode = (() => {
     ]);
 
     const PresentationIcon = ({ name }) => {
+        const renderFramedPresentationIcon = (pathD) => react.createElement("svg", {
+            viewBox: "0 0 24 24",
+            "aria-hidden": "true"
+        },
+            react.createElement("rect", {
+                x: 3,
+                y: 5,
+                width: 18,
+                height: 14,
+                rx: 3
+            }),
+            react.createElement("path", { d: pathD })
+        );
         if (name === "standard") {
-            return react.createElement("svg", {
-                viewBox: "0 0 24 24",
-                "aria-hidden": "true"
-            },
-                react.createElement("rect", {
-                    x: 3,
-                    y: 5,
-                    width: 18,
-                    height: 14,
-                    rx: 3
-                }),
-                react.createElement("path", { d: "M10 5v14" })
-            );
+            return renderFramedPresentationIcon("M10 5v14");
         }
         if (name === "vinyl") {
             return react.createElement("svg", {
@@ -246,19 +247,7 @@ const VinylPlayerMode = (() => {
                 react.createElement("circle", { cx: 12, cy: 12, r: 2 })
             );
         }
-        return react.createElement("svg", {
-            viewBox: "0 0 24 24",
-            "aria-hidden": "true"
-        },
-            react.createElement("rect", {
-                x: 3,
-                y: 5,
-                width: 18,
-                height: 14,
-                rx: 3
-            }),
-            react.createElement("path", { d: "m10 9 5 3-5 3z" })
-        );
+        return renderFramedPresentationIcon("m10 9 5 3-5 3z");
     };
 
     const PresentationSwitcher = react.memo(({

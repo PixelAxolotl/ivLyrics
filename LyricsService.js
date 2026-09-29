@@ -1456,6 +1456,24 @@
             transTx.onerror = () => reject(transTx.error);
         });
 
+    // Reads a `${trackId}:${lang}`-keyed entry from a readonly cache store and
+    // returns its data when present and unexpired, otherwise null. Shared by
+    // getMetadata and getTMI (store name and expiry type differ); each caller
+    // keeps its own try/catch so its error label is unchanged.
+    const readTrackLangCacheData = async (cache, db, storeName, expiryType, trackId, lang) => {
+        const tx = db.transaction(storeName, 'readonly');
+        const store = tx.objectStore(storeName);
+        const cacheKey = `${trackId}:${lang}`;
+
+        const result = await awaitIdbRequest(store.get(cacheKey));
+
+        if (result && !cache._isExpired(result.cachedAt, expiryType)) {
+            return result.data;
+        }
+
+        return null;
+    };
+
     const LyricsCache = {
         DB_NAME: 'ivLyricsCache',
         DB_VERSION: 7,
@@ -1848,17 +1866,7 @@
         async getMetadata(trackId, lang) {
             try {
                 const db = await this._openDB();
-                const tx = db.transaction('metadata', 'readonly');
-                const store = tx.objectStore('metadata');
-                const cacheKey = `${trackId}:${lang}`;
-
-                const result = await awaitIdbRequest(store.get(cacheKey));
-
-                if (result && !this._isExpired(result.cachedAt, 'metadata')) {
-                    return result.data;
-                }
-
-                return null;
+                return await readTrackLangCacheData(this, db, 'metadata', 'metadata', trackId, lang);
             } catch (error) {
                 console.error('[LyricsCache] getMetadata error:', error);
                 return null;
@@ -2012,17 +2020,7 @@
                     return null;
                 }
 
-                const tx = db.transaction('tmi', 'readonly');
-                const store = tx.objectStore('tmi');
-                const cacheKey = `${trackId}:${lang}`;
-
-                const result = await awaitIdbRequest(store.get(cacheKey));
-
-                if (result && !this._isExpired(result.cachedAt, 'tmi')) {
-                    return result.data;
-                }
-
-                return null;
+                return await readTrackLangCacheData(this, db, 'tmi', 'tmi', trackId, lang);
             } catch (error) {
                 console.error('[LyricsCache] getTMI error:', error);
                 return null;

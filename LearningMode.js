@@ -2859,16 +2859,7 @@
                 )
             );
 
-        return react.createElement("aside", {
-            className: `ivlyrics-study-panel theme-${studyTheme}`,
-            role: "dialog",
-            "aria-label": t("title", "AI 학습 모드"),
-            onKeyDown: handleQuizKeyDown,
-            tabIndex: -1
-        },
-            renderStudyHeader(),
-            react.createElement("div", { className: "ivlyrics-study-body" },
-                react.createElement("nav", { className: "ivlyrics-study-rail", "aria-label": t("title", "AI 학습 모드") },
+        const renderStudyRail = () => react.createElement("nav", { className: "ivlyrics-study-rail", "aria-label": t("title", "AI 학습 모드") },
                     react.createElement("div", { className: "ivlyrics-study-tabs", role: "tablist" },
                         react.createElement(TabButton, { id: "explain", activeTab, onSelect: setActiveTab }, t("tabExplain", "오늘의 해설")),
                         react.createElement(TabButton, { id: "quiz", activeTab, onSelect: setActiveTab }, t("tabQuiz", "퀴즈")),
@@ -2932,7 +2923,18 @@
                             disabled: status === "loading" || !hasLyrics
                         }, t("quizRegenerate", "새 문제 만들기"))
                     )
-                ),
+                );
+
+        return react.createElement("aside", {
+            className: `ivlyrics-study-panel theme-${studyTheme}`,
+            role: "dialog",
+            "aria-label": t("title", "AI 학습 모드"),
+            onKeyDown: handleQuizKeyDown,
+            tabIndex: -1
+        },
+            renderStudyHeader(),
+            react.createElement("div", { className: "ivlyrics-study-body" },
+                renderStudyRail(),
                 react.createElement("main", { className: "ivlyrics-study-stage" },
                     !hasLyrics && activeTab !== "history" && react.createElement(EmptyState, null, t("noLyrics", "학습할 가사가 없습니다.")),
                     hasLyrics && activeTab !== "history" && !pack && status !== "loading" && react.createElement(EmptyState, null,

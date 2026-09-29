@@ -2832,14 +2832,7 @@
                 )
         );
 
-        return react.createElement("aside", {
-            className: `ivlyrics-study-panel theme-${studyTheme}`,
-            role: "dialog",
-            "aria-label": t("title", "AI 학습 모드"),
-            onKeyDown: handleQuizKeyDown,
-            tabIndex: -1
-        },
-            react.createElement("div", { className: "ivlyrics-study-header" },
+        const renderStudyHeader = () => react.createElement("div", { className: "ivlyrics-study-header" },
                 react.createElement("div", { className: "ivlyrics-study-title-wrap" },
                     react.createElement("div", { className: "ivlyrics-study-eyebrow" }, t("eyebrow", "AI Learning")),
                     react.createElement("h2", { className: "ivlyrics-study-title" }, t("title", "AI 학습 모드")),
@@ -2864,7 +2857,16 @@
                         "aria-label": t("close", "닫기")
                     }, "x")
                 )
-            ),
+            );
+
+        return react.createElement("aside", {
+            className: `ivlyrics-study-panel theme-${studyTheme}`,
+            role: "dialog",
+            "aria-label": t("title", "AI 학습 모드"),
+            onKeyDown: handleQuizKeyDown,
+            tabIndex: -1
+        },
+            renderStudyHeader(),
             react.createElement("div", { className: "ivlyrics-study-body" },
                 react.createElement("nav", { className: "ivlyrics-study-rail", "aria-label": t("title", "AI 학습 모드") },
                     react.createElement("div", { className: "ivlyrics-study-tabs", role: "tablist" },

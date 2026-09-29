@@ -11379,6 +11379,114 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			Toast.success(I18n.t('syncCreator.rangeStyleCleared') || '선택 범위의 스타일을 지웠습니다.');
 		};
 
+		const renderStyleRangeCharGrid = () => react.createElement('div', {
+				style: {
+					display: 'flex',
+					flexWrap: 'wrap',
+					alignItems: 'baseline',
+					gap: 0,
+					maxHeight: 80,
+					overflowY: 'auto',
+					marginTop: 7,
+					padding: '7px 8px',
+					borderRadius: 7,
+					background: 'rgba(0,0,0,0.22)',
+					fontSize: 16,
+					lineHeight: 1.55,
+					userSelect: 'none',
+					cursor: 'text',
+					overscrollBehavior: 'contain'
+				},
+				role: 'listbox',
+				'aria-label': I18n.t('syncCreator.rangeStyleSelectLabel') || '스타일을 적용할 글자 범위'
+			}, currentFullLineChars.map((char, index) => {
+				const absoluteIndex = currentLineStart + index;
+				const existingStyle = currentLineStyleRanges.find(range => range.start <= absoluteIndex && range.end >= absoluteIndex);
+				const selected = index >= selectionStart && index <= selectionEnd;
+				const color = existingStyle?.speaker
+					? getSyncCreatorSpeakerTextColor(
+						existingStyle.speaker,
+						existingStyle['speaker-color'],
+						existingStyle['speaker-fallback']
+					)
+					: '';
+				return react.createElement('span', {
+					key: `range-style-${currentLineStart}-${index}`,
+					role: 'option',
+					'aria-selected': selected,
+					onPointerDown: (event) => beginStyleRangeSelection(index, event),
+					onPointerEnter: () => extendStyleRangeSelection(index),
+					style: {
+						display: 'inline-block',
+						minWidth: char === ' ' ? '0.42em' : undefined,
+						padding: 0,
+						margin: 0,
+						borderRadius: 3,
+						color: color || 'var(--spice-text)',
+						background: selected
+							? 'rgba(var(--spice-rgb-accent, 30, 215, 96), 0.32)'
+							: (existingStyle ? 'rgba(var(--spice-rgb-accent, 30, 215, 96), 0.10)' : 'transparent'),
+						boxShadow: existingStyle?.kind && existingStyle.kind !== 'vocal'
+							? 'inset 0 -2px 0 rgba(var(--spice-rgb-accent, 30, 215, 96), 0.75)'
+							: 'none'
+					},
+					title: existingStyle
+						? [getSyncCreatorKindLabel(existingStyle.kind), existingStyle.speaker].filter(Boolean).join(' · ')
+						: undefined
+				}, char === ' ' ? '\u00A0' : char);
+			}));
+
+		const renderStyleRangeColorColumn = () => react.createElement('section', { className: 'sync-creator-range-style-pane sync-creator-range-color-picker' },
+					react.createElement('div', { className: 'sync-creator-range-style-pane-title' }, I18n.t('syncCreator.rangeColorLabel') || '부분 색상'),
+					react.createElement('div', {
+						className: 'sync-creator-range-speaker-palette',
+						style: {
+							width: '100%',
+							maxHeight: 270,
+							overflowY: 'auto',
+							overflowX: 'hidden',
+							overscrollBehavior: 'contain'
+						}
+					},
+						renderSpeakerPicker(
+							styleRangeSpeaker,
+							styleRangeSpeakerColor,
+							styleRangeSpeakerFallback,
+							selectRangeSpeaker,
+							{ disabled: !selectedText }
+						),
+						isSyncCreatorCustomSpeaker(styleRangeSpeaker) && react.createElement('div', {
+							style: { display: 'grid', gridTemplateColumns: '34px minmax(110px, 1fr)', gap: 7, marginTop: 7, alignItems: 'center' }
+						},
+							react.createElement('input', {
+								type: 'color',
+								disabled: !selectedText,
+								value: sanitizeSyncCreatorSpeakerColor(styleRangeSpeaker, styleRangeSpeakerColor, true, styleRangeSpeakerFallback),
+								onChange: event => {
+									const nextColor = normalizeSyncCreatorSpeakerColor(event.target.value);
+									setStyleRangeSpeakerColor(nextColor);
+									applyRangeSpeakerMeta(styleRangeSpeaker, nextColor, styleRangeSpeakerFallback);
+								},
+								style: { width: 34, height: 30, padding: 2, border: `1px solid ${TOSS_BORDER}`, borderRadius: 7, background: 'transparent' },
+								'aria-label': I18n.t('syncCreator.speakerCustomColor') || 'Custom speaker color'
+							}),
+							react.createElement('select', {
+								style: { ...s.select, width: '100%' },
+								disabled: !selectedText,
+								value: styleRangeSpeakerFallback,
+								onChange: event => {
+									const nextFallback = normalizeSyncCreatorSpeakerFallback(event.target.value) || SYNC_CREATOR_DEFAULT_CUSTOM_FALLBACK;
+									setStyleRangeSpeakerFallback(nextFallback);
+									applyRangeSpeakerMeta(styleRangeSpeaker, styleRangeSpeakerColor, nextFallback);
+								}
+							}, SYNC_CREATOR_CUSTOM_FALLBACK_OPTIONS.map(value => react.createElement('option', {
+								key: value,
+								value
+							}, value.replace(' 1', ''))))
+						)
+					)
+				);
+
 		return react.createElement('section', {
 			className: 'sync-creator-range-style-editor',
 			style: {
@@ -11428,62 +11536,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				react.createElement('div', { style: { marginTop: 8, fontSize: 10.5, color: 'var(--spice-subtext)', lineHeight: 1.4 } },
 					I18n.t('syncCreator.rangeStyleHint') || '싱크 단위와 관계없이 원하는 글자를 드래그해 선택하세요.'
 				),
-				react.createElement('div', {
-					style: {
-						display: 'flex',
-						flexWrap: 'wrap',
-						alignItems: 'baseline',
-						gap: 0,
-						maxHeight: 80,
-						overflowY: 'auto',
-						marginTop: 7,
-						padding: '7px 8px',
-						borderRadius: 7,
-						background: 'rgba(0,0,0,0.22)',
-						fontSize: 16,
-						lineHeight: 1.55,
-						userSelect: 'none',
-						cursor: 'text',
-						overscrollBehavior: 'contain'
-					},
-					role: 'listbox',
-					'aria-label': I18n.t('syncCreator.rangeStyleSelectLabel') || '스타일을 적용할 글자 범위'
-				}, currentFullLineChars.map((char, index) => {
-					const absoluteIndex = currentLineStart + index;
-					const existingStyle = currentLineStyleRanges.find(range => range.start <= absoluteIndex && range.end >= absoluteIndex);
-					const selected = index >= selectionStart && index <= selectionEnd;
-					const color = existingStyle?.speaker
-						? getSyncCreatorSpeakerTextColor(
-							existingStyle.speaker,
-							existingStyle['speaker-color'],
-							existingStyle['speaker-fallback']
-						)
-						: '';
-					return react.createElement('span', {
-						key: `range-style-${currentLineStart}-${index}`,
-						role: 'option',
-						'aria-selected': selected,
-						onPointerDown: (event) => beginStyleRangeSelection(index, event),
-						onPointerEnter: () => extendStyleRangeSelection(index),
-						style: {
-							display: 'inline-block',
-							minWidth: char === ' ' ? '0.42em' : undefined,
-							padding: 0,
-							margin: 0,
-							borderRadius: 3,
-							color: color || 'var(--spice-text)',
-							background: selected
-								? 'rgba(var(--spice-rgb-accent, 30, 215, 96), 0.32)'
-								: (existingStyle ? 'rgba(var(--spice-rgb-accent, 30, 215, 96), 0.10)' : 'transparent'),
-							boxShadow: existingStyle?.kind && existingStyle.kind !== 'vocal'
-								? 'inset 0 -2px 0 rgba(var(--spice-rgb-accent, 30, 215, 96), 0.75)'
-								: 'none'
-						},
-						title: existingStyle
-							? [getSyncCreatorKindLabel(existingStyle.kind), existingStyle.speaker].filter(Boolean).join(' · ')
-							: undefined
-					}, char === ' ' ? '\u00A0' : char);
-				})),
+				renderStyleRangeCharGrid(),
 				react.createElement('div', {
 					style: { minHeight: 28, marginTop: 5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }
 				},
@@ -11509,56 +11562,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							allowEmpty: true
 						})
 					),
-					react.createElement('section', { className: 'sync-creator-range-style-pane sync-creator-range-color-picker' },
-						react.createElement('div', { className: 'sync-creator-range-style-pane-title' }, I18n.t('syncCreator.rangeColorLabel') || '부분 색상'),
-						react.createElement('div', {
-							className: 'sync-creator-range-speaker-palette',
-							style: {
-								width: '100%',
-								maxHeight: 270,
-								overflowY: 'auto',
-								overflowX: 'hidden',
-								overscrollBehavior: 'contain'
-							}
-						},
-							renderSpeakerPicker(
-								styleRangeSpeaker,
-								styleRangeSpeakerColor,
-								styleRangeSpeakerFallback,
-								selectRangeSpeaker,
-								{ disabled: !selectedText }
-							),
-							isSyncCreatorCustomSpeaker(styleRangeSpeaker) && react.createElement('div', {
-								style: { display: 'grid', gridTemplateColumns: '34px minmax(110px, 1fr)', gap: 7, marginTop: 7, alignItems: 'center' }
-							},
-								react.createElement('input', {
-									type: 'color',
-									disabled: !selectedText,
-									value: sanitizeSyncCreatorSpeakerColor(styleRangeSpeaker, styleRangeSpeakerColor, true, styleRangeSpeakerFallback),
-									onChange: event => {
-										const nextColor = normalizeSyncCreatorSpeakerColor(event.target.value);
-										setStyleRangeSpeakerColor(nextColor);
-										applyRangeSpeakerMeta(styleRangeSpeaker, nextColor, styleRangeSpeakerFallback);
-									},
-									style: { width: 34, height: 30, padding: 2, border: `1px solid ${TOSS_BORDER}`, borderRadius: 7, background: 'transparent' },
-									'aria-label': I18n.t('syncCreator.speakerCustomColor') || 'Custom speaker color'
-								}),
-								react.createElement('select', {
-									style: { ...s.select, width: '100%' },
-									disabled: !selectedText,
-									value: styleRangeSpeakerFallback,
-									onChange: event => {
-										const nextFallback = normalizeSyncCreatorSpeakerFallback(event.target.value) || SYNC_CREATOR_DEFAULT_CUSTOM_FALLBACK;
-										setStyleRangeSpeakerFallback(nextFallback);
-										applyRangeSpeakerMeta(styleRangeSpeaker, styleRangeSpeakerColor, nextFallback);
-									}
-								}, SYNC_CREATOR_CUSTOM_FALLBACK_OPTIONS.map(value => react.createElement('option', {
-									key: value,
-									value
-								}, value.replace(' 1', ''))))
-							)
-						)
-					)
+					renderStyleRangeColorColumn()
 				)
 			)
 		);

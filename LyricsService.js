@@ -60,9 +60,7 @@
             };
         };
 
-        const buildTimedSegments = (items, options = {}) => {
-            if (!Array.isArray(items) || items.length === 0) return [];
-
+        const resolveTimingAccessors = (options) => {
             const getText = typeof options.getText === "function"
                 ? options.getText
                 : (item) => item?.text ?? item?.char ?? "";
@@ -72,6 +70,13 @@
             const getEndTime = typeof options.getEndTime === "function"
                 ? options.getEndTime
                 : (item) => item?.endTime;
+            return { getText, getStartTime, getEndTime };
+        };
+
+        const buildTimedSegments = (items, options = {}) => {
+            if (!Array.isArray(items) || items.length === 0) return [];
+
+            const { getText, getStartTime, getEndTime } = resolveTimingAccessors(options);
             const segments = [];
             let wordEntries = [];
             let spaceEntries = [];
@@ -118,15 +123,7 @@
         const applyLatinWordFillTiming = (items, options = {}) => {
             if (!Array.isArray(items) || items.length === 0) return [];
 
-            const getText = typeof options.getText === "function"
-                ? options.getText
-                : (item) => item?.text ?? item?.char ?? "";
-            const getStartTime = typeof options.getStartTime === "function"
-                ? options.getStartTime
-                : (item) => item?.startTime;
-            const getEndTime = typeof options.getEndTime === "function"
-                ? options.getEndTime
-                : (item) => item?.endTime;
+            const { getText, getStartTime, getEndTime } = resolveTimingAccessors(options);
             const result = [...items];
             let wordEntries = [];
 

@@ -8163,20 +8163,24 @@
                         .map(result => result.value);
 
                     if (successfulSlots.length > 0) {
-                        const requestResultsByLine = new Map();
-                        successfulSlots.forEach(({ slot, targetField, lines }) => {
-                            translationRequests.forEach((request, requestIndex) => {
-                                const value = String(lines[requestIndex] ?? '').trim();
-                                const entry = {
-                                    ...request,
-                                    slot,
-                                    [`${targetField}Text`]: value || null
-                                };
-                                const entries = requestResultsByLine.get(request.lineIndex) || [];
-                                entries.push(entry);
-                                requestResultsByLine.set(request.lineIndex, entries);
+                        const buildRequestResultsByLine = () => {
+                            const requestResultsByLine = new Map();
+                            successfulSlots.forEach(({ slot, targetField, lines }) => {
+                                translationRequests.forEach((request, requestIndex) => {
+                                    const value = String(lines[requestIndex] ?? '').trim();
+                                    const entry = {
+                                        ...request,
+                                        slot,
+                                        [`${targetField}Text`]: value || null
+                                    };
+                                    const entries = requestResultsByLine.get(request.lineIndex) || [];
+                                    entries.push(entry);
+                                    requestResultsByLine.set(request.lineIndex, entries);
+                                });
                             });
-                        });
+                            return requestResultsByLine;
+                        };
+                        const requestResultsByLine = buildRequestResultsByLine();
 
                         const mergeSlotResultsIntoLine = (line, idx) => {
                             const isKaraokeLine = Array.isArray(line.syllables)

@@ -731,36 +731,7 @@ const TranslationTipStep = ({ onNext, onBack }) => {
       })
     );
 
-  return react.createElement(
-    "div",
-    {
-      className: "wizard-step translation-tip-step",
-      style: wizardStepStyle,
-    },
-    react.createElement(
-      "h2",
-      { style: wizardTitleStyle },
-      I18n.t("setupWizard.translationTip.title")
-    ),
-    react.createElement(
-      "p",
-      { style: wizardSubtitleStyle },
-      I18n.t("setupWizard.translationTip.subtitle")
-    ),
-    // Animation container
-    react.createElement(
-      "div",
-      {
-        style: {
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "20px",
-        },
-      },
-      // Language cards row
+  const renderTranslationTipLanguageCards = () =>
       react.createElement(
         "div",
         {
@@ -816,7 +787,39 @@ const TranslationTipStep = ({ onNext, onBack }) => {
             )
           )
         )
-      ),
+      );
+
+  return react.createElement(
+    "div",
+    {
+      className: "wizard-step translation-tip-step",
+      style: wizardStepStyle,
+    },
+    react.createElement(
+      "h2",
+      { style: wizardTitleStyle },
+      I18n.t("setupWizard.translationTip.title")
+    ),
+    react.createElement(
+      "p",
+      { style: wizardSubtitleStyle },
+      I18n.t("setupWizard.translationTip.subtitle")
+    ),
+    // Animation container
+    react.createElement(
+      "div",
+      {
+        style: {
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "20px",
+        },
+      },
+      // Language cards row
+      renderTranslationTipLanguageCards(),
       // Arrow and toggle animation
       react.createElement(
         "div",

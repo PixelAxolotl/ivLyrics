@@ -1892,26 +1892,7 @@ const VideoHelperTestStep = ({ onNext, onBack, onSkip, helperEnabled, onHelperCh
       })
     );
 
-  return react.createElement(
-    "div",
-    {
-      className: "wizard-step video-helper-test-step",
-      style: wizardStepStyle,
-    },
-    react.createElement(
-      "h2",
-      { style: wizardTitleStyle },
-      I18n.t("setupWizard.videoHelperTest.title")
-    ),
-    react.createElement(
-      "p",
-      { style: wizardSubtitleStyle },
-      I18n.t("setupWizard.videoHelperTest.subtitle")
-    ),
-    // Enable helper toggle
-    renderVideoHelperEnableToggle(),
-    // Test button
-    helperEnabled &&
+  const renderVideoHelperTestButton = () =>
     react.createElement(
       "div",
       {
@@ -1935,7 +1916,29 @@ const VideoHelperTestStep = ({ onNext, onBack, onSkip, helperEnabled, onHelperCh
           ? I18n.t("setupWizard.videoHelperTest.testing")
           : I18n.t("setupWizard.videoHelperTest.testVideo")
       )
+    );
+
+  return react.createElement(
+    "div",
+    {
+      className: "wizard-step video-helper-test-step",
+      style: wizardStepStyle,
+    },
+    react.createElement(
+      "h2",
+      { style: wizardTitleStyle },
+      I18n.t("setupWizard.videoHelperTest.title")
     ),
+    react.createElement(
+      "p",
+      { style: wizardSubtitleStyle },
+      I18n.t("setupWizard.videoHelperTest.subtitle")
+    ),
+    // Enable helper toggle
+    renderVideoHelperEnableToggle(),
+    // Test button
+    helperEnabled &&
+    renderVideoHelperTestButton(),
     // Download progress
     testStatus === "downloading" && renderVideoHelperDownloadProgress(),
     // Success message

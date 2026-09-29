@@ -971,36 +971,7 @@ const OverlayTipStep = ({ overlayEnabled, onOverlayChange, onNext, onBack }) => 
       )
     );
 
-  return react.createElement(
-    "div",
-    {
-      className: "wizard-step overlay-tip-step",
-      style: wizardStepStyle,
-    },
-    react.createElement(
-      "h2",
-      { style: wizardTitleStyle },
-      I18n.t("setupWizard.overlayTip.title")
-    ),
-    react.createElement(
-      "p",
-      { style: wizardSubtitleStyle },
-      I18n.t("setupWizard.overlayTip.subtitle")
-    ),
-    // Animation container
-    react.createElement(
-      "div",
-      {
-        style: {
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "20px",
-        },
-      },
-      // Desktop mockup with floating overlay
+  const renderOverlayTipMockup = () =>
       react.createElement(
         "div",
         {
@@ -1102,7 +1073,39 @@ const OverlayTipStep = ({ overlayEnabled, onOverlayChange, onNext, onBack }) => 
             borderRadius: 0,
           },
         })
-      ),
+      );
+
+  return react.createElement(
+    "div",
+    {
+      className: "wizard-step overlay-tip-step",
+      style: wizardStepStyle,
+    },
+    react.createElement(
+      "h2",
+      { style: wizardTitleStyle },
+      I18n.t("setupWizard.overlayTip.title")
+    ),
+    react.createElement(
+      "p",
+      { style: wizardSubtitleStyle },
+      I18n.t("setupWizard.overlayTip.subtitle")
+    ),
+    // Animation container
+    react.createElement(
+      "div",
+      {
+        style: {
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "20px",
+        },
+      },
+      // Desktop mockup with floating overlay
+      renderOverlayTipMockup(),
       // Interactive Toggle
       renderWizardInteractiveToggle(
         overlayEnabled,

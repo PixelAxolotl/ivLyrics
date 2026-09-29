@@ -836,6 +836,7 @@ const SyncCreatorProfileModal = react.memo(({
 			// The parent handler owns user-facing error messaging.
 		}
 	}, [canEditGreeting, greetingDraft, onSaveGreeting]);
+	const computeCreatorProfileIcons = () => {
 	const closeIcon = react.createElement(
 		"svg",
 		{
@@ -913,6 +914,10 @@ const SyncCreatorProfileModal = react.memo(({
 		react.createElement("circle", { cx: 15, cy: 12, r: 2 }),
 		react.createElement("circle", { cx: 7, cy: 18, r: 2 })
 	);
+
+	return { closeIcon, themeIcon, likeIcon, decorationSettingsIcon };
+	};
+	const { closeIcon, themeIcon, likeIcon, decorationSettingsIcon } = computeCreatorProfileIcons();
 
 	const maybeLoadMore = react.useCallback(() => {
 		const body = bodyRef.current;

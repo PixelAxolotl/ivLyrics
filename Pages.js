@@ -968,9 +968,7 @@ const SyncCreatorProfileModal = react.memo(({
 		}
 	}, [uiTheme]);
 
-	const content = react.createElement(
-		react.Fragment,
-		null,
+	const renderCreatorProfileHero = () => (
 		react.createElement(
 			"div",
 			{ className: "lyrics-creator-profile-hero" },
@@ -1197,7 +1195,9 @@ const SyncCreatorProfileModal = react.memo(({
 					copy.loading
 			)
 		)
-	),
+	)
+	);
+	const renderCreatorProfileSections = () => (
 		error
 			? react.createElement(
 				"div",
@@ -1328,6 +1328,12 @@ const SyncCreatorProfileModal = react.memo(({
 							copy.noContributions
 						)
 				)
+	);
+	const content = react.createElement(
+		react.Fragment,
+		null,
+		renderCreatorProfileHero(),
+		renderCreatorProfileSections()
 	);
 
 	return react.createElement(

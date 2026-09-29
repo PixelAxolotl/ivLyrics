@@ -8027,12 +8027,10 @@ class LyricsContainer extends react.Component {
 
   getGeminiTranslation(lyricsState, lyrics, mode, onProgress = null) {
     return new Promise((resolve, reject) => {
-      const viKey = StorageManager.getPersisted(
-        `${APP_NAME}:visual:gemini-api-key`
-      );
-      const romajiKey = StorageManager.getPersisted(
-        `${APP_NAME}:visual:gemini-api-key-romaji`
-      );
+      // These reads are kept for their side effect: getPersisted registers the
+      // key via saveStorageKeys. The returned values are intentionally unused.
+      StorageManager.getPersisted(`${APP_NAME}:visual:gemini-api-key`);
+      StorageManager.getPersisted(`${APP_NAME}:visual:gemini-api-key-romaji`);
 
       // The unified Romaji, Romaja, Pinyin button uses Smart Phonetic logic;
       // every other Gemini mode is a translation.

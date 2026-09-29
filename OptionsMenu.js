@@ -3991,8 +3991,7 @@ const TrackSyncAdjustPill = react.memo(({ trackUri }) => {
     compactControls.push(renderStepButton(control));
   });
 
-  const movementFeedback = interactionFeedback
-    ? react.createElement(
+  const renderTrackSyncMovementFeedback = () => react.createElement(
       "span",
       {
         key: `flow-${interactionFeedback.id}`,
@@ -4016,7 +4015,10 @@ const TrackSyncAdjustPill = react.memo(({ trackUri }) => {
           className: "lyrics-track-sync-value-impact is-reset",
         })
         : null
-    )
+    );
+
+  const movementFeedback = interactionFeedback
+    ? renderTrackSyncMovementFeedback()
     : null;
 
   if (!trackUri) return null;

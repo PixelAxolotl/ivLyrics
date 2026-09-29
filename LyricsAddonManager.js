@@ -1415,6 +1415,7 @@
                 hasSyncDataService: !!window.SyncDataService?.getSyncData
             });
 
+            const applyRegisteredSyncData = async () => {
             if (shouldApplyRegisteredSyncData) {
                 if ((trackId || trackIsrc) && window.SyncDataService?.getSyncData) {
                     try {
@@ -1478,6 +1479,8 @@
                     }
                 }
             }
+            };
+            await applyRegisteredSyncData();
 
             const applyPseudoKaraoke = async () => {
                 if (allowKaraoke && window.PseudoKaraokeService?.applyToResult) {

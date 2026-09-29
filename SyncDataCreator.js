@@ -5649,60 +5649,63 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				? normalizeSyncCreatorGranularity(existingLine?.granularity)
 				: syncGranularity
 		};
-		const leadMetaPart = currentParallelData?.parts?.find(part => part.role === 'lead') || currentParallelData?.parts?.[0] || activeParallelPart;
-		const lineMetaDraft = lineMetaDrafts[lineStart] || {};
-		const hasLineSpeakerDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker');
-		const hasLineSpeakerColorDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker-color');
-		const hasLineSpeakerFallbackDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker-fallback');
-		const hasLineKindDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'kind');
-		const draftLineSpeaker = normalizeSyncCreatorSpeaker(lineMetaDraft.speaker);
-		const draftLineKind = normalizeSyncCreatorKind(lineMetaDraft.kind);
-		const existingLineSpeaker = normalizeSyncCreatorSpeaker(existingLine?.speaker);
-		const existingLineKind = normalizeSyncCreatorKind(existingLine?.kind);
-		const lineSpeaker = hasLineSpeakerDraft
-			? draftLineSpeaker || SYNC_CREATOR_DEFAULT_SPEAKER
-			: currentLineMeta.speaker || existingLineSpeaker || leadMetaPart?.speaker || SYNC_CREATOR_DEFAULT_SPEAKER;
-		const lineKind = hasLineKindDraft
-			? draftLineKind || SYNC_CREATOR_DEFAULT_KIND
-			: currentLineMeta.kind || existingLineKind || leadMetaPart?.kind || SYNC_CREATOR_DEFAULT_KIND;
-		const lineSpeakerFallback = sanitizeSyncCreatorSpeakerFallback(
-			lineSpeaker,
-			hasLineSpeakerFallbackDraft
-				? lineMetaDraft['speaker-fallback']
-				: currentLineMeta['speaker-fallback'] || existingLine?.['speaker-fallback'] || leadMetaPart?.['speaker-fallback'],
-			true,
-			hasLineSpeakerDraft ? lineMetaDraft.speaker : existingLine?.speaker || leadMetaPart?.speaker || lineSpeaker
-		);
-		const lineSpeakerColor = sanitizeSyncCreatorSpeakerColor(
-			lineSpeaker,
-			hasLineSpeakerColorDraft
-				? lineMetaDraft['speaker-color']
-				: currentLineMeta['speaker-color'] || existingLine?.['speaker-color'] || leadMetaPart?.['speaker-color'],
-			true,
-			lineSpeakerFallback
-		);
-		const shouldPersistLineSpeaker = multiVocalMode || lineSpeaker !== SYNC_CREATOR_DEFAULT_SPEAKER;
-		const shouldPersistLineKind = multiVocalMode || lineKind !== SYNC_CREATOR_DEFAULT_KIND;
-		if (lineSpeaker && shouldPersistLineSpeaker) {
-			lineData.speaker = lineSpeaker;
-		} else {
-			delete lineData.speaker;
-		}
-		if (lineSpeakerFallback) {
-			lineData['speaker-fallback'] = lineSpeakerFallback;
-		} else {
-			delete lineData['speaker-fallback'];
-		}
-		if (lineSpeakerColor) {
-			lineData['speaker-color'] = lineSpeakerColor;
-		} else {
-			delete lineData['speaker-color'];
-		}
-		if (lineKind && shouldPersistLineKind) {
-			lineData.kind = lineKind;
-		} else {
-			delete lineData.kind;
-		}
+		const applyLineSpeakerMeta = () => {
+			const leadMetaPart = currentParallelData?.parts?.find(part => part.role === 'lead') || currentParallelData?.parts?.[0] || activeParallelPart;
+			const lineMetaDraft = lineMetaDrafts[lineStart] || {};
+			const hasLineSpeakerDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker');
+			const hasLineSpeakerColorDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker-color');
+			const hasLineSpeakerFallbackDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker-fallback');
+			const hasLineKindDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'kind');
+			const draftLineSpeaker = normalizeSyncCreatorSpeaker(lineMetaDraft.speaker);
+			const draftLineKind = normalizeSyncCreatorKind(lineMetaDraft.kind);
+			const existingLineSpeaker = normalizeSyncCreatorSpeaker(existingLine?.speaker);
+			const existingLineKind = normalizeSyncCreatorKind(existingLine?.kind);
+			const lineSpeaker = hasLineSpeakerDraft
+				? draftLineSpeaker || SYNC_CREATOR_DEFAULT_SPEAKER
+				: currentLineMeta.speaker || existingLineSpeaker || leadMetaPart?.speaker || SYNC_CREATOR_DEFAULT_SPEAKER;
+			const lineKind = hasLineKindDraft
+				? draftLineKind || SYNC_CREATOR_DEFAULT_KIND
+				: currentLineMeta.kind || existingLineKind || leadMetaPart?.kind || SYNC_CREATOR_DEFAULT_KIND;
+			const lineSpeakerFallback = sanitizeSyncCreatorSpeakerFallback(
+				lineSpeaker,
+				hasLineSpeakerFallbackDraft
+					? lineMetaDraft['speaker-fallback']
+					: currentLineMeta['speaker-fallback'] || existingLine?.['speaker-fallback'] || leadMetaPart?.['speaker-fallback'],
+				true,
+				hasLineSpeakerDraft ? lineMetaDraft.speaker : existingLine?.speaker || leadMetaPart?.speaker || lineSpeaker
+			);
+			const lineSpeakerColor = sanitizeSyncCreatorSpeakerColor(
+				lineSpeaker,
+				hasLineSpeakerColorDraft
+					? lineMetaDraft['speaker-color']
+					: currentLineMeta['speaker-color'] || existingLine?.['speaker-color'] || leadMetaPart?.['speaker-color'],
+				true,
+				lineSpeakerFallback
+			);
+			const shouldPersistLineSpeaker = multiVocalMode || lineSpeaker !== SYNC_CREATOR_DEFAULT_SPEAKER;
+			const shouldPersistLineKind = multiVocalMode || lineKind !== SYNC_CREATOR_DEFAULT_KIND;
+			if (lineSpeaker && shouldPersistLineSpeaker) {
+				lineData.speaker = lineSpeaker;
+			} else {
+				delete lineData.speaker;
+			}
+			if (lineSpeakerFallback) {
+				lineData['speaker-fallback'] = lineSpeakerFallback;
+			} else {
+				delete lineData['speaker-fallback'];
+			}
+			if (lineSpeakerColor) {
+				lineData['speaker-color'] = lineSpeakerColor;
+			} else {
+				delete lineData['speaker-color'];
+			}
+			if (lineKind && shouldPersistLineKind) {
+				lineData.kind = lineKind;
+			} else {
+				delete lineData.kind;
+			}
+		};
+		applyLineSpeakerMeta();
 
 		if (activeParallelPart && currentParallelData) {
 			const existingParts = Array.isArray(existingLine?.parallel?.parts) ? existingLine.parallel.parts : [];

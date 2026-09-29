@@ -1520,116 +1520,7 @@ const CommunityVideoSelector = ({
                   )
   ;
 
-  const renderSubmitForm = () =>
-            react.createElement(
-              "div",
-              {
-                className: "community-video-submit-form",
-              },
-	              react.createElement(
-	                "div",
-	                {
-	                  className: "form-group",
-	                },
-	                react.createElement(
-	                  "label",
-	                  null,
-	                  editingVideo
-	                    ? I18n.t("communityVideo.videoTitle")
-	                    : I18n.t("communityVideo.youtubeUrl")
-	                ),
-	                editingVideo
-	                  ? react.createElement(
-	                    "div",
-	                    {
-	                      className: "video-title-text",
-	                    },
-	                    `${editingVideo.youtubeTitle || editingVideo.youtubeVideoId} (${editingVideo.youtubeVideoId})`
-	                  )
-	                  : react.createElement("input", {
-	                    type: "text",
-	                    value: submitUrl,
-	                    onChange: (e) => setSubmitUrl(e.target.value),
-	                    placeholder: "https://youtube.com/watch?v=... or Video ID",
-	                  })
-	              ),
-
-              // 제목 표시
-              submitVideoTitle &&
-              react.createElement(
-                "div",
-                {
-                  className: "form-group video-title-preview",
-                },
-                react.createElement(
-                  "label",
-                  null,
-                  I18n.t("communityVideo.videoTitle")
-                ),
-                react.createElement(
-                  "div",
-                  {
-                    className: "video-title-text",
-                  },
-                  submitVideoTitle
-                )
-              ),
-
-              // 제목 로딩 중
-              isLoadingTitle &&
-              react.createElement(
-                "div",
-                {
-                  className: "form-group",
-                },
-                react.createElement(
-                  "div",
-                  {
-                    className: "loading-title",
-                  },
-                  I18n.t("communityVideo.loadingTitle")
-                )
-              ),
-
-              // Embed 미리보기 (등록 폼) - 폼용 별도 상태 사용
-              formPreviewVideoId &&
-              showSubmitForm &&
-              react.createElement(SimpleVideoPreview, {
-                videoId: formPreviewVideoId,
-                startTime: submitStartTime,
-                skipSegments: submitSkipSegments,
-              }),
-
-              react.createElement(
-                "div",
-                {
-                  className: "form-group",
-                },
-                react.createElement(
-                  "label",
-                  null,
-                  I18n.t("communityVideo.startTimeLabel")
-                ),
-                react.createElement(
-                  "div",
-                  {
-                    className: "form-hint",
-                  },
-                  I18n.t("communityVideo.startTimeHint")
-                ),
-                react.createElement("input", {
-                  type: "text",
-                  inputMode: "decimal",
-                  value: submitStartTime,
-                  onChange: (e) => setSubmitStartTime(e.target.value),
-                  onFocus: (e) => e.currentTarget.select(),
-                  onMouseDown: (e) => e.stopPropagation(),
-                  onClick: (e) => e.stopPropagation(),
-                  onBlur: (e) => setSubmitStartTime(String(normalizeCommunityVideoStartTime(e.target.value))),
-                  "aria-label": I18n.t("communityVideo.startTimeLabel"),
-                  placeholder: "0",
-                })
-              ),
+  const renderSkipSegmentEditor = () =>
               react.createElement(
                 "div",
                 {
@@ -1779,7 +1670,120 @@ const CommunityVideoSelector = ({
                     )
                   )
                 )
+              )
+  ;
+
+  const renderSubmitForm = () =>
+            react.createElement(
+              "div",
+              {
+                className: "community-video-submit-form",
+              },
+	              react.createElement(
+	                "div",
+	                {
+	                  className: "form-group",
+	                },
+	                react.createElement(
+	                  "label",
+	                  null,
+	                  editingVideo
+	                    ? I18n.t("communityVideo.videoTitle")
+	                    : I18n.t("communityVideo.youtubeUrl")
+	                ),
+	                editingVideo
+	                  ? react.createElement(
+	                    "div",
+	                    {
+	                      className: "video-title-text",
+	                    },
+	                    `${editingVideo.youtubeTitle || editingVideo.youtubeVideoId} (${editingVideo.youtubeVideoId})`
+	                  )
+	                  : react.createElement("input", {
+	                    type: "text",
+	                    value: submitUrl,
+	                    onChange: (e) => setSubmitUrl(e.target.value),
+	                    placeholder: "https://youtube.com/watch?v=... or Video ID",
+	                  })
+	              ),
+
+              // 제목 표시
+              submitVideoTitle &&
+              react.createElement(
+                "div",
+                {
+                  className: "form-group video-title-preview",
+                },
+                react.createElement(
+                  "label",
+                  null,
+                  I18n.t("communityVideo.videoTitle")
+                ),
+                react.createElement(
+                  "div",
+                  {
+                    className: "video-title-text",
+                  },
+                  submitVideoTitle
+                )
               ),
+
+              // 제목 로딩 중
+              isLoadingTitle &&
+              react.createElement(
+                "div",
+                {
+                  className: "form-group",
+                },
+                react.createElement(
+                  "div",
+                  {
+                    className: "loading-title",
+                  },
+                  I18n.t("communityVideo.loadingTitle")
+                )
+              ),
+
+              // Embed 미리보기 (등록 폼) - 폼용 별도 상태 사용
+              formPreviewVideoId &&
+              showSubmitForm &&
+              react.createElement(SimpleVideoPreview, {
+                videoId: formPreviewVideoId,
+                startTime: submitStartTime,
+                skipSegments: submitSkipSegments,
+              }),
+
+              react.createElement(
+                "div",
+                {
+                  className: "form-group",
+                },
+                react.createElement(
+                  "label",
+                  null,
+                  I18n.t("communityVideo.startTimeLabel")
+                ),
+                react.createElement(
+                  "div",
+                  {
+                    className: "form-hint",
+                  },
+                  I18n.t("communityVideo.startTimeHint")
+                ),
+                react.createElement("input", {
+                  type: "text",
+                  inputMode: "decimal",
+                  value: submitStartTime,
+                  onChange: (e) => setSubmitStartTime(e.target.value),
+                  onFocus: (e) => e.currentTarget.select(),
+                  onMouseDown: (e) => e.stopPropagation(),
+                  onClick: (e) => e.stopPropagation(),
+                  onBlur: (e) => setSubmitStartTime(String(normalizeCommunityVideoStartTime(e.target.value))),
+                  "aria-label": I18n.t("communityVideo.startTimeLabel"),
+                  placeholder: "0",
+                })
+              ),
+              renderSkipSegmentEditor(),
               formPreviewVideoId &&
               react.createElement(
                 "a",

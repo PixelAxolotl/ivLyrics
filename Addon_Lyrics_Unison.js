@@ -343,7 +343,7 @@
         });
 
         const paragraphs = getElementsByLocalName(document, 'p');
-        const parsedLines = paragraphs.map((paragraph, lineIndex) => {
+        const parseParagraphLine = (paragraph, lineIndex) => {
             const startTime = parseTimeMs(getAttribute(paragraph, 'begin')) ?? 0;
             const explicitEnd = parseTimeMs(getAttribute(paragraph, 'end'));
             const paragraphDuration = parseTimeMs(getAttribute(paragraph, 'dur'));
@@ -428,7 +428,9 @@
             }
 
             return line;
-        }).filter(Boolean);
+        };
+
+        const parsedLines = paragraphs.map(parseParagraphLine).filter(Boolean);
 
         parsedLines.sort((left, right) => left.startTime - right.startTime);
         parsedLines.forEach((line, index) => {

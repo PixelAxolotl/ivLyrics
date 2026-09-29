@@ -607,7 +607,7 @@
 
         const sourceLineKey = String(line.paxsenixSourceLineKey || line.paxsenixLineKey || 'line');
         const fragmentCount = plan.length - 1;
-        const fragments = plan.slice(0, -1).map((startIndex, fragmentIndex) => {
+        const buildJapaneseLineFragment = (startIndex, fragmentIndex) => {
             const endIndex = plan[fragmentIndex + 1];
             const fragmentSyllables = syllables.slice(startIndex, endIndex);
             const first = fragmentSyllables[0];
@@ -625,7 +625,8 @@
                 paxsenixSegmentIndex: fragmentIndex,
                 paxsenixSegmentCount: fragmentCount
             };
-        });
+        };
+        const fragments = plan.slice(0, -1).map(buildJapaneseLineFragment);
 
         const isJapaneseLineSplitSafe = () => {
         const flattenedSyllables = fragments.flatMap(fragment => fragment.syllables);

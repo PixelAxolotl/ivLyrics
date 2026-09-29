@@ -3285,7 +3285,7 @@ const TranslationMenu = react.memo(({ friendlyLanguage, hasTranslation }) => {
 
     const items = buildTranslationMenuItems();
 
-    openOptionsModal(I18n.t("menu.translationSettings"), items, async (name, value) => {
+    const handleTranslationMenuChange = async (name, value) => {
       // Skip processing for button items
       if (name === "open-api-settings") {
         return;
@@ -3355,7 +3355,9 @@ const TranslationMenu = react.memo(({ friendlyLanguage, hasTranslation }) => {
       }
 
       lyricContainerUpdate?.();
-    });
+    };
+
+    openOptionsModal(I18n.t("menu.translationSettings"), items, handleTranslationMenuChange);
   };
 
   return react.createElement(

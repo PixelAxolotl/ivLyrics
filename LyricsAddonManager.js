@@ -515,6 +515,50 @@
         };
     }
 
+    // Fetches a provider result, preferring a still-valid cache entry over a
+    // fresh provider.getLyrics() call. Mirrors the original try/finally: the
+    // AddonDebug timing span always closes, cache-lookup failures are swallowed
+    // with a warning, and debug logs fire in the same order. Returns the raw
+    // result plus whether it came from cache and whether the provider was hit.
+    async function resolveProviderResult(provider, info, lyricsCacheId, debugTiming) {
+        let result = null;
+        let cacheHit = false;
+        let providerFetched = false;
+
+        try {
+            if (lyricsCacheId && window.LyricsService?.getCachedLyrics) {
+                try {
+                    const cached = await window.LyricsService.getCachedLyrics(lyricsCacheId, provider.id);
+                    const isProviderCacheCurrent = cached && (!provider.cacheVersion || cached.cacheVersion === provider.cacheVersion);
+                    const isSyncDataRendererCurrent = !cached?.syncDataApplied
+                        || cached.syncDataRendererVersion === SYNC_DATA_RENDERER_VERSION;
+                    if (isProviderCacheCurrent && isSyncDataRendererCurrent) {
+                        result = cached;
+                        cacheHit = true;
+                        window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Cache hit for ${provider.id}`);
+                    } else if (isProviderCacheCurrent && !isSyncDataRendererCurrent) {
+                        window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Sync-data renderer cache mismatch for ${provider.id}, refetching...`);
+                    } else if (cached) {
+                        window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Cache version mismatch for ${provider.id}, refetching...`);
+                    }
+                } catch (error) {
+                    console.warn(`[LyricsAddonManager] Cache lookup failed for ${provider.id}:`, error);
+                }
+            }
+
+            if (!result) {
+                result = await provider.getLyrics(info);
+                providerFetched = true;
+            }
+        } finally {
+            if (debugTiming) {
+                window.AddonDebug.timeEnd('lyrics', `provider:${provider.id}`);
+            }
+        }
+
+        return { result, cacheHit, providerFetched };
+    }
+
     // ============================================
     // LyricsAddonManager Class
     // ============================================
@@ -1276,8 +1320,6 @@
             window.__ivLyricsDebugLog?.(`[LyricsAddonManager] User settings for ${provider.id}: character=${allowCharacter}, word=${allowWord}, synced=${allowSynced}, unsynced=${allowUnsynced}`);
 
             let result = null;
-            let cacheHit = false;
-            let providerFetched = false;
             let syncDataAppliedThisCall = false;
             let pseudoKaraokeChanged = false;
             let instrumentalBreaksNormalized = false;
@@ -1286,36 +1328,10 @@
                 window.AddonDebug.time('lyrics', `provider:${provider.id}`);
             }
 
-            try {
-                if (lyricsCacheId && window.LyricsService?.getCachedLyrics) {
-                    try {
-                        const cached = await window.LyricsService.getCachedLyrics(lyricsCacheId, provider.id);
-                        const isProviderCacheCurrent = cached && (!provider.cacheVersion || cached.cacheVersion === provider.cacheVersion);
-                        const isSyncDataRendererCurrent = !cached?.syncDataApplied
-                            || cached.syncDataRendererVersion === SYNC_DATA_RENDERER_VERSION;
-                        if (isProviderCacheCurrent && isSyncDataRendererCurrent) {
-                            result = cached;
-                            cacheHit = true;
-                            window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Cache hit for ${provider.id}`);
-                        } else if (isProviderCacheCurrent && !isSyncDataRendererCurrent) {
-                            window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Sync-data renderer cache mismatch for ${provider.id}, refetching...`);
-                        } else if (cached) {
-                            window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Cache version mismatch for ${provider.id}, refetching...`);
-                        }
-                    } catch (error) {
-                        console.warn(`[LyricsAddonManager] Cache lookup failed for ${provider.id}:`, error);
-                    }
-                }
-
-                if (!result) {
-                    result = await provider.getLyrics(info);
-                    providerFetched = true;
-                }
-            } finally {
-                if (debugTiming) {
-                    window.AddonDebug.timeEnd('lyrics', `provider:${provider.id}`);
-                }
-            }
+            const fetched = await resolveProviderResult(provider, info, lyricsCacheId, debugTiming);
+            result = fetched.result;
+            const cacheHit = fetched.cacheHit;
+            const providerFetched = fetched.providerFetched;
 
             if (!result || result.error) {
                 window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Provider ${provider.id} returned error:`, result?.error);

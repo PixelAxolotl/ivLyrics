@@ -12276,26 +12276,88 @@ react.createElement(OptionList, {
           ],
           onChange: () => { },
         });
-  const renderAboutTab = () =>
+  const renderAboutClientInfoSection = () =>
 react.createElement(
-        "div",
-        {
-          className: `tab-content ${activeTab === "about" ? "active" : ""}`,
-          "data-tab-id": "about",
-        },
-        // Discord 계정 연동 섹션 (최상단)
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.aboutTab.account.title"),
-          subtitle: I18n.t("settingsAdvanced.aboutTab.account.subtitle"),
-          sectionKey: "about-account",
-        }),
-        react.createElement(AccountSection),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.aboutTab.appInfo.title"),
-          subtitle: I18n.t("settingsAdvanced.aboutTab.subtitle"),
-          sectionKey: "about-app-info",
-        }),
-        react.createElement(
+          "div",
+          {
+            className: "info-card about-info-card about-client-card",
+            style: {
+              padding: "20px",
+              background: "rgba(255, 255, 255, 0.03)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: "0 0 12px 12px",
+              backdropFilter: "blur(30px) saturate(150%)",
+              WebkitBackdropFilter: "blur(30px) saturate(150%)",
+              marginBottom: "24px",
+            },
+          },
+          react.createElement(
+            "p",
+            {
+              className: "about-info-description about-info-description-compact",
+              style: {
+                margin: "0 0 8px",
+                fontSize: "13px",
+                lineHeight: "1.6",
+              },
+            },
+            I18n.t("settingsAdvanced.aboutTab.clientInfo.description"),
+          ),
+          react.createElement(
+            "div",
+            {
+              className: "about-client-id-row",
+              style: {
+                marginTop: "12px",
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+              },
+            },
+            react.createElement(
+              "div",
+              {
+                className: "about-client-id-box",
+                style: {
+                  flex: 1,
+                  borderRadius: "8px",
+                  padding: "10px 14px",
+                  fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                  fontSize: "13px",
+                  userSelect: "all",
+                  wordBreak: "break-all",
+                  lineHeight: "1.5",
+                },
+              },
+              Spicetify.LocalStorage.get("ivLyrics:user-hash")
+            ),
+            react.createElement(
+              "button",
+              {
+                className: "btn about-client-copy-btn",
+                onClick: () => {
+                  const clientId = Spicetify.LocalStorage.get("ivLyrics:user-hash");
+                  navigator.clipboard.writeText(clientId).then(() => {
+                    Toast.success(I18n.t("settingsAdvanced.aboutTab.clientInfo.copied"));
+                  }).catch(() => {
+                    Toast.error(I18n.t("settingsAdvanced.aboutTab.clientInfo.copyFailed"));
+                  });
+                },
+                style: {
+                  padding: "10px 16px",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  letterSpacing: "-0.01em",
+                  whiteSpace: "nowrap",
+                },
+              },
+              I18n.t("settingsAdvanced.aboutTab.clientInfo.copy")
+            )
+          )
+        );
+  const renderAboutAppInfoSection = () =>
+react.createElement(
           "div",
           {
             className: "info-card about-info-card",
@@ -12388,91 +12450,33 @@ react.createElement(
             },
             I18n.t("settingsAdvanced.aboutTab.thanks")
           )
-        ),
+        );
+  const renderAboutTab = () =>
+react.createElement(
+        "div",
+        {
+          className: `tab-content ${activeTab === "about" ? "active" : ""}`,
+          "data-tab-id": "about",
+        },
+        // Discord 계정 연동 섹션 (최상단)
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.aboutTab.account.title"),
+          subtitle: I18n.t("settingsAdvanced.aboutTab.account.subtitle"),
+          sectionKey: "about-account",
+        }),
+        react.createElement(AccountSection),
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.aboutTab.appInfo.title"),
+          subtitle: I18n.t("settingsAdvanced.aboutTab.subtitle"),
+          sectionKey: "about-app-info",
+        }),
+        renderAboutAppInfoSection(),
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.aboutTab.clientInfo.title"),
           subtitle: I18n.t("settingsAdvanced.aboutTab.clientInfo.subtitle"),
           sectionKey: "about-client-info",
         }),
-        react.createElement(
-          "div",
-          {
-            className: "info-card about-info-card about-client-card",
-            style: {
-              padding: "20px",
-              background: "rgba(255, 255, 255, 0.03)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: "0 0 12px 12px",
-              backdropFilter: "blur(30px) saturate(150%)",
-              WebkitBackdropFilter: "blur(30px) saturate(150%)",
-              marginBottom: "24px",
-            },
-          },
-          react.createElement(
-            "p",
-            {
-              className: "about-info-description about-info-description-compact",
-              style: {
-                margin: "0 0 8px",
-                fontSize: "13px",
-                lineHeight: "1.6",
-              },
-            },
-            I18n.t("settingsAdvanced.aboutTab.clientInfo.description"),
-          ),
-          react.createElement(
-            "div",
-            {
-              className: "about-client-id-row",
-              style: {
-                marginTop: "12px",
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-              },
-            },
-            react.createElement(
-              "div",
-              {
-                className: "about-client-id-box",
-                style: {
-                  flex: 1,
-                  borderRadius: "8px",
-                  padding: "10px 14px",
-                  fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-                  fontSize: "13px",
-                  userSelect: "all",
-                  wordBreak: "break-all",
-                  lineHeight: "1.5",
-                },
-              },
-              Spicetify.LocalStorage.get("ivLyrics:user-hash")
-            ),
-            react.createElement(
-              "button",
-              {
-                className: "btn about-client-copy-btn",
-                onClick: () => {
-                  const clientId = Spicetify.LocalStorage.get("ivLyrics:user-hash");
-                  navigator.clipboard.writeText(clientId).then(() => {
-                    Toast.success(I18n.t("settingsAdvanced.aboutTab.clientInfo.copied"));
-                  }).catch(() => {
-                    Toast.error(I18n.t("settingsAdvanced.aboutTab.clientInfo.copyFailed"));
-                  });
-                },
-                style: {
-                  padding: "10px 16px",
-                  borderRadius: "8px",
-                  fontSize: "13px",
-                  fontWeight: "600",
-                  letterSpacing: "-0.01em",
-                  whiteSpace: "nowrap",
-                },
-              },
-              I18n.t("settingsAdvanced.aboutTab.clientInfo.copy")
-            )
-          )
-        ),
+        renderAboutClientInfoSection(),
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.aboutTab.update.title"),
           subtitle: I18n.t("settingsAdvanced.aboutTab.update.subtitle"),

@@ -3152,21 +3152,7 @@ const FullscreenOverlay = (() => {
         const hideLeftPanelForTvMode = tvModeEnabled;
         const PresentationSwitcher = VinylMode?.PresentationSwitcher;
 
-        return react.createElement(react.Fragment, null,
-            renderResearchConsentDialog(),
-            !tvModeEnabled && !tmiMode && PresentationSwitcher && react.createElement(PresentationSwitcher, {
-                activeMode: normalizedPresentationMode,
-                visible: true,
-                onChange: handlePresentationModeChange
-            }),
-            // TMI Overlay for TV Mode & Portrait Mode (rendered above everything when active)
-            (tvModeEnabled || isPortraitFullscreen) && tmiMode && react.createElement("div", {
-                className: "fullscreen-tv-tmi-overlay"
-            },
-                renderTmiModeView(false)
-            ),
-            // Bottom-left: TV Mode Song Info OR Context info
-            tvModeEnabled ? react.createElement(react.Fragment, null,
+        const renderTvModeSongInfo = () => react.createElement(react.Fragment, null,
                 react.createElement("div", {
                     className: "fullscreen-tv-song-info"
                 },
@@ -3312,7 +3298,24 @@ const FullscreenOverlay = (() => {
                         react.createElement("span", { className: "fullscreen-tv-time total" }, formatTime(duration))
                     )
                 )
-            ) : react.createElement("div", {
+        );
+
+        return react.createElement(react.Fragment, null,
+            renderResearchConsentDialog(),
+            !tvModeEnabled && !tmiMode && PresentationSwitcher && react.createElement(PresentationSwitcher, {
+                activeMode: normalizedPresentationMode,
+                visible: true,
+                onChange: handlePresentationModeChange
+            }),
+            // TMI Overlay for TV Mode & Portrait Mode (rendered above everything when active)
+            (tvModeEnabled || isPortraitFullscreen) && tmiMode && react.createElement("div", {
+                className: "fullscreen-tv-tmi-overlay"
+            },
+                renderTmiModeView(false)
+            ),
+            // Bottom-left: TV Mode Song Info OR Context info
+            tvModeEnabled ? renderTvModeSongInfo()
+            : react.createElement("div", {
                 className: `fullscreen-bottom-left ${!uiVisible ? 'hidden' : ''}`
             },
                 react.createElement(ContextInfo, { show: showContextInOverlay, showImage: showContextImage })

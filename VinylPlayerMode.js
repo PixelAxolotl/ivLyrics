@@ -1568,7 +1568,7 @@ const VinylPlayerMode = (() => {
                 "--iv-video-stage-lyric-background-opacity": `${Math.min(100, Math.max(0, Number(vinylSettings.videoStageLyricBackgroundOpacity) || 0))}%`,
                 "--iv-vinyl-background-blur": `${backgroundBlur}px`
         };
-        return react.createElement("div", {
+        const renderModeOverlay = () => react.createElement("div", {
             className: [
                 "fullscreen-vinyl-overlay",
                 isClosing ? "is-closing" : "is-open",
@@ -1678,6 +1678,8 @@ const VinylPlayerMode = (() => {
                 renderLyricLayer(displayedLyric)
             ) : null
         );
+
+        return renderModeOverlay();
     });
 
     Mode.PresentationSwitcher = PresentationSwitcher;

@@ -9834,19 +9834,7 @@ const ConfigModal = ({
               unit: "%",
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            const configChange = new CustomEvent("ivLyrics", {
-              detail: {
-                type: "config",
-                name,
-                value,
-              },
-            });
-            window.dispatchEvent(configChange);
-          },
+          onChange: handleVisualConfigChange,
         }),
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.multiVocalColors.title") || "Multi-vocal Colors",
@@ -9863,14 +9851,7 @@ const ConfigModal = ({
               defaultValue: CONFIG.visual["sync-data-custom-speaker-colors-enabled"] ?? true,
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(new CustomEvent("ivLyrics", {
-              detail: { type: "config", name, value },
-            }));
-          },
+          onChange: handleVisualConfigChange,
         }),
         react.createElement(ConfigMultiVocalColorSettings),
         react.createElement(SettingsSectionTitle, {

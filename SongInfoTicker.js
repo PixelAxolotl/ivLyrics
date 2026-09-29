@@ -228,7 +228,7 @@ const SongResearch = (() => {
     const splitTrailingUrlPunctuation = (value) => {
         let url = value;
         let suffix = "";
-        while (/[.,;:!?，。！？、\]\}]/u.test(url.slice(-1))) {
+        while (/[.,;:!?，。！？、\]}]/u.test(url.slice(-1))) {
             suffix = url.slice(-1) + suffix;
             url = url.slice(0, -1);
         }

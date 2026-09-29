@@ -637,7 +637,7 @@
             if (start < 0) return '';
             const block = String(code).slice(start, start + 24000);
             const escapedProperty = String(propertyName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const match = block.match(new RegExp(`(?:^|[,{\\n\\r])\\s*${escapedProperty}\\s*:\\s*(['\"\\x60])([^'\"\\x60\\r\\n]+)\\1`, 'm'));
+            const match = block.match(new RegExp(`(?:^|[,{\\n\\r])\\s*${escapedProperty}\\s*:\\s*(['"\\x60])([^'"\\x60\\r\\n]+)\\1`, 'm'));
             return match ? match[2].trim() : '';
         }
 

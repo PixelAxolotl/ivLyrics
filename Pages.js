@@ -3600,7 +3600,7 @@ const splitLineByParallelShape = (text, rowCount) => {
 		return [];
 	}
 
-	const separatorParts = value.split(/\s*[\/|／｜]\s*/).filter(Boolean);
+	const separatorParts = value.split(/\s*[/|／｜]\s*/).filter(Boolean);
 	if (separatorParts.length === rowCount) {
 		return separatorParts;
 	}

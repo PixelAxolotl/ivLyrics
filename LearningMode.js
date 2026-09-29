@@ -852,13 +852,13 @@
         .normalize("NFKC")
         .toLowerCase()
         .replace(/[\u200B-\u200D\uFEFF]/g, "")
-        .replace(/[\"'`“”‘’「」『』,.;:!?！？。、，、·・()[\]{}<>/\\|~～_+=-]+/g, " ")
+        .replace(/["'`“”‘’「」『』,.;:!?！？。、，、·・()[\]{}<>/\\|~～_+=-]+/g, " ")
         .replace(/\s+/g, " ")
         .trim();
 
     const extractQuotedQuizText = (value) => {
         const text = String(value || "");
-        const match = text.match(/[\"“”'‘’「『](.*?)[\"“”'‘’」』]/);
+        const match = text.match(/["“”'‘’「『](.*?)["“”'‘’」』]/);
         return match?.[1] || "";
     };
 
@@ -925,7 +925,7 @@
 
     const LOCAL_SCRIPT_PRONUNCIATION_PATTERN = /[ㄱ-ㅎㅏ-ㅣ가-힣ぁ-ゟ゠-ヿ一-龯々〇]/u;
     const IPA_SYMBOL_PATTERN = /[ɑɐɒæɓʙβɔɕçɗɖðəɚɛɜɝɞɟɡɠɢʛɦɧħɥʜɨɪʝɭɬɫɮʟɯɰŋɳɲɴøɵɸœɶɹɻɾɽʀʁɺʂʃʈθʊʉʌʋⱱʍχʎʏʑʐʒʔʕʡʢʰʲʷˈˌːˑ̩̯̃]/u;
-    const PHONETIC_MARK_PATTERN = /[\/\[\]ˈˌːˑ̩̯̃]/u;
+    const PHONETIC_MARK_PATTERN = /[/[\]ˈˌːˑ̩̯̃]/u;
     const ASCII_ONLY_PATTERN = /^[\x00-\x7F]+$/;
     const normalizePronunciation = (value) => {
         const text = String(value || "").normalize("NFC").trim();

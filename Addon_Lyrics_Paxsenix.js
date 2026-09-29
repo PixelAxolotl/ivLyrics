@@ -41,7 +41,7 @@
     const DISPLAY_UPPERCASE_PATTERN = /[A-Z]/u;
     const DISPLAY_LOWERCASE_PATTERN = /[a-z]/u;
     const DISPLAY_NUMBER_PATTERN = /\p{Number}/u;
-    const DISPLAY_PUNCTUATION_PATTERN = /[.,'’!?;:()\-]/u;
+    const DISPLAY_PUNCTUATION_PATTERN = /[.,'’!?;:()-]/u;
 
     const SPEAKER_PALETTE = [
         { color: '#a8ccff', fallback: 'MALE 1' },

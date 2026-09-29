@@ -7820,7 +7820,7 @@ class LyricsContainer extends react.Component {
     const isNoteLine = (text) => {
       const t = String(text || "").trim();
       if (!t) return true;
-      return /^[\s♪♩♫♬·•・。.、…~\-]+$/.test(t);
+      return /^[\s♪♩♫♬·•・。.、…~-]+$/.test(t);
     };
 
     // Helper function to normalize text for comparison

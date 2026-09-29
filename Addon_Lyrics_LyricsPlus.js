@@ -36,7 +36,7 @@
     const DISPLAY_UPPERCASE_PATTERN = /[A-Z]/u;
     const DISPLAY_LOWERCASE_PATTERN = /[a-z]/u;
     const DISPLAY_NUMBER_PATTERN = /\p{Number}/u;
-    const DISPLAY_PUNCTUATION_PATTERN = /[.,'’!?;:()\-]/u;
+    const DISPLAY_PUNCTUATION_PATTERN = /[.,'’!?;:()-]/u;
     const OBJECT_PROPERTY_IS_ENUMERABLE = Object.prototype.propertyIsEnumerable;
     const CACHE_VERSION = '2026-09-06-lyricsplus-11';
     const ATTRIBUTION = 'Lyrics from LyricsPlus.';
@@ -417,8 +417,8 @@
         const leftCharacter = getBoundaryCharacter(leftText, true);
         const rightCharacter = getBoundaryCharacter(rightText, false);
         if (!leftCharacter || !rightCharacter) return null;
-        if (/[\(\[\{（「『【〈《]/u.test(leftCharacter)) return null;
-        if (/[\)\]\}）」』】〉》、。，．！？?!]/u.test(rightCharacter)) return null;
+        if (/[([{（「『【〈《]/u.test(leftCharacter)) return null;
+        if (/[)\]}）」』】〉》、。，．！？?!]/u.test(rightCharacter)) return null;
         if (/[ゃゅょっぁぃぅぇぉゎャュョッァィゥェォヮー々]/u.test(rightCharacter)) return null;
 
         const leftEndTime = Number(leftSyllable?.endTime);

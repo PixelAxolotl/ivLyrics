@@ -3022,7 +3022,7 @@ const DebugInfoPanel = () => {
             // 엔드포인트 URL (축약)
             react.createElement("div", {
               className: "debug-api-endpoint"
-            }, log.endpoint?.replace(/https?:\/\/[^\/]+/, '') || '-'),
+            }, log.endpoint?.replace(/https?:\/\/[^/]+/, '') || '-'),
             // 상세 정보 (토글)
             showApiDetails[log.id] && react.createElement(
               "div",

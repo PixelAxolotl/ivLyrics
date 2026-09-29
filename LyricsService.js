@@ -734,7 +734,7 @@
                 /^\s*\[\s*(verse|chorus|bridge|intro|outro|pre-?chorus|hook|refrain)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
                 /^\s*\[\s*(절|후렴|브릿지|인트로|아웃트로|간주|부분)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
                 /^\s*\[\s*(ヴァース|コーラス|ブリッジ|イントロ|アウトロ)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
-                /^\s*\[\s*(verse|chorus|bridge|intro|outro)\s*(\d+)?\s*(:|：)?\s*[^,\[\]]*\]\s*$/i
+                /^\s*\[\s*(verse|chorus|bridge|intro|outro)\s*(\d+)?\s*(:|：)?\s*[^,[\]]*\]\s*$/i
             ];
 
             return sectionPatterns.some(pattern => pattern.test(normalizedText));
@@ -5631,7 +5631,7 @@
         const JAPANESE_PARTICLES = new Set(['は', 'が', 'を', 'に', 'へ', 'と', 'も', 'で', 'の', 'ね', 'よ', 'か', 'な', 'さ']);
         const HAN_PARTICLES = new Set(['的', '了', '吗', '呢', '啊', '呀', '吧', '啦', '嘛', '着', '过']);
         const LATIN_CONNECTOR_WORDS = new Set(['a', 'an', 'the', 'to', 'of', 'in', 'on', 'at', 'for', 'and', 'or', 'but']);
-        const UNIT_PUNCTUATION_REGEX = /[.,!?;:'"()[\]{}\-]/;
+        const UNIT_PUNCTUATION_REGEX = /[.,!?;:'"()[\]{}-]/;
         const _analysisCache = new Map();
         const _inflightAnalysis = new Map();
         const _analysisHintsCache = new WeakMap();
@@ -6936,7 +6936,7 @@
                 const unitText = phraseUnits[unitIndex - 1] || '';
                 const trimmedUnit = unitText.trim();
                 const isWhitespaceOnly = !trimmedUnit && /\s/.test(unitText);
-                const isPunctuationOnly = !!trimmedUnit && /^[.,!?;:'"()[\]{}\-]+$/.test(trimmedUnit);
+                const isPunctuationOnly = !!trimmedUnit && /^[.,!?;:'"()[\]{}-]+$/.test(trimmedUnit);
                 const isLexicalUnit = !!trimmedUnit && !isPunctuationOnly;
                 const minCandidateIndex = unitIndex;
                 const maxCandidateIndex = isFinalUnit

@@ -2451,7 +2451,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             /^\s*\[\s*(verse|chorus|bridge|intro|outro|pre-?chorus|hook|refrain)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
             /^\s*\[\s*(절|후렴|브릿지|인트로|아웃트로|간주|부분)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
             /^\s*\[\s*(ヴァース|コーラス|ブリッジ|イントロ|アウトロ)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
-            /^\s*\[\s*(verse|chorus|bridge|intro|outro)\s*(\d+)?\s*(:|：)?\s*[^,\[\]]*\]\s*$/i
+            /^\s*\[\s*(verse|chorus|bridge|intro|outro)\s*(\d+)?\s*(:|：)?\s*[^,[\]]*\]\s*$/i
         ].some(pattern => pattern.test(normalizedText));
     };
 
@@ -2521,7 +2521,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         };
         const isNoteLine = (text) => {
             const value = String(text || '').trim();
-            return !value || /^[\s♪♩♫♬·•・。、…~\-]+$/.test(value);
+            return !value || /^[\s♪♩♫♬·•・。、…~-]+$/.test(value);
         };
         const processPhoneticHyphen = (text) => {
             const mode = getVisualSetting('phonetic-hyphen-replace', 'keep');
@@ -2708,7 +2708,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         const value = typeof text === 'string' ? text.trim() : '';
         if (!value || rowCount <= 1) return [];
 
-        const separatorParts = value.split(/\s*[\/|／｜]\s*/).filter(Boolean);
+        const separatorParts = value.split(/\s*[/|／｜]\s*/).filter(Boolean);
         if (separatorParts.length === rowCount) {
             return separatorParts;
         }

@@ -790,7 +790,7 @@ const SYNC_CREATOR_KIND_OPTIONS = [
 	['pop', 'syncCreator.kindPop']
 ];
 const SYNC_CREATOR_KIND_LABELS = new Map(SYNC_CREATOR_KIND_OPTIONS);
-const SYNC_CREATOR_PARALLEL_HINT_REGEX = /[()（）\/|／｜]/u;
+const SYNC_CREATOR_PARALLEL_HINT_REGEX = /[()（）/|／｜]/u;
 const SYNC_CREATOR_LRC_METADATA_LINE_REGEX = /^\s*\[(?:ar|al|ti|au|length|by|offset|re|ve):[^\]]*\]\s*$/i;
 const SYNC_CREATOR_HANGUL_CODA_BY_JAMO = new Map([
 	['ㄱ', 1], ['ㄲ', 2], ['ㄳ', 3], ['ㄴ', 4], ['ㄵ', 5], ['ㄶ', 6], ['ㄷ', 7], ['ㄹ', 8],
@@ -1868,13 +1868,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const ch = chars[index];
 		if (!ch) return false;
 		if (isInternalJoiner(chars, index)) return false;
-		return /[\(\[\{「『【〈《¿¡'"“”‘’]/u.test(ch);
+		return /[([{「『【〈《¿¡'"“”‘’]/u.test(ch);
 	};
 	const isTrailingChar = (chars, index) => {
 		const ch = chars[index];
 		if (!ch) return false;
 		if (isInternalJoiner(chars, index)) return false;
-		return /[\s!?\.,;:\)\]\}」』】〉》'"“”‘’]/u.test(ch);
+		return /[\s!?.,;:)\]}」』】〉》'"“”‘’]/u.test(ch);
 	};
 	const isValidOnsetCluster = (cluster) => /^(bl|br|ch|chr|cl|cr|dr|fl|fr|gl|gr|ph|pl|pr|qu|sc|sch|scr|sh|sk|sl|sm|sn|sp|spl|spr|st|str|sw|th|thr|tr|tw|wh|wr)$/i.test(cluster);
 	const edgeInterpolation = (progress) => {

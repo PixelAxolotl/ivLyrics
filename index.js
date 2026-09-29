@@ -4282,20 +4282,7 @@ const LyricsCacheEditModal = ({
     }
   };
 
-  return react.createElement(
-    "div",
-    {
-      className: "ivlyrics-cache-edit-overlay",
-      onClick: handleOverlayClick,
-    },
-    react.createElement(
-      "div",
-      {
-        className: "ivlyrics-cache-edit-modal",
-        role: "dialog",
-        "aria-modal": true,
-        "aria-label": I18n.t("lyricsCacheEditor.title"),
-      },
+  const renderCacheEditHeader = () =>
       react.createElement(
         "div",
         { className: "ivlyrics-cache-edit-header" },
@@ -4329,7 +4316,10 @@ const LyricsCacheEditModal = ({
           },
           "×"
         )
-      ),
+      )
+  ;
+
+  const renderCacheEditBody = () =>
       react.createElement(
         "div",
         { className: "ivlyrics-cache-edit-body" },
@@ -4448,7 +4438,10 @@ const LyricsCacheEditModal = ({
           { className: "ivlyrics-cache-edit-error" },
           error
         )
-      ),
+      )
+  ;
+
+  const renderCacheEditFooter = () =>
       react.createElement(
         "div",
         { className: "ivlyrics-cache-edit-footer" },
@@ -4475,6 +4468,25 @@ const LyricsCacheEditModal = ({
             : I18n.t("lyricsCacheEditor.save")
         )
       )
+  ;
+
+  return react.createElement(
+    "div",
+    {
+      className: "ivlyrics-cache-edit-overlay",
+      onClick: handleOverlayClick,
+    },
+    react.createElement(
+      "div",
+      {
+        className: "ivlyrics-cache-edit-modal",
+        role: "dialog",
+        "aria-modal": true,
+        "aria-label": I18n.t("lyricsCacheEditor.title"),
+      },
+      renderCacheEditHeader(),
+      renderCacheEditBody(),
+      renderCacheEditFooter()
     )
   );
 };

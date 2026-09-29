@@ -2161,6 +2161,22 @@ const LYRICS_MODE_TYPE_KEYS = ['karaoke', 'synced', 'unsynced'];
 const IVLYRICS_RENDER_MODE_LOCK_STORAGE_KEY = "ivLyrics:visual:render-mode-lock";
 const getLyricsDataMode = (mode) => mode === WORD_KARAOKE ? KARAOKE : mode;
 const isKaraokeRenderMode = (mode) => mode === KARAOKE || mode === WORD_KARAOKE;
+// Returns the mode-specific lyrics array held on a LyricsContainer state when
+// it exists for the given render mode, otherwise undefined so callers can pick
+// their own fallback. Mirrors the if-chain the karaoke/synced/unsynced getters
+// used to repeat verbatim.
+const resolveModeSpecificLyrics = (state, currentMode) => {
+  if (isKaraokeRenderMode(currentMode) && Array.isArray(state.karaoke)) {
+    return state.karaoke;
+  }
+  if (currentMode === SYNCED && Array.isArray(state.synced)) {
+    return state.synced;
+  }
+  if (currentMode === UNSYNCED && Array.isArray(state.unsynced)) {
+    return state.unsynced;
+  }
+  return undefined;
+};
 const getLyricsModeTypeKey = (mode) => LYRICS_MODE_TYPE_KEYS[getLyricsDataMode(mode)] || null;
 const normalizeLyricsRenderModeLock = (value) => {
   if (value === null || value === undefined || value === "") return -1;
@@ -5096,16 +5112,10 @@ class LyricsContainer extends react.Component {
 
   getCurrentCulturalAnnotationLyrics() {
     const currentMode = this.getCurrentMode();
-    if (isKaraokeRenderMode(currentMode) && Array.isArray(this.state.karaoke)) {
-      return this.state.karaoke;
-    }
-    if (currentMode === SYNCED && Array.isArray(this.state.synced)) {
-      return this.state.synced;
-    }
-    if (currentMode === UNSYNCED && Array.isArray(this.state.unsynced)) {
-      return this.state.unsynced;
-    }
-    return Array.isArray(this.state.currentLyrics) ? this.state.currentLyrics : [];
+    return (
+      resolveModeSpecificLyrics(this.state, currentMode) ??
+      (Array.isArray(this.state.currentLyrics) ? this.state.currentLyrics : [])
+    );
   }
 
   clearCulturalAnnotationsForTrack(uri, { updateState = false } = {}) {
@@ -5270,18 +5280,10 @@ class LyricsContainer extends react.Component {
 
   getEditingBaseLyrics() {
     const currentMode = this.getCurrentMode();
-
-    if (isKaraokeRenderMode(currentMode) && Array.isArray(this.state.karaoke)) {
-      return this.state.karaoke;
-    }
-    if (currentMode === SYNCED && Array.isArray(this.state.synced)) {
-      return this.state.synced;
-    }
-    if (currentMode === UNSYNCED && Array.isArray(this.state.unsynced)) {
-      return this.state.unsynced;
-    }
-
-    return this.resolveLyricsForMode(this.state, currentMode) || [];
+    return (
+      resolveModeSpecificLyrics(this.state, currentMode) ??
+      (this.resolveLyricsForMode(this.state, currentMode) || [])
+    );
   }
 
   getEditableCacheSourceLines() {

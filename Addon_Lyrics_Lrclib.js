@@ -2288,6 +2288,18 @@
 
         return { headers, syncDataLineCharCounts, syncDataSource };
     }
+    // searchCandidates()와 getLyrics()의 트랙 메타데이터 파싱은 동일하다.
+    // (getSearchSettings/splitArtists 호출은 원래처럼 호출당 1회씩만 수행된다.)
+    function parseLrclibTrackMetadata(info) {
+        const title = info?.title?.trim?.();
+        const artist = info?.artist?.trim?.();
+        const album = info?.album?.trim?.();
+        const searchSettings = getSearchSettings();
+        const trackDuration = Number(info?.duration || 0);
+        const trackDurationSec = trackDuration > 0 ? trackDuration / 1000 : 0;
+        const expectedArtists = splitArtists(artist);
+        return { title, artist, album, searchSettings, trackDurationSec, expectedArtists };
+    }
     const LrclibLyricsAddon = {
         ...ADDON_INFO,  // 메타데이터 병합 (id, name, version 등)
 
@@ -2302,13 +2314,7 @@
 
         async searchCandidates(info) {
             try {
-                const title = info?.title?.trim?.();
-                const artist = info?.artist?.trim?.();
-                const album = info?.album?.trim?.();
-                const searchSettings = getSearchSettings();
-                const trackDuration = Number(info?.duration || 0);
-                const trackDurationSec = trackDuration > 0 ? trackDuration / 1000 : 0;
-                const expectedArtists = splitArtists(artist);
+                const { title, artist, album, searchSettings, trackDurationSec, expectedArtists } = parseLrclibTrackMetadata(info);
 
                 if (!title || !artist || !trackDurationSec) {
                     return {
@@ -2648,13 +2654,7 @@
             };
 
             try {
-                const title = info?.title?.trim?.();
-                const artist = info?.artist?.trim?.();
-                const album = info?.album?.trim?.();
-                const searchSettings = getSearchSettings();
-                const trackDuration = Number(info?.duration || 0);
-                const trackDurationSec = trackDuration > 0 ? trackDuration / 1000 : 0;
-                const expectedArtists = splitArtists(artist);
+                const { title, artist, album, searchSettings, trackDurationSec, expectedArtists } = parseLrclibTrackMetadata(info);
 
                 if (!title || !artist || !trackDurationSec) {
                     result.error = 'Missing track metadata';

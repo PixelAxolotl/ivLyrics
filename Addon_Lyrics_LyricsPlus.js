@@ -636,6 +636,7 @@
             };
         });
 
+        const isSoloLineSplitSafe = () => {
         const flattenedSyllables = fragments.flatMap(fragment => fragment.syllables);
         const preservesSyllables = flattenedSyllables.length === syllables.length
             && flattenedSyllables.every((syllable, index) => syllable === syllables[index]);
@@ -650,7 +651,9 @@
                     <= fragment.syllables[0].startTime
             )
         ));
-        return preservesSyllables && preservesText && hasSafeFragmentTiming
+        return preservesSyllables && preservesText && hasSafeFragmentTiming;
+        };
+        return isSoloLineSplitSafe()
             ? fragments
             : [line];
     }

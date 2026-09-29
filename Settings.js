@@ -11534,498 +11534,515 @@ react.createElement(OptionList, {
           ],
           onChange: handleVisualConfigChange,
         });
-  const renderFullscreenTab = () =>
-react.createElement(
-        "div",
+  const renderFullscreenTab = () => {
+    // ===== 기본 설정 섹션 =====
+    const renderFullscreenBasicSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.fullscreenMode.title"),
+            subtitle: I18n.t("settingsAdvanced.fullscreenMode.subtitle"),
+            sectionKey: "fullscreen-mode",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.playback.fullscreenShortcut.label"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.shortcut.info"),
+                key: "fullscreen-key",
+                type: ConfigHotkey,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.browserFullscreen.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.browserFullscreen.info"),
+                key: "fullscreen-browser-fullscreen",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-browser-fullscreen"] ?? false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.pageUiOnly.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.pageUiOnly.info"),
+                key: "fullscreen-page-ui-only",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-page-ui-only"] ?? false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.hideOverlay.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.hideOverlay.info"),
+                key: "fullscreen-hide-overlay",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-hide-overlay"] ?? true,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.tvMode.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.tvMode.info"),
+                key: "fullscreen-tv-mode",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-tv-mode"] ?? false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.toggleTvModeKey.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.toggleTvModeKey.info"),
+                key: "toggle-tv-mode-key",
+                type: ConfigHotkey,
+                defaultValue: "t",
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+
+    ];
+    // ===== LP 모드 섹션 =====
+    const renderFullscreenVinylSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("vinyl.mode"),
+            subtitle: I18n.t("vinyl.settings.subtitle"),
+            sectionKey: "vinyl-mode",
+          }),
+          react.createElement(FullscreenPresentationPicker, {
+            defaultValue:
+              CONFIG.visual["fullscreen-focus-presentation"] || "vinyl",
+            onChange: saveVinylSetting,
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("vinyl.settings.albumSizeLabel"),
+                info: I18n.t("vinyl.settings.albumSizeDesc"),
+                key: "fullscreen-vinyl-album-size",
+                type: ConfigSliderRange,
+                min: 70,
+                max: 140,
+                step: 5,
+                unit: "%",
+                defaultValue: CONFIG.visual["fullscreen-vinyl-album-size"] ?? 100,
+              },
+              {
+                desc: I18n.t("vinyl.settings.recordSizeLabel"),
+                info: I18n.t("vinyl.settings.recordSizeDesc"),
+                key: "fullscreen-vinyl-record-size",
+                type: ConfigSliderRange,
+                min: 70,
+                max: 140,
+                step: 5,
+                unit: "%",
+                defaultValue: CONFIG.visual["fullscreen-vinyl-record-size"] ?? 100,
+              },
+              {
+                desc: I18n.t("vinyl.settings.backgroundBlurLabel"),
+                info: I18n.t("vinyl.settings.backgroundBlurDesc"),
+                key: "fullscreen-vinyl-background-blur",
+                type: ConfigSliderRange,
+                min: 0,
+                max: 100,
+                step: 5,
+                unit: "px",
+                defaultValue: CONFIG.visual["fullscreen-vinyl-background-blur"] ?? 0,
+              },
+              {
+                desc: I18n.t("vinyl.settings.animationsLabel"),
+                info: I18n.t("vinyl.settings.animationsDesc"),
+                key: "fullscreen-vinyl-animations",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-vinyl-animations"] !== false,
+              },
+              {
+                desc: I18n.t("vinyl.settings.centerRotationLabel"),
+                info: I18n.t("vinyl.settings.centerRotationDesc"),
+                key: "fullscreen-vinyl-center-rotation",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-vinyl-center-rotation"] !== false,
+              },
+              {
+                desc: I18n.t("vinyl.settings.lyricsLabel"),
+                info: I18n.t("vinyl.settings.lyricsDesc"),
+                key: "fullscreen-vinyl-lyrics-enabled",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-vinyl-lyrics-enabled"] !== false,
+              },
+            ],
+            onChange: saveVinylSetting,
+          }),
+
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("vinyl.settings.tonearmTitle"),
+            subtitle: I18n.t("vinyl.settings.tonearmSubtitle"),
+            sectionKey: "vinyl-tonearm",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("vinyl.settings.tonearmStyleLabel"),
+                info: I18n.t("vinyl.settings.tonearmStyleDesc"),
+                key: "fullscreen-vinyl-tonearm-style",
+                type: ConfigSelection,
+                options: {
+                  s: I18n.t("vinyl.settings.tonearmStyleS"),
+                  straight: I18n.t("vinyl.settings.tonearmStyleStraight"),
+                  j: I18n.t("vinyl.settings.tonearmStyleJ"),
+                  linear: I18n.t("vinyl.settings.tonearmStyleLinear"),
+                },
+                defaultValue: CONFIG.visual["fullscreen-vinyl-tonearm-style"] || "s",
+              },
+              {
+                desc: I18n.t("vinyl.settings.tonearmFinishLabel"),
+                info: I18n.t("vinyl.settings.tonearmFinishDesc"),
+                key: "fullscreen-vinyl-tonearm-finish",
+                type: ConfigSelection,
+                options: {
+                  white: I18n.t("vinyl.settings.tonearmFinishWhite"),
+                  silver: I18n.t("vinyl.settings.tonearmFinishSilver"),
+                  black: I18n.t("vinyl.settings.tonearmFinishBlack"),
+                },
+                defaultValue: CONFIG.visual["fullscreen-vinyl-tonearm-finish"] || "white",
+              },
+              {
+                desc: I18n.t("vinyl.settings.tonearmSizeLabel"),
+                info: I18n.t("vinyl.settings.tonearmSizeDesc"),
+                key: "fullscreen-vinyl-tonearm-size",
+                type: ConfigSliderRange,
+                min: 80,
+                max: 120,
+                step: 5,
+                unit: "%",
+                defaultValue: CONFIG.visual["fullscreen-vinyl-tonearm-size"] ?? 100,
+              },
+            ],
+            onChange: saveVinylSetting,
+          }),
+
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("sections.typography"),
+            subtitle: I18n.t("vinyl.settings.typographySubtitle"),
+            sectionKey: "vinyl-typography",
+          }),
+          ...renderLyricsTypographySections({ vinyl: true, onChange: saveVinylSetting }),
+
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("vinyl.settings.videoStageTypographyTitle"),
+            subtitle: I18n.t("vinyl.settings.videoStageTypographySubtitle"),
+            sectionKey: "video-stage-typography",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.originalStyle.fontFamily"),
+                info: I18n.t("settingsAdvanced.originalStyle.fontFamilyDesc"),
+                key: "fullscreen-video-stage-original-font-family",
+                type: ConfigFontSelector,
+                defaultValue:
+                  CONFIG.visual["fullscreen-video-stage-original-font-family"] ||
+                  CONFIG.visual["fullscreen-vinyl-original-font-family"] ||
+                  "Pretendard Variable",
+              },
+              {
+                desc: I18n.t("settingsAdvanced.pronunciationStyle.title"),
+                info: I18n.t("settingsAdvanced.pronunciationStyle.fontFamilyDesc"),
+                key: "fullscreen-video-stage-phonetic-font-family",
+                type: ConfigFontSelector,
+                defaultValue:
+                  CONFIG.visual["fullscreen-video-stage-phonetic-font-family"] ||
+                  CONFIG.visual["fullscreen-vinyl-phonetic-font-family"] ||
+                  "Pretendard Variable",
+              },
+              {
+                desc: I18n.t("settingsAdvanced.translationStyle.title"),
+                info: I18n.t("settingsAdvanced.translationStyle.fontFamilyDesc"),
+                key: "fullscreen-video-stage-translation-font-family",
+                type: ConfigFontSelector,
+                defaultValue:
+                  CONFIG.visual["fullscreen-video-stage-translation-font-family"] ||
+                  CONFIG.visual["fullscreen-vinyl-translation-font-family"] ||
+                  "Pretendard Variable",
+              },
+              {
+                desc: I18n.t("settings.culturalAnnotations.fontFamily.label"),
+                info: I18n.t("settings.culturalAnnotations.fontFamily.desc"),
+                key: "fullscreen-video-stage-cultural-font-family",
+                type: ConfigFontSelector,
+                defaultValue:
+                  CONFIG.visual["fullscreen-video-stage-cultural-font-family"] ||
+                  CONFIG.visual["cultural-annotations-vinyl-font-family"] ||
+                  "Pretendard Variable",
+              },
+              {
+                desc: I18n.t("vinyl.settings.videoStageBackgroundColorLabel"),
+                info: I18n.t("vinyl.settings.videoStageBackgroundColorDesc"),
+                key: "fullscreen-video-stage-lyric-background-color",
+                type: ConfigColorPicker,
+                defaultValue:
+                  CONFIG.visual["fullscreen-video-stage-lyric-background-color"] ||
+                  "#000000",
+              },
+              {
+                desc: I18n.t("vinyl.settings.videoStageBackgroundOpacityLabel"),
+                info: I18n.t("vinyl.settings.videoStageBackgroundOpacityDesc"),
+                key: "fullscreen-video-stage-lyric-background-opacity",
+                type: ConfigSliderRange,
+                min: 0,
+                max: 100,
+                step: 1,
+                unit: "%",
+                defaultValue:
+                  CONFIG.visual["fullscreen-video-stage-lyric-background-opacity"] ??
+                  46,
+              },
+            ],
+            onChange: saveVinylSetting,
+          }),
+
+    ];
+    // ===== 일반 모드 레이아웃 섹션 =====
+    const renderFullscreenNormalLayoutSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.normalMode.title"),
+            subtitle: I18n.t("settingsAdvanced.normalMode.subtitle"),
+            sectionKey: "normal-mode",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.twoColumnLayout.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.splitView.info"),
+                key: "fullscreen-two-column",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-two-column"] ?? true,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.invertPosition.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.invertPosition.info"),
+                key: "fullscreen-layout-reverse",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-layout-reverse"] ?? false,
+                when: () => CONFIG.visual["fullscreen-two-column"] !== false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.showAlbumArt.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.showAlbumArt.info"),
+                key: "fullscreen-show-album",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-show-album"] ?? true,
+                when: () => CONFIG.visual["fullscreen-two-column"] !== false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.showTrackInfo.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.showTrackInfo.info"),
+                key: "fullscreen-show-info",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-show-info"] ?? true,
+                when: () => CONFIG.visual["fullscreen-two-column"] !== false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.normalMode.showAlbumName.desc"),
+                info: I18n.t("settingsAdvanced.normalMode.showAlbumName.info"),
+                key: "fullscreen-show-album-name",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-show-album-name"] ?? false,
+                when: () => CONFIG.visual["fullscreen-two-column"] !== false && CONFIG.visual["fullscreen-show-info"] !== false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.centerWhenNoLyrics.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.centerWhenNoLyrics.info"),
+                key: "fullscreen-center-when-no-lyrics",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-center-when-no-lyrics"] ?? true,
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+
+    ];
+    // ===== TV 모드 섹션 =====
+    const renderFullscreenTvModeSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.tvMode.title"),
+            subtitle: I18n.t("settingsAdvanced.tvMode.subtitle"),
+            sectionKey: "tv-mode",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.tvModeAlbumSize.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.tvModeAlbumSize.info"),
+                key: "fullscreen-tv-album-size",
+                type: ConfigSliderRange,
+                min: 80,
+                max: 200,
+                step: 10,
+                unit: "px",
+                defaultValue: CONFIG.visual["fullscreen-tv-album-size"] || 140,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.tvMode.showAlbumName.desc"),
+                info: I18n.t("settingsAdvanced.tvMode.showAlbumName.info"),
+                key: "fullscreen-tv-show-album-name",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-tv-show-album-name"] ?? true,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.tvMode.showControls.desc"),
+                info: I18n.t("settingsAdvanced.tvMode.showControls.info"),
+                key: "fullscreen-tv-show-controls",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-tv-show-controls"] ?? false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.tvMode.showProgress.desc"),
+                info: I18n.t("settingsAdvanced.tvMode.showProgress.info"),
+                key: "fullscreen-tv-show-progress",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-tv-show-progress"] ?? false,
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+
+    ];
+    // ===== 제목/아티스트 설정 섹션 =====
+    const renderFullscreenTitleArtistSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.metadataDisplay.title"),
+            subtitle: I18n.t("settingsAdvanced.metadataDisplay.subtitle"),
+            sectionKey: "metadata-display",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.trimTitle.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.trimTitle.info"),
+                key: "fullscreen-trim-title",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-trim-title"] ?? false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.translateMetadata.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.translateMetadata.info"),
+                key: "translate-metadata",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["translate-metadata"] ?? false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.info"),
+                key: "translate-metadata-mode",
+                type: ConfigSelection,
+                options: {
+                  "translated": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.translated"),
+                  "romanized": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.romanized"),
+                  "original-translated": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.originalTranslated"),
+                  "original-romanized": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.originalRomanized"),
+                  "all": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.all")
+                },
+                defaultValue: CONFIG.visual["translate-metadata-mode"] || "translated",
+                when: () => CONFIG.visual["translate-metadata"] === true,
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.fullscreenStyle.title"),
+            subtitle: I18n.t("settingsAdvanced.fullscreenStyle.subtitle"),
+            sectionKey: "fullscreen-style",
+          }),
+          renderFullscreenStyleSection(),
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.fullscreenUI.title"),
+            subtitle: I18n.t("settingsAdvanced.fullscreenUI.subtitle"),
+            sectionKey: "fullscreen-ui",
+          }),
+          renderFullscreenUiSection(),
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.controllerStyle.title"),
+            subtitle: I18n.t("settingsAdvanced.controllerStyle.subtitle"),
+            sectionKey: "controller-style",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.controllerStyle.buttonSize.desc"),
+                info: I18n.t("settingsAdvanced.controllerStyle.buttonSize.info"),
+                key: "fullscreen-control-button-size",
+                type: ConfigSliderRange,
+                min: 28,
+                max: 48,
+                step: 2,
+                unit: "px",
+                defaultValue: CONFIG.visual["fullscreen-control-button-size"] || 36,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.controllerStyle.background.desc"),
+                info: I18n.t("settingsAdvanced.controllerStyle.background.info"),
+                key: "fullscreen-controls-background",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-controls-background"] ?? false,
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.autoHide.title"),
+            subtitle: I18n.t("settingsAdvanced.autoHide.subtitle"),
+            sectionKey: "auto-hide",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.autoHide.enabled.desc"),
+                info: I18n.t("settingsAdvanced.autoHide.enabled.info"),
+                key: "fullscreen-auto-hide-ui",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-auto-hide-ui"] ?? true,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.autoHide.delay.desc"),
+                info: I18n.t("settingsAdvanced.autoHide.delay.info"),
+                key: "fullscreen-auto-hide-delay",
+                type: ConfigSliderRange,
+                min: 1,
+                max: 10,
+                step: 0.5,
+                unit: I18n.t("settingsAdvanced.fullscreenUI.nextTrackTime.unit"),
+                defaultValue: CONFIG.visual["fullscreen-auto-hide-delay"] || 3,
+                when: () => CONFIG.visual["fullscreen-auto-hide-ui"] !== false,
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.tmiStyle.title"),
+            subtitle: I18n.t("settingsAdvanced.tmiStyle.subtitle"),
+            sectionKey: "tmi-style",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.tmiStyle.fontSize.desc"),
+                info: I18n.t("settingsAdvanced.tmiStyle.fontSize.info"),
+                key: "fullscreen-tmi-font-size",
+                type: ConfigSliderRange,
+                min: 80,
+                max: 150,
+                step: 5,
+                unit: "%",
+                defaultValue: CONFIG.visual["fullscreen-tmi-font-size"] || 100,
+              },
+              ...createTextOutlineSettingItems("fullscreen-tmi"),
+            ],
+            onChange: handleVisualConfigChange,
+          })
+    ];
+
+    return react.createElement(
+      "div",
         {
           className: `tab-content ${activeTab === "fullscreen" ? "active" : ""}`,
           "data-tab-id": "fullscreen",
         },
-        // ===== 기본 설정 섹션 =====
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.fullscreenMode.title"),
-          subtitle: I18n.t("settingsAdvanced.fullscreenMode.subtitle"),
-          sectionKey: "fullscreen-mode",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.playback.fullscreenShortcut.label"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.shortcut.info"),
-              key: "fullscreen-key",
-              type: ConfigHotkey,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.browserFullscreen.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.browserFullscreen.info"),
-              key: "fullscreen-browser-fullscreen",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-browser-fullscreen"] ?? false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.pageUiOnly.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.pageUiOnly.info"),
-              key: "fullscreen-page-ui-only",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-page-ui-only"] ?? false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.hideOverlay.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.hideOverlay.info"),
-              key: "fullscreen-hide-overlay",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-hide-overlay"] ?? true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.tvMode.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.tvMode.info"),
-              key: "fullscreen-tv-mode",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-tv-mode"] ?? false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.toggleTvModeKey.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.toggleTvModeKey.info"),
-              key: "toggle-tv-mode-key",
-              type: ConfigHotkey,
-              defaultValue: "t",
-            },
-          ],
-          onChange: handleVisualConfigChange,
-        }),
-
-        // ===== LP 모드 섹션 =====
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("vinyl.mode"),
-          subtitle: I18n.t("vinyl.settings.subtitle"),
-          sectionKey: "vinyl-mode",
-        }),
-        react.createElement(FullscreenPresentationPicker, {
-          defaultValue:
-            CONFIG.visual["fullscreen-focus-presentation"] || "vinyl",
-          onChange: saveVinylSetting,
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("vinyl.settings.albumSizeLabel"),
-              info: I18n.t("vinyl.settings.albumSizeDesc"),
-              key: "fullscreen-vinyl-album-size",
-              type: ConfigSliderRange,
-              min: 70,
-              max: 140,
-              step: 5,
-              unit: "%",
-              defaultValue: CONFIG.visual["fullscreen-vinyl-album-size"] ?? 100,
-            },
-            {
-              desc: I18n.t("vinyl.settings.recordSizeLabel"),
-              info: I18n.t("vinyl.settings.recordSizeDesc"),
-              key: "fullscreen-vinyl-record-size",
-              type: ConfigSliderRange,
-              min: 70,
-              max: 140,
-              step: 5,
-              unit: "%",
-              defaultValue: CONFIG.visual["fullscreen-vinyl-record-size"] ?? 100,
-            },
-            {
-              desc: I18n.t("vinyl.settings.backgroundBlurLabel"),
-              info: I18n.t("vinyl.settings.backgroundBlurDesc"),
-              key: "fullscreen-vinyl-background-blur",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 100,
-              step: 5,
-              unit: "px",
-              defaultValue: CONFIG.visual["fullscreen-vinyl-background-blur"] ?? 0,
-            },
-            {
-              desc: I18n.t("vinyl.settings.animationsLabel"),
-              info: I18n.t("vinyl.settings.animationsDesc"),
-              key: "fullscreen-vinyl-animations",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-vinyl-animations"] !== false,
-            },
-            {
-              desc: I18n.t("vinyl.settings.centerRotationLabel"),
-              info: I18n.t("vinyl.settings.centerRotationDesc"),
-              key: "fullscreen-vinyl-center-rotation",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-vinyl-center-rotation"] !== false,
-            },
-            {
-              desc: I18n.t("vinyl.settings.lyricsLabel"),
-              info: I18n.t("vinyl.settings.lyricsDesc"),
-              key: "fullscreen-vinyl-lyrics-enabled",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-vinyl-lyrics-enabled"] !== false,
-            },
-          ],
-          onChange: saveVinylSetting,
-        }),
-
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("vinyl.settings.tonearmTitle"),
-          subtitle: I18n.t("vinyl.settings.tonearmSubtitle"),
-          sectionKey: "vinyl-tonearm",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("vinyl.settings.tonearmStyleLabel"),
-              info: I18n.t("vinyl.settings.tonearmStyleDesc"),
-              key: "fullscreen-vinyl-tonearm-style",
-              type: ConfigSelection,
-              options: {
-                s: I18n.t("vinyl.settings.tonearmStyleS"),
-                straight: I18n.t("vinyl.settings.tonearmStyleStraight"),
-                j: I18n.t("vinyl.settings.tonearmStyleJ"),
-                linear: I18n.t("vinyl.settings.tonearmStyleLinear"),
-              },
-              defaultValue: CONFIG.visual["fullscreen-vinyl-tonearm-style"] || "s",
-            },
-            {
-              desc: I18n.t("vinyl.settings.tonearmFinishLabel"),
-              info: I18n.t("vinyl.settings.tonearmFinishDesc"),
-              key: "fullscreen-vinyl-tonearm-finish",
-              type: ConfigSelection,
-              options: {
-                white: I18n.t("vinyl.settings.tonearmFinishWhite"),
-                silver: I18n.t("vinyl.settings.tonearmFinishSilver"),
-                black: I18n.t("vinyl.settings.tonearmFinishBlack"),
-              },
-              defaultValue: CONFIG.visual["fullscreen-vinyl-tonearm-finish"] || "white",
-            },
-            {
-              desc: I18n.t("vinyl.settings.tonearmSizeLabel"),
-              info: I18n.t("vinyl.settings.tonearmSizeDesc"),
-              key: "fullscreen-vinyl-tonearm-size",
-              type: ConfigSliderRange,
-              min: 80,
-              max: 120,
-              step: 5,
-              unit: "%",
-              defaultValue: CONFIG.visual["fullscreen-vinyl-tonearm-size"] ?? 100,
-            },
-          ],
-          onChange: saveVinylSetting,
-        }),
-
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("sections.typography"),
-          subtitle: I18n.t("vinyl.settings.typographySubtitle"),
-          sectionKey: "vinyl-typography",
-        }),
-        ...renderLyricsTypographySections({ vinyl: true, onChange: saveVinylSetting }),
-
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("vinyl.settings.videoStageTypographyTitle"),
-          subtitle: I18n.t("vinyl.settings.videoStageTypographySubtitle"),
-          sectionKey: "video-stage-typography",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.originalStyle.fontFamily"),
-              info: I18n.t("settingsAdvanced.originalStyle.fontFamilyDesc"),
-              key: "fullscreen-video-stage-original-font-family",
-              type: ConfigFontSelector,
-              defaultValue:
-                CONFIG.visual["fullscreen-video-stage-original-font-family"] ||
-                CONFIG.visual["fullscreen-vinyl-original-font-family"] ||
-                "Pretendard Variable",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.pronunciationStyle.title"),
-              info: I18n.t("settingsAdvanced.pronunciationStyle.fontFamilyDesc"),
-              key: "fullscreen-video-stage-phonetic-font-family",
-              type: ConfigFontSelector,
-              defaultValue:
-                CONFIG.visual["fullscreen-video-stage-phonetic-font-family"] ||
-                CONFIG.visual["fullscreen-vinyl-phonetic-font-family"] ||
-                "Pretendard Variable",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.translationStyle.title"),
-              info: I18n.t("settingsAdvanced.translationStyle.fontFamilyDesc"),
-              key: "fullscreen-video-stage-translation-font-family",
-              type: ConfigFontSelector,
-              defaultValue:
-                CONFIG.visual["fullscreen-video-stage-translation-font-family"] ||
-                CONFIG.visual["fullscreen-vinyl-translation-font-family"] ||
-                "Pretendard Variable",
-            },
-            {
-              desc: I18n.t("settings.culturalAnnotations.fontFamily.label"),
-              info: I18n.t("settings.culturalAnnotations.fontFamily.desc"),
-              key: "fullscreen-video-stage-cultural-font-family",
-              type: ConfigFontSelector,
-              defaultValue:
-                CONFIG.visual["fullscreen-video-stage-cultural-font-family"] ||
-                CONFIG.visual["cultural-annotations-vinyl-font-family"] ||
-                "Pretendard Variable",
-            },
-            {
-              desc: I18n.t("vinyl.settings.videoStageBackgroundColorLabel"),
-              info: I18n.t("vinyl.settings.videoStageBackgroundColorDesc"),
-              key: "fullscreen-video-stage-lyric-background-color",
-              type: ConfigColorPicker,
-              defaultValue:
-                CONFIG.visual["fullscreen-video-stage-lyric-background-color"] ||
-                "#000000",
-            },
-            {
-              desc: I18n.t("vinyl.settings.videoStageBackgroundOpacityLabel"),
-              info: I18n.t("vinyl.settings.videoStageBackgroundOpacityDesc"),
-              key: "fullscreen-video-stage-lyric-background-opacity",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 100,
-              step: 1,
-              unit: "%",
-              defaultValue:
-                CONFIG.visual["fullscreen-video-stage-lyric-background-opacity"] ??
-                46,
-            },
-          ],
-          onChange: saveVinylSetting,
-        }),
-
-        // ===== 일반 모드 레이아웃 섹션 =====
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.normalMode.title"),
-          subtitle: I18n.t("settingsAdvanced.normalMode.subtitle"),
-          sectionKey: "normal-mode",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.twoColumnLayout.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.splitView.info"),
-              key: "fullscreen-two-column",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-two-column"] ?? true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.invertPosition.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.invertPosition.info"),
-              key: "fullscreen-layout-reverse",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-layout-reverse"] ?? false,
-              when: () => CONFIG.visual["fullscreen-two-column"] !== false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.showAlbumArt.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.showAlbumArt.info"),
-              key: "fullscreen-show-album",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-show-album"] ?? true,
-              when: () => CONFIG.visual["fullscreen-two-column"] !== false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.showTrackInfo.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.showTrackInfo.info"),
-              key: "fullscreen-show-info",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-show-info"] ?? true,
-              when: () => CONFIG.visual["fullscreen-two-column"] !== false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.normalMode.showAlbumName.desc"),
-              info: I18n.t("settingsAdvanced.normalMode.showAlbumName.info"),
-              key: "fullscreen-show-album-name",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-show-album-name"] ?? false,
-              when: () => CONFIG.visual["fullscreen-two-column"] !== false && CONFIG.visual["fullscreen-show-info"] !== false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.centerWhenNoLyrics.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.centerWhenNoLyrics.info"),
-              key: "fullscreen-center-when-no-lyrics",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-center-when-no-lyrics"] ?? true,
-            },
-          ],
-          onChange: handleVisualConfigChange,
-        }),
-
-        // ===== TV 모드 섹션 =====
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.tvMode.title"),
-          subtitle: I18n.t("settingsAdvanced.tvMode.subtitle"),
-          sectionKey: "tv-mode",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.tvModeAlbumSize.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.tvModeAlbumSize.info"),
-              key: "fullscreen-tv-album-size",
-              type: ConfigSliderRange,
-              min: 80,
-              max: 200,
-              step: 10,
-              unit: "px",
-              defaultValue: CONFIG.visual["fullscreen-tv-album-size"] || 140,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.tvMode.showAlbumName.desc"),
-              info: I18n.t("settingsAdvanced.tvMode.showAlbumName.info"),
-              key: "fullscreen-tv-show-album-name",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-tv-show-album-name"] ?? true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.tvMode.showControls.desc"),
-              info: I18n.t("settingsAdvanced.tvMode.showControls.info"),
-              key: "fullscreen-tv-show-controls",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-tv-show-controls"] ?? false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.tvMode.showProgress.desc"),
-              info: I18n.t("settingsAdvanced.tvMode.showProgress.info"),
-              key: "fullscreen-tv-show-progress",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-tv-show-progress"] ?? false,
-            },
-          ],
-          onChange: handleVisualConfigChange,
-        }),
-
-        // ===== 제목/아티스트 설정 섹션 =====
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.metadataDisplay.title"),
-          subtitle: I18n.t("settingsAdvanced.metadataDisplay.subtitle"),
-          sectionKey: "metadata-display",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.trimTitle.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.trimTitle.info"),
-              key: "fullscreen-trim-title",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-trim-title"] ?? false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.translateMetadata.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.translateMetadata.info"),
-              key: "translate-metadata",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["translate-metadata"] ?? false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.info"),
-              key: "translate-metadata-mode",
-              type: ConfigSelection,
-              options: {
-                "translated": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.translated"),
-                "romanized": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.romanized"),
-                "original-translated": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.originalTranslated"),
-                "original-romanized": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.originalRomanized"),
-                "all": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.all")
-              },
-              defaultValue: CONFIG.visual["translate-metadata-mode"] || "translated",
-              when: () => CONFIG.visual["translate-metadata"] === true,
-            },
-          ],
-          onChange: handleVisualConfigChange,
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.fullscreenStyle.title"),
-          subtitle: I18n.t("settingsAdvanced.fullscreenStyle.subtitle"),
-          sectionKey: "fullscreen-style",
-        }),
-        renderFullscreenStyleSection(),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.fullscreenUI.title"),
-          subtitle: I18n.t("settingsAdvanced.fullscreenUI.subtitle"),
-          sectionKey: "fullscreen-ui",
-        }),
-        renderFullscreenUiSection(),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.controllerStyle.title"),
-          subtitle: I18n.t("settingsAdvanced.controllerStyle.subtitle"),
-          sectionKey: "controller-style",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.controllerStyle.buttonSize.desc"),
-              info: I18n.t("settingsAdvanced.controllerStyle.buttonSize.info"),
-              key: "fullscreen-control-button-size",
-              type: ConfigSliderRange,
-              min: 28,
-              max: 48,
-              step: 2,
-              unit: "px",
-              defaultValue: CONFIG.visual["fullscreen-control-button-size"] || 36,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.controllerStyle.background.desc"),
-              info: I18n.t("settingsAdvanced.controllerStyle.background.info"),
-              key: "fullscreen-controls-background",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-controls-background"] ?? false,
-            },
-          ],
-          onChange: handleVisualConfigChange,
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.autoHide.title"),
-          subtitle: I18n.t("settingsAdvanced.autoHide.subtitle"),
-          sectionKey: "auto-hide",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.autoHide.enabled.desc"),
-              info: I18n.t("settingsAdvanced.autoHide.enabled.info"),
-              key: "fullscreen-auto-hide-ui",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-auto-hide-ui"] ?? true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.autoHide.delay.desc"),
-              info: I18n.t("settingsAdvanced.autoHide.delay.info"),
-              key: "fullscreen-auto-hide-delay",
-              type: ConfigSliderRange,
-              min: 1,
-              max: 10,
-              step: 0.5,
-              unit: I18n.t("settingsAdvanced.fullscreenUI.nextTrackTime.unit"),
-              defaultValue: CONFIG.visual["fullscreen-auto-hide-delay"] || 3,
-              when: () => CONFIG.visual["fullscreen-auto-hide-ui"] !== false,
-            },
-          ],
-          onChange: handleVisualConfigChange,
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.tmiStyle.title"),
-          subtitle: I18n.t("settingsAdvanced.tmiStyle.subtitle"),
-          sectionKey: "tmi-style",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.tmiStyle.fontSize.desc"),
-              info: I18n.t("settingsAdvanced.tmiStyle.fontSize.info"),
-              key: "fullscreen-tmi-font-size",
-              type: ConfigSliderRange,
-              min: 80,
-              max: 150,
-              step: 5,
-              unit: "%",
-              defaultValue: CONFIG.visual["fullscreen-tmi-font-size"] || 100,
-            },
-            ...createTextOutlineSettingItems("fullscreen-tmi"),
-          ],
-          onChange: handleVisualConfigChange,
-        })
-      );
+      ...renderFullscreenBasicSection(),
+      ...renderFullscreenVinylSection(),
+      ...renderFullscreenNormalLayoutSection(),
+      ...renderFullscreenTvModeSection(),
+      ...renderFullscreenTitleArtistSection(),
+    );
+  };
 
   const renderAboutUpdateSection = () =>
 react.createElement(OptionList, {

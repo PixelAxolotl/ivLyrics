@@ -7635,22 +7635,24 @@ class LyricsContainer extends react.Component {
       uri,
     });
     const sharedSnapshot = window.LyricsService?.getLyricsSnapshot?.(uri);
-    const sharedPresentationWasInvalidated = !!sharedSnapshot &&
-      this._invalidatedSharedPresentationSnapshots?.has(sharedSnapshot);
-    const sharedPresentationMatches =
-      !sharedPresentationWasInvalidated &&
-      sharedSnapshot?.presentationComplete === true &&
-      Array.isArray(sharedSnapshot?.displayLyrics) &&
-      sharedSnapshot.trackUri === uri &&
-      (sharedSnapshot.provider || '') === (lyricsState.provider || '') &&
-      sharedSnapshot.lyricsType === getLyricsModeTypeKey(mode) &&
-      (sharedSnapshot.displayMode1 || 'none') === (displayMode1 || 'none') &&
-      (sharedSnapshot.displayMode2 || 'none') === (displayMode2 || 'none') &&
-      (sharedSnapshot.detectedLanguage || '') === (originalLanguage || '') &&
-      (sharedSnapshot.translationTargetLanguage || '') === this.getTranslationTargetLanguage() &&
-      (sharedSnapshot.pronunciationNotation || 'translation') === getCurrentLyricsPronunciationNotation() &&
-      (!sharedSnapshot.translationSourceText ||
-        sharedSnapshot.translationSourceText === getNonSectionLyricsText(lyrics));
+    const computeSharedPresentationMatches = () => {
+      const sharedPresentationWasInvalidated = !!sharedSnapshot &&
+        this._invalidatedSharedPresentationSnapshots?.has(sharedSnapshot);
+      return !sharedPresentationWasInvalidated &&
+        sharedSnapshot?.presentationComplete === true &&
+        Array.isArray(sharedSnapshot?.displayLyrics) &&
+        sharedSnapshot.trackUri === uri &&
+        (sharedSnapshot.provider || '') === (lyricsState.provider || '') &&
+        sharedSnapshot.lyricsType === getLyricsModeTypeKey(mode) &&
+        (sharedSnapshot.displayMode1 || 'none') === (displayMode1 || 'none') &&
+        (sharedSnapshot.displayMode2 || 'none') === (displayMode2 || 'none') &&
+        (sharedSnapshot.detectedLanguage || '') === (originalLanguage || '') &&
+        (sharedSnapshot.translationTargetLanguage || '') === this.getTranslationTargetLanguage() &&
+        (sharedSnapshot.pronunciationNotation || 'translation') === getCurrentLyricsPronunciationNotation() &&
+        (!sharedSnapshot.translationSourceText ||
+          sharedSnapshot.translationSourceText === getNonSectionLyricsText(lyrics));
+    };
+    const sharedPresentationMatches = computeSharedPresentationMatches();
     if (sharedPresentationMatches) {
       this._sharedPresentationKeys.set(
         uri,
@@ -7747,33 +7749,36 @@ class LyricsContainer extends react.Component {
     const currentRendererVersion = getSyncDataRendererCacheVersion(lyricsState);
     const currentLyricsShapeSignature = getLyricsProcessingShapeSignature(lyrics);
     const currentPronunciationNotation = getCurrentLyricsPronunciationNotation();
-    if (this._dmResults[currentUri]) {
-      const cached = this._dmResults[currentUri];
-      // If provider, renderer, or selected lyric shape changed, invalidate all cache for this track.
-      if (cached.lastProvider !== currentProvider
-        || cached.lastRendererVersion !== currentRendererVersion
-        || cached.lastLyricsShapeSignature !== currentLyricsShapeSignature) {
-        ivLyricsDebug('[processLyricsWithDisplayModes] Lyrics source shape changed, invalidating display-mode cache', {
-          previousProvider: cached.lastProvider,
-          currentProvider,
-          previousShape: cached.lastLyricsShapeSignature,
-          currentShape: currentLyricsShapeSignature,
-        });
-        cached.mode1 = null;
-        cached.mode2 = null;
+    const invalidateStaleDisplayModeCache = () => {
+      if (this._dmResults[currentUri]) {
+        const cached = this._dmResults[currentUri];
+        // If provider, renderer, or selected lyric shape changed, invalidate all cache for this track.
+        if (cached.lastProvider !== currentProvider
+          || cached.lastRendererVersion !== currentRendererVersion
+          || cached.lastLyricsShapeSignature !== currentLyricsShapeSignature) {
+          ivLyricsDebug('[processLyricsWithDisplayModes] Lyrics source shape changed, invalidating display-mode cache', {
+            previousProvider: cached.lastProvider,
+            currentProvider,
+            previousShape: cached.lastLyricsShapeSignature,
+            currentShape: currentLyricsShapeSignature,
+          });
+          cached.mode1 = null;
+          cached.mode2 = null;
+        }
+        // If mode settings changed, invalidate cache for that mode
+        if (cached.lastMode1 !== displayMode1) {
+          cached.mode1 = null;
+        }
+        if (cached.lastMode2 !== displayMode2) {
+          cached.mode2 = null;
+        }
+        if (cached.lastPronunciationNotation !== currentPronunciationNotation) {
+          if (displayMode1 === "gemini_romaji") cached.mode1 = null;
+          if (displayMode2 === "gemini_romaji") cached.mode2 = null;
+        }
       }
-      // If mode settings changed, invalidate cache for that mode
-      if (cached.lastMode1 !== displayMode1) {
-        cached.mode1 = null;
-      }
-      if (cached.lastMode2 !== displayMode2) {
-        cached.mode2 = null;
-      }
-      if (cached.lastPronunciationNotation !== currentPronunciationNotation) {
-        if (displayMode1 === "gemini_romaji") cached.mode1 = null;
-        if (displayMode2 === "gemini_romaji") cached.mode2 = null;
-      }
-    }
+    };
+    invalidateStaleDisplayModeCache();
 
     this._dmResults[currentUri] = this._dmResults[currentUri] || {
       mode1: null,

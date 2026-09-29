@@ -2010,6 +2010,7 @@
                         }
                     }
 
+                    const buildResolvedSearchFlow = () => {
                     const withinTolerance = item => item?.durationDiff <= LRCLIB_DURATION_TOLERANCE_SEC;
                     // Every "best candidate" slot below prefers an in-tolerance
                     // match and otherwise falls back to any match, else null. Share
@@ -2052,6 +2053,8 @@
                         bestFallbackPlainCandidate: pickWithTolerance(fallbackScriptCandidates, isPlain),
                         bestInstrumentalCandidate: pickWithTolerance(rankedCandidates, isInstrumental)
                     };
+                    };
+                    return buildResolvedSearchFlow();
                 };
 
         return runSearchFlow;

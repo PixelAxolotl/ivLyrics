@@ -2329,8 +2329,6 @@ const Utils = {
             : "none";
         this.setCachedDiscordSupportTier(normalizedId, tier);
         return tier;
-      } catch (error) {
-        throw error;
       } finally {
         clearTimeout(timeoutId);
       }

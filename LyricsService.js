@@ -8914,12 +8914,8 @@
         }
 
         async initializeAsync(lang) {
-            try {
-                await this.injectExternals(lang);
-                await this.createTranslator(lang);
-            } catch (error) {
-                throw error;
-            }
+            await this.injectExternals(lang);
+            await this.createTranslator(lang);
         }
 
         static async callGemini({
@@ -9073,44 +9069,40 @@
 
         async injectExternals(lang) {
             const langCode = lang?.slice(0, 2);
-            try {
-                switch (langCode) {
-                    case "ja":
-                        await Promise.all([
-                            this.includeExternal(kuromojiPath),
-                            this.includeExternal(kuroshiroPath),
-                        ]);
-                        break;
-                    case "ko":
-                        await this.includeExternal(aromanize);
-                        break;
-                    case "zh":
-                        await this.includeExternal(openCCPath);
-                        this.includeExternal(pinyinProPath).catch(() => { });
-                        this.includeExternal(tinyPinyinPath).catch(() => { });
-                        break;
-                    case "ru":
-                    case "vi":
-                    case "de":
-                    case "en":
-                    case "es":
-                    case "fr":
-                    case "it":
-                    case "pt":
-                    case "nl":
-                    case "pl":
-                    case "tr":
-                    case "cs":
-                    case "ar":
-                    case "hi":
-                    case "th":
-                    case "id":
-                    case "ms":
-                        this.finished[langCode] = true;
-                        break;
-                }
-            } catch (error) {
-                throw error;
+            switch (langCode) {
+                case "ja":
+                    await Promise.all([
+                        this.includeExternal(kuromojiPath),
+                        this.includeExternal(kuroshiroPath),
+                    ]);
+                    break;
+                case "ko":
+                    await this.includeExternal(aromanize);
+                    break;
+                case "zh":
+                    await this.includeExternal(openCCPath);
+                    this.includeExternal(pinyinProPath).catch(() => { });
+                    this.includeExternal(tinyPinyinPath).catch(() => { });
+                    break;
+                case "ru":
+                case "vi":
+                case "de":
+                case "en":
+                case "es":
+                case "fr":
+                case "it":
+                case "pt":
+                case "nl":
+                case "pl":
+                case "tr":
+                case "cs":
+                case "ar":
+                case "hi":
+                case "th":
+                case "id":
+                case "ms":
+                    this.finished[langCode] = true;
+                    break;
             }
         }
 

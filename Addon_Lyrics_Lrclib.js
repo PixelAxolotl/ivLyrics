@@ -2550,47 +2550,42 @@
                     syncAddonCacheVersion();
                 }, []);
 
+                // 두 폴백 토글 행은 라벨/설명/체크 상태/onChange만 다르고 구조가 동일하다.
+                const renderFallbackSetting = ({ label, description, checked, onChange }) =>
+                    React.createElement('div', { className: 'ai-addon-setting' },
+                        React.createElement('div', {
+                            style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '12px'
+                            }
+                        },
+                            React.createElement('div', { style: { flex: '1 1 auto' } },
+                                React.createElement('label', null, label),
+                                React.createElement('small', null, description)
+                            ),
+                            React.createElement('input', {
+                                type: 'checkbox',
+                                checked,
+                                onChange
+                            })
+                        )
+                    );
+
                 return React.createElement('div', { className: 'lyrics-addon-settings ai-addon-settings lrclib-settings' },
-                    React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('div', {
-                            style: {
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: '12px'
-                            }
-                        },
-                            React.createElement('div', { style: { flex: '1 1 auto' } },
-                                React.createElement('label', null, getAddonText('settings.fallbackTitleArtistLabel', '1st Fallback (title + artist)')),
-                                React.createElement('small', null, getAddonText('settings.fallbackTitleArtistDesc', 'Use q=title+artist free-text search when structured search fails.'))
-                            ),
-                            React.createElement('input', {
-                                type: 'checkbox',
-                                checked: enableFallbackTitleArtist,
-                                onChange: handleToggle(LRCLIB_SETTING_KEYS.fallbackTitleArtist, setEnableFallbackTitleArtist)
-                            })
-                        )
-                    ),
-                    React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('div', {
-                            style: {
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: '12px'
-                            }
-                        },
-                            React.createElement('div', { style: { flex: '1 1 auto' } },
-                                React.createElement('label', null, getAddonText('settings.fallbackTitleOnlyLabel', '2nd Fallback (title only)')),
-                                React.createElement('small', null, getAddonText('settings.fallbackTitleOnlyDesc', 'Use q=title free-text search when the first fallback also fails.'))
-                            ),
-                            React.createElement('input', {
-                                type: 'checkbox',
-                                checked: enableFallbackTitleOnly,
-                                onChange: handleToggle(LRCLIB_SETTING_KEYS.fallbackTitleOnly, setEnableFallbackTitleOnly)
-                            })
-                        )
-                    )
+                    renderFallbackSetting({
+                        label: getAddonText('settings.fallbackTitleArtistLabel', '1st Fallback (title + artist)'),
+                        description: getAddonText('settings.fallbackTitleArtistDesc', 'Use q=title+artist free-text search when structured search fails.'),
+                        checked: enableFallbackTitleArtist,
+                        onChange: handleToggle(LRCLIB_SETTING_KEYS.fallbackTitleArtist, setEnableFallbackTitleArtist)
+                    }),
+                    renderFallbackSetting({
+                        label: getAddonText('settings.fallbackTitleOnlyLabel', '2nd Fallback (title only)'),
+                        description: getAddonText('settings.fallbackTitleOnlyDesc', 'Use q=title free-text search when the first fallback also fails.'),
+                        checked: enableFallbackTitleOnly,
+                        onChange: handleToggle(LRCLIB_SETTING_KEYS.fallbackTitleOnly, setEnableFallbackTitleOnly)
+                    })
                 );
             };
         },

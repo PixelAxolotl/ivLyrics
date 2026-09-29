@@ -219,9 +219,7 @@ const OverlaySettings = () => {
     return I18n.t("overlay.status.disconnected");
   };
 
-  return react.createElement(
-    "div",
-    { className: "option-list-wrapper" },
+  const renderOverlayEnableRow = () =>
     // Enable/Disable Row
     react.createElement(
       "div",
@@ -289,7 +287,9 @@ const OverlaySettings = () => {
           )
         )
       )
-    ),
+    );
+
+  const renderOverlayTrimRow = () =>
     react.createElement(
       "div",
       { className: "setting-row", "data-setting-key": "overlay-trim-metadata" },
@@ -313,7 +313,9 @@ const OverlaySettings = () => {
           })
         )
       )
-    ),
+    );
+
+  const renderOverlayPortRow = () =>
     // Port Setting Row (Only shown when enabled)
     enabled && react.createElement(
       "div",
@@ -356,7 +358,16 @@ const OverlaySettings = () => {
           })
         )
       )
-    )
+    );
+
+  return react.createElement(
+    "div",
+    { className: "option-list-wrapper" },
+    // Enable/Disable Row
+    renderOverlayEnableRow(),
+    renderOverlayTrimRow(),
+    // Port Setting Row (Only shown when enabled)
+    renderOverlayPortRow()
   );
 };
 

@@ -3168,7 +3168,7 @@ const TranslationMenu = react.memo(({ friendlyLanguage, hasTranslation }) => {
     // 현재 트랙의 언어 오버라이드 상태 (비동기로 로드)
     const currentOverride = window.lyricContainer?.trackLanguageOverride || null;
 
-    const items = [
+    const buildTranslationMenuItems = () => [
       {
         section: I18n.t("menu.detectedLanguage"),
         subtitle: I18n.t("menu.detectedLanguageInfo"),
@@ -3282,6 +3282,8 @@ const TranslationMenu = react.memo(({ friendlyLanguage, hasTranslation }) => {
         ],
       },
     ];
+
+    const items = buildTranslationMenuItems();
 
     openOptionsModal(I18n.t("menu.translationSettings"), items, async (name, value) => {
       // Skip processing for button items

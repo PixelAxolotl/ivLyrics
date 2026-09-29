@@ -6621,18 +6621,21 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				}
 			};
 
-			// 오른쪽 방향키: 한 글자 싱크
-			if (shortcutAction === 'charForward') {
+			const handleCharForwardShortcut = () => {
 				consumeKeyboardEvent();
 				const currentTime = Spicetify.Player.getProgress() / 1000;
 				if (syncGranularity === 'line') syncWholeLine(currentTime);
 				else if (syncGranularity === 'word') advanceOneSelectedWord(currentTime);
 				else advanceOneChar(currentTime);
 				return;
+			};
+			// 오른쪽 방향키: 한 글자 싱크
+			if (shortcutAction === 'charForward') {
+				handleCharForwardShortcut();
+				return;
 			}
 
-			// 왼쪽 방향키: 한 글자 취소 (첫 글자도 취소 가능)
-			if (shortcutAction === 'charBack') {
+			const handleCharBackShortcut = () => {
 				consumeKeyboardEvent();
 				if (syncGranularity === 'word') {
 					pendingSyllableSyncRef.current = null;
@@ -6656,24 +6659,37 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					}
 				}
 				return;
+			};
+			// 왼쪽 방향키: 한 글자 취소 (첫 글자도 취소 가능)
+			if (shortcutAction === 'charBack') {
+				handleCharBackShortcut();
+				return;
 			}
 
-			// . (> 키): 한 단어 싱크
-			if (shortcutAction === 'wordForward') {
+			const handleWordForwardShortcut = () => {
 				consumeKeyboardEvent();
 				const currentTime = Spicetify.Player.getProgress() / 1000;
 				if (syncGranularity === 'line') syncWholeLine(currentTime);
 				else if (syncGranularity === 'word') advanceOneSelectedWord(currentTime);
 				else advanceOneWord(currentTime);
 				return;
+			};
+			// . (> 키): 한 단어 싱크
+			if (shortcutAction === 'wordForward') {
+				handleWordForwardShortcut();
+				return;
 			}
 
-			// , (< 키): 한 단어 취소
-			if (shortcutAction === 'wordBack') {
+			const handleWordBackShortcut = () => {
 				consumeKeyboardEvent();
 				pendingSyllableSyncRef.current = null;
 				if (syncGranularity === 'word') revertOneSelectedWord();
 				else revertOneWord();
+				return;
+			};
+			// , (< 키): 한 단어 취소
+			if (shortcutAction === 'wordBack') {
+				handleWordBackShortcut();
 				return;
 			}
 

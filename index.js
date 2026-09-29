@@ -9919,7 +9919,7 @@ class LyricsContainer extends react.Component {
       this.state.currentLyrics.length > 0;
     const canRegenerateTranslation =
       hasLoadedGeminiTranslation || canRegenerateCulturalAnnotations;
-    const cacheEditModal =
+    const computeCacheEditModal = () =>
       this.state.isLyricsEditModalOpen &&
       react.createElement(LyricsCacheEditModal, {
         isOpen: this.state.isLyricsEditModalOpen,
@@ -9942,6 +9942,7 @@ class LyricsContainer extends react.Component {
         onTranslationChange: (value) =>
           this.setState({ lyricsEditTranslationText: value, lyricsEditError: "" }),
       });
+    const cacheEditModal = computeCacheEditModal();
 
     const renderedCurrentLyrics = isSyncCreatorActive && syncCreatorPlainLyrics.length > 0
       ? syncCreatorPlainLyrics

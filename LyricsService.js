@@ -4957,96 +4957,103 @@
                 return null;
             }
 
-            const syncBody = syncData.syncData;
-            const syncLines = expandSyncDataCompactLines(syncBody.lines);
-            const syncSource = syncBody.source || syncData.source || null;
-            const hasNormalizedSourceLineShape = Array.isArray(syncSource?.lineCharCounts)
-                && syncSource.lineCharCounts.length > 0;
-            const shouldNormalizeParentheticalLines =
-                Number(syncBody.version ?? syncData.version ?? 1) >= 2
-                || hasNormalizedSourceLineShape;
-            const baseLyricsLines = getSyncDataBaseLyricsLines(lyrics, shouldNormalizeParentheticalLines);
-            const baseLyricsTimingRows = getSyncDataBaseLyricsTimingRows(lyrics);
-            const baseLyricsText = baseLyricsLines.join('\n');
-            let normalizedSyncLines = syncLines;
-            let sourceLinePrefix = 0;
-            let hasExactSourceLineShape = false;
-            const sourceLineCharCounts = hasNormalizedSourceLineShape ? syncSource.lineCharCounts : null;
-            if (sourceLineCharCounts) {
-                const baseLineCharCounts = getSyncDataLineCharCounts(baseLyricsLines);
-                hasExactSourceLineShape = hasExactSyncDataLineShape(sourceLineCharCounts, baseLineCharCounts);
-                sourceLinePrefix = findSyncDataLineShapePrefix(sourceLineCharCounts, baseLineCharCounts);
-                if (sourceLinePrefix < 0) {
-                    window.__ivLyricsDebugLog?.('[SyncDataService] Sync-data source line shape mismatch; skipping karaoke render', {
-                        expectedLineCount: sourceLineCharCounts.length,
-                        actualLineCount: baseLineCharCounts.length,
-                        expectedPreview: sourceLineCharCounts.slice(0, 12),
-                        actualPreview: baseLineCharCounts.slice(0, 12),
-                        provider: syncData.provider,
-                        sourceProvider: syncSource?.provider,
-                        lrclibId: syncSource?.lrclibId
-                    });
-                    return null;
-                }
-                if (sourceLinePrefix > 0) {
-                    const sourceCharOffset = getSyncDataLeadingCharOffset(sourceLineCharCounts, sourceLinePrefix);
-                    normalizedSyncLines = shiftSyncDataLineIndexes(syncLines, sourceCharOffset);
-                    window.__ivLyricsDebugLog?.('[SyncDataService] Trimmed leading sync-data source lines', {
-                        prefixLineCount: sourceLinePrefix,
-                        sourceCharOffset,
-                        provider: syncData.provider,
-                        sourceProvider: syncSource?.provider,
-                        lrclibId: syncSource?.lrclibId
-                    });
-                }
-            }
-            if (sourceLinePrefix === 0 && syncSource?.lyricsFingerprint) {
-                const baseLyricsFingerprint = getSyncDataLyricsFingerprint(baseLyricsText);
-                if (syncSource.lyricsFingerprint !== baseLyricsFingerprint) {
-                    const currentLrclibId = options?.currentLrclibId
-                        ?? options?.result?.lrclibId
-                        ?? null;
-                    const canApplyLrclibFingerprintFallback = SyncDataSourceCompatibility
-                        .canApplyLrclibFingerprintFallback({
-                            syncSource,
-                            currentProvider: options?.result?.provider ?? options?.provider,
-                            currentLrclibId,
-                            hasExactLineShape: hasExactSourceLineShape
-                        });
-                    if (canApplyLrclibFingerprintFallback) {
-                        window.__ivLyricsDebugLog?.('[SyncDataService] LRCLIB lyrics fingerprint changed with the same source ID and exact line shape; applying sync-data compatibility fallback', {
-                            expected: syncSource.lyricsFingerprint,
-                            actual: baseLyricsFingerprint,
-                            provider: syncData.provider,
-                            sourceProvider: syncSource?.provider,
-                            lrclibId: syncSource?.lrclibId
-                        });
-                    } else {
-                        window.__ivLyricsDebugLog?.('[SyncDataService] Sync-data source fingerprint mismatch; skipping karaoke render', {
-                            expected: syncSource.lyricsFingerprint,
-                            actual: baseLyricsFingerprint,
+            const resolveNormalizedSyncLines = () => {
+                const syncBody = syncData.syncData;
+                const syncLines = expandSyncDataCompactLines(syncBody.lines);
+                const syncSource = syncBody.source || syncData.source || null;
+                const hasNormalizedSourceLineShape = Array.isArray(syncSource?.lineCharCounts)
+                    && syncSource.lineCharCounts.length > 0;
+                const shouldNormalizeParentheticalLines =
+                    Number(syncBody.version ?? syncData.version ?? 1) >= 2
+                    || hasNormalizedSourceLineShape;
+                const baseLyricsLines = getSyncDataBaseLyricsLines(lyrics, shouldNormalizeParentheticalLines);
+                const baseLyricsTimingRows = getSyncDataBaseLyricsTimingRows(lyrics);
+                const baseLyricsText = baseLyricsLines.join('\n');
+                let normalizedSyncLines = syncLines;
+                let sourceLinePrefix = 0;
+                let hasExactSourceLineShape = false;
+                const sourceLineCharCounts = hasNormalizedSourceLineShape ? syncSource.lineCharCounts : null;
+                if (sourceLineCharCounts) {
+                    const baseLineCharCounts = getSyncDataLineCharCounts(baseLyricsLines);
+                    hasExactSourceLineShape = hasExactSyncDataLineShape(sourceLineCharCounts, baseLineCharCounts);
+                    sourceLinePrefix = findSyncDataLineShapePrefix(sourceLineCharCounts, baseLineCharCounts);
+                    if (sourceLinePrefix < 0) {
+                        window.__ivLyricsDebugLog?.('[SyncDataService] Sync-data source line shape mismatch; skipping karaoke render', {
+                            expectedLineCount: sourceLineCharCounts.length,
+                            actualLineCount: baseLineCharCounts.length,
+                            expectedPreview: sourceLineCharCounts.slice(0, 12),
+                            actualPreview: baseLineCharCounts.slice(0, 12),
                             provider: syncData.provider,
                             sourceProvider: syncSource?.provider,
                             lrclibId: syncSource?.lrclibId
                         });
                         return null;
                     }
+                    if (sourceLinePrefix > 0) {
+                        const sourceCharOffset = getSyncDataLeadingCharOffset(sourceLineCharCounts, sourceLinePrefix);
+                        normalizedSyncLines = shiftSyncDataLineIndexes(syncLines, sourceCharOffset);
+                        window.__ivLyricsDebugLog?.('[SyncDataService] Trimmed leading sync-data source lines', {
+                            prefixLineCount: sourceLinePrefix,
+                            sourceCharOffset,
+                            provider: syncData.provider,
+                            sourceProvider: syncSource?.provider,
+                            lrclibId: syncSource?.lrclibId
+                        });
+                    }
                 }
-            }
-            const durationAdjustment = getSyncDataDurationOffsetMs(syncData, syncBody, options);
-            if (durationAdjustment.offsetMs) {
-                normalizedSyncLines = applySyncDataDurationOffsetToLines(normalizedSyncLines, durationAdjustment.offsetMs);
-                window.__ivLyricsDebugLog?.('[SyncDataService] Applied duration mismatch offset to sync-data', {
-                    provider: syncData.provider,
-                    isrc: syncData.isrc || null,
-                    registeredDurationMs: durationAdjustment.registeredDurationMs,
-                    currentDurationMs: durationAdjustment.currentDurationMs,
-                    diffMs: durationAdjustment.diffMs,
-                    frontOffsetMs: durationAdjustment.offsetMs,
-                    rearRemainderMs: durationAdjustment.diffMs - durationAdjustment.offsetMs,
-                    frontRatio: SYNC_DATA_DURATION_FRONT_OFFSET_RATIO
-                });
-            }
+                if (sourceLinePrefix === 0 && syncSource?.lyricsFingerprint) {
+                    const baseLyricsFingerprint = getSyncDataLyricsFingerprint(baseLyricsText);
+                    if (syncSource.lyricsFingerprint !== baseLyricsFingerprint) {
+                        const currentLrclibId = options?.currentLrclibId
+                            ?? options?.result?.lrclibId
+                            ?? null;
+                        const canApplyLrclibFingerprintFallback = SyncDataSourceCompatibility
+                            .canApplyLrclibFingerprintFallback({
+                                syncSource,
+                                currentProvider: options?.result?.provider ?? options?.provider,
+                                currentLrclibId,
+                                hasExactLineShape: hasExactSourceLineShape
+                            });
+                        if (canApplyLrclibFingerprintFallback) {
+                            window.__ivLyricsDebugLog?.('[SyncDataService] LRCLIB lyrics fingerprint changed with the same source ID and exact line shape; applying sync-data compatibility fallback', {
+                                expected: syncSource.lyricsFingerprint,
+                                actual: baseLyricsFingerprint,
+                                provider: syncData.provider,
+                                sourceProvider: syncSource?.provider,
+                                lrclibId: syncSource?.lrclibId
+                            });
+                        } else {
+                            window.__ivLyricsDebugLog?.('[SyncDataService] Sync-data source fingerprint mismatch; skipping karaoke render', {
+                                expected: syncSource.lyricsFingerprint,
+                                actual: baseLyricsFingerprint,
+                                provider: syncData.provider,
+                                sourceProvider: syncSource?.provider,
+                                lrclibId: syncSource?.lrclibId
+                            });
+                            return null;
+                        }
+                    }
+                }
+                const durationAdjustment = getSyncDataDurationOffsetMs(syncData, syncBody, options);
+                if (durationAdjustment.offsetMs) {
+                    normalizedSyncLines = applySyncDataDurationOffsetToLines(normalizedSyncLines, durationAdjustment.offsetMs);
+                    window.__ivLyricsDebugLog?.('[SyncDataService] Applied duration mismatch offset to sync-data', {
+                        provider: syncData.provider,
+                        isrc: syncData.isrc || null,
+                        registeredDurationMs: durationAdjustment.registeredDurationMs,
+                        currentDurationMs: durationAdjustment.currentDurationMs,
+                        diffMs: durationAdjustment.diffMs,
+                        frontOffsetMs: durationAdjustment.offsetMs,
+                        rearRemainderMs: durationAdjustment.diffMs - durationAdjustment.offsetMs,
+                        frontRatio: SYNC_DATA_DURATION_FRONT_OFFSET_RATIO
+                    });
+                }
+                return { syncSource, baseLyricsLines, baseLyricsTimingRows, normalizedSyncLines };
+            };
+            const syncLineNormalization = resolveNormalizedSyncLines();
+            if (!syncLineNormalization) return null;
+            const { syncSource, baseLyricsLines, baseLyricsTimingRows } = syncLineNormalization;
+            let normalizedSyncLines = syncLineNormalization.normalizedSyncLines;
 
             // 전체 가사 텍스트를 하나로 합침 (줄바꿈 없이 - SyncDataCreator와 동일하게)
             // SyncDataCreator에서는 각 줄의 글자 수만 계산하고 줄바꿈은 포함하지 않음

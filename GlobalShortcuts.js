@@ -175,16 +175,19 @@
         }
 
         // 컨테이너 클래스 업데이트 (fullscreen-container 내부의 컨테이너 찾기)
-        const fullscreenContainer = document.getElementById('lyrics-fullscreen-container');
-        const container = fullscreenContainer?.querySelector('.lyrics-lyricsContainer-LyricsContainer')
-            || document.querySelector('.lyrics-lyricsContainer-LyricsContainer.fullscreen-active');
-        if (container) {
-            if (newValue) {
-                container.classList.add('tv-mode-active');
-            } else {
-                container.classList.remove('tv-mode-active');
+        const updateTvModeContainerClass = () => {
+            const fullscreenContainer = document.getElementById('lyrics-fullscreen-container');
+            const container = fullscreenContainer?.querySelector('.lyrics-lyricsContainer-LyricsContainer')
+                || document.querySelector('.lyrics-lyricsContainer-LyricsContainer.fullscreen-active');
+            if (container) {
+                if (newValue) {
+                    container.classList.add('tv-mode-active');
+                } else {
+                    container.classList.remove('tv-mode-active');
+                }
             }
-        }
+        };
+        updateTvModeContainerClass();
     };
 
     // 전체화면 종료 시 이전 페이지로 돌아가기

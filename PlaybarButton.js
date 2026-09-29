@@ -64,20 +64,30 @@
 		});
 	}
 
-	function verifyButtonRegistration(callback, retries = 5) {
+	function verifyPlaybarButtonRegistration(selector, successMessage, failureMessage, callback, retries = 5) {
 		// 버튼이 실제로 DOM에 추가되었는지 확인
 		setTimeout(() => {
-			const ivLyricsButton = document.querySelector('.main-nowPlayingBar-extraControls button svg path[d*="M13.426 2.574"]');
-			if (ivLyricsButton) {
-				window.__ivLyricsDebugLog?.("[ivLyrics] Playbar button successfully registered");
+			const registeredButton = document.querySelector(selector);
+			if (registeredButton) {
+				window.__ivLyricsDebugLog?.(successMessage);
 				callback(true);
 			} else if (retries > 0) {
-				verifyButtonRegistration(callback, retries - 1);
+				verifyPlaybarButtonRegistration(selector, successMessage, failureMessage, callback, retries - 1);
 			} else {
-				console.warn("[ivLyrics] Playbar button registration verification failed");
+				console.warn(failureMessage);
 				callback(false);
 			}
 		}, 200);
+	}
+
+	function verifyButtonRegistration(callback, retries = 5) {
+		verifyPlaybarButtonRegistration(
+			'.main-nowPlayingBar-extraControls button svg path[d*="M13.426 2.574"]',
+			"[ivLyrics] Playbar button successfully registered",
+			"[ivLyrics] Playbar button registration verification failed",
+			callback,
+			retries
+		);
 	}
 
 	function setPlaybarButton() {
@@ -166,19 +176,13 @@
 	});
 
 	function verifyFullscreenButtonRegistration(callback, retries = 5) {
-		// 전체화면 버튼이 실제로 DOM에 추가되었는지 확인
-		setTimeout(() => {
-			const ivLyricsFullscreenButton = document.querySelector('.main-nowPlayingBar-extraControls button svg path[d*="M0.25 3C0.25"]');
-			if (ivLyricsFullscreenButton) {
-				window.__ivLyricsDebugLog?.("[ivLyrics] Fullscreen button successfully registered");
-				callback(true);
-			} else if (retries > 0) {
-				verifyFullscreenButtonRegistration(callback, retries - 1);
-			} else {
-				console.warn("[ivLyrics] Fullscreen button registration verification failed");
-				callback(false);
-			}
-		}, 200);
+		verifyPlaybarButtonRegistration(
+			'.main-nowPlayingBar-extraControls button svg path[d*="M0.25 3C0.25"]',
+			"[ivLyrics] Fullscreen button successfully registered",
+			"[ivLyrics] Fullscreen button registration verification failed",
+			callback,
+			retries
+		);
 	}
 
 	function setFullscreenButton() {

@@ -8327,6 +8327,27 @@ class LyricsContainer extends react.Component {
     await this.translator.awaitFinished(language);
 
     let result;
+    // zh-hans and zh-hant share an identical pinyin conversion path; keep it in
+    // one place so both Chinese branches stay in sync.
+    const convertLyricsToPinyin = async () => {
+      const converted = await Promise.all(
+        lyrics.map(
+          async (lyric) =>
+            await this.translator.convertToPinyin(lyric?.text || "", {
+              toneType: "mark",
+              type: "string",
+            })
+        )
+      );
+      // Warn if pinyin conversion produced no visible changes (likely CDN blocked -> fallback)
+      const anyChanged = lyrics.some(
+        (lyric, i) => (converted?.[i] ?? "") !== (lyric?.text || "")
+      );
+      if (!anyChanged) {
+        Toast.error(I18n.t("notifications.pinyinLibraryUnavailable"));
+      }
+      return converted;
+    };
     try {
       if (language === "ja") {
         // Japanese
@@ -8364,22 +8385,7 @@ class LyricsContainer extends react.Component {
       } else if (language === "zh-hans") {
         // Chinese (Simplified)
         if (targetConvert === "pinyin") {
-          result = await Promise.all(
-            lyrics.map(
-              async (lyric) =>
-                await this.translator.convertToPinyin(lyric?.text || "", {
-                  toneType: "mark",
-                  type: "string",
-                })
-            )
-          );
-          // Warn if pinyin conversion produced no visible changes (likely CDN blocked -> fallback)
-          const anyChanged = lyrics.some(
-            (lyric, i) => (result?.[i] ?? "") !== (lyric?.text || "")
-          );
-          if (!anyChanged) {
-            Toast.error(I18n.t("notifications.pinyinLibraryUnavailable"));
-          }
+          result = await convertLyricsToPinyin();
         } else {
           const map = {
             cn: { from: "cn", target: "cn" },
@@ -8407,22 +8413,7 @@ class LyricsContainer extends react.Component {
       } else if (language === "zh-hant") {
         // Chinese (Traditional)
         if (targetConvert === "pinyin") {
-          result = await Promise.all(
-            lyrics.map(
-              async (lyric) =>
-                await this.translator.convertToPinyin(lyric?.text || "", {
-                  toneType: "mark",
-                  type: "string",
-                })
-            )
-          );
-          // Warn if pinyin conversion produced no visible changes (likely CDN blocked -> fallback)
-          const anyChanged = lyrics.some(
-            (lyric, i) => (result?.[i] ?? "") !== (lyric?.text || "")
-          );
-          if (!anyChanged) {
-            Toast.error(I18n.t("notifications.pinyinLibraryUnavailable"));
-          }
+          result = await convertLyricsToPinyin();
         } else {
           const map = {
             cn: { from: "t", target: "cn" },

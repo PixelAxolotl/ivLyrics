@@ -12180,7 +12180,6 @@ react.createElement(OptionList, {
 												</div>
 											`;
                     } else if (updateInfo.hasUpdate) {
-                      showCopyButton = true;
                       const safeUpdateAvailable = escapeSettingsReleaseHtml(
                         I18n.t("notifications.updateAvailable")
                       );

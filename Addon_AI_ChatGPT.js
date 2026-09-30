@@ -1497,6 +1497,105 @@
                 const isModelInList = availableModels.find(m => m.id === model);
                 const hasApiKey = getApiKeys().length > 0;
 
+                const renderEndpointCard = (endpoint, index) => {
+                    const status = endpointTestStatus[endpoint.id] || '';
+                    const models = endpointModels[endpoint.id] || [];
+                    const modelsLoadingForEndpoint = !!endpointModelsLoading[endpoint.id];
+                    const endpointModel = endpoint.model || '';
+                    const endpointCustomModel = endpoint.customModel || '';
+                    const isEndpointModelInList = models.find(m => m.id === endpointModel);
+                    const hasEndpointApiKey = String(endpoint.apiKey || '').trim().length > 0;
+                    return React.createElement('div', {
+                        key: endpoint.id,
+                        style: { display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', marginTop: '6px' }
+                    },
+                        React.createElement('div', { className: 'ai-addon-input-group' },
+                            React.createElement('input', {
+                                type: 'text',
+                                value: endpoint.label,
+                                onChange: (e) => handleEndpointChange(endpoint.id, 'label', e.target.value),
+                                placeholder: `Endpoint ${index + 2} (e.g., Local Ollama)`
+                            }),
+                            React.createElement('button', {
+                                onClick: () => handleRemoveEndpoint(endpoint.id),
+                                className: 'ai-addon-btn-secondary'
+                            }, 'Remove')
+                        ),
+                        React.createElement('div', { className: 'ai-addon-setting' },
+                            React.createElement('label', null, 'API Key(s)'),
+                            React.createElement('div', { className: 'ai-addon-input-group' },
+                                React.createElement('input', {
+                                    type: 'text',
+                                    value: endpoint.apiKey,
+                                    onChange: (e) => handleEndpointChange(endpoint.id, 'apiKey', e.target.value),
+                                    placeholder: 'sk-...'
+                                }),
+                                React.createElement('button', { onClick: () => window.open(ADDON_INFO.apiKeyUrl, '_blank'), className: 'ai-addon-btn-secondary' }, 'Get API Key')
+                            )
+                        ),
+                        React.createElement('div', { className: 'ai-addon-setting' },
+                            React.createElement('label', null, 'Base URL'),
+                            React.createElement('input', {
+                                type: 'text',
+                                value: endpoint.baseUrl,
+                                onChange: (e) => handleEndpointChange(endpoint.id, 'baseUrl', e.target.value),
+                                placeholder: 'https://api.openai.com/v1'
+                            }),
+                            React.createElement('small', null, 'Change this to use OpenAI-compatible APIs')
+                        ),
+                        React.createElement('div', { className: 'ai-addon-setting' },
+                            React.createElement('label', null, 'Model'),
+                            React.createElement('div', { className: 'ai-addon-input-group' },
+                                React.createElement('select', {
+                                    value: isEndpointModelInList ? endpointModel : '',
+                                    onChange: (e) => handleEndpointModelChange(endpoint.id, e.target.value),
+                                    disabled: modelsLoadingForEndpoint
+                                },
+                                    modelsLoadingForEndpoint
+                                        ? React.createElement('option', { value: '' }, 'Loading models...')
+                                        : models.length > 0
+                                            ? [
+                                                !endpointModel && React.createElement('option', { key: '__placeholder__', value: '' }, '-- Select a model --'),
+                                                ...models.map(m => React.createElement('option', { key: m.id, value: m.id }, m.name)),
+                                                React.createElement('option', { key: 'custom', value: '' }, 'Custom...')
+                                            ].filter(Boolean)
+                                            : [
+                                                React.createElement('option', { key: 'empty', value: '' }, hasEndpointApiKey ? 'No models found' : 'Enter API key first'),
+                                                React.createElement('option', { key: 'custom', value: '' }, 'Custom...')
+                                            ]
+                                ),
+                                React.createElement('button', {
+                                    onClick: () => handleRefreshEndpointModels(endpoint),
+                                    className: 'ai-addon-btn-secondary',
+                                    disabled: modelsLoadingForEndpoint || !hasEndpointApiKey,
+                                    title: 'Refresh model list'
+                                }, modelsLoadingForEndpoint ? '...' : '↻')
+                            ),
+                            models.length > 0 && React.createElement('small', null, `${models.length} models available`)
+                        ),
+                        (!isEndpointModelInList || endpointCustomModel) &&
+                        React.createElement('div', { className: 'ai-addon-setting' },
+                            React.createElement('label', null, 'Custom Model ID'),
+                            React.createElement('input', {
+                                type: 'text',
+                                value: endpointCustomModel,
+                                onChange: (e) => handleEndpointCustomModelChange(endpoint.id, e.target.value),
+                                placeholder: 'e.g., gpt-4-turbo'
+                            })
+                        ),
+                        React.createElement('div', { className: 'ai-addon-input-group' },
+                            React.createElement('button', {
+                                onClick: () => handleTestEndpoint(endpoint),
+                                className: 'ai-addon-btn-primary',
+                                disabled: modelsLoadingForEndpoint || !hasEndpointApiKey
+                            }, 'Test Endpoint'),
+                            status && React.createElement('span', {
+                                className: `ai-addon-test-status ${status.startsWith('✓') ? 'success' : status.startsWith('✗') ? 'error' : ''}`
+                            }, status)
+                        )
+                    );
+                };
+
                 const handleAddEndpoint = useCallback(() => {
                     setExtraEndpointsState((prev) => {
                         const next = [...prev, {

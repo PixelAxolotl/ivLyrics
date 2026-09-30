@@ -7348,7 +7348,7 @@ class LyricsContainer extends react.Component {
       }
 
       // Check if lyrics indicate no lyrics / instrumental
-      // Conditions: 
+      // Conditions:
       // 1. Total lines <= 3
       // 2. First line contains "no lyrics" or "instrumental"
       const checkNoLyrics = (lyrics) => {

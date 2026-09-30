@@ -1,7 +1,7 @@
 /**
  * Groq AI Addon for ivLyrics
  * Groq의 초고속 추론을 사용한 번역, 발음, Research 생성
- * 
+ *
  * @author default
  * @version 1.0.1
  */

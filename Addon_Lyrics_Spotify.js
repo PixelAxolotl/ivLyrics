@@ -1,7 +1,7 @@
 /**
  * Spotify Lyrics Provider Addon
  * Spotify의 내장 가사 서비스를 통해 가사를 제공합니다.
- * 
+ *
  * Original Code is from https://github.com/spicetify/cli/tree/main/CustomApps/lyrics-plus
  *
  * @addon-type lyrics

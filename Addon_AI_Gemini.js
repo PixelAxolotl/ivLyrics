@@ -1,7 +1,7 @@
 /**
  * Gemini AI Addon for ivLyrics
  * Google Gemini AI를 사용한 번역, 발음, Research 생성
- * 
+ *
  * @author default
  * @version 1.0.1
  */

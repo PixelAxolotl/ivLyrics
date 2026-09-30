@@ -5908,7 +5908,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		if (endCharIndex < dragStartCharIndex) {
 			// 시작점보다 뒤로 가서 끝났으면 해당 부분은 싱크 안함 (혹은 이전 싱크 유지)
 			// 여기서는 그냥 저장 진행 (지워진 상태로)
-			// 만약 전체를 취소하고 싶다면 별도 처리가 필요하지만, 
+			// 만약 전체를 취소하고 싶다면 별도 처리가 필요하지만,
 			// UX상 왼쪽으로 가서 놓으면 그 부분은 싱크가 안 된 상태가 됨.
 		}
 

@@ -1367,13 +1367,13 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
             }
 
             // Ensure container is empty before creating new player
-            // containerRef.current.innerHTML = ""; // YT.Player replaces the element, so we need a wrapper or let it replace a child. 
+            // containerRef.current.innerHTML = ""; // YT.Player replaces the element, so we need a wrapper or let it replace a child.
             // Actually YT.Player replaces the target element. If we use a ref to a div, that div gets replaced by the iframe.
             // If we destroy the player, does it restore the div? No.
             // So we need to ensure we have a fresh target element.
-            // The easiest way is to let React handle the DOM node. 
+            // The easiest way is to let React handle the DOM node.
             // If we destroy the player, the iframe is removed. We might need to recreate the container div?
-            // Actually, YT.Player(id|element) replaces the element. 
+            // Actually, YT.Player(id|element) replaces the element.
             // If we use a ref, we should probably use a wrapper and append a child to it, or handle the ref carefully.
 
             // Better approach: Create a temporary div inside the container

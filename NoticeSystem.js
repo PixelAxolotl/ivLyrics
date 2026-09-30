@@ -151,7 +151,7 @@ const createNoticeIcon = (name, size = 20) => {
  *     }
  *   ]
  * }
- * 
+ *
  * dismissible 동작 규칙:
  * - dismissible: true → 항상 닫기 가능
  * - dismissible: false + min_version 없음 → 항상 닫기 불가

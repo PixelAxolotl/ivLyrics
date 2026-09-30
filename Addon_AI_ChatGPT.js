@@ -1,7 +1,7 @@
 /**
  * ChatGPT AI Addon for ivLyrics
  * OpenAI ChatGPT를 사용한 번역, 발음, Research 생성
- * 
+ *
  * @author default
  * @version 1.0.1
  */

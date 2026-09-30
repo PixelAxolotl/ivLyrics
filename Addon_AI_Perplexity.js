@@ -1,7 +1,7 @@
 /**
  * Perplexity AI Addon for ivLyrics
  * Perplexity AI를 사용한 번역, 발음, Research 생성
- * 
+ *
  * @author default
  * @version 1.0.1
  */

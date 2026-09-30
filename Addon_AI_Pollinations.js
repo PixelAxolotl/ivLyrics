@@ -1,7 +1,7 @@
 /**
  * Pollinations.ai AI Addon for ivLyrics
  * Pollinations.ai를 사용한 번역, 발음, Research 생성
- * 
+ *
  * @author default
  * @version 1.1.1
  */

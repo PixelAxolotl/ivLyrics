@@ -1,7 +1,7 @@
 /**
  * OpenRouter AI Addon for ivLyrics
  * OpenRouter를 통한 다양한 AI 모델 사용 (번역, 발음, Research 생성)
- * 
+ *
  * @author default
  * @version 1.0.1
  */

@@ -1,7 +1,7 @@
 /**
  * AI Addon Manager
  * AI 제공자(Gemini, ChatGPT 등) Addon들을 관리하는 중앙 시스템
- * 
+ *
  * @author ivLis STUDIO
  * @description 번역, 발음, 음악 Research 생성을 위한 AI Addon 등록 및 관리
  */
@@ -1996,7 +1996,7 @@ ${normalizedText}
         /**
          * Addon 등록
          * @param {Object} addon - Addon 객체
-         * 
+         *
          * 필수 필드:
          * - id: string (고유 ID)
          * - name: string (표시 이름)
@@ -2004,10 +2004,10 @@ ${normalizedText}
          * - description: string | { en: string, ko: string, ... } (설명)
          * - version: string (버전)
          * - supports: { translate: boolean, metadata: boolean, research|tmi: boolean, lyricsStudy: boolean, characterPronunciation: boolean, culturalAnnotations: boolean } (지원 기능)
-         * 
+         *
          * 필수 메서드:
          * - getSettingsUI(): React.Component (설정 UI)
-         * 
+         *
          * 기능별 메서드:
          * - translateLyrics(params): Promise<Object> (supports.translate = true인 경우)
          * - translateMetadata(params): Promise<Object> (supports.metadata = true인 경우)

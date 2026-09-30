@@ -1471,7 +1471,8 @@ window.LANG_VI = {
       "import": {
         "label": "Nhập cài đặt",
         "button": "Nhập",
-        "processing": "Đang nhập..."
+        "processing": "Đang nhập...",
+        "confirm": "Thao tác này sẽ nhập {count} cài đặt và thay thế cài đặt hiện tại của bạn. Tiếp tục?"
       }
     },
     "cloudSync": {

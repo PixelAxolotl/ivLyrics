@@ -1471,7 +1471,8 @@ window.LANG_CS = {
       "import": {
         "label": "Nastavení importu",
         "button": "Importovat",
-        "processing": "Import..."
+        "processing": "Import...",
+        "confirm": "Bude importováno {count} nastavení a vaše současná nastavení budou nahrazena. Pokračovat?"
       }
     },
     "cloudSync": {

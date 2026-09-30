@@ -11104,6 +11104,22 @@ const ConfigModal = ({
                         if (!cfg || typeof cfg !== "object" || Array.isArray(cfg)) {
                           throw new Error(I18n.t("settingsAdvanced.aboutTab.account.backup.invalidFormat"));
                         }
+
+                        // A settings file can point AI endpoints at a different
+                        // host while API keys already stored locally stay in
+                        // place, so the next request would send the existing key
+                        // there. Confirm before overwriting, like every other
+                        // destructive path in this screen.
+                        const settingCount = Object.keys(cfg).length;
+                        const confirmed = window.confirm(
+                          I18n.t("settingsAdvanced.exportImport.import.confirm", { count: settingCount })
+                        );
+                        if (!confirmed) {
+                          button.textContent = originalText;
+                          button.disabled = false;
+                          return;
+                        }
+
                         await StorageManager.importConfig(cfg);
 
                         const resultContainer = getSettingsResultContainer(button, "export-result-container");

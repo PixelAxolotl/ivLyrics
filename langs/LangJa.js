@@ -1471,7 +1471,8 @@ window.LANG_JA = {
       "import": {
         "label": "設定の読み込み",
         "button": "読み込み",
-        "processing": "読み込み中..."
+        "processing": "読み込み中...",
+        "confirm": "{count} 件の設定をインポートし、現在の設定を置き換えます。続行しますか？"
       }
     },
     "cloudSync": {

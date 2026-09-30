@@ -2940,6 +2940,12 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			return null;
 		}
 	});
+	const [showLineCounter, setShowLineCounter] = useState(() => {
+		try { return window.lyricContainer?.state?.showLineCounter ?? false; } catch (e) { return false; }
+	});
+	const [markedLines, setMarkedLines] = useState(() => {
+		try { return new Set(window.lyricContainer?.state?.markedLines ?? []); } catch (e) { return new Set(); }
+	});
 
 	// Refs
 	const containerRef = useRef(null);
@@ -9844,6 +9850,31 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			color: TOSS_BLUE, cursor: 'copy',
 			letterSpacing: '0', textTransform: 'none', lineHeight: 1.2
 		},
+		lineCounterSection: {
+			padding: '10px 12px',
+			borderBottom: `1px solid ${TOSS_BORDER}`,
+			background: 'rgba(255,255,255,0.02)'
+		},
+		lineCounterHeader: {
+			fontSize: '10px', fontWeight: '700', color: 'var(--spice-subtext)',
+			letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: '8px'
+		},
+		lineCounterGrid: {
+			display: 'flex', flexWrap: 'wrap', gap: '4px', maxHeight: '120px', overflowY: 'auto'
+		},
+		lineCounterItem: {
+			minWidth: '28px', height: '24px', padding: '0 6px',
+			borderRadius: '6px', border: '1px solid transparent',
+			background: 'rgba(255,255,255,0.04)', color: 'var(--spice-subtext)',
+			fontSize: '10px', fontWeight: '600', cursor: 'pointer',
+			display: 'inline-flex', alignItems: 'center', justifyContent: 'center'
+		},
+		lineCounterItemMarked: {
+			background: 'rgba(255, 214, 64, 0.15)', borderColor: 'rgba(255, 214, 64, 0.4)', color: '#ffd640'
+		},
+		lineCounterItemCurrent: {
+			borderColor: 'var(--spice-rgb-accent, 30, 215, 96)', color: 'var(--spice-text, #fff)'
+		},
 		candidatePreview: {
 			minHeight: '0',
 			background: 'rgba(255,255,255,0.025)',
@@ -11457,6 +11488,22 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			),
 			I18n.t('syncCreator.back') || '닫기'
 		),
+		react.createElement('button', {
+			className: 'sync-creator-line-counter-toggle',
+			style: {
+				...s.backBtn,
+				...(showLineCounter ? { background: 'rgba(255,255,255,0.1)', borderColor: 'rgba(255,255,255,0.2)' } : {})
+			},
+			onClick: () => {
+				const next = !showLineCounter;
+				setShowLineCounter(next);
+				if (window.lyricContainer?.setState) {
+					window.lyricContainer.setState({ showLineCounter: next });
+				}
+			},
+			title: 'Toggle line counter',
+			'aria-pressed': showLineCounter
+		}, '≡'),
 		renderGranularitySelector(),
 		(hasUnsubmittedSync || hasPublishedSync) && react.createElement('button', {
 			className: 'sync-creator-revert',
@@ -12139,6 +12186,39 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					react.createElement('div', { style: s.lineStatus }, isCurrentLineSynced ? '✓ ' + I18n.t('syncCreator.synced') : I18n.t('syncCreator.notSynced'))
 				),
 				react.createElement('button', { style: { ...s.navBtn, opacity: nextNavigableLineIndex < 0 ? 0.3 : 1 }, onClick: goToNextLine, disabled: nextNavigableLineIndex < 0 }, '›')
+			),
+			showLineCounter && react.createElement('div', { style: s.lineCounterSection },
+				react.createElement('div', { style: s.lineCounterHeader }, 'Line Counter'),
+				react.createElement('div', { style: s.lineCounterGrid },
+					lyricsLines.map((line, index) => {
+						const isMarked = markedLines.has(index);
+						const isCurrentLine = index === currentLineIndex;
+						return react.createElement('button', {
+							key: index,
+							type: 'button',
+							style: {
+								...s.lineCounterItem,
+								...(isMarked ? s.lineCounterItemMarked : {}),
+								...(isCurrentLine ? s.lineCounterItemCurrent : {})
+							},
+							onClick: () => {
+								setMarkedLines(prev => {
+									const next = new Set(prev);
+									if (next.has(index)) {
+										next.delete(index);
+									} else {
+										next.add(index);
+									}
+									if (window.lyricContainer?.setState) {
+										window.lyricContainer.setState({ markedLines: new Set(next) });
+									}
+									return next;
+								});
+							},
+							title: `Line ${index + 1}${isMarked ? ' (marked)' : ''}`
+						}, index + 1);
+					})
+				)
 			),
 			showLivePreview && renderLivePreviewOverlay(),
 			multiVocalMode && react.createElement('div', { style: s.multiVocalBanner },

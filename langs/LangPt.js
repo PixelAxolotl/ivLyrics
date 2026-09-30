@@ -1471,7 +1471,8 @@ window.LANG_PT = {
       "import": {
         "label": "Importar Configurações",
         "button": "Importar",
-        "processing": "Importando..."
+        "processing": "Importando...",
+        "confirm": "Isso importará {count} configurações e substituirá as suas configurações atuais. Continuar?"
       }
     },
     "cloudSync": {

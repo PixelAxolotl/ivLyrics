@@ -1471,7 +1471,8 @@ window.LANG_TR = {
     "import": {
       "label": "Ayarları İçe Aktar",
       "button": "İçe Aktar",
-      "processing": "İçe aktarılıyor..."
+      "processing": "İçe aktarılıyor...",
+      "confirm": "Bu işlem {count} ayarı içe aktarır ve mevcut ayarlarınızın yerini alır. Devam edilsin mi?"
     }
   },
   "cloudSync": {

@@ -1471,7 +1471,8 @@ window.LANG_FR = {
       "import": {
         "label": "Importer paramètres",
         "button": "Importer",
-        "processing": "Importation..."
+        "processing": "Importation...",
+        "confirm": "{count} paramètres seront importés et vos paramètres actuels seront remplacés. Continuer ?"
       }
     },
     "cloudSync": {

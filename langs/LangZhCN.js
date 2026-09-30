@@ -1471,7 +1471,8 @@ window.LANG_ZH_CN = {
       "import": {
         "label": "导入设置",
         "button": "导入",
-        "processing": "正在导入..."
+        "processing": "正在导入...",
+        "confirm": "将导入 {count} 项设置并替换当前设置。是否继续？"
       }
     },
     "cloudSync": {

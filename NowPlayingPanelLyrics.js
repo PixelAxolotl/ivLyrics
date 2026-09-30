@@ -3631,7 +3631,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         return react.createElement("div", { className: lineClass, style: lineStyle },
             react.createElement("p", {
                 className: "ivlyrics-panel-line-text",
-                dangerouslySetInnerHTML: displayText ? { __html: displayText } : undefined
+                ...Utils.createHTMLProps(displayText)
             }, displayText ? undefined : " "),
             phonetic && react.createElement("div", {
                 className: "ivlyrics-panel-line-phonetic"

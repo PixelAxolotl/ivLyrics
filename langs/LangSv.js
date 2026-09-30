@@ -1471,7 +1471,8 @@ window.LANG_SV = {
       "import": {
         "label": "Importera inställningar",
         "button": "Importera",
-        "processing": "Importerar..."
+        "processing": "Importerar...",
+        "confirm": "Detta importerar {count} inställningar och ersätter dina nuvarande inställningar. Fortsätt?"
       }
     },
     "cloudSync": {

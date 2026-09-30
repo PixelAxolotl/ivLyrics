@@ -287,6 +287,15 @@ const initializeFuriganaConverter = () => {
 
 // Load Kuromoji library for furigana conversion
 if (typeof window.kuromoji === "undefined") {
+  // Pinned to kuromoji@0.1.2 and verified by subresource integrity before the
+  // bytes execute in the Spicetify renderer. Both mirrors serve identical
+  // content, so one hash covers the fallback: a compromised mirror that
+  // substituted different bytes would fail the check and fall through to
+  // onerror instead of running. Regenerate with:
+  //   node -e "const c=require('crypto'),h=require('https');
+  //   h.get(u,r=>{const b=[];r.on('data',d=>b.push(d));r.on('end',()=>
+  //   console.log('sha384-'+c.createHash('sha384').update(Buffer.concat(b)).digest('base64')))})"
+  const KUROMOJI_INTEGRITY = "sha384-LCHxvFGxgpk9Bl+0+OaV6Rf24HQamJPrNHIo6VGkXkVgGWRvl68eqUwCW5PWqfwh";
   const kuromojiScriptUrls = [
     "https://cdn.jsdelivr.net/npm/kuromoji@0.1.2/build/kuromoji.js",
     "https://unpkg.com/kuromoji@0.1.2/build/kuromoji.js",
@@ -297,6 +306,10 @@ if (typeof window.kuromoji === "undefined") {
 
     const kuromojiScript = document.createElement("script");
     kuromojiScript.src = kuromojiScriptUrls[index];
+    // SRI is only enforced for cross-origin scripts when the request is made
+    // in CORS mode, so crossorigin is required for the hash to be checked.
+    kuromojiScript.integrity = KUROMOJI_INTEGRITY;
+    kuromojiScript.crossOrigin = "anonymous";
     kuromojiScript.async = false; // Load synchronously to ensure it's available
     kuromojiScript.onload = initializeFuriganaConverter;
     kuromojiScript.onerror = () => {
@@ -1699,6 +1712,22 @@ const IMPORT_PROVIDER_ORDER_KEYS = new Set([
   `${APP_NAME}:ai:provider-order`,
   `${APP_NAME}:lyrics:provider-order`,
 ]);
+// AI addon settings keep the API endpoint (`base-url`) and the API key
+// (`api-keys`) as two independent keys, and a request pairs the two. An
+// imported settings file can therefore redirect where a credential the user
+// already stored is sent, without that credential ever appearing in the file.
+// Imported endpoints are therefore restricted to http(s), matching the scheme
+// check the rest of the app already applies to provider URLs.
+const IMPORT_ENDPOINT_KEY_PATTERN = /(^|:)(base-url|baseurl|api-base|apiurl)$/i;
+const isImportedEndpointValueSafe = (value) => {
+  if (typeof value !== "string" || value.trim() === "") return false;
+  try {
+    const { protocol } = new URL(value.trim());
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+};
 const normalizeImportedConfig = (config) => {
   if (!config || typeof config !== "object" || Array.isArray(config)) {
     throw new TypeError("Invalid ivLyrics settings backup.");
@@ -1807,6 +1836,12 @@ const normalizeImportedConfig = (config) => {
 
   Object.entries(normalizedConfig).forEach(([key, value]) => {
     if (key === TRACK_SYNC_OFFSETS_STORAGE_KEY) return;
+    if (IMPORT_ENDPOINT_KEY_PATTERN.test(key)) {
+      if (isImportedEndpointValueSafe(value)) return;
+      delete normalizedConfig[key];
+      console.warn(`[ivLyrics] Ignored imported endpoint with unsafe value: ${key}`);
+      return;
+    }
     if (typeof value === "string") return;
     if (typeof value === "boolean" || (
       typeof value === "number" && Number.isFinite(value)
@@ -4682,6 +4717,8 @@ class LyricsContainer extends react.Component {
       isPlaybackPaused: true,
       lyricsRequestSeq: 0,
       isSyncCreatorActive: false,
+      showLineCounter: false,
+      markedLines: new Set(),
     };
     this.currentTrackUri = "";
     this._lyricsFetchSeq = 0;
@@ -10141,6 +10178,58 @@ class LyricsContainer extends react.Component {
           : react.createElement("div", null, I18n.t("messages.noLyrics"))
       )
       : null;
+    const lineCounterOverlay = isSyncCreatorActive && this.state.showLineCounter
+      ? react.createElement(
+        "div",
+        {
+          className: "ivlyrics-line-counter-overlay",
+          style: {
+            position: "absolute",
+            bottom: "20px",
+            right: "20px",
+            zIndex: 10,
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            padding: "8px 14px",
+            borderRadius: "10px",
+            background: "rgba(0, 0, 0, 0.65)",
+            backdropFilter: "blur(12px)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            color: "#fff",
+            fontSize: "13px",
+            fontWeight: "600",
+            cursor: "pointer",
+            userSelect: "none",
+          },
+          onClick: () => {
+            const currentIndex = this.state.currentLyricIndex || 0;
+            this.setState((prev) => {
+              const newMarked = new Set(prev.markedLines || []);
+              if (newMarked.has(currentIndex)) {
+                newMarked.delete(currentIndex);
+              } else {
+                newMarked.add(currentIndex);
+              }
+              return { markedLines: newMarked };
+            });
+          },
+          onContextMenu: (e) => {
+            e.preventDefault();
+            this.setState({ markedLines: new Set() });
+          },
+          title: "Click to mark/unmark current line",
+        },
+        react.createElement("span", null, `${(this.state.currentLyricIndex || 0) + 1} / ${syncCreatorPlainLyrics.length || 0}`),
+        react.createElement("span", {
+          style: {
+            fontSize: "10px",
+            opacity: 0.6,
+            marginLeft: "4px",
+          }
+        }, "≡")
+      )
+      : null;
     const fullscreenPresentation = this.state.isFullscreen
       ? normalizeIvLyricsFullscreenPresentation(
         this.state.fullscreenPresentation
@@ -10919,6 +11008,7 @@ class LyricsContainer extends react.Component {
       ),
       cacheEditModal,
       !shouldHideFullscreenLyrics && !suppressStaleLyricsPage && activeLyricsPage,
+      lineCounterOverlay,
       !this.state.showMarketplace &&
       !shouldHideFullscreenLyrics &&
       window.IvLyricsLearningMode?.StudyPanel &&

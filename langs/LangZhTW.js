@@ -1471,7 +1471,8 @@ window.LANG_ZH_TW = {
       "import": {
         "label": "匯入設定",
         "button": "匯入",
-        "processing": "正在匯入..."
+        "processing": "正在匯入...",
+        "confirm": "將匯入 {count} 項設定並取代目前的設定。是否繼續？"
       }
     },
     "cloudSync": {

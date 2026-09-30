@@ -1471,7 +1471,8 @@ window.LANG_MS = {
       "import": {
         "label": "Import Tetapan",
         "button": "Import",
-        "processing": "Mengimport..."
+        "processing": "Mengimport...",
+        "confirm": "Ini akan mengimport {count} tetapan dan menggantikan tetapan semasa anda. Teruskan?"
       }
     },
     "cloudSync": {

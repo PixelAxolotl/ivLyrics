@@ -1471,7 +1471,8 @@ window.LANG_ID = {
       "import": {
         "label": "Impor Pengaturan",
         "button": "Impor",
-        "processing": "Mengimpor..."
+        "processing": "Mengimpor...",
+        "confirm": "Ini akan mengimpor {count} setelan dan menggantikan setelan Anda saat ini. Lanjutkan?"
       }
     },
     "cloudSync": {

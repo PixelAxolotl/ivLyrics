@@ -1471,7 +1471,8 @@ window.LANG_KO = {
       "import": {
         "label": "설정 불러오기",
         "button": "불러오기",
-        "processing": "불러오는 중..."
+        "processing": "불러오는 중...",
+        "confirm": "{count}개의 설정을 불러와 현재 설정을 대체합니다. 계속할까요?"
       }
     },
     "cloudSync": {

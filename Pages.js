@@ -608,44 +608,6 @@ const CreatorProfileTrackCover = react.memo(({ title, artist }) => {
 	);
 });
 
-function createCreatorProfileShell(contributor, options = {}) {
-	const artist = typeof options.artist === "string" && options.artist.trim() ? options.artist.trim() : null;
-	const displayName = contributor?.name || "Anonymous";
-
-	return {
-		userHash: contributor?.userHash || null,
-		displayName,
-		account: contributor?.avatarUrl
-			? {
-				profileImage: contributor.avatarUrl,
-				displayName
-			}
-			: null,
-		stats: null,
-		viewer: {
-			authenticated: false,
-			isOwnProfile: false,
-			canLike: false,
-			liked: false
-		},
-		artistStats: {
-			items: []
-		},
-		filters: {
-			artist
-		},
-		contributions: [],
-		pagination: {
-			offset: 0,
-			limit: CREATOR_PROFILE_PAGE_SIZE,
-			returnedCount: 0,
-			totalCount: 0,
-			hasMore: false,
-			nextOffset: null
-		}
-	};
-}
-
 const CreatorDecorationEditor = react.memo(({
 	displayName,
 	tier,
@@ -824,7 +786,6 @@ const SyncCreatorProfileModal = react.memo(({
 	const trackCount = Number(profileData.stats?.trackCount || 0);
 	const contributionPoints = Number(profileData.stats?.contributionPoints || 0);
 	const likeCount = Number(profileData.stats?.likeCount || 0);
-	const artistGroupCount = Number(profileData.stats?.artistGroupCount || 0);
 	const totalContributionCount = Number(profileData.pagination?.totalCount || trackCount || 0);
 	const loadedContributionCount = contributions.length;
 	const hasMoreContributions = !!profileData.pagination?.hasMore;
@@ -875,6 +836,7 @@ const SyncCreatorProfileModal = react.memo(({
 			// The parent handler owns user-facing error messaging.
 		}
 	}, [canEditGreeting, greetingDraft, onSaveGreeting]);
+	const computeCreatorProfileIcons = () => {
 	const closeIcon = react.createElement(
 		"svg",
 		{
@@ -889,20 +851,23 @@ const SyncCreatorProfileModal = react.memo(({
 		react.createElement("path", { d: "M3 3l10 10" }),
 		react.createElement("path", { d: "M13 3L3 13" })
 	);
+	const buildThemeToggleIcon = (...iconChildren) => react.createElement(
+		"svg",
+		{
+			width: 16,
+			height: 16,
+			viewBox: "0 0 24 24",
+			fill: "none",
+			stroke: "currentColor",
+			strokeWidth: 2,
+			strokeLinecap: "round",
+			strokeLinejoin: "round",
+			"aria-hidden": "true"
+		},
+		...iconChildren
+	);
 	const themeIcon = isDarkTheme
-		? react.createElement(
-			"svg",
-			{
-				width: 16,
-				height: 16,
-				viewBox: "0 0 24 24",
-				fill: "none",
-				stroke: "currentColor",
-				strokeWidth: 2,
-				strokeLinecap: "round",
-				strokeLinejoin: "round",
-				"aria-hidden": "true"
-			},
+		? buildThemeToggleIcon(
 			react.createElement("circle", { cx: 12, cy: 12, r: 4 }),
 			react.createElement("path", { d: "M12 2v2" }),
 			react.createElement("path", { d: "M12 20v2" }),
@@ -913,19 +878,7 @@ const SyncCreatorProfileModal = react.memo(({
 			react.createElement("path", { d: "m6.34 17.66-1.41 1.41" }),
 			react.createElement("path", { d: "m19.07 4.93-1.41 1.41" })
 		)
-		: react.createElement(
-			"svg",
-			{
-				width: 16,
-				height: 16,
-				viewBox: "0 0 24 24",
-				fill: "none",
-				stroke: "currentColor",
-				strokeWidth: 2,
-				strokeLinecap: "round",
-				strokeLinejoin: "round",
-				"aria-hidden": "true"
-			},
+		: buildThemeToggleIcon(
 			react.createElement("path", { d: "M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8 8 0 1 0 11 11Z" })
 		);
 	const likeIcon = react.createElement(
@@ -961,6 +914,10 @@ const SyncCreatorProfileModal = react.memo(({
 		react.createElement("circle", { cx: 15, cy: 12, r: 2 }),
 		react.createElement("circle", { cx: 7, cy: 18, r: 2 })
 	);
+
+	return { closeIcon, themeIcon, likeIcon, decorationSettingsIcon };
+	};
+	const { closeIcon, themeIcon, likeIcon, decorationSettingsIcon } = computeCreatorProfileIcons();
 
 	const maybeLoadMore = react.useCallback(() => {
 		const body = bodyRef.current;
@@ -1016,33 +973,7 @@ const SyncCreatorProfileModal = react.memo(({
 		}
 	}, [uiTheme]);
 
-	const content = react.createElement(
-		react.Fragment,
-		null,
-		react.createElement(
-			"div",
-			{ className: "lyrics-creator-profile-hero" },
-			avatarUrl && !avatarFailed
-				? react.createElement("img", {
-					key: avatarUrl,
-					className: "lyrics-creator-profile-avatar",
-					src: avatarUrl,
-					alt: displayName,
-					onLoad: (event) => {
-						event.currentTarget.style.display = "";
-					},
-					onError: () => {
-						setFailedAvatarUrl(avatarUrl);
-					}
-				})
-				: react.createElement(
-					"div",
-					{ className: "lyrics-creator-profile-avatar lyrics-creator-profile-avatar-fallback" },
-					initial
-				),
-			react.createElement(
-				"div",
-				{ className: "lyrics-creator-profile-info" },
+	const renderCreatorProfileNameRow = () => (
 				react.createElement(
 					"div",
 					{ className: "lyrics-creator-profile-name-row" },
@@ -1098,7 +1029,9 @@ const SyncCreatorProfileModal = react.memo(({
 						decorationSettingsIcon
 					)
 				)
-				),
+				)
+	);
+	const renderCreatorProfileDecorationPanel = () => (
 			isOwnProfile && react.createElement(
 				"div",
 				{
@@ -1140,7 +1073,39 @@ const SyncCreatorProfileModal = react.memo(({
 							)
 						)
 					)
-			),
+			)
+	);
+	const renderCreatorProfileStats = () => (
+			hasLoadedProfileData
+				? react.createElement(
+						"div",
+						{ className: "lyrics-creator-profile-stats" },
+						react.createElement(
+							"div",
+							{ className: "lyrics-creator-profile-stat" },
+							react.createElement("strong", null, trackCount.toLocaleString()),
+							react.createElement("span", null, copy.tracks)
+						),
+					react.createElement(
+						"div",
+						{ className: "lyrics-creator-profile-stat" },
+						react.createElement("strong", null, likeCount.toLocaleString()),
+						react.createElement("span", null, copy.likes)
+					),
+					react.createElement(
+						"div",
+						{ className: "lyrics-creator-profile-stat is-points" },
+						react.createElement("strong", null, contributionPoints.toLocaleString(undefined, { maximumFractionDigits: 2 })),
+						react.createElement("span", null, copy.points)
+					)
+				)
+				: react.createElement(
+					"div",
+					{ className: "lyrics-creator-profile-inline-state" },
+					copy.loading
+			)
+	);
+	const renderCreatorProfileGreetingBlock = () => (
 			(greeting || canEditGreeting) && react.createElement(
 				"div",
 				{ className: "lyrics-creator-profile-greeting-block" },
@@ -1215,37 +1180,41 @@ const SyncCreatorProfileModal = react.memo(({
 								greeting ? copy.editGreeting : copy.addGreeting
 							)
 						)
-			),
-			hasLoadedProfileData
-				? react.createElement(
-						"div",
-						{ className: "lyrics-creator-profile-stats" },
-						react.createElement(
-							"div",
-							{ className: "lyrics-creator-profile-stat" },
-							react.createElement("strong", null, trackCount.toLocaleString()),
-							react.createElement("span", null, copy.tracks)
-						),
-					react.createElement(
-						"div",
-						{ className: "lyrics-creator-profile-stat" },
-						react.createElement("strong", null, likeCount.toLocaleString()),
-						react.createElement("span", null, copy.likes)
-					),
-					react.createElement(
-						"div",
-						{ className: "lyrics-creator-profile-stat is-points" },
-						react.createElement("strong", null, contributionPoints.toLocaleString(undefined, { maximumFractionDigits: 2 })),
-						react.createElement("span", null, copy.points)
-					)
-				)
+			)
+	);
+	const renderCreatorProfileHero = () => (
+		react.createElement(
+			"div",
+			{ className: "lyrics-creator-profile-hero" },
+			avatarUrl && !avatarFailed
+				? react.createElement("img", {
+					key: avatarUrl,
+					className: "lyrics-creator-profile-avatar",
+					src: avatarUrl,
+					alt: displayName,
+					onLoad: (event) => {
+						event.currentTarget.style.display = "";
+					},
+					onError: () => {
+						setFailedAvatarUrl(avatarUrl);
+					}
+				})
 				: react.createElement(
 					"div",
-					{ className: "lyrics-creator-profile-inline-state" },
-					copy.loading
-			)
+					{ className: "lyrics-creator-profile-avatar lyrics-creator-profile-avatar-fallback" },
+					initial
+				),
+			react.createElement(
+				"div",
+				{ className: "lyrics-creator-profile-info" },
+				renderCreatorProfileNameRow(),
+			renderCreatorProfileDecorationPanel(),
+			renderCreatorProfileGreetingBlock(),
+			renderCreatorProfileStats()
 		)
-	),
+	)
+	);
+	const renderCreatorProfileSections = () => (
 		error
 			? react.createElement(
 				"div",
@@ -1377,8 +1346,14 @@ const SyncCreatorProfileModal = react.memo(({
 						)
 				)
 	);
+	const content = react.createElement(
+		react.Fragment,
+		null,
+		renderCreatorProfileHero(),
+		renderCreatorProfileSections()
+	);
 
-	return react.createElement(
+	const renderCreatorProfileModalShell = () => react.createElement(
 		"div",
 		{
 			className: "lyrics-creator-profile-overlay",
@@ -1451,6 +1426,8 @@ const SyncCreatorProfileModal = react.memo(({
 			)
 		)
 	);
+
+	return renderCreatorProfileModalShell();
 });
 
 // CreditFooter implementing provider and contributor display
@@ -1914,7 +1891,7 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 		return null;
 	}
 
-	const footer = react.createElement(
+	const renderFooter = () => react.createElement(
 		"div",
 		{
 			className: "lyrics-credit-footer",
@@ -2015,42 +1992,48 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 		)
 	);
 
-	const modalContributor = creatorProfile && !profileLoading && !profileError
-		? activeContributor
-		: {
-			key: "unverified-creator",
-			userHash: null,
-			name: copy.anonymous,
-			avatarUrl: null,
-			linked: false,
-			profileAvailable: false,
-			anonymous: true,
-			isPrivate: true
-		};
-	const modal = activeContributor
-		? react.createElement(SyncCreatorProfileModal, {
-			contributor: modalContributor,
-			profile: creatorProfile,
-			loading: profileLoading,
-			error: profileError,
-			likePending,
-			greetingPending,
-			loadMorePending: profileLoadingMore,
-			listRefreshing: profileListRefreshing,
-			onClose: closeProfile,
-			onToggleLike: handleToggleLike,
-			onSaveGreeting: handleSaveGreeting,
-			onLoadMore: handleLoadMore,
-			onTrackClick: handleTrackClick,
-			activeArtistFilter: profileArtistFilter,
-			onArtistFilterChange: handleArtistFilterChange,
-			supportInfo: activeContributor?.userHash ? supportByUserHash[activeContributor.userHash] : null,
-			decorationPending,
-			onSaveDecoration: handleSaveDecoration,
-			onResetDecoration: handleResetDecoration,
-			onRefreshSupport: handleRefreshSupport
-		})
-		: null;
+	const footer = renderFooter();
+
+	const renderCreatorProfileModal = () => {
+		const modalContributor = creatorProfile && !profileLoading && !profileError
+			? activeContributor
+			: {
+				key: "unverified-creator",
+				userHash: null,
+				name: copy.anonymous,
+				avatarUrl: null,
+				linked: false,
+				profileAvailable: false,
+				anonymous: true,
+				isPrivate: true
+			};
+		return activeContributor
+			? react.createElement(SyncCreatorProfileModal, {
+				contributor: modalContributor,
+				profile: creatorProfile,
+				loading: profileLoading,
+				error: profileError,
+				likePending,
+				greetingPending,
+				loadMorePending: profileLoadingMore,
+				listRefreshing: profileListRefreshing,
+				onClose: closeProfile,
+				onToggleLike: handleToggleLike,
+				onSaveGreeting: handleSaveGreeting,
+				onLoadMore: handleLoadMore,
+				onTrackClick: handleTrackClick,
+				activeArtistFilter: profileArtistFilter,
+				onArtistFilterChange: handleArtistFilterChange,
+				supportInfo: activeContributor?.userHash ? supportByUserHash[activeContributor.userHash] : null,
+				decorationPending,
+				onSaveDecoration: handleSaveDecoration,
+				onResetDecoration: handleResetDecoration,
+				onRefreshSupport: handleRefreshSupport
+			})
+			: null;
+	};
+
+	const modal = renderCreatorProfileModal();
 
 	return react.createElement(
 		react.Fragment,
@@ -2776,24 +2759,24 @@ const renderLyricSubLine = (
 };
 
 const renderLyricMainContent = ({
-  isKara = false,
-  karaokeRenderGranularity = null,
-  mainText,
-  line,
-  position,
+	isKara = false,
+	karaokeRenderGranularity = null,
+	mainText,
+	line,
+	position,
 	isActive,
 	isEffectFocused = isActive,
 	isEffectLive = isActive || isEffectFocused,
 	settingsRevision = 0,
 	globalCharOffset = 0,
-  activeGlobalCharIndex = -1,
-  subText = null,
-  subText2 = null,
-  culturalAnnotations = [],
+	activeGlobalCharIndex = -1,
+	subText = null,
+	subText2 = null,
+	culturalAnnotations = [],
 }) => {
 	if (isKara) {
-          return react.createElement(KaraokeLine, {
-                  line,
+		return react.createElement(KaraokeLine, {
+			line,
 			// Future rows are already pinned to 0 by the playback window. Completed
 			// rows receive one stable position past their final glyph so the painted
 			// progress remains visible without returning to the per-frame update path.
@@ -2803,13 +2786,13 @@ const renderLyricMainContent = ({
 			isEffectLive,
 			settingsRevision,
 			globalCharOffset,
-                  activeGlobalCharIndex,
-                  phonetic: subText,
-                  translation: subText2,
-                  culturalAnnotations,
-                  renderGranularity: karaokeRenderGranularity,
-          });
-  }
+			activeGlobalCharIndex,
+			phonetic: subText,
+			translation: subText2,
+			culturalAnnotations,
+			renderGranularity: karaokeRenderGranularity,
+		});
+	}
 
 	if (typeof mainText === "string") {
 		return null;
@@ -3065,15 +3048,17 @@ const getInterludeCandidateText = (line) => {
 	return getPlainLyricText(line);
 };
 
+const normalizeInterludeMarkerText = (text) => String(text ?? "")
+	.replace(/&nbsp;/gi, " ")
+	.replace(/<[^>]+>/g, "")
+	.trim();
+
 const isInterludeMarkerText = (text) => {
 	if (window.ivLyricsInstrumentalBreaks?.isMarkerText?.(text)) {
 		return true;
 	}
 
-	const normalized = String(text ?? "")
-		.replace(/&nbsp;/gi, " ")
-		.replace(/<[^>]+>/g, "")
-		.trim();
+	const normalized = normalizeInterludeMarkerText(text);
 
 	return !normalized || INTERLUDE_MARKER_REGEX.test(normalized);
 };
@@ -3083,10 +3068,7 @@ const isMusicNoteInterludeMarkerText = (text) => {
 		return true;
 	}
 
-	const normalized = String(text ?? "")
-		.replace(/&nbsp;/gi, " ")
-		.replace(/<[^>]+>/g, "")
-		.trim();
+	const normalized = normalizeInterludeMarkerText(text);
 
 	return INTERLUDE_NOTE_CHARACTER_REGEX.test(normalized)
 		&& INTERLUDE_MARKER_REGEX.test(normalized);
@@ -3600,7 +3582,7 @@ const splitLineByParallelShape = (text, rowCount) => {
 		return [];
 	}
 
-	const separatorParts = value.split(/\s*[\/|／｜]\s*/).filter(Boolean);
+	const separatorParts = value.split(/\s*[/|／｜]\s*/).filter(Boolean);
 	if (separatorParts.length === rowCount) {
 		return separatorParts;
 	}
@@ -3981,37 +3963,37 @@ const createCopyHandler = (text, successMessageKey, failureMessageKey) => (event
 };
 
 const getLyricsAnchorRatio = (container) => {
-  if (!container) {
-          return 0.5;
-  }
+	if (!container) {
+		return 0.5;
+	}
 
 	const rawAnchorRatio = window.getComputedStyle(container).getPropertyValue("--ivfs-lyrics-anchor-ratio").trim();
 	const parsedAnchorRatio = Number.parseFloat(rawAnchorRatio);
 
 	return Number.isFinite(parsedAnchorRatio)
-          ? Math.min(0.95, Math.max(0.05, parsedAnchorRatio))
-          : 0.5;
+		? Math.min(0.95, Math.max(0.05, parsedAnchorRatio))
+		: 0.5;
 };
 
 const getElementOffsetTopWithin = (element, container) => {
-  if (!element || !container) {
-          return 0;
-  }
+	if (!element || !container) {
+		return 0;
+	}
 
-  let top = 0;
-  let node = element;
-  while (node && node !== container) {
-          top += Number(node.offsetTop) || 0;
-          node = node.offsetParent;
-  }
+	let top = 0;
+	let node = element;
+	while (node && node !== container) {
+		top += Number(node.offsetTop) || 0;
+		node = node.offsetParent;
+	}
 
-  if (node === container) {
-          return top;
-  }
+	if (node === container) {
+		return top;
+	}
 
-  const elementRect = element.getBoundingClientRect();
-  const containerRect = container.getBoundingClientRect();
-  return (elementRect.top - containerRect.top) + (container.scrollTop || 0);
+	const elementRect = element.getBoundingClientRect();
+	const containerRect = container.getBoundingClientRect();
+	return (elementRect.top - containerRect.top) + (container.scrollTop || 0);
 };
 
 const LYRICS_CENTERING_DURATION_MS = 420;
@@ -4021,7 +4003,6 @@ const LYRICS_CENTERING_MAX_STAGGER_MS = 180;
 const LYRICS_CENTERING_SETTLE_RESERVE_MS = 24;
 const LYRICS_CENTERING_MIN_TOTAL_MS = 80;
 const LYRICS_CENTERING_BEZIER = [0.22, 1, 0.36, 1];
-const LYRICS_CENTERING_EASING_CSS = "cubic-bezier(0.22, 1, 0.36, 1)";
 const KARAOKE_RELEASE_WINDOW_MS = 820;
 const KARAOKE_COMPLETION_POSITION_OFFSET_MS = 900;
 const syncedLyricsScrollAnimations = new WeakMap();
@@ -4269,13 +4250,13 @@ const animateSyncedLyricsScroll = (container, targetTop) => {
 };
 
 const scrollSyncedContainerToActiveLine = (container, activeLine, behavior = "smooth") => {
-  if (!container || !activeLine) return;
+	if (!container || !activeLine) return;
 
-  const anchorRatio = getLyricsAnchorRatio(container);
-  const containerHeight = container.clientHeight || 0;
-  const lineAnchorCenter = getActiveLineAnchorCenter(activeLine);
-  const activeLineTop = getElementOffsetTopWithin(activeLine, container);
-  const targetTop = activeLineTop - (containerHeight * anchorRatio - lineAnchorCenter);
+	const anchorRatio = getLyricsAnchorRatio(container);
+	const containerHeight = container.clientHeight || 0;
+	const lineAnchorCenter = getActiveLineAnchorCenter(activeLine);
+	const activeLineTop = getElementOffsetTopWithin(activeLine, container);
+	const targetTop = activeLineTop - (containerHeight * anchorRatio - lineAnchorCenter);
 	const maxScrollTop = Math.max(0, container.scrollHeight - containerHeight);
 	const nextTop = Math.max(0, Math.min(targetTop, maxScrollTop));
 
@@ -4357,10 +4338,10 @@ const getCompactSyncedOffset = (container, activeLine, isScrolling) => {
 		return 0;
 	}
 
-  const anchorRatio = getLyricsAnchorRatio(container);
-  const anchorOffset = container.clientHeight * anchorRatio;
-  const activeLineTop = getElementOffsetTopWithin(activeLine, container);
-  return anchorOffset - (activeLineTop + getActiveLineAnchorCenter(activeLine));
+	const anchorRatio = getLyricsAnchorRatio(container);
+	const anchorOffset = container.clientHeight * anchorRatio;
+	const activeLineTop = getElementOffsetTopWithin(activeLine, container);
+	return anchorOffset - (activeLineTop + getActiveLineAnchorCenter(activeLine));
 };
 
 const useSyncedLayoutEffect = react.useLayoutEffect || useEffect;
@@ -4799,9 +4780,7 @@ const assignKaraokeWordIndexes = (timedChars, preferSourceUnits = false, locale 
 		});
 	};
 
-	if (preferSourceUnits) {
-		assignFromSourceUnits();
-	} else if (window.LyricsWordSegmenter?.segmentRanges) {
+	const buildCharTextAndOffsets = () => {
 		const text = timedChars.map((charInfo) => String(charInfo?.char || "")).join("");
 		const charUtf16Offsets = [];
 		let utf16Offset = 0;
@@ -4809,6 +4788,13 @@ const assignKaraokeWordIndexes = (timedChars, preferSourceUnits = false, locale 
 			charUtf16Offsets.push(utf16Offset);
 			utf16Offset += String(charInfo?.char || "").length;
 		});
+		return { text, charUtf16Offsets };
+	};
+
+	if (preferSourceUnits) {
+		assignFromSourceUnits();
+	} else if (window.LyricsWordSegmenter?.segmentRanges) {
+		const { text, charUtf16Offsets } = buildCharTextAndOffsets();
 
 		window.LyricsWordSegmenter.segmentRanges(text, locale).forEach((segment, nextWordIndex) => {
 			for (let index = 0; index < charUtf16Offsets.length; index += 1) {
@@ -4819,13 +4805,7 @@ const assignKaraokeWordIndexes = (timedChars, preferSourceUnits = false, locale 
 			}
 		});
 	} else if (typeof Intl !== "undefined" && typeof Intl.Segmenter === "function") {
-		const text = timedChars.map((charInfo) => String(charInfo?.char || "")).join("");
-		const charUtf16Offsets = [];
-		let utf16Offset = 0;
-		timedChars.forEach((charInfo) => {
-			charUtf16Offsets.push(utf16Offset);
-			utf16Offset += String(charInfo?.char || "").length;
-		});
+		const { text, charUtf16Offsets } = buildCharTextAndOffsets();
 
 		let nextWordIndex = 0;
 		for (const segment of new Intl.Segmenter(locale === "auto" ? undefined : locale, { granularity: "word" }).segment(text)) {
@@ -6567,9 +6547,6 @@ const useSyncedLyricsEngine = ({
 				subText,
 				subText2,
 			} = line;
-			const compactVisibleIndex = compact
-				? displayLineNumber - compactWindowStartIndex
-				: visibleIndex;
 
 			if (compact && lineNumber === 1 && layoutActiveLineIndex <= leadingEmptyLines) {
 				if (isBeforeFirstLyric) {
@@ -6602,16 +6579,6 @@ const useSyncedLyricsEngine = ({
 			const playbackState = getSyncedLinePlaybackState(playbackWindows[lineNumber], position);
 			const isHighlightedLine = isKara ? playbackState.isHighlighted : lineNumber === activeLineIndex;
 			const isAnimatingLine = isKara ? playbackState.isAnimating : isAnchorLine;
-			let animationIndex = getSyncedAnimationIndex({
-				compact,
-				isScrolling,
-				activeLineIndex: compact ? visualDisplayLineIndex : visualLineIndex,
-				lineNumber: compact ? displayLineNumber : lineNumber,
-				visibleIndex: compactVisibleIndex,
-			});
-			if (trailingInterludeLine && lineNumber <= layoutActiveLineIndex) {
-				animationIndex -= 1;
-			}
 			const visibilityAnimationIndex = compact
 				? displayLineNumber - activeDisplayLineIndex
 				: lineNumber - layoutActiveLineIndex;
@@ -7183,9 +7150,9 @@ const applyKaraokeWhitespaceCompensation = (timedChars) => {
 };
 
 const getActiveKaraokeTimedCharIndex = (timedChars, position) => {
-  if (!Array.isArray(timedChars) || timedChars.length === 0) {
-          return -1;
-  }
+	if (!Array.isArray(timedChars) || timedChars.length === 0) {
+		return -1;
+	}
 
 	let activeCharIndex = -1;
 	let lastPassedCharIndex = -1;
@@ -7223,7 +7190,7 @@ const getActiveKaraokeTimedCharIndex = (timedChars, position) => {
 		}
 	}
 
-  return activeCharIndex;
+	return activeCharIndex;
 };
 
 const KARAOKE_VOCAL_STACK_CENTER_THRESHOLD = 4;
@@ -7299,36 +7266,36 @@ const getKaraokeVocalAnchorLineKey = (line) => [
 ].join("|");
 
 const getKaraokeVocalAnchorPosition = (vocalRowRenderData, position, activeCharIndexes = null) => {
-  if (!Array.isArray(vocalRowRenderData) || vocalRowRenderData.length === 0 || !Number.isFinite(position)) {
-          return -1;
-  }
+	if (!Array.isArray(vocalRowRenderData) || vocalRowRenderData.length === 0 || !Number.isFinite(position)) {
+		return -1;
+	}
 
-  let firstActiveRowIndex = -1;
-  let lastActiveRowIndex = -1;
+	let firstActiveRowIndex = -1;
+	let lastActiveRowIndex = -1;
 
-  for (let rowIndex = 0; rowIndex < vocalRowRenderData.length; rowIndex++) {
-          const { timedChars: rowTimedChars, bounds, anchorEndTime } = vocalRowRenderData[rowIndex];
-          const activeCharIndex = activeCharIndexes?.[rowIndex]
-                  ?? getActiveKaraokeTimedCharIndex(rowTimedChars, position);
-          const { startTime, endTime } = bounds;
-          const rowActive = Number.isFinite(anchorEndTime)
-                  ? position >= startTime && position < anchorEndTime
-                  : (activeCharIndex >= 0 && activeCharIndex < rowTimedChars.length)
-                          || (position >= startTime && position <= endTime);
+	for (let rowIndex = 0; rowIndex < vocalRowRenderData.length; rowIndex++) {
+		const { timedChars: rowTimedChars, bounds, anchorEndTime } = vocalRowRenderData[rowIndex];
+		const activeCharIndex = activeCharIndexes?.[rowIndex]
+			?? getActiveKaraokeTimedCharIndex(rowTimedChars, position);
+		const { startTime, endTime } = bounds;
+		const rowActive = Number.isFinite(anchorEndTime)
+			? position >= startTime && position < anchorEndTime
+			: (activeCharIndex >= 0 && activeCharIndex < rowTimedChars.length)
+				|| (position >= startTime && position <= endTime);
 
-          if (rowActive) {
-                  if (firstActiveRowIndex < 0) {
-                          firstActiveRowIndex = rowIndex;
-                  }
-                  lastActiveRowIndex = rowIndex;
-          }
-  }
+		if (rowActive) {
+			if (firstActiveRowIndex < 0) {
+				firstActiveRowIndex = rowIndex;
+			}
+			lastActiveRowIndex = rowIndex;
+		}
+	}
 
-  if (firstActiveRowIndex >= 0 && lastActiveRowIndex >= 0) {
-          return Math.ceil((firstActiveRowIndex + lastActiveRowIndex) / 2);
-  }
+	if (firstActiveRowIndex >= 0 && lastActiveRowIndex >= 0) {
+		return Math.ceil((firstActiveRowIndex + lastActiveRowIndex) / 2);
+	}
 
-  return -1;
+	return -1;
 };
 
 const getKaraokeVocalAnchorWindowMs = (vocalRowRenderData, anchorPosition) => {
@@ -7375,33 +7342,33 @@ const getKaraokeVocalAnchorWindowMs = (vocalRowRenderData, anchorPosition) => {
 };
 
 const getStableKaraokeVocalAnchorPosition = (stateRef, line, position, nextAnchorPosition) => {
-  if (!stateRef?.current) {
-          return nextAnchorPosition;
-  }
+	if (!stateRef?.current) {
+		return nextAnchorPosition;
+	}
 
-  const lineKey = getKaraokeVocalAnchorLineKey(line);
-  const state = stateRef.current;
-  const positionWentBack = Number.isFinite(state.lastPlaybackPosition)
-          && Number.isFinite(position)
-          && position < state.lastPlaybackPosition - 250;
+	const lineKey = getKaraokeVocalAnchorLineKey(line);
+	const state = stateRef.current;
+	const positionWentBack = Number.isFinite(state.lastPlaybackPosition)
+		&& Number.isFinite(position)
+		&& position < state.lastPlaybackPosition - 250;
 
-  if (state.lineKey !== lineKey || positionWentBack) {
-          state.lineKey = lineKey;
-          state.anchorPosition = nextAnchorPosition;
-          state.lastPlaybackPosition = position;
-          return nextAnchorPosition;
-  }
+	if (state.lineKey !== lineKey || positionWentBack) {
+		state.lineKey = lineKey;
+		state.anchorPosition = nextAnchorPosition;
+		state.lastPlaybackPosition = position;
+		return nextAnchorPosition;
+	}
 
-  state.lastPlaybackPosition = position;
-  if (!Number.isFinite(nextAnchorPosition) || nextAnchorPosition < 0) {
-          return Number.isFinite(state.anchorPosition) ? state.anchorPosition : -1;
-  }
+	state.lastPlaybackPosition = position;
+	if (!Number.isFinite(nextAnchorPosition) || nextAnchorPosition < 0) {
+		return Number.isFinite(state.anchorPosition) ? state.anchorPosition : -1;
+	}
 
-  state.anchorPosition = Math.max(
-          Number.isFinite(state.anchorPosition) ? state.anchorPosition : nextAnchorPosition,
-          nextAnchorPosition
-  );
-  return state.anchorPosition;
+	state.anchorPosition = Math.max(
+		Number.isFinite(state.anchorPosition) ? state.anchorPosition : nextAnchorPosition,
+		nextAnchorPosition
+	);
+	return state.anchorPosition;
 };
 
 const KARAOKE_FILL_STEPS = 25;
@@ -7582,20 +7549,18 @@ const getKaraokeBounceValues = (position, isActive, startTime, endTime, attenuat
 			? smoothKaraokeMotion((position - profile.startTime) / profile.riseDuration)
 			: 1 - smoothKaraokeMotion((position - profile.endTime) / profile.releaseDuration);
 		scaleStrength = glowStrength = strength;
+	} else if (position < profile.endTime) {
+		const phase = Math.max(0, Math.min(1, (position - profile.startTime) / profile.riseDuration));
+		const phaseSpread = smoothing * phase * (1 - phase);
+		strength = smoothKaraokeMotion(phase + phaseSpread * 0.18);
+		scaleStrength = smoothKaraokeMotion(phase + phaseSpread * 0.28);
+		glowStrength = smoothKaraokeMotion(phase + phaseSpread * 0.08);
 	} else {
-		if (position < profile.endTime) {
-			const phase = Math.max(0, Math.min(1, (position - profile.startTime) / profile.riseDuration));
-			const phaseSpread = smoothing * phase * (1 - phase);
-			strength = smoothKaraokeMotion(phase + phaseSpread * 0.18);
-			scaleStrength = smoothKaraokeMotion(phase + phaseSpread * 0.28);
-			glowStrength = smoothKaraokeMotion(phase + phaseSpread * 0.08);
-		} else {
-			const phase = Math.max(0, Math.min(1, (position - profile.endTime) / profile.releaseDuration));
-			const phaseSpread = smoothing * phase * (1 - phase) * 0.16;
-			strength = 1 - smoothKaraokeRelease(phase, smoothing);
-			scaleStrength = 1 - smoothKaraokeRelease(phase + phaseSpread, smoothing);
-			glowStrength = 1 - smoothKaraokeRelease(phase - phaseSpread, smoothing);
-		}
+		const phase = Math.max(0, Math.min(1, (position - profile.endTime) / profile.releaseDuration));
+		const phaseSpread = smoothing * phase * (1 - phase) * 0.16;
+		strength = 1 - smoothKaraokeRelease(phase, smoothing);
+		scaleStrength = 1 - smoothKaraokeRelease(phase + phaseSpread, smoothing);
+		glowStrength = 1 - smoothKaraokeRelease(phase - phaseSpread, smoothing);
 	}
 	const offsetY = Math.round(-profile.amplitude * strength * 4) / 4;
 	const scale = Math.round((1 + profile.scaleAmount * scaleStrength) * 500) / 500;
@@ -8027,7 +7992,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 		);
 		const reading = furiganaMap.get(index);
 
-		let renderedCharNode = reading
+		const renderedCharNode = reading
 			? react.createElement(
 				"ruby",
 				{
@@ -8237,9 +8202,6 @@ const SyncedLyricsPage = react.memo(({ lyrics = [], provider, contributors, copy
 		handleContainerClick,
 		renderItems,
 		compactOffset,
-		activeLyricIndex,
-		globalCharOffsets,
-		activeGlobalCharIndex,
 	} = useSyncedLyricsEngine({
 		lyrics,
 		position: karaokePosition,
@@ -8655,6 +8617,39 @@ const UnsyncedLyricsPage = react.memo(({ lyrics = [], provider, contributors, co
 
 
 
+const buildLoadingSpinnerCircle = (begin) =>
+	react.createElement(
+		"circle",
+		{
+			cx: "50",
+			cy: "50",
+			r: "0",
+			fill: "none",
+			stroke: "currentColor",
+			"stroke-width": "2",
+		},
+		react.createElement("animate", {
+			attributeName: "r",
+			repeatCount: "indefinite",
+			dur: "1s",
+			values: "0;40",
+			keyTimes: "0;1",
+			keySplines: "0 0.2 0.8 1",
+			calcMode: "spline",
+			begin,
+		}),
+		react.createElement("animate", {
+			attributeName: "opacity",
+			repeatCount: "indefinite",
+			dur: "1s",
+			values: "1;0",
+			keyTimes: "0;1",
+			keySplines: "0.2 0 0.8 1",
+			calcMode: "spline",
+			begin,
+		})
+	);
+
 const LoadingIcon = react.createElement(
 	"svg",
 	{
@@ -8663,68 +8658,8 @@ const LoadingIcon = react.createElement(
 		viewBox: "0 0 100 100",
 		preserveAspectRatio: "xMidYMid",
 	},
-	react.createElement(
-		"circle",
-		{
-			cx: "50",
-			cy: "50",
-			r: "0",
-			fill: "none",
-			stroke: "currentColor",
-			"stroke-width": "2",
-		},
-		react.createElement("animate", {
-			attributeName: "r",
-			repeatCount: "indefinite",
-			dur: "1s",
-			values: "0;40",
-			keyTimes: "0;1",
-			keySplines: "0 0.2 0.8 1",
-			calcMode: "spline",
-			begin: "0s",
-		}),
-		react.createElement("animate", {
-			attributeName: "opacity",
-			repeatCount: "indefinite",
-			dur: "1s",
-			values: "1;0",
-			keyTimes: "0;1",
-			keySplines: "0.2 0 0.8 1",
-			calcMode: "spline",
-			begin: "0s",
-		})
-	),
-	react.createElement(
-		"circle",
-		{
-			cx: "50",
-			cy: "50",
-			r: "0",
-			fill: "none",
-			stroke: "currentColor",
-			"stroke-width": "2",
-		},
-		react.createElement("animate", {
-			attributeName: "r",
-			repeatCount: "indefinite",
-			dur: "1s",
-			values: "0;40",
-			keyTimes: "0;1",
-			keySplines: "0 0.2 0.8 1",
-			calcMode: "spline",
-			begin: "-0.5s",
-		}),
-		react.createElement("animate", {
-			attributeName: "opacity",
-			repeatCount: "indefinite",
-			dur: "1s",
-			values: "1;0",
-			keyTimes: "0;1",
-			keySplines: "0.2 0 0.8 1",
-			calcMode: "spline",
-			begin: "-0.5s",
-		})
-	)
+	buildLoadingSpinnerCircle("0s"),
+	buildLoadingSpinnerCircle("-0.5s")
 );
 
 const createNoLyricsParticle = (index, cx, radius, x, duration, delay, opacity = 0.75) =>
@@ -8818,42 +8753,6 @@ const NoLyricsAnimation = () => react.createElement(
 
 window.ivLyricsNoLyricsAnimation = NoLyricsAnimation;
 
-
-const LyricsPage = ({ lyricsContainer }) => {
-	const modes = CONFIG.modes;
-	const activeMode = lyricsContainer.getCurrentMode();
-
-	const topBarProps = {
-		links: modes,
-		activeLink: modes[activeMode] || modes[0],
-		switchCallback: (mode) => {
-			const modeIndex = modes.indexOf(mode);
-			if (modeIndex !== -1) {
-				lyricsContainer.switchTo(modeIndex);
-			}
-		}
-	};
-
-	const topBarContent = typeof TopBarContent === "function"
-		? react.createElement(TopBarContent, topBarProps)
-		: null;
-
-	return react.createElement(
-		"div",
-		{
-			className: "lyrics-page-wrapper",
-			style: { width: "100%", height: "100%", position: "relative" }
-		},
-		topBarContent,
-		lyricsContainer.render(),
-		react.createElement(CreditFooter, {
-			provider: lyricsContainer.state.provider,
-			contributors: lyricsContainer.state.contributors,
-			syncType: lyricsContainer.state.syncType,
-			syncPoints: lyricsContainer.state.syncPoints
-		})
-	);
-};
 
 const LyricsUnavailableView = react.memo(({ isLoading }) =>
 	isLoading

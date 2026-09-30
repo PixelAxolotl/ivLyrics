@@ -1,7 +1,7 @@
 /**
  * AI Addon Manager
  * AI 제공자(Gemini, ChatGPT 등) Addon들을 관리하는 중앙 시스템
- * 
+ *
  * @author ivLis STUDIO
  * @description 번역, 발음, 음악 Research 생성을 위한 AI Addon 등록 및 관리
  */
@@ -1996,7 +1996,7 @@ ${normalizedText}
         /**
          * Addon 등록
          * @param {Object} addon - Addon 객체
-         * 
+         *
          * 필수 필드:
          * - id: string (고유 ID)
          * - name: string (표시 이름)
@@ -2004,10 +2004,10 @@ ${normalizedText}
          * - description: string | { en: string, ko: string, ... } (설명)
          * - version: string (버전)
          * - supports: { translate: boolean, metadata: boolean, research|tmi: boolean, lyricsStudy: boolean, characterPronunciation: boolean, culturalAnnotations: boolean } (지원 기능)
-         * 
+         *
          * 필수 메서드:
          * - getSettingsUI(): React.Component (설정 UI)
-         * 
+         *
          * 기능별 메서드:
          * - translateLyrics(params): Promise<Object> (supports.translate = true인 경우)
          * - translateMetadata(params): Promise<Object> (supports.metadata = true인 경우)
@@ -2259,7 +2259,6 @@ ${normalizedText}
         getEnabledProvidersFor(capability) {
             const allProviders = this.getEnabledProviders();
             const storedCapability = capability === 'research' ? 'tmi' : capability;
-            // console.log(`[AIAddonManager] Checking providers for ${capability}. Enabled total: ${allProviders.length}`);
 
             return allProviders.filter(addon => {
                 // 1. Addon 자체가 해당 기능을 지원하는지 확인
@@ -2267,7 +2266,6 @@ ${normalizedText}
                     ? addon.supports?.research === true || addon.supports?.tmi === true || typeof addon.generateResearch === 'function' || typeof addon.generateTMI === 'function'
                     : addon.supports?.[capability] === true;
                 if (!supportsCapability) {
-                    // console.log(`[AIAddonManager] Filtered out ${addon.id}: does not support ${capability}`);
                     return false;
                 }
                 // 2. 사용자가 해당 기능을 활성화했는지 확인 (기본값 true)
@@ -2278,7 +2276,6 @@ ${normalizedText}
 
                 const isEnabled = this.isCapabilityEnabled(addon.id, storedCapability);
                 if (!isEnabled) {
-                    // console.log(`[AIAddonManager] Filtered out ${addon.id}: capability ${capability} disabled by user setting`);
                     return false;
                 }
                 return true;
@@ -2597,6 +2594,127 @@ ${normalizedText}
             return units;
         }
 
+        _normalizeCharacterPronunciationLine(text, lineIndex, unitMode, resultLines, resultLinesByIndex) {
+            const sourceChars = Array.from(text);
+            const resultLine = resultLinesByIndex.get(lineIndex) || resultLines[lineIndex] || {};
+            const resultChars = Array.isArray(resultLine?.c)
+                ? resultLine.c
+                : (Array.isArray(resultLine?.chars) ? resultLine.chars : []);
+            const hasResultPronunciationArray = Array.isArray(resultLine?.p) || Array.isArray(resultLine?.pronunciations);
+            const resultPronunciations = Array.isArray(resultLine?.p)
+                ? resultLine.p
+                : (Array.isArray(resultLine?.pronunciations) ? resultLine.pronunciations : []);
+            const resultUnits = Array.isArray(resultLine?.u)
+                ? resultLine.u
+                : (Array.isArray(resultLine?.units) ? resultLine.units : []);
+            const byIndex = new Map();
+
+            if (unitMode === 'char' && hasResultPronunciationArray) {
+                if (resultPronunciations.length !== sourceChars.length) {
+                    throw new Error(`Character pronunciation response line ${lineIndex} returned ${resultPronunciations.length} slots, expected ${sourceChars.length}.`);
+                }
+
+                resultPronunciations.forEach((value, index) => {
+                    const pronunciation = typeof value === 'string' ? value.trim() : '';
+                    if (pronunciation) {
+                        byIndex.set(index, { p: pronunciation });
+                    }
+                });
+            } else {
+                if (unitMode === 'char') {
+                    throw new Error(`Character pronunciation response line ${lineIndex} missing p array.`);
+                }
+                resultChars.forEach((item, fallbackIndex) => {
+                    const index = Number.isInteger(Number(item?.i)) ? Number(item.i) : fallbackIndex;
+                    const rawPronunciation = item?.p ?? item?.pronunciation;
+                    const pronunciation = typeof rawPronunciation === 'string' ? rawPronunciation.trim() : '';
+                    if (index < 0 || index >= sourceChars.length) {
+                        if (unitMode === 'char' && pronunciation) {
+                            throw new Error(`Character pronunciation response used index ${index} outside line ${lineIndex} length ${sourceChars.length}.`);
+                        }
+                        return;
+                    }
+                    if (unitMode === 'char' && byIndex.has(index)) {
+                        const existingPronunciation = byIndex.get(index)?.p ?? byIndex.get(index)?.pronunciation;
+                        const existingText = typeof existingPronunciation === 'string' ? existingPronunciation.trim() : '';
+                        if (pronunciation && existingText) {
+                            throw new Error(`Character pronunciation response duplicated index ${index} on line ${lineIndex}.`);
+                        }
+                        if (!pronunciation && existingText) return;
+                    }
+                    byIndex.set(index, item);
+                });
+            }
+
+            const sourceUnits = unitMode === 'word'
+                ? this._buildWordPronunciationUnits(text)
+                : [];
+            const normalizedUnits = [];
+            if (unitMode === 'word') {
+                resultUnits.forEach((item, fallbackIndex) => {
+                    const unitIndex = Number.isInteger(Number(item?.i)) ? Number(item.i) : fallbackIndex;
+                    const sourceUnit = sourceUnits[unitIndex] || null;
+                    const start = Number.isInteger(Number(item?.s ?? item?.start))
+                        ? Number(item?.s ?? item?.start)
+                        : sourceUnit?.start;
+                    const end = Number.isInteger(Number(item?.e ?? item?.end))
+                        ? Number(item?.e ?? item?.end)
+                        : sourceUnit?.end;
+                    const pronunciation = typeof (item?.p ?? item?.pronunciation) === 'string'
+                        ? (item.p ?? item.pronunciation).trim()
+                        : '';
+
+                    if (!pronunciation || !Number.isInteger(start) || !Number.isInteger(end)) return;
+                    if (start < 0 || end < start || end >= sourceChars.length) return;
+                    normalizedUnits.push({
+                        start,
+                        end,
+                        text: sourceChars.slice(start, end + 1).join(''),
+                        pronunciation
+                    });
+                });
+                if (!normalizedUnits.length && byIndex.size > 0) {
+                    sourceUnits.forEach(unit => {
+                        const pronunciation = [];
+                        for (let i = unit.start; i <= unit.end; i++) {
+                            const item = byIndex.get(i);
+                            const rawPronunciation = item?.p ?? item?.pronunciation;
+                            if (typeof rawPronunciation === 'string' && rawPronunciation.trim()) {
+                                pronunciation.push(rawPronunciation.trim());
+                            }
+                        }
+                        if (pronunciation.length) {
+                            normalizedUnits.push({
+                                ...unit,
+                                pronunciation: pronunciation.join('')
+                            });
+                        }
+                    });
+                }
+            }
+
+            return {
+                index: lineIndex,
+                unitMode,
+                units: normalizedUnits,
+                chars: sourceChars.map((char, charIndex) => {
+                    const item = byIndex.get(charIndex) || {};
+                    const rawPronunciation = item.p ?? item.pronunciation;
+                    const pronunciation = unitMode === 'word'
+                        ? ''
+                        : (typeof rawPronunciation === 'string'
+                        ? rawPronunciation.trim()
+                        : '');
+
+                    return {
+                        i: charIndex,
+                        char,
+                        pronunciation
+                    };
+                })
+            };
+        }
+
         _normalizeCharacterPronunciationResult(result, lines, options = {}) {
             const sourceLines = (Array.isArray(lines) ? lines : [])
                 .map(line => String(line ?? ''));
@@ -2613,126 +2731,7 @@ ${normalizedText}
             });
 
             return {
-                lines: sourceLines.map((text, lineIndex) => {
-                    const sourceChars = Array.from(text);
-                    const resultLine = resultLinesByIndex.get(lineIndex) || resultLines[lineIndex] || {};
-                    const resultChars = Array.isArray(resultLine?.c)
-                        ? resultLine.c
-                        : (Array.isArray(resultLine?.chars) ? resultLine.chars : []);
-                    const hasResultPronunciationArray = Array.isArray(resultLine?.p) || Array.isArray(resultLine?.pronunciations);
-                    const resultPronunciations = Array.isArray(resultLine?.p)
-                        ? resultLine.p
-                        : (Array.isArray(resultLine?.pronunciations) ? resultLine.pronunciations : []);
-                    const resultUnits = Array.isArray(resultLine?.u)
-                        ? resultLine.u
-                        : (Array.isArray(resultLine?.units) ? resultLine.units : []);
-                    const byIndex = new Map();
-
-                    if (unitMode === 'char' && hasResultPronunciationArray) {
-                        if (resultPronunciations.length !== sourceChars.length) {
-                            throw new Error(`Character pronunciation response line ${lineIndex} returned ${resultPronunciations.length} slots, expected ${sourceChars.length}.`);
-                        }
-
-                        resultPronunciations.forEach((value, index) => {
-                            const pronunciation = typeof value === 'string' ? value.trim() : '';
-                            if (pronunciation) {
-                                byIndex.set(index, { p: pronunciation });
-                            }
-                        });
-                    } else {
-                        if (unitMode === 'char') {
-                            throw new Error(`Character pronunciation response line ${lineIndex} missing p array.`);
-                        }
-                        resultChars.forEach((item, fallbackIndex) => {
-                            const index = Number.isInteger(Number(item?.i)) ? Number(item.i) : fallbackIndex;
-                            const rawPronunciation = item?.p ?? item?.pronunciation;
-                            const pronunciation = typeof rawPronunciation === 'string' ? rawPronunciation.trim() : '';
-                            if (index < 0 || index >= sourceChars.length) {
-                                if (unitMode === 'char' && pronunciation) {
-                                    throw new Error(`Character pronunciation response used index ${index} outside line ${lineIndex} length ${sourceChars.length}.`);
-                                }
-                                return;
-                            }
-                            if (unitMode === 'char' && byIndex.has(index)) {
-                                const existingPronunciation = byIndex.get(index)?.p ?? byIndex.get(index)?.pronunciation;
-                                const existingText = typeof existingPronunciation === 'string' ? existingPronunciation.trim() : '';
-                                if (pronunciation && existingText) {
-                                    throw new Error(`Character pronunciation response duplicated index ${index} on line ${lineIndex}.`);
-                                }
-                                if (!pronunciation && existingText) return;
-                            }
-                            byIndex.set(index, item);
-                        });
-                    }
-
-                    const sourceUnits = unitMode === 'word'
-                        ? this._buildWordPronunciationUnits(text)
-                        : [];
-                    const normalizedUnits = [];
-                    if (unitMode === 'word') {
-                        resultUnits.forEach((item, fallbackIndex) => {
-                            const unitIndex = Number.isInteger(Number(item?.i)) ? Number(item.i) : fallbackIndex;
-                            const sourceUnit = sourceUnits[unitIndex] || null;
-                            const start = Number.isInteger(Number(item?.s ?? item?.start))
-                                ? Number(item?.s ?? item?.start)
-                                : sourceUnit?.start;
-                            const end = Number.isInteger(Number(item?.e ?? item?.end))
-                                ? Number(item?.e ?? item?.end)
-                                : sourceUnit?.end;
-                            const pronunciation = typeof (item?.p ?? item?.pronunciation) === 'string'
-                                ? (item.p ?? item.pronunciation).trim()
-                                : '';
-
-                            if (!pronunciation || !Number.isInteger(start) || !Number.isInteger(end)) return;
-                            if (start < 0 || end < start || end >= sourceChars.length) return;
-                            normalizedUnits.push({
-                                start,
-                                end,
-                                text: sourceChars.slice(start, end + 1).join(''),
-                                pronunciation
-                            });
-                        });
-                        if (!normalizedUnits.length && byIndex.size > 0) {
-                            sourceUnits.forEach(unit => {
-                                const pronunciation = [];
-                                for (let i = unit.start; i <= unit.end; i++) {
-                                    const item = byIndex.get(i);
-                                    const rawPronunciation = item?.p ?? item?.pronunciation;
-                                    if (typeof rawPronunciation === 'string' && rawPronunciation.trim()) {
-                                        pronunciation.push(rawPronunciation.trim());
-                                    }
-                                }
-                                if (pronunciation.length) {
-                                    normalizedUnits.push({
-                                        ...unit,
-                                        pronunciation: pronunciation.join('')
-                                    });
-                                }
-                            });
-                        }
-                    }
-
-                    return {
-                        index: lineIndex,
-                        unitMode,
-                        units: normalizedUnits,
-                        chars: sourceChars.map((char, charIndex) => {
-                            const item = byIndex.get(charIndex) || {};
-                            const rawPronunciation = item.p ?? item.pronunciation;
-                            const pronunciation = unitMode === 'word'
-                                ? ''
-                                : (typeof rawPronunciation === 'string'
-                                ? rawPronunciation.trim()
-                                : '');
-
-                            return {
-                                i: charIndex,
-                                char,
-                                pronunciation
-                            };
-                        })
-                    };
-                })
+                lines: sourceLines.map((text, lineIndex) => this._normalizeCharacterPronunciationLine(text, lineIndex, unitMode, resultLines, resultLinesByIndex))
             };
         }
 

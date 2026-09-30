@@ -2,17 +2,17 @@
  * ================================================================================
  * LRCLIB Lyrics Provider Addon
  * ================================================================================
- * 
- * 이 파일은 LRCLIB(https://lrclib.net) 오픈소스 가사 데이터베이스에서 
+ *
+ * 이 파일은 LRCLIB(https://lrclib.net) 오픈소스 가사 데이터베이스에서
  * 가사를 검색하고 가져오는 Spicetify 애드온입니다.
- * 
+ *
  * 【주요 기능】
  * - 구조화 검색 중심 LRCLIB 검색 흐름 적용
  * - 제목 + 가수 + 앨범 구조화 검색 후 필요 시 다단계 자유검색 폴백
  * - Jaro-Winkler 알고리즘 기반 아티스트 유사도 매칭
  * - duration 기반 최근접 후보 선택 및 노래방/싱크/일반 가사 지원
  * - 네트워크 오류 시 자동 재시도 메커니즘
- * 
+ *
  * 【검색 전략】
  * - /api/search 구조화 검색(track_name + artist_name + album_name)
  * - 구조화 검색에서 적합한 후보가 없을 때 q=title+artist, q=title 순서로 자유검색 폴백
@@ -275,7 +275,7 @@
     // ============================================
     // LRCLIB 서버의 기본 API 주소입니다.
     // 모든 API 요청은 이 주소를 기반으로 구성됩니다.
-    // 
+    //
     // 【사용 가능한 엔드포인트】
     // - GET /api/search?track_name=...&artist_name=... : 구조화된 검색
     // - GET /api/search?q=... : 자유 텍스트 검색
@@ -408,11 +408,11 @@
      * ────────────────────────────────────────────────────────────────────────────
      * 문자열 정규화 함수 (normalize)
      * ────────────────────────────────────────────────────────────────────────────
-     * 
+     *
      * 【목적】
      * 서로 다른 형식의 문자열을 비교하기 위해 통일된 형태로 변환합니다.
      * 예: "Hello  World" vs "hello world" → 동일하게 처리
-     * 
+     *
      * 【정규화 단계】
      * 1. NFKC 유니코드 정규화 - 호환 문자를 표준 형태로 통일
      *    예: ＡＢＣ(전각) → ABC(반각), ｶﾅ(반각) → カナ(전각)
@@ -422,7 +422,7 @@
      *    예: '' "" → ' "
      * 5. 모든 종류의 괄호 제거 - 부가 정보(feat., remix 등) 무시
      * 6. 연속 공백을 단일 공백으로 치환
-     * 
+     *
      * @param {string} s - 정규화할 원본 문자열
      * @returns {string} 정규화된 문자열 (비어있으면 빈 문자열 반환)
      */
@@ -462,27 +462,27 @@
      * ────────────────────────────────────────────────────────────────────────────
      * Jaro-Winkler 유사도 계산 함수
      * ────────────────────────────────────────────────────────────────────────────
-     * 
+     *
      * 【알고리즘 개요】
      * Jaro-Winkler는 두 문자열 간의 유사도를 0.0 ~ 1.0 사이 값으로 반환합니다.
      * 특히 짧은 문자열이나 오타 검출에 효과적이며, 제목/아티스트 매칭에 적합합니다.
-     * 
+     *
      * 【계산 과정】
      * 1단계: Jaro 유사도 (dj) 계산
      *   - 일치 윈도우 = max(len1, len2) / 2 - 1
      *   - 윈도우 내에서 일치하는 문자 수 계산
      *   - 순서가 다른 일치(transposition) 계산
      *   - dj = (m/l1 + m/l2 + (m-t)/m) / 3
-     * 
+     *
      * 2단계: Winkler 보정
      *   - 공통 접두사(최대 4자)에 가중치 부여
      *   - 최종 점수 = dj + prefix * 0.1 * (1 - dj)
-     * 
+     *
      * 【예시】
      * - "MARTHA" vs "MARHTA" → 약 0.96 (철자 오류에도 높은 유사도)
      * - "DWAYNE" vs "DUANE" → 약 0.84
      * - "ABC" vs "XYZ" → 0.0 (완전 불일치)
-     * 
+     *
      * @param {string} s1 - 비교할 첫 번째 문자열
      * @param {string} s2 - 비교할 두 번째 문자열
      * @returns {number} 유사도 점수 (0.0 = 완전 불일치, 1.0 = 완전 일치)
@@ -630,21 +630,21 @@
      * ────────────────────────────────────────────────────────────────────────────
      * 타임아웃 및 재시도 지원 Fetch 함수
      * ────────────────────────────────────────────────────────────────────────────
-     * 
+     *
      * 【목적】
      * 네트워크 요청에 타임아웃을 적용하고, 실패 시 자동으로 1회 재시도합니다.
      * LRCLIB 서버의 간헐적 장애나 네트워크 불안정에 대응합니다.
-     * 
+     *
      * 【동작 방식】
      * 1. AbortController를 사용하여 타임아웃 구현
      * 2. 첫 번째 시도 실패 시 500ms 대기 후 재시도
      * 3. 재시도도 실패하면 null 반환 (에러 throw 대신)
-     * 
+     *
      * 【설계 결정】
      * - null 반환: UI에 에러 메시지를 노출하지 않기 위함
      * - 500ms 대기: 서버 부하 완화 및 네트워크 복구 시간 확보
      * - 35초 타임아웃: LRCLIB 서버 응답 시간을 고려한 값
-     * 
+     *
      * @param {string} url - 요청할 URL
      * @param {Object} options - fetch 옵션 (headers 등)
      * @param {number} timeoutMs - 타임아웃 시간 (기본 35초)
@@ -1742,26 +1742,26 @@
      * ────────────────────────────────────────────────────────────────────────────
      * LRC 형식 파싱 함수 (Ultra-Flexible)
      * ────────────────────────────────────────────────────────────────────────────
-     * 
+     *
      * 【목적】
      * LRC(Lyrics) 형식의 문자열을 파싱하여 구조화된 가사 객체로 변환합니다.
-     * 
+     *
      * 【LRC 형식 예시】
      * [00:12.34]첫 번째 가사
      * [00:15.67]두 번째 가사
      * [01:00,89]쉼표 구분자도 지원
-     * 
+     *
      * 【지원하는 형식】
      * - [MM:SS.xx] 또는 [MM:SS,xx]: 밀리초 포함
      * - [MM:SS]: 밀리초 없는 형식
      * - 타임스탬프 없는 일반 텍스트도 unsynced에 포함
-     * 
+     *
      * 【반환 객체 구조】
      * {
      *   synced: [{ startTime: 12340, text: "첫 번째 가사" }, ...] 또는 null,
      *   unsynced: [{ text: "첫 번째 가사" }, ...]
      * }
-     * 
+     *
      * @param {string} lrc - LRC 형식의 가사 문자열
      * @returns {Object} { synced: Array|null, unsynced: Array }
      */
@@ -1807,98 +1807,10 @@
     // ADDON_INFO를 스프레드하여 메타데이터를 포함하고,
     // init(), getSettingsUI(), getLyrics() 메서드를 구현합니다.
 
-    const LrclibLyricsAddon = {
-        ...ADDON_INFO,  // 메타데이터 병합 (id, name, version 등)
-
-        /**
-         * 【초기화 메서드】
-         * 애드온이 로드될 때 호출됩니다.
-         * 현재 설정 상태를 반영한 캐시 버전을 동기화합니다.
-         */
-        async init() {
-            syncAddonCacheVersion();
-        },
-
-        async searchCandidates(info) {
-            try {
-                const title = info?.title?.trim?.();
-                const artist = info?.artist?.trim?.();
-                const album = info?.album?.trim?.();
-                const searchSettings = getSearchSettings();
-                const trackDuration = Number(info?.duration || 0);
-                const trackDurationSec = trackDuration > 0 ? trackDuration / 1000 : 0;
-                const expectedArtists = splitArtists(artist);
-
-                if (!title || !artist || !trackDurationSec) {
-                    return {
-                        success: false,
-                        error: 'Missing track metadata',
-                        candidates: [],
-                        selectedCandidateKey: null
-                    };
-                }
-
-                const headers = { 'x-user-agent': `spicetify v${Spicetify.Config?.version || 'unknown'}` };
-                const trackId = window.LyricsService?.extractTrackId?.(info?.uri)
-                    || window.ivLyricsTrackIdentity?.extractTrackId?.(info?.uri)
-                    || '';
-                const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, info)
-                    || window.SyncDataService?.getTrackIsrc?.(trackId, info)
-                    || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);
-                let syncDataLineCharCounts = null;
-                let syncDataSource = null;
-
-                if (trackId && window.SyncDataService?.getSyncData) {
-                    try {
-                        const existingSyncData = await window.SyncDataService.getSyncData(trackId, ADDON_INFO.id, { ...info, isrc: trackIsrc });
-                        syncDataLineCharCounts = getSyncDataLineCharCounts(existingSyncData);
-                        syncDataSource = getSyncDataLrclibSource(existingSyncData);
-                    } catch (e) {
-                        window.__ivLyricsDebugLog?.('[LR-DEBUG] Failed to fetch sync-data for exact line matching:', e?.message || e);
-                    }
-                }
-
-                let sourceDirectLookupAttempted = false;
-                let cachedSourceDirectPreviewCandidate = null;
-                const getSourceDirectPreviewCandidate = async () => {
-                    if (sourceDirectLookupAttempted) return cachedSourceDirectPreviewCandidate;
-                    sourceDirectLookupAttempted = true;
-
-                    if (!getSyncDataLrclibId(syncDataSource)) return null;
-
-                    try {
-                        const directCandidate = decorateDirectCandidate(
-                            await fetchLrclibCandidateById(syncDataSource, headers),
-                            syncDataSource,
-                            trackDurationSec
-                        );
-                        cachedSourceDirectPreviewCandidate = buildDirectPreviewCandidate(directCandidate);
-                    } catch (e) {
-                        window.__ivLyricsDebugLog?.('[LR-DEBUG] Failed to restore LRCLIB sync-data source:', e?.message || e);
-                        cachedSourceDirectPreviewCandidate = null;
-                    }
-                    return cachedSourceDirectPreviewCandidate;
-                };
-
-                const buildSourceDirectSearchResult = (directPreviewCandidate) => ({
-                    success: true,
-                    error: null,
-                    candidates: [directPreviewCandidate],
-                    selectedCandidateKey: directPreviewCandidate.candidateKey,
-                    selectedSource: 'source-direct',
-                    searchMode: 'source-direct',
-                    totalResults: 1,
-                    usedFallbackQuery: false,
-                    syncDataLineCount: syncDataLineCharCounts?.length || 0,
-                    directLrclibId: getSyncDataLrclibId(syncDataSource),
-                    englishTitle: null,
-                    englishArtist: null
-                });
-
-                const sourceDirectPreviewCandidate = await getSourceDirectPreviewCandidate();
-                if (sourceDirectPreviewCandidate) {
-                    return buildSourceDirectSearchResult(sourceDirectPreviewCandidate);
-                }
+    // 검색 실행/후보 랭킹/검색 흐름 로직은 searchCandidates()와 getLyrics()에서
+    // 동일하게 사용되므로, 호출별 컨텍스트를 받아 runSearchFlow를 돌려주는
+    // 팩토리로 공유한다. 반환되는 클로저 및 그 안의 로직은 원본과 완전히 동일하다.
+    function createLrclibSearchFlowRunner({ headers, searchSettings, trackDurationSec, syncDataLineCharCounts, syncDataSource }) {
                 const runSearch = async (params, label) => {
                     const query = new URLSearchParams();
                     if (params.track_name) query.set('track_name', params.track_name);
@@ -2098,7 +2010,19 @@
                         }
                     }
 
+                    const buildResolvedSearchFlow = () => {
                     const withinTolerance = item => item?.durationDiff <= LRCLIB_DURATION_TOLERANCE_SEC;
+                    // Every "best candidate" slot below prefers an in-tolerance
+                    // match and otherwise falls back to any match, else null. Share
+                    // that fixed two-pass lookup so the twelve slots stay identical.
+                    const pickWithTolerance = (list, matches) => list.find(item => withinTolerance(item) && matches(item))
+                        || list.find(matches)
+                        || null;
+                    const isSynced = item => item.syncedLyrics;
+                    const isPlain = item => item.plainLyrics;
+                    const isInstrumental = item => item.instrumental;
+                    const isPreferredSynced = item => item.preferredLyricsSource === 'synced';
+                    const isPreferredPlain = item => item.preferredLyricsSource === 'plain';
                     const sourceMatchedCandidates = rankedCandidates.filter(item => Number(item?.syncSourceMatchScore || 0) > 0);
                     const exactMatchCandidates = rankedCandidates.filter(item => item.syncLineExactMatch);
                     const nativeScriptCandidates = rankedCandidates.filter(item => hasOriginalLyricsScript(getCandidateLyricsText(item, item.preferredLyricsSource)));
@@ -2116,62 +2040,29 @@
                         rankedCandidates,
                         hasExactSyncLineMatch: exactMatchCandidates.length > 0,
                         usedFallbackQuery,
-                        bestSourceSyncedCandidate: sourceMatchedCandidates.find(item => withinTolerance(item) && item.syncedLyrics)
-                            || sourceMatchedCandidates.find(item => item.syncedLyrics)
-                            || null,
-                        bestSourcePlainCandidate: sourceMatchedCandidates.find(item => withinTolerance(item) && item.plainLyrics)
-                            || sourceMatchedCandidates.find(item => item.plainLyrics)
-                            || null,
-                        bestSourceInstrumentalCandidate: sourceMatchedCandidates.find(item => withinTolerance(item) && item.instrumental)
-                            || sourceMatchedCandidates.find(item => item.instrumental)
-                            || null,
-                        bestExactNativeSyncedCandidate: exactNativeScriptCandidates.find(item => withinTolerance(item) && item.preferredLyricsSource === 'synced')
-                            || exactNativeScriptCandidates.find(item => item.preferredLyricsSource === 'synced')
-                            || null,
-                        bestExactNativePlainCandidate: exactNativeScriptCandidates.find(item => withinTolerance(item) && item.preferredLyricsSource === 'plain')
-                            || exactNativeScriptCandidates.find(item => item.preferredLyricsSource === 'plain')
-                            || null,
-                        bestExactFallbackSyncedCandidate: exactFallbackScriptCandidates.find(item => withinTolerance(item) && item.preferredLyricsSource === 'synced')
-                            || exactFallbackScriptCandidates.find(item => item.preferredLyricsSource === 'synced')
-                            || null,
-                        bestExactFallbackPlainCandidate: exactFallbackScriptCandidates.find(item => withinTolerance(item) && item.preferredLyricsSource === 'plain')
-                            || exactFallbackScriptCandidates.find(item => item.preferredLyricsSource === 'plain')
-                            || null,
-                        bestNativeSyncedCandidate: orderedNativeScriptCandidates.find(item => withinTolerance(item) && item.syncedLyrics)
-                            || orderedNativeScriptCandidates.find(item => item.syncedLyrics)
-                            || null,
-                        bestNativePlainCandidate: orderedNativeScriptCandidates.find(item => withinTolerance(item) && item.plainLyrics)
-                            || orderedNativeScriptCandidates.find(item => item.plainLyrics)
-                            || null,
-                        bestFallbackSyncedCandidate: fallbackScriptCandidates.find(item => withinTolerance(item) && item.syncedLyrics)
-                            || fallbackScriptCandidates.find(item => item.syncedLyrics)
-                            || null,
-                        bestFallbackPlainCandidate: fallbackScriptCandidates.find(item => withinTolerance(item) && item.plainLyrics)
-                            || fallbackScriptCandidates.find(item => item.plainLyrics)
-                            || null,
-                        bestInstrumentalCandidate: rankedCandidates.find(item => withinTolerance(item) && item.instrumental)
-                            || rankedCandidates.find(item => item.instrumental)
-                            || null
+                        bestSourceSyncedCandidate: pickWithTolerance(sourceMatchedCandidates, isSynced),
+                        bestSourcePlainCandidate: pickWithTolerance(sourceMatchedCandidates, isPlain),
+                        bestSourceInstrumentalCandidate: pickWithTolerance(sourceMatchedCandidates, isInstrumental),
+                        bestExactNativeSyncedCandidate: pickWithTolerance(exactNativeScriptCandidates, isPreferredSynced),
+                        bestExactNativePlainCandidate: pickWithTolerance(exactNativeScriptCandidates, isPreferredPlain),
+                        bestExactFallbackSyncedCandidate: pickWithTolerance(exactFallbackScriptCandidates, isPreferredSynced),
+                        bestExactFallbackPlainCandidate: pickWithTolerance(exactFallbackScriptCandidates, isPreferredPlain),
+                        bestNativeSyncedCandidate: pickWithTolerance(orderedNativeScriptCandidates, isSynced),
+                        bestNativePlainCandidate: pickWithTolerance(orderedNativeScriptCandidates, isPlain),
+                        bestFallbackSyncedCandidate: pickWithTolerance(fallbackScriptCandidates, isSynced),
+                        bestFallbackPlainCandidate: pickWithTolerance(fallbackScriptCandidates, isPlain),
+                        bestInstrumentalCandidate: pickWithTolerance(rankedCandidates, isInstrumental)
                     };
+                    };
+                    return buildResolvedSearchFlow();
                 };
 
-                const primaryMetadata = {
-                    title,
-                    artist,
-                    album,
-                    expectedArtists
-                };
-
-                const primarySearchFlow = await runSearchFlow(primaryMetadata, { includeAlbum: true });
-                if (primarySearchFlow.fatal) {
-                    return {
-                        success: false,
-                        error: primarySearchFlow.error,
-                        candidates: [],
-                        selectedCandidateKey: null
-                    };
-                }
-
+        return runSearchFlow;
+    }
+    // body/selectedFlow/selectedSource 후보 선택 사다리는 searchCandidates()와
+    // getLyrics()에서 완전히 동일하게 사용된다. 호출별 컨텍스트를 받아 선택 결과와
+    // 영어 재검색 상태를 그대로 돌려주는 헬퍼로 공유한다.
+    async function selectLrclibCandidate({ primarySearchFlow, runSearchFlow, syncDataLineCharCounts, syncDataSource, info }) {
                 let body = null;
                 let selectedFlow = primarySearchFlow;
                 let selectedSource = 'primary-none';
@@ -2205,159 +2096,187 @@
                     return englishSearchFlow;
                 };
 
+                // A single ladder rung: adopt `flow[candidateProp]` as the chosen
+                // body if nothing has been selected yet. `flow` is `primarySearchFlow`
+                // (always present) or the lazily-built `englishSearchFlow` (may be
+                // null). Behaviour matches the original `if (!body && flow?.prop)`
+                // rungs, including the `else if` chain (each later rung already ran
+                // only while `body` was still null).
+                const selectFromFlow = (flow, candidateProp, source) => {
+                    if (body || !flow || !flow[candidateProp]) return;
+                    body = flow[candidateProp];
+                    selectedFlow = flow;
+                    selectedSource = source;
+                };
+                // English rungs need the flow resolved first. `ensure` mirrors the
+                // original rungs that awaited `ensureEnglishSearchFlow()` before the
+                // check; later english rungs reused the already-resolved flow.
+                const selectFromEnglish = async (candidateProp, source, ensure) => {
+                    if (body) return;
+                    if (ensure) await ensureEnglishSearchFlow();
+                    selectFromFlow(englishSearchFlow, candidateProp, source);
+                };
+
                 if (syncDataSource) {
-                    if (primarySearchFlow.bestSourceSyncedCandidate) {
-                        body = primarySearchFlow.bestSourceSyncedCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-source-synced';
-                    }
-
-                    if (!body) {
-                        await ensureEnglishSearchFlow();
-                        if (englishSearchFlow?.bestSourceSyncedCandidate) {
-                            body = englishSearchFlow.bestSourceSyncedCandidate;
-                            selectedFlow = englishSearchFlow;
-                            selectedSource = 'english-source-synced';
-                        }
-                    }
-
-                    if (!body && primarySearchFlow.bestSourcePlainCandidate) {
-                        body = primarySearchFlow.bestSourcePlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-source-plain';
-                    }
-
-                    if (!body && englishSearchFlow?.bestSourcePlainCandidate) {
-                        body = englishSearchFlow.bestSourcePlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-source-plain';
-                    }
-
-                    if (!body && primarySearchFlow.bestSourceInstrumentalCandidate) {
-                        body = primarySearchFlow.bestSourceInstrumentalCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-source-instrumental';
-                    }
-
-                    if (!body && englishSearchFlow?.bestSourceInstrumentalCandidate) {
-                        body = englishSearchFlow.bestSourceInstrumentalCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-source-instrumental';
-                    }
+                    selectFromFlow(primarySearchFlow, 'bestSourceSyncedCandidate', 'primary-source-synced');
+                    await selectFromEnglish('bestSourceSyncedCandidate', 'english-source-synced', true);
+                    selectFromFlow(primarySearchFlow, 'bestSourcePlainCandidate', 'primary-source-plain');
+                    await selectFromEnglish('bestSourcePlainCandidate', 'english-source-plain', false);
+                    selectFromFlow(primarySearchFlow, 'bestSourceInstrumentalCandidate', 'primary-source-instrumental');
+                    await selectFromEnglish('bestSourceInstrumentalCandidate', 'english-source-instrumental', false);
                 }
 
                 if (shouldPreferExactSyncLineMatch) {
-                    if (!body && primarySearchFlow.bestExactNativeSyncedCandidate) {
-                        body = primarySearchFlow.bestExactNativeSyncedCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-exact-native-synced';
-                    }
+                    selectFromFlow(primarySearchFlow, 'bestExactNativeSyncedCandidate', 'primary-exact-native-synced');
+                    await selectFromEnglish('bestExactNativeSyncedCandidate', 'english-exact-native-synced', true);
+                    selectFromFlow(primarySearchFlow, 'bestExactNativePlainCandidate', 'primary-exact-native-plain');
+                    await selectFromEnglish('bestExactNativePlainCandidate', 'english-exact-native-plain', false);
+                    selectFromFlow(primarySearchFlow, 'bestExactFallbackSyncedCandidate', 'primary-exact-fallback-synced');
+                    await selectFromEnglish('bestExactFallbackSyncedCandidate', 'english-exact-fallback-synced', false);
+                    selectFromFlow(primarySearchFlow, 'bestExactFallbackPlainCandidate', 'primary-exact-fallback-plain');
+                    await selectFromEnglish('bestExactFallbackPlainCandidate', 'english-exact-fallback-plain', false);
+                }
 
-                    if (!body) {
-                        await ensureEnglishSearchFlow();
-                        if (englishSearchFlow?.bestExactNativeSyncedCandidate) {
-                            body = englishSearchFlow.bestExactNativeSyncedCandidate;
-                            selectedFlow = englishSearchFlow;
-                            selectedSource = 'english-exact-native-synced';
-                        }
-                    }
+                selectFromFlow(primarySearchFlow, 'bestNativeSyncedCandidate', 'primary-native-synced');
+                await selectFromEnglish('bestNativeSyncedCandidate', 'english-native-synced', true);
 
-                    if (!body && primarySearchFlow.bestExactNativePlainCandidate) {
-                        body = primarySearchFlow.bestExactNativePlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-exact-native-plain';
-                    }
+                selectFromFlow(primarySearchFlow, 'bestNativePlainCandidate', 'primary-native-plain');
+                await selectFromEnglish('bestNativePlainCandidate', 'english-native-plain', false);
+                selectFromFlow(primarySearchFlow, 'bestFallbackSyncedCandidate', 'primary-fallback-synced');
+                await selectFromEnglish('bestFallbackSyncedCandidate', 'english-fallback-synced', false);
+                selectFromFlow(primarySearchFlow, 'bestFallbackPlainCandidate', 'primary-fallback-plain');
+                await selectFromEnglish('bestFallbackPlainCandidate', 'english-fallback-plain', false);
+                selectFromFlow(primarySearchFlow, 'bestInstrumentalCandidate', 'primary-instrumental');
+                await selectFromEnglish('bestInstrumentalCandidate', 'english-instrumental', false);
 
-                    if (!body && englishSearchFlow?.bestExactNativePlainCandidate) {
-                        body = englishSearchFlow.bestExactNativePlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-exact-native-plain';
-                    }
+        return { body, selectedFlow, selectedSource, englishSearchFlow, englishMetadata, englishSearchError };
+    }
+    // 트랙 컨텍스트(요청 헤더 + 기존 sync-data 기반 정보) 준비 로직은
+    // searchCandidates()와 getLyrics()에서 동일하다. 동일 로직을 헬퍼로 공유하되
+    // trackId/trackIsrc는 내부에서만 쓰이므로 그대로 지역 변수로 남긴다.
+    async function resolveLrclibTrackContext(info) {
+                const headers = { 'x-user-agent': `spicetify v${Spicetify.Config?.version || 'unknown'}` };
+                const trackId = window.LyricsService?.extractTrackId?.(info?.uri)
+                    || window.ivLyricsTrackIdentity?.extractTrackId?.(info?.uri)
+                    || '';
+                const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, info)
+                    || window.SyncDataService?.getTrackIsrc?.(trackId, info)
+                    || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);
+                let syncDataLineCharCounts = null;
+                let syncDataSource = null;
 
-                    if (!body && primarySearchFlow.bestExactFallbackSyncedCandidate) {
-                        body = primarySearchFlow.bestExactFallbackSyncedCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-exact-fallback-synced';
-                    }
-
-                    if (!body && englishSearchFlow?.bestExactFallbackSyncedCandidate) {
-                        body = englishSearchFlow.bestExactFallbackSyncedCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-exact-fallback-synced';
-                    }
-
-                    if (!body && primarySearchFlow.bestExactFallbackPlainCandidate) {
-                        body = primarySearchFlow.bestExactFallbackPlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-exact-fallback-plain';
-                    }
-
-                    if (!body && englishSearchFlow?.bestExactFallbackPlainCandidate) {
-                        body = englishSearchFlow.bestExactFallbackPlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-exact-fallback-plain';
+                if (trackId && window.SyncDataService?.getSyncData) {
+                    try {
+                        const existingSyncData = await window.SyncDataService.getSyncData(trackId, ADDON_INFO.id, { ...info, isrc: trackIsrc });
+                        syncDataLineCharCounts = getSyncDataLineCharCounts(existingSyncData);
+                        syncDataSource = getSyncDataLrclibSource(existingSyncData);
+                    } catch (e) {
+                        window.__ivLyricsDebugLog?.('[LR-DEBUG] Failed to fetch sync-data for exact line matching:', e?.message || e);
                     }
                 }
 
-                if (!body) {
-                    body = primarySearchFlow.bestNativeSyncedCandidate;
-                    if (body) {
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-native-synced';
-                    }
+        return { headers, syncDataLineCharCounts, syncDataSource };
+    }
+    // searchCandidates()와 getLyrics()의 트랙 메타데이터 파싱은 동일하다.
+    // (getSearchSettings/splitArtists 호출은 원래처럼 호출당 1회씩만 수행된다.)
+    function parseLrclibTrackMetadata(info) {
+        const title = info?.title?.trim?.();
+        const artist = info?.artist?.trim?.();
+        const album = info?.album?.trim?.();
+        const searchSettings = getSearchSettings();
+        const trackDuration = Number(info?.duration || 0);
+        const trackDurationSec = trackDuration > 0 ? trackDuration / 1000 : 0;
+        const expectedArtists = splitArtists(artist);
+        return { title, artist, album, searchSettings, trackDurationSec, expectedArtists };
+    }
+    const LrclibLyricsAddon = {
+        ...ADDON_INFO,  // 메타데이터 병합 (id, name, version 등)
+
+        /**
+         * 【초기화 메서드】
+         * 애드온이 로드될 때 호출됩니다.
+         * 현재 설정 상태를 반영한 캐시 버전을 동기화합니다.
+         */
+        async init() {
+            syncAddonCacheVersion();
+        },
+
+        async searchCandidates(info) {
+            try {
+                const { title, artist, album, searchSettings, trackDurationSec, expectedArtists } = parseLrclibTrackMetadata(info);
+
+                if (!title || !artist || !trackDurationSec) {
+                    return {
+                        success: false,
+                        error: 'Missing track metadata',
+                        candidates: [],
+                        selectedCandidateKey: null
+                    };
                 }
 
-                if (!body) {
-                    await ensureEnglishSearchFlow();
-                    if (englishSearchFlow?.bestNativeSyncedCandidate) {
-                        body = englishSearchFlow.bestNativeSyncedCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-native-synced';
+                const { headers, syncDataLineCharCounts, syncDataSource } = await resolveLrclibTrackContext(info);
+
+                let sourceDirectLookupAttempted = false;
+                let cachedSourceDirectPreviewCandidate = null;
+                const getSourceDirectPreviewCandidate = async () => {
+                    if (sourceDirectLookupAttempted) return cachedSourceDirectPreviewCandidate;
+                    sourceDirectLookupAttempted = true;
+
+                    if (!getSyncDataLrclibId(syncDataSource)) return null;
+
+                    try {
+                        const directCandidate = decorateDirectCandidate(
+                            await fetchLrclibCandidateById(syncDataSource, headers),
+                            syncDataSource,
+                            trackDurationSec
+                        );
+                        cachedSourceDirectPreviewCandidate = buildDirectPreviewCandidate(directCandidate);
+                    } catch (e) {
+                        window.__ivLyricsDebugLog?.('[LR-DEBUG] Failed to restore LRCLIB sync-data source:', e?.message || e);
+                        cachedSourceDirectPreviewCandidate = null;
                     }
+                    return cachedSourceDirectPreviewCandidate;
+                };
+
+                const buildSourceDirectSearchResult = (directPreviewCandidate) => ({
+                    success: true,
+                    error: null,
+                    candidates: [directPreviewCandidate],
+                    selectedCandidateKey: directPreviewCandidate.candidateKey,
+                    selectedSource: 'source-direct',
+                    searchMode: 'source-direct',
+                    totalResults: 1,
+                    usedFallbackQuery: false,
+                    syncDataLineCount: syncDataLineCharCounts?.length || 0,
+                    directLrclibId: getSyncDataLrclibId(syncDataSource),
+                    englishTitle: null,
+                    englishArtist: null
+                });
+
+                const sourceDirectPreviewCandidate = await getSourceDirectPreviewCandidate();
+                if (sourceDirectPreviewCandidate) {
+                    return buildSourceDirectSearchResult(sourceDirectPreviewCandidate);
+                }
+                const runSearchFlow = createLrclibSearchFlowRunner({ headers, searchSettings, trackDurationSec, syncDataLineCharCounts, syncDataSource });
+
+                const primaryMetadata = {
+                    title,
+                    artist,
+                    album,
+                    expectedArtists
+                };
+
+                const primarySearchFlow = await runSearchFlow(primaryMetadata, { includeAlbum: true });
+                if (primarySearchFlow.fatal) {
+                    return {
+                        success: false,
+                        error: primarySearchFlow.error,
+                        candidates: [],
+                        selectedCandidateKey: null
+                    };
                 }
 
-                if (!body) {
-                    if (primarySearchFlow.bestNativePlainCandidate) {
-                        body = primarySearchFlow.bestNativePlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-native-plain';
-                    }
-                    else if (englishSearchFlow?.bestNativePlainCandidate) {
-                        body = englishSearchFlow.bestNativePlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-native-plain';
-                    }
-                    else if (primarySearchFlow.bestFallbackSyncedCandidate) {
-                        body = primarySearchFlow.bestFallbackSyncedCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-fallback-synced';
-                    }
-                    else if (englishSearchFlow?.bestFallbackSyncedCandidate) {
-                        body = englishSearchFlow.bestFallbackSyncedCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-fallback-synced';
-                    }
-                    else if (primarySearchFlow.bestFallbackPlainCandidate) {
-                        body = primarySearchFlow.bestFallbackPlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-fallback-plain';
-                    }
-                    else if (englishSearchFlow?.bestFallbackPlainCandidate) {
-                        body = englishSearchFlow.bestFallbackPlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-fallback-plain';
-                    }
-                    else if (primarySearchFlow.bestInstrumentalCandidate) {
-                        body = primarySearchFlow.bestInstrumentalCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-instrumental';
-                    }
-                    else if (englishSearchFlow?.bestInstrumentalCandidate) {
-                        body = englishSearchFlow.bestInstrumentalCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-instrumental';
-                    }
-                }
+                let { body, selectedFlow, selectedSource, englishSearchFlow, englishMetadata, englishSearchError } = await selectLrclibCandidate({ primarySearchFlow, runSearchFlow, syncDataLineCharCounts, syncDataSource, info });
 
                 if (!body && getSyncDataLrclibId(syncDataSource)) {
                     const directPreviewCandidate = await getSourceDirectPreviewCandidate();
@@ -2427,38 +2346,27 @@
                 const query = new URLSearchParams({ q: queryValue });
                 const response = await fetchWithTimeout(`${LRCLIB_API_BASE}/search?${query.toString()}`, { headers }, 35000);
 
+                // 수동 검색 실패 응답은 error 메시지만 다르고 나머지 형태가 동일하다.
+                const manualSearchFailure = (errorMessage) => ({
+                    success: false,
+                    error: errorMessage,
+                    candidates: [],
+                    selectedCandidateKey: null,
+                    searchMode: 'manual',
+                    totalResults: 0
+                });
+
                 if (!response) {
-                    return {
-                        success: false,
-                        error: 'Network request failed',
-                        candidates: [],
-                        selectedCandidateKey: null,
-                        searchMode: 'manual',
-                        totalResults: 0
-                    };
+                    return manualSearchFailure('Network request failed');
                 }
 
                 if (!response.ok) {
-                    return {
-                        success: false,
-                        error: response.status === 404 ? 'No lyrics found' : `API error: ${response.status}`,
-                        candidates: [],
-                        selectedCandidateKey: null,
-                        searchMode: 'manual',
-                        totalResults: 0
-                    };
+                    return manualSearchFailure(response.status === 404 ? 'No lyrics found' : `API error: ${response.status}`);
                 }
 
                 const data = await response.json();
                 if (!Array.isArray(data)) {
-                    return {
-                        success: false,
-                        error: 'Invalid LRCLIB response',
-                        candidates: [],
-                        selectedCandidateKey: null,
-                        searchMode: 'manual',
-                        totalResults: 0
-                    };
+                    return manualSearchFailure('Invalid LRCLIB response');
                 }
 
                 const trackDuration = Number(info?.duration || 0);
@@ -2509,7 +2417,7 @@
          * 【설정 UI 메서드】
          * 사용자 설정 화면에 표시될 React 컴포넌트를 반환합니다.
          * 자유검색 폴백 단계를 개별적으로 켜고 끌 수 있습니다.
-         * 
+         *
          * @returns {Function} React 함수형 컴포넌트
          */
         getSettingsUI() {
@@ -2537,47 +2445,42 @@
                     syncAddonCacheVersion();
                 }, []);
 
+                // 두 폴백 토글 행은 라벨/설명/체크 상태/onChange만 다르고 구조가 동일하다.
+                const renderFallbackSetting = ({ label, description, checked, onChange }) =>
+                    React.createElement('div', { className: 'ai-addon-setting' },
+                        React.createElement('div', {
+                            style: {
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                gap: '12px'
+                            }
+                        },
+                            React.createElement('div', { style: { flex: '1 1 auto' } },
+                                React.createElement('label', null, label),
+                                React.createElement('small', null, description)
+                            ),
+                            React.createElement('input', {
+                                type: 'checkbox',
+                                checked,
+                                onChange
+                            })
+                        )
+                    );
+
                 return React.createElement('div', { className: 'lyrics-addon-settings ai-addon-settings lrclib-settings' },
-                    React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('div', {
-                            style: {
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: '12px'
-                            }
-                        },
-                            React.createElement('div', { style: { flex: '1 1 auto' } },
-                                React.createElement('label', null, getAddonText('settings.fallbackTitleArtistLabel', '1st Fallback (title + artist)')),
-                                React.createElement('small', null, getAddonText('settings.fallbackTitleArtistDesc', 'Use q=title+artist free-text search when structured search fails.'))
-                            ),
-                            React.createElement('input', {
-                                type: 'checkbox',
-                                checked: enableFallbackTitleArtist,
-                                onChange: handleToggle(LRCLIB_SETTING_KEYS.fallbackTitleArtist, setEnableFallbackTitleArtist)
-                            })
-                        )
-                    ),
-                    React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('div', {
-                            style: {
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                gap: '12px'
-                            }
-                        },
-                            React.createElement('div', { style: { flex: '1 1 auto' } },
-                                React.createElement('label', null, getAddonText('settings.fallbackTitleOnlyLabel', '2nd Fallback (title only)')),
-                                React.createElement('small', null, getAddonText('settings.fallbackTitleOnlyDesc', 'Use q=title free-text search when the first fallback also fails.'))
-                            ),
-                            React.createElement('input', {
-                                type: 'checkbox',
-                                checked: enableFallbackTitleOnly,
-                                onChange: handleToggle(LRCLIB_SETTING_KEYS.fallbackTitleOnly, setEnableFallbackTitleOnly)
-                            })
-                        )
-                    )
+                    renderFallbackSetting({
+                        label: getAddonText('settings.fallbackTitleArtistLabel', '1st Fallback (title + artist)'),
+                        description: getAddonText('settings.fallbackTitleArtistDesc', 'Use q=title+artist free-text search when structured search fails.'),
+                        checked: enableFallbackTitleArtist,
+                        onChange: handleToggle(LRCLIB_SETTING_KEYS.fallbackTitleArtist, setEnableFallbackTitleArtist)
+                    }),
+                    renderFallbackSetting({
+                        label: getAddonText('settings.fallbackTitleOnlyLabel', '2nd Fallback (title only)'),
+                        description: getAddonText('settings.fallbackTitleOnlyDesc', 'Use q=title free-text search when the first fallback also fails.'),
+                        checked: enableFallbackTitleOnly,
+                        onChange: handleToggle(LRCLIB_SETTING_KEYS.fallbackTitleOnly, setEnableFallbackTitleOnly)
+                    })
                 );
             };
         },
@@ -2586,10 +2489,10 @@
          * ────────────────────────────────────────────────────────────────────────────
          * 가사 가져오기 메서드 (getLyrics) - 핵심 메서드
          * ────────────────────────────────────────────────────────────────────────────
-         * 
+         *
          * 【목적】
          * Spotify에서 재생 중인 트랙의 가사를 LRCLIB API에서 검색하여 반환합니다.
-         * 
+         *
          * 【입력 파라미터】
          * @param {Object} info - 트랙 정보 객체
          *   - uri: Spotify URI (예: "spotify:track:abc123")
@@ -2597,7 +2500,7 @@
          *   - artist: 아티스트 이름
          *   - album: 앨범 이름 (구조화 검색에 사용)
          *   - duration: 곡 길이 (밀리초)
-         * 
+         *
          * 【반환값】
          * @returns {Promise<LyricsResult>} 가사 결과 객체
          *   - uri: 트랙 URI
@@ -2607,7 +2510,7 @@
          *   - unsynced: 일반 가사 배열 또는 null
          *   - copyright: 저작권 정보 (현재 null)
          *   - error: 에러 메시지 또는 null
-         * 
+         *
          * 【검색 전략】
          * 구조화 검색 + 자유검색 폴백 + 아티스트/재생시간 검증
          */
@@ -2640,13 +2543,7 @@
             };
 
             try {
-                const title = info?.title?.trim?.();
-                const artist = info?.artist?.trim?.();
-                const album = info?.album?.trim?.();
-                const searchSettings = getSearchSettings();
-                const trackDuration = Number(info?.duration || 0);
-                const trackDurationSec = trackDuration > 0 ? trackDuration / 1000 : 0;
-                const expectedArtists = splitArtists(artist);
+                const { title, artist, album, searchSettings, trackDurationSec, expectedArtists } = parseLrclibTrackMetadata(info);
 
                 if (!title || !artist || !trackDurationSec) {
                     result.error = 'Missing track metadata';
@@ -2654,25 +2551,7 @@
                     return result;
                 }
 
-                const headers = { 'x-user-agent': `spicetify v${Spicetify.Config?.version || 'unknown'}` };
-                const trackId = window.LyricsService?.extractTrackId?.(info?.uri)
-                    || window.ivLyricsTrackIdentity?.extractTrackId?.(info?.uri)
-                    || '';
-                const trackIsrc = await window.SyncDataService?.resolveTrackIsrc?.(trackId, info)
-                    || window.SyncDataService?.getTrackIsrc?.(trackId, info)
-                    || window.SyncDataService?.normalizeSyncDataIsrc?.(info?.isrc || info?.external_ids?.isrc || info?.externalIds?.isrc);
-                let syncDataLineCharCounts = null;
-                let syncDataSource = null;
-
-                if (trackId && window.SyncDataService?.getSyncData) {
-                    try {
-                        const existingSyncData = await window.SyncDataService.getSyncData(trackId, ADDON_INFO.id, { ...info, isrc: trackIsrc });
-                        syncDataLineCharCounts = getSyncDataLineCharCounts(existingSyncData);
-                        syncDataSource = getSyncDataLrclibSource(existingSyncData);
-                    } catch (e) {
-                        window.__ivLyricsDebugLog?.('[LR-DEBUG] Failed to fetch sync-data for exact line matching:', e?.message || e);
-                    }
-                }
+                const { headers, syncDataLineCharCounts, syncDataSource } = await resolveLrclibTrackContext(info);
 
                 if (getSyncDataLrclibId(syncDataSource)) {
                     const directCandidate = decorateDirectCandidate(
@@ -2697,261 +2576,7 @@
                     }
                 }
 
-                const runSearch = async (params, label) => {
-                    const query = new URLSearchParams();
-                    if (params.track_name) query.set('track_name', params.track_name);
-                    if (params.artist_name) query.set('artist_name', params.artist_name);
-                    if (params.album_name && params.album_name !== 'undefined') query.set('album_name', params.album_name);
-                    if (params.q) query.set('q', params.q);
-
-                    const searchUrl = `${LRCLIB_API_BASE}/search?${query.toString()}`;
-                    const response = await fetchWithTimeout(searchUrl, { headers }, 35000);
-
-                    if (!response) {
-                        return {
-                            fatal: true,
-                            error: 'Network request failed',
-                            searchLabel: label,
-                            totalResults: 0,
-                            candidates: []
-                        };
-                    }
-
-                    if (!response.ok) {
-                        if (response.status === 429) {
-                            return {
-                                fatal: true,
-                                error: 'Rate limit exceeded (429)',
-                                searchLabel: label,
-                                totalResults: 0,
-                                candidates: []
-                            };
-                        }
-                        if (response.status === 404) {
-                            return {
-                                fatal: false,
-                                error: 'No lyrics found',
-                                searchLabel: label,
-                                totalResults: 0,
-                                candidates: []
-                            };
-                        }
-                        return {
-                            fatal: true,
-                            error: `API error: ${response.status}`,
-                            searchLabel: label,
-                            totalResults: 0,
-                            candidates: []
-                        };
-                    }
-
-                    const data = await response.json();
-                    if (!Array.isArray(data)) {
-                        return {
-                            fatal: true,
-                            error: 'Invalid LRCLIB response',
-                            searchLabel: label,
-                            totalResults: 0,
-                            candidates: []
-                        };
-                    }
-
-                    return {
-                        fatal: false,
-                        error: data.length === 0 ? 'No lyrics found' : null,
-                        searchLabel: label,
-                        totalResults: data.length,
-                        candidates: data
-                    };
-                };
-
-                const rankCandidates = (candidates, metadata, { allowTitleDrivenMatch = false } = {}) => {
-                    const metadataTitle = metadata?.title || '';
-                    const metadataArtists = metadata?.expectedArtists || [];
-
-                    return candidates
-                        .map(item => {
-                            const candidateArtists = splitArtists(item?.artistName || '');
-                            const candidateTitle = item?.trackName || item?.name || '';
-                            const syncLineMatch = getCandidateSyncLineMatch(item, syncDataLineCharCounts);
-                            const lyricsText = getCandidateLyricsText(item, syncLineMatch.preferredLyricsSource);
-                            const lyricsMix = analyzeLyricsLanguageMix(lyricsText);
-                            const titleScore = getTitleScore(metadataTitle, candidateTitle);
-                            const artistScore = getBestArtistScore(metadataArtists, candidateArtists);
-                            const durationDiff = Math.abs(Number(item?.duration || 0) - trackDurationSec);
-                            const exactDurationMatch = hasExactDurationMatch(trackDurationSec, Number(item?.duration || 0));
-                            const artistMatched = artistScore > LRCLIB_ARTIST_MATCH_THRESHOLD;
-                            const titleDrivenMatch = allowTitleDrivenMatch
-                                && titleScore >= LRCLIB_FALLBACK_TITLE_MATCH_THRESHOLD
-                                && exactDurationMatch;
-                            const rankedItem = {
-                                ...item,
-                                artistScore,
-                                titleScore,
-                                durationDiff,
-                                exactDurationMatch,
-                                artistMatched,
-                                titleDrivenMatch,
-                                syncLineExactMatch: syncLineMatch.syncLineExactMatch,
-                                exactSyncedLineMatch: syncLineMatch.exactSyncedLineMatch,
-                                exactPlainLineMatch: syncLineMatch.exactPlainLineMatch,
-                                preferredLyricsSource: syncLineMatch.preferredLyricsSource,
-                                lyricsMix,
-                                hasInterleavedTranslations: lyricsMix.hasInterleavedTranslations,
-                                matchReason: artistMatched ? 'artist' : (titleDrivenMatch ? 'title' : 'rejected')
-                            };
-                            const sourceMatch = getCandidateSourceMatch(rankedItem, syncDataSource);
-
-                            return {
-                                ...rankedItem,
-                                ...sourceMatch
-                            };
-                        })
-                        .filter(item => {
-                            if (!item?.syncedLyrics && !item?.plainLyrics && !item?.instrumental) return false;
-                            if (item.artistMatched) return true;
-                            if (allowTitleDrivenMatch && item.titleDrivenMatch) return true;
-                            return false;
-                        })
-                        .sort((a, b) => {
-                            if (a.syncSourceMatchScore !== b.syncSourceMatchScore) {
-                                return Number(b.syncSourceMatchScore || 0) - Number(a.syncSourceMatchScore || 0);
-                            }
-                            if (a.syncLineExactMatch !== b.syncLineExactMatch) {
-                                return Number(b.syncLineExactMatch) - Number(a.syncLineExactMatch);
-                            }
-                            if (a.exactSyncedLineMatch !== b.exactSyncedLineMatch) {
-                                return Number(b.exactSyncedLineMatch) - Number(a.exactSyncedLineMatch);
-                            }
-                            if (a.artistMatched !== b.artistMatched) {
-                                return Number(b.artistMatched) - Number(a.artistMatched);
-                            }
-                            if (a.hasInterleavedTranslations !== b.hasInterleavedTranslations) {
-                                return Number(a.hasInterleavedTranslations) - Number(b.hasInterleavedTranslations);
-                            }
-                            if (b.titleScore !== a.titleScore) {
-                                return b.titleScore - a.titleScore;
-                            }
-                            if (a.durationDiff !== b.durationDiff) {
-                                return a.durationDiff - b.durationDiff;
-                            }
-                            return b.artistScore - a.artistScore;
-                        });
-                };
-
-                const runSearchFlow = async (metadata, { includeAlbum = true } = {}) => {
-                    const structuredSearch = await runSearch({
-                        track_name: metadata.title,
-                        artist_name: metadata.artist,
-                        album_name: includeAlbum ? metadata.album : ''
-                    }, includeAlbum ? 'structured' : 'structured:no-album');
-
-                    if (structuredSearch.fatal) {
-                        return {
-                            fatal: true,
-                            error: structuredSearch.error,
-                            resolvedSearch: structuredSearch,
-                            rankedCandidates: [],
-                            usedFallbackQuery: false,
-                            bestSyncedCandidate: null,
-                            bestPlainCandidate: null
-                        };
-                    }
-
-                    let resolvedSearch = structuredSearch;
-                    let rankedCandidates = rankCandidates(structuredSearch.candidates, metadata);
-                    let usedFallbackQuery = false;
-
-                    if (rankedCandidates.length === 0 && LRCLIB_ENABLE_INEXACT_SEARCH) {
-                        const fallbackAttempts = [];
-                        if (searchSettings.enableFallbackTitleArtist && metadata.title && metadata.artist) {
-                            fallbackAttempts.push({ params: { q: `${metadata.title} ${metadata.artist}` }, label: 'q:title+artist' });
-                        }
-                        if (searchSettings.enableFallbackTitleOnly && metadata.title) {
-                            fallbackAttempts.push({ params: { q: metadata.title }, label: 'q:title' });
-                        }
-
-                        for (const attempt of fallbackAttempts) {
-                            const fallbackSearch = await runSearch(attempt.params, attempt.label);
-                            usedFallbackQuery = true;
-
-                            if (fallbackSearch.fatal) {
-                                return {
-                                    fatal: true,
-                                    error: fallbackSearch.error,
-                                    resolvedSearch: fallbackSearch,
-                                    rankedCandidates: [],
-                                    usedFallbackQuery,
-                                    bestSyncedCandidate: null,
-                                    bestPlainCandidate: null
-                                };
-                            }
-
-                            resolvedSearch = fallbackSearch;
-                            rankedCandidates = rankCandidates(fallbackSearch.candidates, metadata, { allowTitleDrivenMatch: true });
-
-                            if (rankedCandidates.length > 0) {
-                                break;
-                            }
-                        }
-                    }
-
-                    const withinTolerance = item => item?.durationDiff <= LRCLIB_DURATION_TOLERANCE_SEC;
-                    const sourceMatchedCandidates = rankedCandidates.filter(item => Number(item?.syncSourceMatchScore || 0) > 0);
-                    const exactMatchCandidates = rankedCandidates.filter(item => item.syncLineExactMatch);
-                    const nativeScriptCandidates = rankedCandidates.filter(item => hasOriginalLyricsScript(getCandidateLyricsText(item, item.preferredLyricsSource)));
-                    const fallbackScriptCandidates = rankedCandidates.filter(item => !hasOriginalLyricsScript(getCandidateLyricsText(item, item.preferredLyricsSource)));
-                    const exactNativeScriptCandidates = nativeScriptCandidates.filter(item => item.syncLineExactMatch);
-                    const exactFallbackScriptCandidates = fallbackScriptCandidates.filter(item => item.syncLineExactMatch);
-                    const preferredNativeScriptCandidates = nativeScriptCandidates.filter(item => !item.hasInterleavedTranslations);
-                    const interleavedNativeScriptCandidates = nativeScriptCandidates.filter(item => item.hasInterleavedTranslations);
-                    const orderedNativeScriptCandidates = preferredNativeScriptCandidates.concat(interleavedNativeScriptCandidates);
-
-                    return {
-                        fatal: false,
-                        error: null,
-                        resolvedSearch,
-                        rankedCandidates,
-                        hasExactSyncLineMatch: exactMatchCandidates.length > 0,
-                        usedFallbackQuery,
-                        bestSourceSyncedCandidate: sourceMatchedCandidates.find(item => withinTolerance(item) && item.syncedLyrics)
-                            || sourceMatchedCandidates.find(item => item.syncedLyrics)
-                            || null,
-                        bestSourcePlainCandidate: sourceMatchedCandidates.find(item => withinTolerance(item) && item.plainLyrics)
-                            || sourceMatchedCandidates.find(item => item.plainLyrics)
-                            || null,
-                        bestSourceInstrumentalCandidate: sourceMatchedCandidates.find(item => withinTolerance(item) && item.instrumental)
-                            || sourceMatchedCandidates.find(item => item.instrumental)
-                            || null,
-                        bestExactNativeSyncedCandidate: exactNativeScriptCandidates.find(item => withinTolerance(item) && item.preferredLyricsSource === 'synced')
-                            || exactNativeScriptCandidates.find(item => item.preferredLyricsSource === 'synced')
-                            || null,
-                        bestExactNativePlainCandidate: exactNativeScriptCandidates.find(item => withinTolerance(item) && item.preferredLyricsSource === 'plain')
-                            || exactNativeScriptCandidates.find(item => item.preferredLyricsSource === 'plain')
-                            || null,
-                        bestExactFallbackSyncedCandidate: exactFallbackScriptCandidates.find(item => withinTolerance(item) && item.preferredLyricsSource === 'synced')
-                            || exactFallbackScriptCandidates.find(item => item.preferredLyricsSource === 'synced')
-                            || null,
-                        bestExactFallbackPlainCandidate: exactFallbackScriptCandidates.find(item => withinTolerance(item) && item.preferredLyricsSource === 'plain')
-                            || exactFallbackScriptCandidates.find(item => item.preferredLyricsSource === 'plain')
-                            || null,
-                        bestNativeSyncedCandidate: orderedNativeScriptCandidates.find(item => withinTolerance(item) && item.syncedLyrics)
-                            || orderedNativeScriptCandidates.find(item => item.syncedLyrics)
-                            || null,
-                        bestNativePlainCandidate: orderedNativeScriptCandidates.find(item => withinTolerance(item) && item.plainLyrics)
-                            || orderedNativeScriptCandidates.find(item => item.plainLyrics)
-                            || null,
-                        bestFallbackSyncedCandidate: fallbackScriptCandidates.find(item => withinTolerance(item) && item.syncedLyrics)
-                            || fallbackScriptCandidates.find(item => item.syncedLyrics)
-                            || null,
-                        bestFallbackPlainCandidate: fallbackScriptCandidates.find(item => withinTolerance(item) && item.plainLyrics)
-                            || fallbackScriptCandidates.find(item => item.plainLyrics)
-                            || null,
-                        bestInstrumentalCandidate: rankedCandidates.find(item => withinTolerance(item) && item.instrumental)
-                            || rankedCandidates.find(item => item.instrumental)
-                            || null
-                    };
-                };
+                const runSearchFlow = createLrclibSearchFlowRunner({ headers, searchSettings, trackDurationSec, syncDataLineCharCounts, syncDataSource });
 
                 const primaryMetadata = {
                     title,
@@ -2971,192 +2596,7 @@
                     return result;
                 }
 
-                let body = null;
-                let selectedFlow = primarySearchFlow;
-                let selectedSource = 'primary-none';
-                let englishSearchFlow = null;
-                let englishMetadata = null;
-                let englishSearchError = null;
-                let englishSearchAttempted = false;
-                const shouldPreferExactSyncLineMatch = Array.isArray(syncDataLineCharCounts) && syncDataLineCharCounts.length > 0;
-
-                const ensureEnglishSearchFlow = async () => {
-                    if (englishSearchAttempted) return englishSearchFlow;
-                    englishSearchAttempted = true;
-                    englishMetadata = await getTrackMetadataForAcceptLanguage(info?.uri, LRCLIB_ENGLISH_ACCEPT_LANGUAGE);
-
-                    if (englishMetadata?.title && englishMetadata?.artist) {
-                        englishMetadata = {
-                            title: englishMetadata.title.trim(),
-                            artist: englishMetadata.artist.trim(),
-                            album: '',
-                            expectedArtists: splitArtists(englishMetadata.artist)
-                        };
-
-                        englishSearchFlow = await runSearchFlow(englishMetadata, { includeAlbum: false });
-
-                        if (englishSearchFlow.fatal) {
-                            englishSearchError = englishSearchFlow.error;
-                            englishSearchFlow = null;
-                        }
-                    }
-
-                    return englishSearchFlow;
-                };
-
-                if (syncDataSource) {
-                    if (primarySearchFlow.bestSourceSyncedCandidate) {
-                        body = primarySearchFlow.bestSourceSyncedCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-source-synced';
-                    }
-
-                    if (!body) {
-                        await ensureEnglishSearchFlow();
-                        if (englishSearchFlow?.bestSourceSyncedCandidate) {
-                            body = englishSearchFlow.bestSourceSyncedCandidate;
-                            selectedFlow = englishSearchFlow;
-                            selectedSource = 'english-source-synced';
-                        }
-                    }
-
-                    if (!body && primarySearchFlow.bestSourcePlainCandidate) {
-                        body = primarySearchFlow.bestSourcePlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-source-plain';
-                    }
-
-                    if (!body && englishSearchFlow?.bestSourcePlainCandidate) {
-                        body = englishSearchFlow.bestSourcePlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-source-plain';
-                    }
-
-                    if (!body && primarySearchFlow.bestSourceInstrumentalCandidate) {
-                        body = primarySearchFlow.bestSourceInstrumentalCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-source-instrumental';
-                    }
-
-                    if (!body && englishSearchFlow?.bestSourceInstrumentalCandidate) {
-                        body = englishSearchFlow.bestSourceInstrumentalCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-source-instrumental';
-                    }
-                }
-
-                if (shouldPreferExactSyncLineMatch) {
-                    if (!body && primarySearchFlow.bestExactNativeSyncedCandidate) {
-                        body = primarySearchFlow.bestExactNativeSyncedCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-exact-native-synced';
-                    }
-
-                    if (!body) {
-                        await ensureEnglishSearchFlow();
-                        if (englishSearchFlow?.bestExactNativeSyncedCandidate) {
-                            body = englishSearchFlow.bestExactNativeSyncedCandidate;
-                            selectedFlow = englishSearchFlow;
-                            selectedSource = 'english-exact-native-synced';
-                        }
-                    }
-
-                    if (!body && primarySearchFlow.bestExactNativePlainCandidate) {
-                        body = primarySearchFlow.bestExactNativePlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-exact-native-plain';
-                    }
-
-                    if (!body && englishSearchFlow?.bestExactNativePlainCandidate) {
-                        body = englishSearchFlow.bestExactNativePlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-exact-native-plain';
-                    }
-
-                    if (!body && primarySearchFlow.bestExactFallbackSyncedCandidate) {
-                        body = primarySearchFlow.bestExactFallbackSyncedCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-exact-fallback-synced';
-                    }
-
-                    if (!body && englishSearchFlow?.bestExactFallbackSyncedCandidate) {
-                        body = englishSearchFlow.bestExactFallbackSyncedCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-exact-fallback-synced';
-                    }
-
-                    if (!body && primarySearchFlow.bestExactFallbackPlainCandidate) {
-                        body = primarySearchFlow.bestExactFallbackPlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-exact-fallback-plain';
-                    }
-
-                    if (!body && englishSearchFlow?.bestExactFallbackPlainCandidate) {
-                        body = englishSearchFlow.bestExactFallbackPlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-exact-fallback-plain';
-                    }
-                }
-
-                if (!body) {
-                    body = primarySearchFlow.bestNativeSyncedCandidate;
-                    if (body) {
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-native-synced';
-                    }
-                }
-
-                if (!body) {
-                    await ensureEnglishSearchFlow();
-                    if (englishSearchFlow?.bestNativeSyncedCandidate) {
-                        body = englishSearchFlow.bestNativeSyncedCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-native-synced';
-                    }
-                }
-
-                if (!body) {
-                    if (primarySearchFlow.bestNativePlainCandidate) {
-                        body = primarySearchFlow.bestNativePlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-native-plain';
-                    }
-                    else if (englishSearchFlow?.bestNativePlainCandidate) {
-                        body = englishSearchFlow.bestNativePlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-native-plain';
-                    }
-                    else if (primarySearchFlow.bestFallbackSyncedCandidate) {
-                        body = primarySearchFlow.bestFallbackSyncedCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-fallback-synced';
-                    }
-                    else if (englishSearchFlow?.bestFallbackSyncedCandidate) {
-                        body = englishSearchFlow.bestFallbackSyncedCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-fallback-synced';
-                    }
-                    else if (primarySearchFlow.bestFallbackPlainCandidate) {
-                        body = primarySearchFlow.bestFallbackPlainCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-fallback-plain';
-                    }
-                    else if (englishSearchFlow?.bestFallbackPlainCandidate) {
-                        body = englishSearchFlow.bestFallbackPlainCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-fallback-plain';
-                    }
-                    else if (primarySearchFlow.bestInstrumentalCandidate) {
-                        body = primarySearchFlow.bestInstrumentalCandidate;
-                        selectedFlow = primarySearchFlow;
-                        selectedSource = 'primary-instrumental';
-                    }
-                    else if (englishSearchFlow?.bestInstrumentalCandidate) {
-                        body = englishSearchFlow.bestInstrumentalCandidate;
-                        selectedFlow = englishSearchFlow;
-                        selectedSource = 'english-instrumental';
-                    }
-                }
+                let { body, selectedFlow, selectedSource, englishSearchFlow, englishMetadata, englishSearchError } = await selectLrclibCandidate({ primarySearchFlow, runSearchFlow, syncDataLineCharCounts, syncDataSource, info });
 
                 if (!body) {
                     if (englishSearchError) {

@@ -790,7 +790,7 @@ const SYNC_CREATOR_KIND_OPTIONS = [
 	['pop', 'syncCreator.kindPop']
 ];
 const SYNC_CREATOR_KIND_LABELS = new Map(SYNC_CREATOR_KIND_OPTIONS);
-const SYNC_CREATOR_PARALLEL_HINT_REGEX = /[()（）\/|／｜]/u;
+const SYNC_CREATOR_PARALLEL_HINT_REGEX = /[()（）/|／｜]/u;
 const SYNC_CREATOR_LRC_METADATA_LINE_REGEX = /^\s*\[(?:ar|al|ti|au|length|by|offset|re|ve):[^\]]*\]\s*$/i;
 const SYNC_CREATOR_HANGUL_CODA_BY_JAMO = new Map([
 	['ㄱ', 1], ['ㄲ', 2], ['ㄳ', 3], ['ㄴ', 4], ['ㄵ', 5], ['ㄶ', 6], ['ㄷ', 7], ['ㄹ', 8],
@@ -1189,6 +1189,24 @@ const getSyncCreatorKindLabel = (value) => {
 const normalizeSyncCreatorKind = (value) => (
 	SYNC_CREATOR_KIND_LABELS.has(value) ? value : ''
 );
+
+// Shared field-value normaliser for the per-line and per-part meta editors:
+// dispatches on the meta field name to the matching sanitiser, falling back to
+// a trimmed string. Pure function of (field, value).
+const normalizeSyncCreatorMetaFieldValue = (field, value) => {
+	switch (field) {
+		case 'speaker':
+			return normalizeSyncCreatorSpeaker(value);
+		case 'speaker-color':
+			return normalizeSyncCreatorSpeakerColor(value);
+		case 'speaker-fallback':
+			return normalizeSyncCreatorSpeakerFallback(value);
+		case 'kind':
+			return normalizeSyncCreatorKind(value);
+		default:
+			return String(value || '').trim();
+	}
+};
 
 const getSyncCreatorStyleRangeSpeakerMeta = (range = {}) => {
 	const sourceSpeaker = range?.speaker;
@@ -1868,13 +1886,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const ch = chars[index];
 		if (!ch) return false;
 		if (isInternalJoiner(chars, index)) return false;
-		return /[\(\[\{「『【〈《¿¡'"“”‘’]/u.test(ch);
+		return /[([{「『【〈《¿¡'"“”‘’]/u.test(ch);
 	};
 	const isTrailingChar = (chars, index) => {
 		const ch = chars[index];
 		if (!ch) return false;
 		if (isInternalJoiner(chars, index)) return false;
-		return /[\s!?\.,;:\)\]\}」』】〉》'"“”‘’]/u.test(ch);
+		return /[\s!?.,;:)\]}」』】〉》'"“”‘’]/u.test(ch);
 	};
 	const isValidOnsetCluster = (cluster) => /^(bl|br|ch|chr|cl|cr|dr|fl|fr|gl|gr|ph|pl|pr|qu|sc|sch|scr|sh|sk|sl|sm|sn|sp|spl|spr|st|str|sw|th|thr|tr|tw|wh|wr)$/i.test(cluster);
 	const edgeInterpolation = (progress) => {
@@ -2153,6 +2171,33 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const pushSyncCreatorRange = (ranges, start, end, lineStart) => {
 		if (!Number.isInteger(start) || !Number.isInteger(end) || end < start) return;
 		ranges.push({ start: lineStart + start, end: lineStart + end });
+	};
+
+	const pushSyncCreatorHiddenIndex = (hiddenRanges, lineStart, index) => {
+		const previous = hiddenRanges[hiddenRanges.length - 1];
+		const absoluteIndex = lineStart + index;
+		if (previous && previous.end + 1 === absoluteIndex) {
+			previous.end = absoluteIndex;
+		} else {
+			hiddenRanges.push({ start: absoluteIndex, end: absoluteIndex });
+		}
+	};
+
+	const trimSyncCreatorRunWhitespace = (chars, runStart, endIndex, pushHidden) => {
+		if (runStart !== null && endIndex >= runStart) {
+			while (runStart <= endIndex && /\s/u.test(chars[runStart] || '')) {
+				pushHidden(runStart);
+				runStart++;
+			}
+			const originalEndIndex = endIndex;
+			while (endIndex >= runStart && /\s/u.test(chars[endIndex] || '')) {
+				endIndex--;
+			}
+			for (let index = endIndex + 1; index <= originalEndIndex; index++) {
+				pushHidden(index);
+			}
+		}
+		return { runStart, endIndex };
 	};
 
 	const normalizeSyncCreatorHiddenRanges = (ranges) => {
@@ -2537,30 +2582,12 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			let partIndex = 0;
 			let runStart = null;
 
-			const pushHidden = (index) => {
-				const previous = hiddenRanges[hiddenRanges.length - 1];
-				const absoluteIndex = lineStart + index;
-				if (previous && previous.end + 1 === absoluteIndex) {
-					previous.end = absoluteIndex;
-				} else {
-					hiddenRanges.push({ start: absoluteIndex, end: absoluteIndex });
-				}
-			};
+			const pushHidden = (index) => pushSyncCreatorHiddenIndex(hiddenRanges, lineStart, index);
 
 			const flushRun = (endIndex) => {
-				if (runStart !== null && endIndex >= runStart) {
-					while (runStart <= endIndex && /\s/u.test(chars[runStart] || '')) {
-						pushHidden(runStart);
-						runStart++;
-					}
-					const originalEndIndex = endIndex;
-					while (endIndex >= runStart && /\s/u.test(chars[endIndex] || '')) {
-						endIndex--;
-					}
-					for (let index = endIndex + 1; index <= originalEndIndex; index++) {
-						pushHidden(index);
-					}
-				}
+				const trimmed = trimSyncCreatorRunWhitespace(chars, runStart, endIndex, pushHidden);
+				runStart = trimmed.runStart;
+				endIndex = trimmed.endIndex;
 				if (runStart !== null && endIndex >= runStart) {
 					if (!partRanges[partIndex]) partRanges[partIndex] = [];
 					pushSyncCreatorRange(partRanges[partIndex], runStart, endIndex, lineStart);
@@ -2616,19 +2643,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		let runPart = null;
 
 		const flushRun = (endIndex) => {
-			if (runStart !== null && endIndex >= runStart) {
-				while (runStart <= endIndex && /\s/u.test(chars[runStart] || '')) {
-					pushHidden(runStart);
-					runStart++;
-				}
-				const originalEndIndex = endIndex;
-				while (endIndex >= runStart && /\s/u.test(chars[endIndex] || '')) {
-					endIndex--;
-				}
-				for (let index = endIndex + 1; index <= originalEndIndex; index++) {
-					pushHidden(index);
-				}
-			}
+			const trimmed = trimSyncCreatorRunWhitespace(chars, runStart, endIndex, pushHidden);
+			runStart = trimmed.runStart;
+			endIndex = trimmed.endIndex;
 			if (runStart !== null && endIndex >= runStart) {
 				if (runPart === 'background') {
 					const ranges = [];
@@ -2642,15 +2659,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			runPart = null;
 		};
 
-		const pushHidden = (index) => {
-			const previous = hiddenRanges[hiddenRanges.length - 1];
-			const absoluteIndex = lineStart + index;
-			if (previous && previous.end + 1 === absoluteIndex) {
-				previous.end = absoluteIndex;
-			} else {
-				hiddenRanges.push({ start: absoluteIndex, end: absoluteIndex });
-			}
-		};
+		const pushHidden = (index) => pushSyncCreatorHiddenIndex(hiddenRanges, lineStart, index);
 
 		for (let index = 0; index < chars.length; index++) {
 			const char = chars[index] || '';
@@ -2718,15 +2727,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const hiddenRanges = [];
 		const parts = [];
 
-		const pushHidden = (index) => {
-			const absoluteIndex = lineStart + index;
-			const previous = hiddenRanges[hiddenRanges.length - 1];
-			if (previous && previous.end + 1 === absoluteIndex) {
-				previous.end = absoluteIndex;
-			} else {
-				hiddenRanges.push({ start: absoluteIndex, end: absoluteIndex });
-			}
-		};
+		const pushHidden = (index) => pushSyncCreatorHiddenIndex(hiddenRanges, lineStart, index);
 
 		const boundaries = [0, ...normalizedSplitPoints, chars.length];
 		for (let boundaryIndex = 0; boundaryIndex < boundaries.length - 1; boundaryIndex++) {
@@ -3475,11 +3476,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			|| null;
 	}, [lrclibCandidates, previewLrclibCandidateKey, selectedLrclibCandidateKey]);
 
-	const applySelectedLrclibCandidate = useCallback(async (candidateKey) => {
-		const candidate = lrclibCandidates.find(item => item.candidateKey === candidateKey);
-		if (!candidate) return;
-
-		const sourceChangeRequestId = beginSyncCreatorSourceChange();
+	// Reset the editor to a clean "no lyrics loaded yet" state before a new
+	// LRCLIB source is fetched. Every referenced updater is a stable React state
+	// setter, so this closes over nothing that changes between renders.
+	const resetSyncCreatorLyricsLoadingState = () => {
 		setIsLoading(true);
 		setError(null);
 		setLyrics(null);
@@ -3494,6 +3494,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		setPendingMultiVocalDecision(null);
 		setActiveParallelPartId('full');
 		setMode('idle');
+	};
+
+	const applySelectedLrclibCandidate = useCallback(async (candidateKey) => {
+		const candidate = lrclibCandidates.find(item => item.candidateKey === candidateKey);
+		if (!candidate) return;
+
+		const sourceChangeRequestId = beginSyncCreatorSourceChange();
+		resetSyncCreatorLyricsLoadingState();
 
 		try {
 			const syntheticResult = buildSyntheticLrclibResult(candidate);
@@ -3579,20 +3587,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 		const sourceChangeRequestId = beginSyncCreatorSourceChange();
 		setIsLoadingLrclibId(true);
-		setIsLoading(true);
-		setError(null);
-		setLyrics(null);
-		setLyricsText('');
-		setSyncData(null);
-		setCurrentLineIndex(0);
-		setMultiVocalMode(false);
-		setManualParallelSplitDrafts({});
-		setParentheticalLayoutDrafts({});
-		setPendingParentheticalLayoutDecision(null);
-		setMergedLineDrafts({});
-		setPendingMultiVocalDecision(null);
-		setActiveParallelPartId('full');
-		setMode('idle');
+		resetSyncCreatorLyricsLoadingState();
 		clearLrclibCandidateState();
 
 		try {
@@ -4691,7 +4686,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const observer = new IntersectionObserver(([entry]) => {
 			isVisibleRef.current = entry.isIntersecting;
 			preventNextTrackRef.current = entry.isIntersecting;
-			// console.log("[SyncDataCreator] Visibility changed:", entry.isIntersecting);
 		}, { threshold: 0 });
 
 		observer.observe(containerRef.current);
@@ -5655,60 +5649,63 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				? normalizeSyncCreatorGranularity(existingLine?.granularity)
 				: syncGranularity
 		};
-		const leadMetaPart = currentParallelData?.parts?.find(part => part.role === 'lead') || currentParallelData?.parts?.[0] || activeParallelPart;
-		const lineMetaDraft = lineMetaDrafts[lineStart] || {};
-		const hasLineSpeakerDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker');
-		const hasLineSpeakerColorDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker-color');
-		const hasLineSpeakerFallbackDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker-fallback');
-		const hasLineKindDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'kind');
-		const draftLineSpeaker = normalizeSyncCreatorSpeaker(lineMetaDraft.speaker);
-		const draftLineKind = normalizeSyncCreatorKind(lineMetaDraft.kind);
-		const existingLineSpeaker = normalizeSyncCreatorSpeaker(existingLine?.speaker);
-		const existingLineKind = normalizeSyncCreatorKind(existingLine?.kind);
-		const lineSpeaker = hasLineSpeakerDraft
-			? draftLineSpeaker || SYNC_CREATOR_DEFAULT_SPEAKER
-			: currentLineMeta.speaker || existingLineSpeaker || leadMetaPart?.speaker || SYNC_CREATOR_DEFAULT_SPEAKER;
-		const lineKind = hasLineKindDraft
-			? draftLineKind || SYNC_CREATOR_DEFAULT_KIND
-			: currentLineMeta.kind || existingLineKind || leadMetaPart?.kind || SYNC_CREATOR_DEFAULT_KIND;
-		const lineSpeakerFallback = sanitizeSyncCreatorSpeakerFallback(
-			lineSpeaker,
-			hasLineSpeakerFallbackDraft
-				? lineMetaDraft['speaker-fallback']
-				: currentLineMeta['speaker-fallback'] || existingLine?.['speaker-fallback'] || leadMetaPart?.['speaker-fallback'],
-			true,
-			hasLineSpeakerDraft ? lineMetaDraft.speaker : existingLine?.speaker || leadMetaPart?.speaker || lineSpeaker
-		);
-		const lineSpeakerColor = sanitizeSyncCreatorSpeakerColor(
-			lineSpeaker,
-			hasLineSpeakerColorDraft
-				? lineMetaDraft['speaker-color']
-				: currentLineMeta['speaker-color'] || existingLine?.['speaker-color'] || leadMetaPart?.['speaker-color'],
-			true,
-			lineSpeakerFallback
-		);
-		const shouldPersistLineSpeaker = multiVocalMode || lineSpeaker !== SYNC_CREATOR_DEFAULT_SPEAKER;
-		const shouldPersistLineKind = multiVocalMode || lineKind !== SYNC_CREATOR_DEFAULT_KIND;
-		if (lineSpeaker && shouldPersistLineSpeaker) {
-			lineData.speaker = lineSpeaker;
-		} else {
-			delete lineData.speaker;
-		}
-		if (lineSpeakerFallback) {
-			lineData['speaker-fallback'] = lineSpeakerFallback;
-		} else {
-			delete lineData['speaker-fallback'];
-		}
-		if (lineSpeakerColor) {
-			lineData['speaker-color'] = lineSpeakerColor;
-		} else {
-			delete lineData['speaker-color'];
-		}
-		if (lineKind && shouldPersistLineKind) {
-			lineData.kind = lineKind;
-		} else {
-			delete lineData.kind;
-		}
+		const applyLineSpeakerMeta = () => {
+			const leadMetaPart = currentParallelData?.parts?.find(part => part.role === 'lead') || currentParallelData?.parts?.[0] || activeParallelPart;
+			const lineMetaDraft = lineMetaDrafts[lineStart] || {};
+			const hasLineSpeakerDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker');
+			const hasLineSpeakerColorDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker-color');
+			const hasLineSpeakerFallbackDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'speaker-fallback');
+			const hasLineKindDraft = Object.prototype.hasOwnProperty.call(lineMetaDraft, 'kind');
+			const draftLineSpeaker = normalizeSyncCreatorSpeaker(lineMetaDraft.speaker);
+			const draftLineKind = normalizeSyncCreatorKind(lineMetaDraft.kind);
+			const existingLineSpeaker = normalizeSyncCreatorSpeaker(existingLine?.speaker);
+			const existingLineKind = normalizeSyncCreatorKind(existingLine?.kind);
+			const lineSpeaker = hasLineSpeakerDraft
+				? draftLineSpeaker || SYNC_CREATOR_DEFAULT_SPEAKER
+				: currentLineMeta.speaker || existingLineSpeaker || leadMetaPart?.speaker || SYNC_CREATOR_DEFAULT_SPEAKER;
+			const lineKind = hasLineKindDraft
+				? draftLineKind || SYNC_CREATOR_DEFAULT_KIND
+				: currentLineMeta.kind || existingLineKind || leadMetaPart?.kind || SYNC_CREATOR_DEFAULT_KIND;
+			const lineSpeakerFallback = sanitizeSyncCreatorSpeakerFallback(
+				lineSpeaker,
+				hasLineSpeakerFallbackDraft
+					? lineMetaDraft['speaker-fallback']
+					: currentLineMeta['speaker-fallback'] || existingLine?.['speaker-fallback'] || leadMetaPart?.['speaker-fallback'],
+				true,
+				hasLineSpeakerDraft ? lineMetaDraft.speaker : existingLine?.speaker || leadMetaPart?.speaker || lineSpeaker
+			);
+			const lineSpeakerColor = sanitizeSyncCreatorSpeakerColor(
+				lineSpeaker,
+				hasLineSpeakerColorDraft
+					? lineMetaDraft['speaker-color']
+					: currentLineMeta['speaker-color'] || existingLine?.['speaker-color'] || leadMetaPart?.['speaker-color'],
+				true,
+				lineSpeakerFallback
+			);
+			const shouldPersistLineSpeaker = multiVocalMode || lineSpeaker !== SYNC_CREATOR_DEFAULT_SPEAKER;
+			const shouldPersistLineKind = multiVocalMode || lineKind !== SYNC_CREATOR_DEFAULT_KIND;
+			if (lineSpeaker && shouldPersistLineSpeaker) {
+				lineData.speaker = lineSpeaker;
+			} else {
+				delete lineData.speaker;
+			}
+			if (lineSpeakerFallback) {
+				lineData['speaker-fallback'] = lineSpeakerFallback;
+			} else {
+				delete lineData['speaker-fallback'];
+			}
+			if (lineSpeakerColor) {
+				lineData['speaker-color'] = lineSpeakerColor;
+			} else {
+				delete lineData['speaker-color'];
+			}
+			if (lineKind && shouldPersistLineKind) {
+				lineData.kind = lineKind;
+			} else {
+				delete lineData.kind;
+			}
+		};
+		applyLineSpeakerMeta();
 
 		if (activeParallelPart && currentParallelData) {
 			const existingParts = Array.isArray(existingLine?.parallel?.parts) ? existingLine.parallel.parts : [];
@@ -5911,7 +5908,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		if (endCharIndex < dragStartCharIndex) {
 			// 시작점보다 뒤로 가서 끝났으면 해당 부분은 싱크 안함 (혹은 이전 싱크 유지)
 			// 여기서는 그냥 저장 진행 (지워진 상태로)
-			// 만약 전체를 취소하고 싶다면 별도 처리가 필요하지만, 
+			// 만약 전체를 취소하고 싶다면 별도 처리가 필요하지만,
 			// UX상 왼쪽으로 가서 놓으면 그 부분은 싱크가 안 된 상태가 됨.
 		}
 
@@ -6117,45 +6114,48 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 	// 키보드 이벤트 리스너 등록
 	useEffect(() => {
-		// 라인이 변경되었는지 확인
-		const lineChanged = prevLineIndexRef.current !== currentLineIndex;
-		if (lineChanged) {
-			prevLineIndexRef.current = currentLineIndex;
-		}
-		const targetChanged = prevKeyboardTargetRef.current !== activeParallelTargetId;
-		if (targetChanged) {
-			prevKeyboardTargetRef.current = activeParallelTargetId;
-		}
+		const resetKeyboardSyncStateForDependencyChange = () => {
+			// 라인이 변경되었는지 확인
+			const lineChanged = prevLineIndexRef.current !== currentLineIndex;
+			if (lineChanged) {
+				prevLineIndexRef.current = currentLineIndex;
+			}
+			const targetChanged = prevKeyboardTargetRef.current !== activeParallelTargetId;
+			if (targetChanged) {
+				prevKeyboardTargetRef.current = activeParallelTargetId;
+			}
 
-		// record 모드가 아니거나 라인이 변경되면 키보드 싱크 상태 초기화
-		const shouldReset = mode !== 'record' || lineChanged || targetChanged;
-		if (shouldReset) scoreInputRef.current = null;
-		if (shouldReset && recordingLockIndexRef.current >= 0) {
-			clearRecordingLock();
-		}
-		if (shouldReset && (isKeyboardSyncingRef.current || isKeyboardDraggingRef.current)) {
-			window.__ivLyricsDebugLog?.('[SyncDataCreator] Resetting keyboard sync state, mode:', mode, 'lineChanged:', lineChanged, 'targetChanged:', targetChanged);
-			// 진행 중인 키보드 싱크 초기화
-			isKeyboardSyncingRef.current = false;
-			keyboardCharIndexRef.current = -1;
-			charTimesRef.current = [];
-			pendingWordSyncRef.current = null; // 보간 대기 상태도 초기화
-			pendingSyllableSyncRef.current = null;
-			setDragStartTime(null);
-			setRecordingProgressIndex(-1);
-			// 드래그 모드도 초기화
-			if (isKeyboardDraggingRef.current) {
-				isKeyboardDraggingRef.current = false;
-				if (keyboardDragIntervalRef.current) {
-					clearInterval(keyboardDragIntervalRef.current);
-					keyboardDragIntervalRef.current = null;
+			// record 모드가 아니거나 라인이 변경되면 키보드 싱크 상태 초기화
+			const shouldReset = mode !== 'record' || lineChanged || targetChanged;
+			if (shouldReset) scoreInputRef.current = null;
+			if (shouldReset && recordingLockIndexRef.current >= 0) {
+				clearRecordingLock();
+			}
+			if (shouldReset && (isKeyboardSyncingRef.current || isKeyboardDraggingRef.current)) {
+				window.__ivLyricsDebugLog?.('[SyncDataCreator] Resetting keyboard sync state, mode:', mode, 'lineChanged:', lineChanged, 'targetChanged:', targetChanged);
+				// 진행 중인 키보드 싱크 초기화
+				isKeyboardSyncingRef.current = false;
+				keyboardCharIndexRef.current = -1;
+				charTimesRef.current = [];
+				pendingWordSyncRef.current = null; // 보간 대기 상태도 초기화
+				pendingSyllableSyncRef.current = null;
+				setDragStartTime(null);
+				setRecordingProgressIndex(-1);
+				// 드래그 모드도 초기화
+				if (isKeyboardDraggingRef.current) {
+					isKeyboardDraggingRef.current = false;
+					if (keyboardDragIntervalRef.current) {
+						clearInterval(keyboardDragIntervalRef.current);
+						keyboardDragIntervalRef.current = null;
+					}
+				}
+				if (keyboardDragWarmupTimerRef.current) {
+					clearTimeout(keyboardDragWarmupTimerRef.current);
+					keyboardDragWarmupTimerRef.current = null;
 				}
 			}
-			if (keyboardDragWarmupTimerRef.current) {
-				clearTimeout(keyboardDragWarmupTimerRef.current);
-				keyboardDragWarmupTimerRef.current = null;
-			}
-		}
+		};
+		resetKeyboardSyncStateForDependencyChange();
 
 		const finishKeyboardSync = () => {
 			if (!isKeyboardSyncingRef.current) return;
@@ -6223,7 +6223,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				e.stopImmediatePropagation();
 			};
 			const isSeekHotkey = normalizedHotkey === 'z' || normalizedHotkey === 'x';
-			if (isSeekHotkey) {
+			const handleSeekShortcut = () => {
 				const target = e.target;
 				if (
 					target?.isContentEditable
@@ -6239,6 +6239,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					const duration = Spicetify.Player.getDuration();
 					Spicetify.Player.seek(Math.min(duration, currentPos + 3000));
 				}
+				return;
+			};
+			if (isSeekHotkey) {
+				handleSeekShortcut();
 				return;
 			}
 
@@ -6448,7 +6452,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						if (interpolationEnabledRef.current) {
 							pendingWordSyncRef.current = {
 								startIdx: wordStartIdx,
-								endIdx: endIdx,
+								endIdx,
 								startTime: currentTime
 							};
 						}
@@ -6627,18 +6631,21 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				}
 			};
 
-			// 오른쪽 방향키: 한 글자 싱크
-			if (shortcutAction === 'charForward') {
+			const handleCharForwardShortcut = () => {
 				consumeKeyboardEvent();
 				const currentTime = Spicetify.Player.getProgress() / 1000;
 				if (syncGranularity === 'line') syncWholeLine(currentTime);
 				else if (syncGranularity === 'word') advanceOneSelectedWord(currentTime);
 				else advanceOneChar(currentTime);
 				return;
+			};
+			// 오른쪽 방향키: 한 글자 싱크
+			if (shortcutAction === 'charForward') {
+				handleCharForwardShortcut();
+				return;
 			}
 
-			// 왼쪽 방향키: 한 글자 취소 (첫 글자도 취소 가능)
-			if (shortcutAction === 'charBack') {
+			const handleCharBackShortcut = () => {
 				consumeKeyboardEvent();
 				if (syncGranularity === 'word') {
 					pendingSyllableSyncRef.current = null;
@@ -6662,29 +6669,41 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					}
 				}
 				return;
+			};
+			// 왼쪽 방향키: 한 글자 취소 (첫 글자도 취소 가능)
+			if (shortcutAction === 'charBack') {
+				handleCharBackShortcut();
+				return;
 			}
 
-			// . (> 키): 한 단어 싱크
-			if (shortcutAction === 'wordForward') {
+			const handleWordForwardShortcut = () => {
 				consumeKeyboardEvent();
 				const currentTime = Spicetify.Player.getProgress() / 1000;
 				if (syncGranularity === 'line') syncWholeLine(currentTime);
 				else if (syncGranularity === 'word') advanceOneSelectedWord(currentTime);
 				else advanceOneWord(currentTime);
 				return;
+			};
+			// . (> 키): 한 단어 싱크
+			if (shortcutAction === 'wordForward') {
+				handleWordForwardShortcut();
+				return;
 			}
 
-			// , (< 키): 한 단어 취소
-			if (shortcutAction === 'wordBack') {
+			const handleWordBackShortcut = () => {
 				consumeKeyboardEvent();
 				pendingSyllableSyncRef.current = null;
 				if (syncGranularity === 'word') revertOneSelectedWord();
 				else revertOneWord();
 				return;
+			};
+			// , (< 키): 한 단어 취소
+			if (shortcutAction === 'wordBack') {
+				handleWordBackShortcut();
+				return;
 			}
 
-			// ; 키: 음절 단위 싱크 (다음 모음까지 진행)
-			if (shortcutAction === 'syllable') {
+			const handleSyllableShortcut = () => {
 				consumeKeyboardEvent();
 				const currentTime = Spicetify.Player.getProgress() / 1000;
 
@@ -6774,6 +6793,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					startTime: currentTime
 				};
 				return;
+			};
+			// ; 키: 음절 단위 싱크 (다음 모음까지 진행)
+			if (shortcutAction === 'syllable') {
+				handleSyllableShortcut();
+				return;
 			}
 
 			const startKeyboardDrag = () => {
@@ -6833,8 +6857,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				return;
 			}
 
-			// Enter: 현재 라인 완료 (중간에서도 완료 가능, 키보드 싱크 중일 때만)
-			if (normalizedHotkey === 'enter') {
+			const handleEnterShortcut = () => {
 				// 키보드 싱크 중일 때만 처리 (글자를 하나라도 맞췄을 때)
 				if (isKeyboardSyncingRef.current && keyboardCharIndexRef.current >= 0) {
 					consumeKeyboardEvent();
@@ -6842,10 +6865,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				}
 				// 싱크 중이 아닐 때는 기본 동작 허용 (다른 버튼 클릭 등)
 				return;
+			};
+			// Enter: 현재 라인 완료 (중간에서도 완료 가능, 키보드 싱크 중일 때만)
+			if (normalizedHotkey === 'enter') {
+				handleEnterShortcut();
+				return;
 			}
 
-			// Backspace: 현재 라인 싱크 취소
-			if (normalizedHotkey === 'backspace') {
+			const handleBackspaceShortcut = () => {
 				consumeKeyboardEvent();
 				scoreInputRef.current = null;
 				if (isKeyboardSyncingRef.current) {
@@ -6872,9 +6899,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					}
 				}
 				return;
+			};
+			// Backspace: 현재 라인 싱크 취소
+			if (normalizedHotkey === 'backspace') {
+				handleBackspaceShortcut();
+				return;
 			}
 
-			if (normalizedHotkey === 'space') {
+			const handleSpaceShortcut = () => {
 				consumeKeyboardEvent();
 				if (typeof Spicetify.Player?.togglePlay === 'function') {
 					Spicetify.Player.togglePlay();
@@ -6883,6 +6915,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				} else {
 					Spicetify.Player?.play?.();
 				}
+				return;
+			};
+			if (normalizedHotkey === 'space') {
+				handleSpaceShortcut();
 				return;
 			}
 
@@ -6985,15 +7021,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	}, [syncData, lineCharOffsets, currentLineIndex, claimSessionForLocalEditing, clearRecordingLock]);
 
 	const updateParallelPartMeta = useCallback((partId, field, value) => {
-		const safeValue = field === 'speaker'
-			? normalizeSyncCreatorSpeaker(value)
-			: field === 'speaker-color'
-				? normalizeSyncCreatorSpeakerColor(value)
-			: field === 'speaker-fallback'
-				? normalizeSyncCreatorSpeakerFallback(value)
-			: field === 'kind'
-				? normalizeSyncCreatorKind(value)
-				: String(value || '').trim();
+		const safeValue = normalizeSyncCreatorMetaFieldValue(field, value);
 		const shouldDelete = (field === 'speaker-color' || field === 'speaker-fallback') && !safeValue;
 		if (!partId || !field || (!safeValue && !shouldDelete)) return;
 		claimSessionForLocalEditing();
@@ -7035,15 +7063,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	}, [lineCharOffsets, currentLineIndex, claimSessionForLocalEditing]);
 
 	const updateCurrentLineMeta = useCallback((field, value) => {
-		const safeValue = field === 'speaker'
-			? normalizeSyncCreatorSpeaker(value)
-			: field === 'speaker-color'
-				? normalizeSyncCreatorSpeakerColor(value)
-			: field === 'speaker-fallback'
-				? normalizeSyncCreatorSpeakerFallback(value)
-			: field === 'kind'
-				? normalizeSyncCreatorKind(value)
-				: String(value || '').trim();
+		const safeValue = normalizeSyncCreatorMetaFieldValue(field, value);
 		const shouldDelete = (field === 'speaker-color' || field === 'speaker-fallback') && !safeValue;
 		if (!field || (!safeValue && !shouldDelete)) return;
 		claimSessionForLocalEditing();
@@ -7524,6 +7544,28 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		setGlobalOffset(prev => prev + deltaMs);
 	}, [claimSessionForLocalEditing]);
 
+	// Suspend autosave and reset every session/draft tracking ref and status
+	// state slot for the active draft. All referenced refs and state setters have
+	// stable identities, so this closes over nothing that changes between renders.
+	const resetSyncCreatorSessionTracking = () => {
+		sessionAutosaveSuppressedRef.current = true;
+		if (sessionAutosaveTimerRef.current) {
+			clearTimeout(sessionAutosaveTimerRef.current);
+			sessionAutosaveTimerRef.current = null;
+		}
+		sessionRecoveryRequestRef.current += 1;
+		sessionCheckpointRestoreRequestRef.current += 1;
+		sessionWriteGenerationRef.current += 1;
+		latestSessionRecordRef.current = null;
+		sessionAppliedDraftKeyRef.current = '';
+		sessionBaselineDraftRef.current = null;
+		setIsRestoringCheckpoint(false);
+		setSessionReadyDraftKey('');
+		setSessionHistory([]);
+		setSessionHistoryCursorId('');
+		setSessionSaveState(sessionAutosaveEnabledRef.current ? 'idle' : 'disabled');
+	};
+
 	const adjustCurrentLineOffset = useCallback((deltaMs) => {
 		claimSessionForLocalEditing();
 		const requestedDeltaSec = deltaMs / 1000;
@@ -7594,22 +7636,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		setGlobalOffset(0);
 		setMode('idle');
 		const draftKey = activeSessionDraftKeyRef.current;
-		sessionAutosaveSuppressedRef.current = true;
-		if (sessionAutosaveTimerRef.current) {
-			clearTimeout(sessionAutosaveTimerRef.current);
-			sessionAutosaveTimerRef.current = null;
-		}
-		sessionRecoveryRequestRef.current += 1;
-		sessionCheckpointRestoreRequestRef.current += 1;
-		sessionWriteGenerationRef.current += 1;
-		latestSessionRecordRef.current = null;
-		sessionAppliedDraftKeyRef.current = '';
-		sessionBaselineDraftRef.current = null;
-		setIsRestoringCheckpoint(false);
-		setSessionReadyDraftKey('');
-		setSessionHistory([]);
-		setSessionHistoryCursorId('');
-		setSessionSaveState(sessionAutosaveEnabledRef.current ? 'idle' : 'disabled');
+		resetSyncCreatorSessionTracking();
 		if (syncCreatorDraftStore && draftKey) {
 			try {
 				await syncCreatorDraftStore.flush();
@@ -8604,22 +8631,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 	const deleteActiveSyncCreatorDraft = useCallback(async ({ resumeAutosave = false } = {}) => {
 		const draftKey = activeSessionDraftKeyRef.current;
-		sessionAutosaveSuppressedRef.current = true;
-		if (sessionAutosaveTimerRef.current) {
-			clearTimeout(sessionAutosaveTimerRef.current);
-			sessionAutosaveTimerRef.current = null;
-		}
-		sessionRecoveryRequestRef.current += 1;
-		sessionCheckpointRestoreRequestRef.current += 1;
-		sessionWriteGenerationRef.current += 1;
-		latestSessionRecordRef.current = null;
-		sessionAppliedDraftKeyRef.current = '';
-		sessionBaselineDraftRef.current = null;
-		setIsRestoringCheckpoint(false);
-		setSessionReadyDraftKey('');
-		setSessionHistory([]);
-		setSessionHistoryCursorId('');
-		setSessionSaveState(sessionAutosaveEnabledRef.current ? 'idle' : 'disabled');
+		resetSyncCreatorSessionTracking();
 		if (!syncCreatorDraftStore || !draftKey) return;
 		try {
 			await syncCreatorDraftStore.flush();
@@ -8710,8 +8722,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 		const materializedSyncData = materializeSyncCreatorParallelDrafts(syncData);
 
-		if (multiVocalMode) {
-			const linesByStart = new Map(materializedSyncData.lines.map(line => [line.start, line]));
+		const validateMultiVocalSubmissionMeta = (validationSyncData) => {
+			const linesByStart = new Map(validationSyncData.lines.map(line => [line.start, line]));
 			for (let index = 0; index < lyricsLines.length; index++) {
 				if (isLineCoveredByMergedPrevious(index, linesByStart)) {
 					continue;
@@ -8721,7 +8733,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				const lineData = linesByStart.get(lineStart);
 				if (!lineData) {
 					Toast.error(I18n.t('syncCreator.lineMissingSync', { line: index + 1 }) || `Line ${index + 1} has no sync yet.`);
-					return;
+					return false;
 				}
 
 				const mergedIndexes = getMergedLineIndexesForStart(index, linesByStart);
@@ -8736,11 +8748,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						const existingPart = existingParts.find(item => item.id === part.id);
 						if (!existingPart || !hasReusableSyncCreatorParallelChars(part, existingPart)) {
 							Toast.error(I18n.t('syncCreator.lineAllPartsMissingSync', { line: index + 1 }) || `Sync every vocal part on line ${index + 1}.`);
-							return;
+							return false;
 						}
 						if (!isSyncCreatorSpeakerMetaComplete(existingPart) || !(normalizeSyncCreatorKind(existingPart.kind) || SYNC_CREATOR_DEFAULT_KIND)) {
 							Toast.error(I18n.t('syncCreator.linePartMetaRequired', { line: index + 1 }) || `Select SPEAKER and text effect for every vocal part on line ${index + 1}.`);
-							return;
+							return false;
 						}
 					}
 				} else if (!isSyncCreatorSpeakerMetaComplete({
@@ -8754,9 +8766,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					'speaker-color': lineData['speaker-color']
 				}) || !(normalizeSyncCreatorKind(lineData.kind) || SYNC_CREATOR_DEFAULT_KIND)) {
 					Toast.error(I18n.t('syncCreator.lineMetaRequired', { line: index + 1 }) || `Select SPEAKER and text effect for line ${index + 1}.`);
-					return;
+					return false;
 				}
 			}
+			return true;
+		};
+
+		if (multiVocalMode && !validateMultiVocalSubmissionMeta(materializedSyncData)) {
+			return;
 		}
 
 		const linesByStart = new Map();
@@ -8771,74 +8788,76 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			if (!confirm(I18n.t('syncCreator.incompleteConfirm'))) return;
 		}
 
+		const normalizeSyncCreatorSubmissionLine = (line) => {
+			const speaker = normalizeSyncCreatorSpeaker(line.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
+			const kind = normalizeSyncCreatorKind(line.kind) || SYNC_CREATOR_DEFAULT_KIND;
+			const speakerFallback = sanitizeSyncCreatorSpeakerFallback(
+				speaker,
+				line['speaker-fallback'],
+				true,
+				line.speaker
+			);
+			const speakerColor = sanitizeSyncCreatorSpeakerColor(
+				speaker,
+				line['speaker-color'],
+				true,
+				speakerFallback
+			);
+			const nextLine = {
+				...line,
+				parallel: line.parallel ? sanitizeSyncCreatorParallel({
+					...line.parallel,
+					parts: Array.isArray(line.parallel.parts)
+						? line.parallel.parts.map(part => {
+							const partSpeaker = normalizeSyncCreatorSpeaker(part.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
+							const partSpeakerFallback = sanitizeSyncCreatorSpeakerFallback(
+								partSpeaker,
+								part['speaker-fallback'],
+								true,
+								part.speaker
+							);
+							const partSpeakerColor = sanitizeSyncCreatorSpeakerColor(
+								partSpeaker,
+								part['speaker-color'],
+								true,
+								partSpeakerFallback
+							);
+							const nextPart = {
+								...part,
+								speaker: partSpeaker,
+								kind: normalizeSyncCreatorKind(part.kind) || SYNC_CREATOR_DEFAULT_KIND
+							};
+							if (partSpeakerFallback) nextPart['speaker-fallback'] = partSpeakerFallback;
+							else delete nextPart['speaker-fallback'];
+							if (partSpeakerColor) nextPart['speaker-color'] = partSpeakerColor;
+							else delete nextPart['speaker-color'];
+							return nextPart;
+						})
+						: line.parallel.parts
+				}) : line.parallel
+			};
+
+			if (multiVocalMode || speaker !== SYNC_CREATOR_DEFAULT_SPEAKER) {
+				nextLine.speaker = speaker;
+			} else {
+				delete nextLine.speaker;
+			}
+			if (speakerFallback) nextLine['speaker-fallback'] = speakerFallback;
+			else delete nextLine['speaker-fallback'];
+			if (speakerColor) nextLine['speaker-color'] = speakerColor;
+			else delete nextLine['speaker-color'];
+			if (multiVocalMode || kind !== SYNC_CREATOR_DEFAULT_KIND) {
+				nextLine.kind = kind;
+			} else {
+				delete nextLine.kind;
+			}
+			return nextLine;
+		};
+
 		const syncDataToSubmit = attachSelectedLrclibSource({
 			...materializedSyncData,
 			...(trackDurationMs > 0 ? { trackDurationMs } : {}),
-			lines: materializedSyncData.lines.map(line => {
-				const speaker = normalizeSyncCreatorSpeaker(line.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
-				const kind = normalizeSyncCreatorKind(line.kind) || SYNC_CREATOR_DEFAULT_KIND;
-				const speakerFallback = sanitizeSyncCreatorSpeakerFallback(
-					speaker,
-					line['speaker-fallback'],
-					true,
-					line.speaker
-				);
-				const speakerColor = sanitizeSyncCreatorSpeakerColor(
-					speaker,
-					line['speaker-color'],
-					true,
-					speakerFallback
-				);
-				const nextLine = {
-					...line,
-					parallel: line.parallel ? sanitizeSyncCreatorParallel({
-						...line.parallel,
-						parts: Array.isArray(line.parallel.parts)
-							? line.parallel.parts.map(part => {
-								const partSpeaker = normalizeSyncCreatorSpeaker(part.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER;
-								const partSpeakerFallback = sanitizeSyncCreatorSpeakerFallback(
-									partSpeaker,
-									part['speaker-fallback'],
-									true,
-									part.speaker
-								);
-								const partSpeakerColor = sanitizeSyncCreatorSpeakerColor(
-									partSpeaker,
-									part['speaker-color'],
-									true,
-									partSpeakerFallback
-								);
-								const nextPart = {
-									...part,
-									speaker: partSpeaker,
-									kind: normalizeSyncCreatorKind(part.kind) || SYNC_CREATOR_DEFAULT_KIND
-								};
-								if (partSpeakerFallback) nextPart['speaker-fallback'] = partSpeakerFallback;
-								else delete nextPart['speaker-fallback'];
-								if (partSpeakerColor) nextPart['speaker-color'] = partSpeakerColor;
-								else delete nextPart['speaker-color'];
-								return nextPart;
-							})
-							: line.parallel.parts
-					}) : line.parallel
-				};
-
-				if (multiVocalMode || speaker !== SYNC_CREATOR_DEFAULT_SPEAKER) {
-					nextLine.speaker = speaker;
-				} else {
-					delete nextLine.speaker;
-				}
-				if (speakerFallback) nextLine['speaker-fallback'] = speakerFallback;
-				else delete nextLine['speaker-fallback'];
-				if (speakerColor) nextLine['speaker-color'] = speakerColor;
-				else delete nextLine['speaker-color'];
-				if (multiVocalMode || kind !== SYNC_CREATOR_DEFAULT_KIND) {
-					nextLine.kind = kind;
-				} else {
-					delete nextLine.kind;
-				}
-				return nextLine;
-			})
+			lines: materializedSyncData.lines.map(normalizeSyncCreatorSubmissionLine)
 		});
 		if (providerRef.current === 'lrclib' && !isCompleteSyncCreatorLrclibSource(syncDataToSubmit?.source)) {
 			Toast.error(I18n.t('syncCreator.lrclibIdInvalid') || 'Enter a valid LRCLIB ID.');
@@ -8892,22 +8911,25 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				album: albumName,
 				...(trackDurationMs > 0 ? { durationMs: trackDurationMs } : {})
 			};
+			const handleSubmitSuccess = async () => {
+				Toast.success(I18n.t('syncCreator.submitSuccess'));
+				// 캐시 무효화
+				await clearLyricsCachesAfterSyncSubmit(resolvedTrackIsrc);
+				await deleteActiveSyncCreatorDraft();
+				// 가사 페이지 새로고침
+				setTimeout(() => {
+					if (typeof window.reloadLyrics === 'function') {
+						window.reloadLyrics(true);
+					} else if (typeof window.lyricContainer?.reloadLyrics === 'function') {
+						window.lyricContainer.reloadLyrics(true);
+					}
+				}, 500);
+				if (onClose) onClose();
+			};
 			if (typeof SyncDataService !== 'undefined' && SyncDataService.submitSyncData) {
 				const result = await SyncDataService.submitSyncData(trackId, provider, compactSyncDataToSubmit, submitMetadata, { authOperation });
 				if (result) {
-					Toast.success(I18n.t('syncCreator.submitSuccess'));
-					// 캐시 무효화
-					await clearLyricsCachesAfterSyncSubmit(resolvedTrackIsrc);
-					await deleteActiveSyncCreatorDraft();
-					// 가사 페이지 새로고침
-					setTimeout(() => {
-						if (typeof window.reloadLyrics === 'function') {
-							window.reloadLyrics(true);
-						} else if (typeof window.lyricContainer?.reloadLyrics === 'function') {
-							window.lyricContainer.reloadLyrics(true);
-						}
-					}, 500);
-					if (onClose) onClose();
+					await handleSubmitSuccess();
 				} else {
 					Toast.error(I18n.t('syncCreator.submitError'));
 				}
@@ -8927,19 +8949,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				});
 
 				if (response.ok) {
-					Toast.success(I18n.t('syncCreator.submitSuccess'));
-					// 캐시 무효화
-					await clearLyricsCachesAfterSyncSubmit(resolvedTrackIsrc);
-					await deleteActiveSyncCreatorDraft();
-					// 가사 페이지 새로고침
-					setTimeout(() => {
-						if (typeof window.reloadLyrics === 'function') {
-							window.reloadLyrics(true);
-						} else if (typeof window.lyricContainer?.reloadLyrics === 'function') {
-							window.lyricContainer.reloadLyrics(true);
-						}
-					}, 500);
-					if (onClose) onClose();
+					await handleSubmitSuccess();
 				} else {
 					Toast.error((await response.json()).error || I18n.t('syncCreator.submitError'));
 				}
@@ -11418,18 +11428,115 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			Toast.success(I18n.t('syncCreator.rangeStyleCleared') || '선택 범위의 스타일을 지웠습니다.');
 		};
 
-		return react.createElement('section', {
-			className: 'sync-creator-range-style-editor',
-			style: {
-				flexShrink: 0,
-				marginTop: 8,
-				border: `1px solid ${TOSS_BORDER}`,
-				borderRadius: 10,
-				background: 'rgba(255,255,255,0.025)',
-				overflow: 'hidden'
-			}
-		},
-			react.createElement('button', {
+		const renderStyleRangeCharGrid = () => react.createElement('div', {
+				style: {
+					display: 'flex',
+					flexWrap: 'wrap',
+					alignItems: 'baseline',
+					gap: 0,
+					maxHeight: 80,
+					overflowY: 'auto',
+					marginTop: 7,
+					padding: '7px 8px',
+					borderRadius: 7,
+					background: 'rgba(0,0,0,0.22)',
+					fontSize: 16,
+					lineHeight: 1.55,
+					userSelect: 'none',
+					cursor: 'text',
+					overscrollBehavior: 'contain'
+				},
+				role: 'listbox',
+				'aria-label': I18n.t('syncCreator.rangeStyleSelectLabel') || '스타일을 적용할 글자 범위'
+			}, currentFullLineChars.map((char, index) => {
+				const absoluteIndex = currentLineStart + index;
+				const existingStyle = currentLineStyleRanges.find(range => range.start <= absoluteIndex && range.end >= absoluteIndex);
+				const selected = index >= selectionStart && index <= selectionEnd;
+				const color = existingStyle?.speaker
+					? getSyncCreatorSpeakerTextColor(
+						existingStyle.speaker,
+						existingStyle['speaker-color'],
+						existingStyle['speaker-fallback']
+					)
+					: '';
+				return react.createElement('span', {
+					key: `range-style-${currentLineStart}-${index}`,
+					role: 'option',
+					'aria-selected': selected,
+					onPointerDown: (event) => beginStyleRangeSelection(index, event),
+					onPointerEnter: () => extendStyleRangeSelection(index),
+					style: {
+						display: 'inline-block',
+						minWidth: char === ' ' ? '0.42em' : undefined,
+						padding: 0,
+						margin: 0,
+						borderRadius: 3,
+						color: color || 'var(--spice-text)',
+						background: selected
+							? 'rgba(var(--spice-rgb-accent, 30, 215, 96), 0.32)'
+							: (existingStyle ? 'rgba(var(--spice-rgb-accent, 30, 215, 96), 0.10)' : 'transparent'),
+						boxShadow: existingStyle?.kind && existingStyle.kind !== 'vocal'
+							? 'inset 0 -2px 0 rgba(var(--spice-rgb-accent, 30, 215, 96), 0.75)'
+							: 'none'
+					},
+					title: existingStyle
+						? [getSyncCreatorKindLabel(existingStyle.kind), existingStyle.speaker].filter(Boolean).join(' · ')
+						: undefined
+				}, char === ' ' ? '\u00A0' : char);
+			}));
+
+		const renderStyleRangeColorColumn = () => react.createElement('section', { className: 'sync-creator-range-style-pane sync-creator-range-color-picker' },
+					react.createElement('div', { className: 'sync-creator-range-style-pane-title' }, I18n.t('syncCreator.rangeColorLabel') || '부분 색상'),
+					react.createElement('div', {
+						className: 'sync-creator-range-speaker-palette',
+						style: {
+							width: '100%',
+							maxHeight: 270,
+							overflowY: 'auto',
+							overflowX: 'hidden',
+							overscrollBehavior: 'contain'
+						}
+					},
+						renderSpeakerPicker(
+							styleRangeSpeaker,
+							styleRangeSpeakerColor,
+							styleRangeSpeakerFallback,
+							selectRangeSpeaker,
+							{ disabled: !selectedText }
+						),
+						isSyncCreatorCustomSpeaker(styleRangeSpeaker) && react.createElement('div', {
+							style: { display: 'grid', gridTemplateColumns: '34px minmax(110px, 1fr)', gap: 7, marginTop: 7, alignItems: 'center' }
+						},
+							react.createElement('input', {
+								type: 'color',
+								disabled: !selectedText,
+								value: sanitizeSyncCreatorSpeakerColor(styleRangeSpeaker, styleRangeSpeakerColor, true, styleRangeSpeakerFallback),
+								onChange: event => {
+									const nextColor = normalizeSyncCreatorSpeakerColor(event.target.value);
+									setStyleRangeSpeakerColor(nextColor);
+									applyRangeSpeakerMeta(styleRangeSpeaker, nextColor, styleRangeSpeakerFallback);
+								},
+								style: { width: 34, height: 30, padding: 2, border: `1px solid ${TOSS_BORDER}`, borderRadius: 7, background: 'transparent' },
+								'aria-label': I18n.t('syncCreator.speakerCustomColor') || 'Custom speaker color'
+							}),
+							react.createElement('select', {
+								style: { ...s.select, width: '100%' },
+								disabled: !selectedText,
+								value: styleRangeSpeakerFallback,
+								onChange: event => {
+									const nextFallback = normalizeSyncCreatorSpeakerFallback(event.target.value) || SYNC_CREATOR_DEFAULT_CUSTOM_FALLBACK;
+									setStyleRangeSpeakerFallback(nextFallback);
+									applyRangeSpeakerMeta(styleRangeSpeaker, styleRangeSpeakerColor, nextFallback);
+								}
+							}, SYNC_CREATOR_CUSTOM_FALLBACK_OPTIONS.map(value => react.createElement('option', {
+								key: value,
+								value
+							}, value.replace(' 1', ''))))
+						)
+					)
+				);
+
+		const renderStyleRangeToggle = () => react.createElement('button', {
 				type: 'button',
 				style: {
 					width: '100%',
@@ -11460,69 +11567,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						: (I18n.t('syncCreator.rangeStyleEmpty') || '설정된 범위 없음')
 				),
 				react.createElement('span', { style: { color: 'var(--spice-subtext)', fontSize: 16, lineHeight: 1 } }, isStyleRangeEditorExpanded ? '⌃' : '⌄')
-			),
-			isStyleRangeEditorExpanded && react.createElement('div', {
+		);
+		const renderStyleRangeExpandedBody = () => react.createElement('div', {
 				style: { padding: '0 11px 10px', borderTop: `1px solid ${TOSS_BORDER}` }
 			},
 				react.createElement('div', { style: { marginTop: 8, fontSize: 10.5, color: 'var(--spice-subtext)', lineHeight: 1.4 } },
 					I18n.t('syncCreator.rangeStyleHint') || '싱크 단위와 관계없이 원하는 글자를 드래그해 선택하세요.'
 				),
-				react.createElement('div', {
-					style: {
-						display: 'flex',
-						flexWrap: 'wrap',
-						alignItems: 'baseline',
-						gap: 0,
-						maxHeight: 80,
-						overflowY: 'auto',
-						marginTop: 7,
-						padding: '7px 8px',
-						borderRadius: 7,
-						background: 'rgba(0,0,0,0.22)',
-						fontSize: 16,
-						lineHeight: 1.55,
-						userSelect: 'none',
-						cursor: 'text',
-						overscrollBehavior: 'contain'
-					},
-					role: 'listbox',
-					'aria-label': I18n.t('syncCreator.rangeStyleSelectLabel') || '스타일을 적용할 글자 범위'
-				}, currentFullLineChars.map((char, index) => {
-					const absoluteIndex = currentLineStart + index;
-					const existingStyle = currentLineStyleRanges.find(range => range.start <= absoluteIndex && range.end >= absoluteIndex);
-					const selected = index >= selectionStart && index <= selectionEnd;
-					const color = existingStyle?.speaker
-						? getSyncCreatorSpeakerTextColor(
-							existingStyle.speaker,
-							existingStyle['speaker-color'],
-							existingStyle['speaker-fallback']
-						)
-						: '';
-					return react.createElement('span', {
-						key: `range-style-${currentLineStart}-${index}`,
-						role: 'option',
-						'aria-selected': selected,
-						onPointerDown: (event) => beginStyleRangeSelection(index, event),
-						onPointerEnter: () => extendStyleRangeSelection(index),
-						style: {
-							display: 'inline-block',
-							minWidth: char === ' ' ? '0.42em' : undefined,
-							padding: 0,
-							margin: 0,
-							borderRadius: 3,
-							color: color || 'var(--spice-text)',
-							background: selected
-								? 'rgba(var(--spice-rgb-accent, 30, 215, 96), 0.32)'
-								: (existingStyle ? 'rgba(var(--spice-rgb-accent, 30, 215, 96), 0.10)' : 'transparent'),
-							boxShadow: existingStyle?.kind && existingStyle.kind !== 'vocal'
-								? 'inset 0 -2px 0 rgba(var(--spice-rgb-accent, 30, 215, 96), 0.75)'
-								: 'none'
-						},
-						title: existingStyle
-							? [getSyncCreatorKindLabel(existingStyle.kind), existingStyle.speaker].filter(Boolean).join(' · ')
-							: undefined
-					}, char === ' ' ? '\u00A0' : char);
-				})),
+				renderStyleRangeCharGrid(),
 				react.createElement('div', {
 					style: { minHeight: 28, marginTop: 5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }
 				},
@@ -11548,58 +11600,22 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							allowEmpty: true
 						})
 					),
-					react.createElement('section', { className: 'sync-creator-range-style-pane sync-creator-range-color-picker' },
-						react.createElement('div', { className: 'sync-creator-range-style-pane-title' }, I18n.t('syncCreator.rangeColorLabel') || '부분 색상'),
-						react.createElement('div', {
-							className: 'sync-creator-range-speaker-palette',
-							style: {
-								width: '100%',
-								maxHeight: 270,
-								overflowY: 'auto',
-								overflowX: 'hidden',
-								overscrollBehavior: 'contain'
-							}
-						},
-							renderSpeakerPicker(
-								styleRangeSpeaker,
-								styleRangeSpeakerColor,
-								styleRangeSpeakerFallback,
-								selectRangeSpeaker,
-								{ disabled: !selectedText }
-							),
-							isSyncCreatorCustomSpeaker(styleRangeSpeaker) && react.createElement('div', {
-								style: { display: 'grid', gridTemplateColumns: '34px minmax(110px, 1fr)', gap: 7, marginTop: 7, alignItems: 'center' }
-							},
-								react.createElement('input', {
-									type: 'color',
-									disabled: !selectedText,
-									value: sanitizeSyncCreatorSpeakerColor(styleRangeSpeaker, styleRangeSpeakerColor, true, styleRangeSpeakerFallback),
-									onChange: event => {
-										const nextColor = normalizeSyncCreatorSpeakerColor(event.target.value);
-										setStyleRangeSpeakerColor(nextColor);
-										applyRangeSpeakerMeta(styleRangeSpeaker, nextColor, styleRangeSpeakerFallback);
-									},
-									style: { width: 34, height: 30, padding: 2, border: `1px solid ${TOSS_BORDER}`, borderRadius: 7, background: 'transparent' },
-									'aria-label': I18n.t('syncCreator.speakerCustomColor') || 'Custom speaker color'
-								}),
-								react.createElement('select', {
-									style: { ...s.select, width: '100%' },
-									disabled: !selectedText,
-									value: styleRangeSpeakerFallback,
-									onChange: event => {
-										const nextFallback = normalizeSyncCreatorSpeakerFallback(event.target.value) || SYNC_CREATOR_DEFAULT_CUSTOM_FALLBACK;
-										setStyleRangeSpeakerFallback(nextFallback);
-										applyRangeSpeakerMeta(styleRangeSpeaker, styleRangeSpeakerColor, nextFallback);
-									}
-								}, SYNC_CREATOR_CUSTOM_FALLBACK_OPTIONS.map(value => react.createElement('option', {
-									key: value,
-									value
-								}, value.replace(' 1', ''))))
-							)
-						)
-					)
+					renderStyleRangeColorColumn()
 				)
-			)
+		);
+		return react.createElement('section', {
+			className: 'sync-creator-range-style-editor',
+			style: {
+				flexShrink: 0,
+				marginTop: 8,
+				border: `1px solid ${TOSS_BORDER}`,
+				borderRadius: 10,
+				background: 'rgba(255,255,255,0.025)',
+				overflow: 'hidden'
+			}
+		},
+			renderStyleRangeToggle(),
+			isStyleRangeEditorExpanded && renderStyleRangeExpandedBody()
 		);
 	};
 
@@ -11766,38 +11782,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			: ''
 	].filter(Boolean).join(' · ');
 
-	const renderHistoryPanel = () => react.createElement('section', {
-		ref: historyPanelRef,
-		className: 'sync-creator-history-panel',
-		style: {
-			...s.historyPanel,
-			maxHeight: 'calc(100% - 180px)',
-			...(historyPanelHeight ? {
-				flex: `0 0 ${Math.round(historyPanelHeight)}px`,
-				height: `${Math.round(historyPanelHeight)}px`
-			} : null)
-		},
-		'aria-busy': isRestoringCheckpoint ? 'true' : undefined,
-		'aria-label': I18n.t('syncCreator.historyTitle') || '작업 내역'
-	},
-		react.createElement('div', {
-			className: 'sync-creator-history-resize-handle',
-			style: s.historyResizeHandle,
-			role: 'separator',
-			tabIndex: 0,
-			'aria-orientation': 'horizontal',
-			'aria-label': I18n.t('syncCreator.historyResize') || '작업 내역 높이 조절',
-			'aria-valuemin': SYNC_CREATOR_HISTORY_MIN_HEIGHT,
-			'aria-valuemax': Math.round(getHistoryPanelHeightBounds().max),
-			'aria-valuenow': Math.round(historyPanelHeight || 190),
-			title: I18n.t('syncCreator.historyResizeHint') || '위아래로 드래그해 작업 내역 높이를 조절합니다.',
-			onPointerDown: handleHistoryResizePointerDown,
-			onPointerMove: handleHistoryResizePointerMove,
-			onPointerUp: finishHistoryResize,
-			onPointerCancel: finishHistoryResize,
-			onKeyDown: handleHistoryResizeKeyDown
-		}, react.createElement('span', { style: s.historyResizeGrip, 'aria-hidden': true })),
-		react.createElement('div', { style: s.historyHeader },
+	const renderHistoryPanel = () => {
+		const renderHistoryHeader = () => react.createElement('div', { style: s.historyHeader },
 			react.createElement('div', { style: s.historyTitleRow },
 				react.createElement('h3', { style: { ...s.historyTitle, margin: 0 } }, I18n.t('syncCreator.historyTitle') || '작업 내역'),
 				react.createElement('span', { style: s.historyCount }, sessionHistory.length),
@@ -11869,55 +11855,93 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					historySaveLabel
 				)
 			)
-		),
-		sessionHistory.length > 0
-			? react.createElement('ol', { ref: historyListRef, style: s.historyList },
-				sessionHistory.map((entry, index) => {
-					const isCurrent = entry.id === sessionHistoryCursorId;
-					const historyTimeLabel = formatHistoryTime(entry.createdAt);
-					return react.createElement('li', { key: entry.id, style: s.historyItem },
-						react.createElement('button', {
-							type: 'button',
-							className: `sync-creator-history-row${isCurrent ? ' is-current' : ''}`,
-							style: { ...s.historyButton, ...(isCurrent ? s.historyButtonActive : null) },
-							onClick: isCurrent ? undefined : () => restoreHistoryCheckpoint(entry.id),
-							disabled: isCurrent || isRestoringCheckpoint,
-							'aria-current': isCurrent ? 'step' : undefined,
-							'data-history-id': entry.id,
-							title: entry.lineText || getHistoryEntryLabel(entry)
-						},
-							react.createElement('span', { style: s.historyTimeline, 'aria-hidden': true },
-								sessionHistory.length > 1 && react.createElement('span', {
-									style: {
-										...s.historyLine,
-										top: index === 0 ? '50%' : '-7px',
-										bottom: index === sessionHistory.length - 1 ? '50%' : '-7px'
-									}
-								}),
-								react.createElement('span', { style: { ...s.historyDot, ...(isCurrent ? s.historyDotActive : null) } })
-							),
-							react.createElement('span', { style: s.historyContent },
-								react.createElement('span', { style: s.historyLabel }, getHistoryEntryLabel(entry)),
-								entry.lineText && react.createElement('span', { style: { ...s.historyText, display: 'block' } }, entry.lineText)
-							),
-							historyTimeLabel && react.createElement('time', {
-								style: s.historyTime,
-								dateTime: formatHistoryDateTime(entry.createdAt)
-							}, historyTimeLabel)
-						)
-					);
-				})
-			)
-			: react.createElement('div', { style: s.historyEmpty },
-				I18n.t('syncCreator.historyEmpty') || '30초 자동 저장 또는 수동 저장 시 작업 상태가 여기에 기록됩니다.'
-			),
-		react.createElement('div', {
+		);
+
+		const renderHistoryEntry = (entry, index) => {
+			const isCurrent = entry.id === sessionHistoryCursorId;
+			const historyTimeLabel = formatHistoryTime(entry.createdAt);
+			return react.createElement('li', { key: entry.id, style: s.historyItem },
+				react.createElement('button', {
+					type: 'button',
+					className: `sync-creator-history-row${isCurrent ? ' is-current' : ''}`,
+					style: { ...s.historyButton, ...(isCurrent ? s.historyButtonActive : null) },
+					onClick: isCurrent ? undefined : () => restoreHistoryCheckpoint(entry.id),
+					disabled: isCurrent || isRestoringCheckpoint,
+					'aria-current': isCurrent ? 'step' : undefined,
+					'data-history-id': entry.id,
+					title: entry.lineText || getHistoryEntryLabel(entry)
+				},
+					react.createElement('span', { style: s.historyTimeline, 'aria-hidden': true },
+						sessionHistory.length > 1 && react.createElement('span', {
+							style: {
+								...s.historyLine,
+								top: index === 0 ? '50%' : '-7px',
+								bottom: index === sessionHistory.length - 1 ? '50%' : '-7px'
+							}
+						}),
+						react.createElement('span', { style: { ...s.historyDot, ...(isCurrent ? s.historyDotActive : null) } })
+					),
+					react.createElement('span', { style: s.historyContent },
+						react.createElement('span', { style: s.historyLabel }, getHistoryEntryLabel(entry)),
+						entry.lineText && react.createElement('span', { style: { ...s.historyText, display: 'block' } }, entry.lineText)
+					),
+					historyTimeLabel && react.createElement('time', {
+						style: s.historyTime,
+						dateTime: formatHistoryDateTime(entry.createdAt)
+					}, historyTimeLabel)
+				)
+			);
+		};
+
+		const renderHistoryResizeHandle = () => react.createElement('div', {
+			className: 'sync-creator-history-resize-handle',
+			style: s.historyResizeHandle,
+			role: 'separator',
+			tabIndex: 0,
+			'aria-orientation': 'horizontal',
+			'aria-label': I18n.t('syncCreator.historyResize') || '작업 내역 높이 조절',
+			'aria-valuemin': SYNC_CREATOR_HISTORY_MIN_HEIGHT,
+			'aria-valuemax': Math.round(getHistoryPanelHeightBounds().max),
+			'aria-valuenow': Math.round(historyPanelHeight || 190),
+			title: I18n.t('syncCreator.historyResizeHint') || '위아래로 드래그해 작업 내역 높이를 조절합니다.',
+			onPointerDown: handleHistoryResizePointerDown,
+			onPointerMove: handleHistoryResizePointerMove,
+			onPointerUp: finishHistoryResize,
+			onPointerCancel: finishHistoryResize,
+			onKeyDown: handleHistoryResizeKeyDown
+		}, react.createElement('span', { style: s.historyResizeGrip, 'aria-hidden': true }));
+		const renderHistoryLiveRegion = () => react.createElement('div', {
 			style: s.historyLive,
 			role: 'status',
 			'aria-live': 'polite',
 			'aria-atomic': 'true'
-		}, historyAnnouncement)
+		}, historyAnnouncement);
+		return react.createElement('section', {
+		ref: historyPanelRef,
+		className: 'sync-creator-history-panel',
+		style: {
+			...s.historyPanel,
+			maxHeight: 'calc(100% - 180px)',
+			...(historyPanelHeight ? {
+				flex: `0 0 ${Math.round(historyPanelHeight)}px`,
+				height: `${Math.round(historyPanelHeight)}px`
+			} : null)
+		},
+		'aria-busy': isRestoringCheckpoint ? 'true' : undefined,
+		'aria-label': I18n.t('syncCreator.historyTitle') || '작업 내역'
+	},
+		renderHistoryResizeHandle(),
+		renderHistoryHeader(),
+		sessionHistory.length > 0
+			? react.createElement('ol', { ref: historyListRef, style: s.historyList },
+				sessionHistory.map((entry, index) => renderHistoryEntry(entry, index))
+			)
+			: react.createElement('div', { style: s.historyEmpty },
+				I18n.t('syncCreator.historyEmpty') || '30초 자동 저장 또는 수동 저장 시 작업 상태가 여기에 기록됩니다.'
+			),
+		renderHistoryLiveRegion()
 	);
+	};
 
 	const renderRightRail = () => react.createElement('aside', { className: 'sync-creator-inspector-rail', style: s.rightRail },
 		react.createElement('div', { className: 'sync-creator-inspector-scroll', style: s.inspectorScroll },

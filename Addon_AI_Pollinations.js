@@ -1,7 +1,7 @@
 /**
  * Pollinations.ai AI Addon for ivLyrics
  * Pollinations.ai를 사용한 번역, 발음, Research 생성
- * 
+ *
  * @author default
  * @version 1.1.1
  */
@@ -122,11 +122,6 @@
         return value && value !== path ? value : fallback;
     }
 
-    function getLocalizedText(textObj, lang) {
-        if (typeof textObj === 'string') return textObj;
-        return textObj[lang] || textObj['en'] || Object.values(textObj)[0] || '';
-    }
-
     function getSetting(key, defaultValue = null) {
         return window.AIAddonManager?.getAddonSetting(ADDON_INFO.id, key, defaultValue) ?? defaultValue;
     }
@@ -188,12 +183,6 @@
             throw new Error('[Pollinations.ai] App Key must be a publishable pk_ key. Never use sk_ as client_id.');
         }
         return clientId;
-    }
-
-    function normalizePollinationsUrl(url) {
-        if (!url) return `${AUTH_BASE_URL}/device`;
-        if (/^https?:\/\//i.test(url)) return url;
-        return `${AUTH_BASE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
     }
 
     async function requestDeviceCode() {
@@ -411,14 +400,14 @@
 
                     // API 키가 있으면 추가 (선택적)
                     if (apiKey) {
-                        headers['Authorization'] = `Bearer ${apiKey}`;
+                        headers.Authorization = `Bearer ${apiKey}`;
                     }
 
                     const response = await window.ivLyricsFetch(endpoint, {
                         method: 'POST',
-                        headers: headers,
+                        headers,
                         body: JSON.stringify({
-                            model: model,
+                            model,
                             messages: buildPromptMessages(prompt),
                             ...getAdvancedRequestParams()
                         })
@@ -546,7 +535,7 @@
                 try {
                     const endpoint = `${BASE_URL}/v1/chat/completions`;
                     const headers = { 'Content-Type': 'application/json' };
-                    if (apiKey) headers['Authorization'] = `Bearer ${apiKey}`;
+                    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
 
                     const response = await window.ivLyricsFetch(endpoint, {
                         method: 'POST',
@@ -559,6 +548,7 @@
                         try { const d = await response.json(); if (d.error?.message) msg = d.error.message; else if (d.message) msg = d.message; } catch (e) { }
                         throw new Error(`[Pollinations.ai] ${msg}`);
                     }
+                    const consumePollinationsStream = async () => {
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let sseBuffer = '', accumulated = '';
@@ -627,6 +617,9 @@
                     }
 
                     return transformed;
+                    };
+
+                    return await consumePollinationsStream();
                 } catch (e) {
                     lastError = e;
                     resetProvisionalOutput(attempt < maxRetries - 1 ? 'retry' : 'failed', e);
@@ -704,7 +697,7 @@
             if (!trimmed.includes('{')) return false;
             return !trimmed.endsWith('}') || trimmed.lastIndexOf('}') < trimmed.lastIndexOf('{');
         };
-        let cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+        const cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
 
         try {
             return JSON.parse(cleaned);
@@ -927,8 +920,7 @@
                     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)'
                 };
 
-                return React.createElement('div', { className: 'ai-addon-settings pollinations-settings' },
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                const renderAccountRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, aiText('pollinationsAccount', 'Pollinations Account')),
                         React.createElement('div', { className: 'ai-addon-input-group', style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginBottom: '8px' } },
                             React.createElement('button', {
@@ -954,8 +946,8 @@
                             }, aiText('pollinationsOpenLogin', 'Open Login Page'))
                         ),
                         keyInfoText && React.createElement('small', { style: { display: 'block', opacity: 0.65 } }, keyInfoText)
-                    ),
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderManualKeyRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('div', {
                             style: { cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', userSelect: 'none' },
                             onClick: () => setManualExpanded(!manualExpanded)
@@ -973,8 +965,8 @@
                             }),
                             React.createElement('small', null, aiText('apiKeyDesc', 'Enter your API key.'))
                         )
-                    ),
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderModelRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, aiText('model', 'Model')),
                         React.createElement('div', { className: 'ai-addon-input-group' },
                             React.createElement('select', {
@@ -1001,14 +993,20 @@
                             placeholder: aiText('modelId', 'Model ID'),
                             'aria-label': aiText('modelId', 'Model ID')
                         })
-                    ),
-                    React.createElement(AdvancedParamsSection),
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderTestRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('button', { onClick: handleTest, className: 'ai-addon-btn-primary', style: primaryButtonStyle }, aiText('testConnection', 'Test Connection')),
                         testStatus && React.createElement('span', {
                             className: `ai-addon-test-status ${testStatus.startsWith('✓') ? 'success' : testStatus.startsWith('✗') ? 'error' : ''}`
                         }, testStatus)
-                    )
+                    );
+
+                return React.createElement('div', { className: 'ai-addon-settings pollinations-settings' },
+                    renderAccountRow(),
+                    renderManualKeyRow(),
+                    renderModelRow(),
+                    React.createElement(AdvancedParamsSection),
+                    renderTestRow()
                 );
             };
 
@@ -1067,11 +1065,7 @@
                 : await callPollinationsAPIRaw(prompt, undefined, parseLines);
 
             // Return in the format expected by LyricsService
-            if (wantSmartPhonetic) {
-                return { phonetic: lines };
-            } else {
-                return { translation: lines };
-            }
+            return wantSmartPhonetic ? { phonetic: lines } : { translation: lines };
         },
 
         async generateCharacterPronunciation({ lines, characterPronunciationPrompt }) {

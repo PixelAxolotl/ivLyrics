@@ -282,7 +282,7 @@ const TabBar = react.memo(({ links, activeLink, switchCallback, windowSize = Num
 	const options = [];
 	for (let i = 0; i < links.length; i++) {
 		const key = links[i];
-		let value = key[0].toUpperCase() + key.slice(1);
+		const value = key[0].toUpperCase() + key.slice(1);
 		const active = key === activeLink;
 		options.push({ key, value, active });
 	}

@@ -468,6 +468,97 @@
         return typeof entry === 'string' ? entry : entry?.provider;
     }
 
+    // Applies the user's lyrics-type permissions to a fully-processed provider
+    // result and derives the has*/granularity flags. Pure: reads `result` and
+    // the allow flags, returns a fresh `finalResult` (never mutates `result`).
+    // `isPseudoKaraoke` is passed in so this stays free of the manager instance.
+    function filterProviderCandidateResult(result, allow, isPseudoKaraokeFn) {
+        const { allowKaraoke, allowCharacter, allowWord, allowSynced, allowUnsynced } = allow;
+
+        const finalResult = { ...result };
+        if (finalResult.syncDataApplied) {
+            finalResult.syncDataRendererVersion = SYNC_DATA_RENDERER_VERSION;
+        }
+        const finalKaraokeGranularity = hasLyricsContent(finalResult.karaoke)
+            ? inferKaraokeGranularity(finalResult)
+            : '';
+        const karaokeGranularityAllowed = finalKaraokeGranularity === LYRICS_TYPES.CHARACTER
+            ? allowCharacter
+            : finalKaraokeGranularity === LYRICS_TYPES.WORD
+                ? allowWord
+                : false;
+        if (!allowKaraoke || !karaokeGranularityAllowed) {
+            finalResult.karaoke = null;
+            finalResult.karaokeGranularity = null;
+        }
+        if (!allowSynced) finalResult.synced = null;
+        if (!allowUnsynced) finalResult.unsynced = null;
+
+        const hasKaraoke = hasLyricsContent(finalResult.karaoke);
+        const hasCharacterKaraoke = hasKaraoke
+            && finalKaraokeGranularity === LYRICS_TYPES.CHARACTER;
+        const hasWordKaraoke = hasKaraoke
+            && finalKaraokeGranularity === LYRICS_TYPES.WORD;
+        const hasSynced = hasLyricsContent(finalResult.synced);
+        const hasUnsynced = hasLyricsContent(finalResult.unsynced);
+        const isPseudoKaraoke = hasKaraoke && isPseudoKaraokeFn(finalResult);
+
+        return {
+            finalResult,
+            finalKaraokeGranularity,
+            hasKaraoke,
+            hasCharacterKaraoke,
+            hasWordKaraoke,
+            hasSynced,
+            hasUnsynced,
+            isPseudoKaraoke
+        };
+    }
+
+    // Fetches a provider result, preferring a still-valid cache entry over a
+    // fresh provider.getLyrics() call. Mirrors the original try/finally: the
+    // AddonDebug timing span always closes, cache-lookup failures are swallowed
+    // with a warning, and debug logs fire in the same order. Returns the raw
+    // result plus whether it came from cache and whether the provider was hit.
+    async function resolveProviderResult(provider, info, lyricsCacheId, debugTiming) {
+        let result = null;
+        let cacheHit = false;
+        let providerFetched = false;
+
+        try {
+            if (lyricsCacheId && window.LyricsService?.getCachedLyrics) {
+                try {
+                    const cached = await window.LyricsService.getCachedLyrics(lyricsCacheId, provider.id);
+                    const isProviderCacheCurrent = cached && (!provider.cacheVersion || cached.cacheVersion === provider.cacheVersion);
+                    const isSyncDataRendererCurrent = !cached?.syncDataApplied
+                        || cached.syncDataRendererVersion === SYNC_DATA_RENDERER_VERSION;
+                    if (isProviderCacheCurrent && isSyncDataRendererCurrent) {
+                        result = cached;
+                        cacheHit = true;
+                        window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Cache hit for ${provider.id}`);
+                    } else if (isProviderCacheCurrent && !isSyncDataRendererCurrent) {
+                        window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Sync-data renderer cache mismatch for ${provider.id}, refetching...`);
+                    } else if (cached) {
+                        window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Cache version mismatch for ${provider.id}, refetching...`);
+                    }
+                } catch (error) {
+                    console.warn(`[LyricsAddonManager] Cache lookup failed for ${provider.id}:`, error);
+                }
+            }
+
+            if (!result) {
+                result = await provider.getLyrics(info);
+                providerFetched = true;
+            }
+        } finally {
+            if (debugTiming) {
+                window.AddonDebug.timeEnd('lyrics', `provider:${provider.id}`);
+            }
+        }
+
+        return { result, cacheHit, providerFetched };
+    }
+
     // ============================================
     // LyricsAddonManager Class
     // ============================================
@@ -1229,8 +1320,6 @@
             window.__ivLyricsDebugLog?.(`[LyricsAddonManager] User settings for ${provider.id}: character=${allowCharacter}, word=${allowWord}, synced=${allowSynced}, unsynced=${allowUnsynced}`);
 
             let result = null;
-            let cacheHit = false;
-            let providerFetched = false;
             let syncDataAppliedThisCall = false;
             let pseudoKaraokeChanged = false;
             let instrumentalBreaksNormalized = false;
@@ -1239,36 +1328,10 @@
                 window.AddonDebug.time('lyrics', `provider:${provider.id}`);
             }
 
-            try {
-                if (lyricsCacheId && window.LyricsService?.getCachedLyrics) {
-                    try {
-                        const cached = await window.LyricsService.getCachedLyrics(lyricsCacheId, provider.id);
-                        const isProviderCacheCurrent = cached && (!provider.cacheVersion || cached.cacheVersion === provider.cacheVersion);
-                        const isSyncDataRendererCurrent = !cached?.syncDataApplied
-                            || cached.syncDataRendererVersion === SYNC_DATA_RENDERER_VERSION;
-                        if (isProviderCacheCurrent && isSyncDataRendererCurrent) {
-                            result = cached;
-                            cacheHit = true;
-                            window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Cache hit for ${provider.id}`);
-                        } else if (isProviderCacheCurrent && !isSyncDataRendererCurrent) {
-                            window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Sync-data renderer cache mismatch for ${provider.id}, refetching...`);
-                        } else if (cached) {
-                            window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Cache version mismatch for ${provider.id}, refetching...`);
-                        }
-                    } catch (error) {
-                        console.warn(`[LyricsAddonManager] Cache lookup failed for ${provider.id}:`, error);
-                    }
-                }
-
-                if (!result) {
-                    result = await provider.getLyrics(info);
-                    providerFetched = true;
-                }
-            } finally {
-                if (debugTiming) {
-                    window.AddonDebug.timeEnd('lyrics', `provider:${provider.id}`);
-                }
-            }
+            const fetched = await resolveProviderResult(provider, info, lyricsCacheId, debugTiming);
+            result = fetched.result;
+            const cacheHit = fetched.cacheHit;
+            const providerFetched = fetched.providerFetched;
 
             if (!result || result.error) {
                 window.__ivLyricsDebugLog?.(`[LyricsAddonManager] Provider ${provider.id} returned error:`, result?.error);
@@ -1301,12 +1364,12 @@
                     if (refreshedSyncData) {
                         result = {
                             ...result,
-							...(Array.isArray(refreshedSyncData.contributors)
-								? { contributors: refreshedSyncData.contributors }
-								: {}),
-							syncType: refreshedSyncData.syncType || result.syncType || 'unknown',
-							syncPoints: Number(refreshedSyncData.syncPoints ?? result.syncPoints ?? 2),
-							syncTypeBreakdown: refreshedSyncData.syncTypeBreakdown || result.syncTypeBreakdown || null
+                            ...(Array.isArray(refreshedSyncData.contributors)
+                                ? { contributors: refreshedSyncData.contributors }
+                                : {}),
+                            syncType: refreshedSyncData.syncType || result.syncType || 'unknown',
+                            syncPoints: Number(refreshedSyncData.syncPoints ?? result.syncPoints ?? 2),
+                            syncTypeBreakdown: refreshedSyncData.syncTypeBreakdown || result.syncTypeBreakdown || null
                         };
                     }
                 } catch (error) {
@@ -1352,6 +1415,7 @@
                 hasSyncDataService: !!window.SyncDataService?.getSyncData
             });
 
+            const applyRegisteredSyncData = async () => {
             if (shouldApplyRegisteredSyncData) {
                 if ((trackId || trackIsrc) && window.SyncDataService?.getSyncData) {
                     try {
@@ -1377,9 +1441,9 @@
                                 result.syncDataApplied = true;
                                 result.syncDataProvider = syncProvider;
                                 result.syncDataRendererVersion = SYNC_DATA_RENDERER_VERSION;
-								result.syncType = syncData.syncType || 'unknown';
-								result.syncPoints = Number(syncData.syncPoints ?? 2);
-								result.syncTypeBreakdown = syncData.syncTypeBreakdown || null;
+                                result.syncType = syncData.syncType || 'unknown';
+                                result.syncPoints = Number(syncData.syncPoints ?? 2);
+                                result.syncTypeBreakdown = syncData.syncTypeBreakdown || null;
                                 syncDataAppliedThisCall = true;
 
                                 if (syncData.contributors || syncData.syncData?.contributors) {
@@ -1415,23 +1479,29 @@
                     }
                 }
             }
+            };
+            await applyRegisteredSyncData();
 
-            if (allowKaraoke && window.PseudoKaraokeService?.applyToResult) {
-                try {
-                    const karaokeBeforePseudo = result.karaoke;
-                    const karaokeSourceBeforePseudo = result.karaokeSource;
-                    const pseudoCacheVersionBeforePseudo = result.pseudoKaraokeCacheVersion;
-                    const pseudoResult = await window.PseudoKaraokeService.applyToResult(result, info);
-                    if (pseudoResult) {
-                        Object.assign(result, pseudoResult);
+            const applyPseudoKaraoke = async () => {
+                if (allowKaraoke && window.PseudoKaraokeService?.applyToResult) {
+                    try {
+                        const karaokeBeforePseudo = result.karaoke;
+                        const karaokeSourceBeforePseudo = result.karaokeSource;
+                        const pseudoCacheVersionBeforePseudo = result.pseudoKaraokeCacheVersion;
+                        const pseudoResult = await window.PseudoKaraokeService.applyToResult(result, info);
+                        if (pseudoResult) {
+                            Object.assign(result, pseudoResult);
+                        }
+                        return result.karaoke !== karaokeBeforePseudo
+                            || result.karaokeSource !== karaokeSourceBeforePseudo
+                            || result.pseudoKaraokeCacheVersion !== pseudoCacheVersionBeforePseudo;
+                    } catch (error) {
+                        console.warn('[LyricsAddonManager] Failed to apply pseudo karaoke:', error);
                     }
-                    pseudoKaraokeChanged = result.karaoke !== karaokeBeforePseudo
-                        || result.karaokeSource !== karaokeSourceBeforePseudo
-                        || result.pseudoKaraokeCacheVersion !== pseudoCacheVersionBeforePseudo;
-                } catch (error) {
-                    console.warn('[LyricsAddonManager] Failed to apply pseudo karaoke:', error);
                 }
-            }
+                return pseudoKaraokeChanged;
+            };
+            pseudoKaraokeChanged = await applyPseudoKaraoke();
 
             // Sync-data and pseudo-karaoke can rebuild line objects after the
             // provider result was normalized. Normalize once more at the final
@@ -1441,33 +1511,20 @@
             instrumentalBreaksNormalized = instrumentalBreaksNormalized
                 || finalInstrumentalBreaks.changed;
 
-            const finalResult = { ...result };
-            if (finalResult.syncDataApplied) {
-                finalResult.syncDataRendererVersion = SYNC_DATA_RENDERER_VERSION;
-            }
-            const finalKaraokeGranularity = hasLyricsContent(finalResult.karaoke)
-                ? inferKaraokeGranularity(finalResult)
-                : '';
-            const karaokeGranularityAllowed = finalKaraokeGranularity === LYRICS_TYPES.CHARACTER
-                ? allowCharacter
-                : finalKaraokeGranularity === LYRICS_TYPES.WORD
-                    ? allowWord
-                    : false;
-            if (!allowKaraoke || !karaokeGranularityAllowed) {
-                finalResult.karaoke = null;
-                finalResult.karaokeGranularity = null;
-            }
-            if (!allowSynced) finalResult.synced = null;
-            if (!allowUnsynced) finalResult.unsynced = null;
-
-            const hasKaraoke = hasLyricsContent(finalResult.karaoke);
-            const hasCharacterKaraoke = hasKaraoke
-                && finalKaraokeGranularity === LYRICS_TYPES.CHARACTER;
-            const hasWordKaraoke = hasKaraoke
-                && finalKaraokeGranularity === LYRICS_TYPES.WORD;
-            const hasSynced = hasLyricsContent(finalResult.synced);
-            const hasUnsynced = hasLyricsContent(finalResult.unsynced);
-            const isPseudoKaraoke = hasKaraoke && this._isPseudoKaraoke(finalResult);
+            const {
+                finalResult,
+                finalKaraokeGranularity,
+                hasKaraoke,
+                hasCharacterKaraoke,
+                hasWordKaraoke,
+                hasSynced,
+                hasUnsynced,
+                isPseudoKaraoke
+            } = filterProviderCandidateResult(
+                result,
+                { allowKaraoke, allowCharacter, allowWord, allowSynced, allowUnsynced },
+                (candidate) => this._isPseudoKaraoke(candidate)
+            );
 
             window.__ivLyricsDebugLog?.(`[LyricsAddonManager] After filtering for ${provider.id}:`, {
                 hasKaraoke,

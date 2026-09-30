@@ -36,7 +36,7 @@
     const DISPLAY_UPPERCASE_PATTERN = /[A-Z]/u;
     const DISPLAY_LOWERCASE_PATTERN = /[a-z]/u;
     const DISPLAY_NUMBER_PATTERN = /\p{Number}/u;
-    const DISPLAY_PUNCTUATION_PATTERN = /[.,'’!?;:()\-]/u;
+    const DISPLAY_PUNCTUATION_PATTERN = /[.,'’!?;:()-]/u;
     const OBJECT_PROPERTY_IS_ENUMERABLE = Object.prototype.propertyIsEnumerable;
     const CACHE_VERSION = '2026-09-06-lyricsplus-11';
     const ATTRIBUTION = 'Lyrics from LyricsPlus.';
@@ -417,8 +417,8 @@
         const leftCharacter = getBoundaryCharacter(leftText, true);
         const rightCharacter = getBoundaryCharacter(rightText, false);
         if (!leftCharacter || !rightCharacter) return null;
-        if (/[\(\[\{（「『【〈《]/u.test(leftCharacter)) return null;
-        if (/[\)\]\}）」』】〉》、。，．！？?!]/u.test(rightCharacter)) return null;
+        if (/[([{（「『【〈《]/u.test(leftCharacter)) return null;
+        if (/[)\]}）」』】〉》、。，．！？?!]/u.test(rightCharacter)) return null;
         if (/[ゃゅょっぁぃぅぇぉゎャュョッァィゥェォヮー々]/u.test(rightCharacter)) return null;
 
         const leftEndTime = Number(leftSyllable?.endTime);
@@ -604,7 +604,7 @@
             line.lyricsPlusSourceLineKey || line.lyricsPlusLineKey || `line-${line.sourceIndex ?? 0}`
         );
         const fragmentCount = plan.length - 1;
-        const fragments = plan.slice(0, -1).map((startIndex, fragmentIndex) => {
+        const buildSoloLineFragment = (startIndex, fragmentIndex) => {
             const endIndex = plan[fragmentIndex + 1];
             const fragmentSyllables = syllables.slice(startIndex, endIndex);
             const first = fragmentSyllables[0];
@@ -634,8 +634,10 @@
                 lyricsPlusFragmentIndex: fragmentIndex,
                 lyricsPlusFragmentCount: fragmentCount
             };
-        });
+        };
+        const fragments = plan.slice(0, -1).map(buildSoloLineFragment);
 
+        const isSoloLineSplitSafe = () => {
         const flattenedSyllables = fragments.flatMap(fragment => fragment.syllables);
         const preservesSyllables = flattenedSyllables.length === syllables.length
             && flattenedSyllables.every((syllable, index) => syllable === syllables[index]);
@@ -650,7 +652,9 @@
                     <= fragment.syllables[0].startTime
             )
         ));
-        return preservesSyllables && preservesText && hasSafeFragmentTiming
+        return preservesSyllables && preservesText && hasSafeFragmentTiming;
+        };
+        return isSoloLineSplitSafe()
             ? fragments
             : [line];
     }
@@ -715,7 +719,7 @@
         const agents = payload?.metadata?.agents || {};
         const songParts = Array.isArray(payload?.metadata?.songParts) ? payload.metadata.songParts : [];
 
-        const parsedLines = payload.lyrics.map((sourceLine, lineIndex) => {
+        const parseSourceLine = (sourceLine, lineIndex) => {
             const rawStart = toFiniteMilliseconds(sourceLine?.time);
             const rawDuration = toPositiveMilliseconds(sourceLine?.duration);
             const rawEnd = Number.isFinite(rawStart) && Number.isFinite(rawDuration)
@@ -764,7 +768,7 @@
             );
 
             let leadPart = createVocalPart(`${lineKey}-lead`, 'lead', leadSyllables, presentation);
-            let backgroundParts = [];
+            const backgroundParts = [];
             if (backgroundSyllables.length > 0) {
                 const backgroundPart = createVocalPart(
                     `${lineKey}-background-1`,
@@ -804,7 +808,9 @@
             }
 
             return line;
-        }).filter(Boolean);
+        };
+
+        const parsedLines = payload.lyrics.map(parseSourceLine).filter(Boolean);
 
         const timedLines = parsedLines
             .filter(line => Number.isFinite(line.startTime))
@@ -827,6 +833,7 @@
             || payloadType === 'unsynced';
         const inferTypeFromContent = !isWordType && !isLineType && !isPlainType;
         const hasCompleteTiming = timedLines.length === parsedLines.length;
+        const computeKaraoke = () => {
         const hasCompleteWordTiming = hasCompleteTiming
             && (isWordType || inferTypeFromContent)
             && timedLines.every(line => line.hasWordTiming);
@@ -851,6 +858,9 @@
                 return karaokeLine;
             })
             : null;
+        return karaoke;
+        };
+        const karaoke = computeKaraoke();
 
         const synced = hasCompleteTiming && !isPlainType ? timedLines.map(line => ({
             startTime: line.startTime,

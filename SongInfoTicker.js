@@ -110,7 +110,7 @@ const SongResearch = (() => {
         const configuredTargetLang = CONFIG.visual["translate:target-language"];
         const lang = configuredTargetLang && configuredTargetLang !== "auto"
             ? configuredTargetLang
-            : (window.I18n?.getCurrentLanguage?.() || CONFIG.visual["language"] || Spicetify.Locale?.getLocale()?.split("-")[0] || "en");
+            : (window.I18n?.getCurrentLanguage?.() || CONFIG.visual.language || Spicetify.Locale?.getLocale()?.split("-")[0] || "en");
         const schema = window.AIAddonManager?.RESEARCH_CACHE_VERSION || "research-v7";
         const cacheKey = `${schema}:${trackId}:${lang || "auto"}`;
 
@@ -228,7 +228,7 @@ const SongResearch = (() => {
     const splitTrailingUrlPunctuation = (value) => {
         let url = value;
         let suffix = "";
-        while (/[.,;:!?，。！？、\]\}]/u.test(url.slice(-1))) {
+        while (/[.,;:!?，。！？、\]}]/u.test(url.slice(-1))) {
             suffix = url.slice(-1) + suffix;
             url = url.slice(0, -1);
         }
@@ -1260,9 +1260,8 @@ const SongResearch = (() => {
             return () => nav.removeEventListener("wheel", handleWheel);
         }, [sectionDefinitions.length]);
 
-        if (info?.error) {
-            const isQuotaError = /429|quota|RESOURCE_EXHAUSTED/i.test(info.message || "");
-            return react.createElement("div", {
+        const renderResearchErrorState = (isQuotaError) =>
+            react.createElement("div", {
                 className: "research-view research-state-view",
                 style: { "--research-scale": researchScale },
                 role: "alert"
@@ -1277,17 +1276,15 @@ const SongResearch = (() => {
                     onRegenerate && react.createElement("button", { type: "button", className: "research-action research-action-primary", onClick: onRegenerate }, react.createElement(Icon, { name: "refresh" }), t("research.regenerate", "Research again")),
                     react.createElement("button", { type: "button", className: "research-action", onClick: onClose }, t("research.close", "Close"))
                 )
-            );
+            )
+        ;
+
+        if (info?.error) {
+            const isQuotaError = /429|quota|RESOURCE_EXHAUSTED/i.test(info.message || "");
+            return renderResearchErrorState(isQuotaError);
         }
 
-        return react.createElement("div", {
-            className: "research-view",
-            style: { "--research-scale": researchScale },
-            lang: normalized.language || undefined,
-            role: "document",
-            "aria-labelledby": "research-document-title",
-            "aria-busy": isGenerating
-        },
+        const renderResearchHero = () =>
             react.createElement("header", { className: "research-hero" },
                 coverUrl && react.createElement("img", { src: coverUrl, className: "research-hero-cover", alt: "" }),
                 react.createElement("div", { className: "research-hero-scrim", "aria-hidden": "true" }),
@@ -1328,8 +1325,11 @@ const SongResearch = (() => {
                         )
                     )
                 )
-            ),
-            sectionDefinitions.length > 0 && react.createElement("nav", {
+            )
+        ;
+
+        const renderResearchNav = () =>
+            react.createElement("nav", {
                 className: "research-nav",
                 ref: navRef,
                 "aria-label": t("research.contents", "Contents"),
@@ -1352,7 +1352,10 @@ const SongResearch = (() => {
                         scrollTo(id);
                     }
                 }, react.createElement(Icon, { name: icon, size: 14 }), react.createElement("span", null, label)))
-            ),
+            )
+        ;
+
+        const renderResearchContent = () =>
             react.createElement("main", { className: "research-content", ref: contentRef },
                 isGenerating && webSearchFallback && react.createElement(ResearchWebSearchFallbackNotice),
                 // Language changes must refresh labels even when article data is unchanged.
@@ -1374,6 +1377,19 @@ const SongResearch = (() => {
                     react.createElement("span", null, t("research.disclaimer", "AI-generated research may contain inaccuracies. Check the linked sources before relying on factual claims"))
                 )
             )
+        ;
+
+        return react.createElement("div", {
+            className: "research-view",
+            style: { "--research-scale": researchScale },
+            lang: normalized.language || undefined,
+            role: "document",
+            "aria-labelledby": "research-document-title",
+            "aria-busy": isGenerating
+        },
+            renderResearchHero(),
+            sectionDefinitions.length > 0 && renderResearchNav(),
+            renderResearchContent()
         );
     });
 

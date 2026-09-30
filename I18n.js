@@ -5,15 +5,15 @@
 // Define I18n on window object immediately using IIFE
 (function () {
     // Cached language data
-    var currentLanguage = null;
-    var languageData = {};
-    var fallbackData = {};
-    var STORAGE_KEY = "ivLyrics:visual:language";
-    var DEFAULT_LANGUAGE = "ko";
-    var LANGUAGE_CODES = ["ko", "en", "zh-CN", "zh-TW", "ja", "es", "fr", "de", "it", "ru", "sv", "pt", "hi", "ar", "fa", "bn", "cs", "th", "tr", "vi", "id", "ms"];
-    var AVAILABLE_LANGUAGES = [];
-    var KEY_PATH_CACHE_LIMIT = 2048;
-    var RESEARCH_KEY_ALIASES = {
+    let currentLanguage = null;
+    let languageData = {};
+    let fallbackData = {};
+    const STORAGE_KEY = "ivLyrics:visual:language";
+    const DEFAULT_LANGUAGE = "ko";
+    const LANGUAGE_CODES = ["ko", "en", "zh-CN", "zh-TW", "ja", "es", "fr", "de", "it", "ru", "sv", "pt", "hi", "ar", "fa", "bn", "cs", "th", "tr", "vi", "id", "ms"];
+    const AVAILABLE_LANGUAGES = [];
+    const KEY_PATH_CACHE_LIMIT = 2048;
+    const RESEARCH_KEY_ALIASES = {
         "tmi.title": "research.title",
         "tmi.requireKey": "research.requireProvider",
         "tmi.disclaimer": "research.disclaimer",
@@ -36,11 +36,11 @@
         "settingsAdvanced.tmiStyle.fontSize.desc": "research.fontSizeDesc",
         "settingsAdvanced.tmiStyle.fontSize.info": "research.fontSizeInfo"
     };
-    var keyPathCache = new Map();
-    var keyPathSplit = null;
-    var lastKeyPath = null;
-    var lastKeyPathSegments = null;
-    var canCacheKeyPaths = false;
+    const keyPathCache = new Map();
+    let keyPathSplit = null;
+    let lastKeyPath = null;
+    let lastKeyPathSegments = null;
+    let canCacheKeyPaths = false;
     try {
         keyPathSplit = String.prototype.split;
         canCacheKeyPaths = /\{\s*\[native code\]\s*\}/.test(Function.prototype.toString.call(keyPathSplit));
@@ -73,7 +73,7 @@
     }
 
     // Language display names
-    var LANGUAGE_NAMES = {
+    const LANGUAGE_NAMES = {
         ko: "한국어",
         en: "English",
         "zh-CN": "简体中文",
@@ -99,87 +99,28 @@
     };
 
     /**
-     * Get language data from external JS files (LangKo.js, LangEn.js, etc.)
+     * Get language data from external JS files (LangKo.js, LangEn.js, etc.).
+     * Each language file publishes its table as window.LANG_<CODE>, e.g.
+     * "zh-CN" -> window.LANG_ZH_CN.
      */
+    const LANGUAGE_DATA_GLOBALS = new Map(
+        LANGUAGE_CODES.map((code) => [code, `LANG_${code.toUpperCase().replace("-", "_")}`])
+    );
+
     function getLanguageData(langCode) {
-        if (langCode === 'ko' && typeof window.LANG_KO !== 'undefined' && window.LANG_KO) {
-            return window.LANG_KO;
-        }
-        if (langCode === 'en' && typeof window.LANG_EN !== 'undefined' && window.LANG_EN) {
-            return window.LANG_EN;
-        }
-        if (langCode === 'zh-CN' && typeof window.LANG_ZH_CN !== 'undefined' && window.LANG_ZH_CN) {
-            return window.LANG_ZH_CN;
-        }
-        if (langCode === 'zh-TW' && typeof window.LANG_ZH_TW !== 'undefined' && window.LANG_ZH_TW) {
-            return window.LANG_ZH_TW;
-        }
-        if (langCode === 'ja' && typeof window.LANG_JA !== 'undefined' && window.LANG_JA) {
-            return window.LANG_JA;
-        }
-        if (langCode === 'es' && typeof window.LANG_ES !== 'undefined' && window.LANG_ES) {
-            return window.LANG_ES;
-        }
-        if (langCode === 'fr' && typeof window.LANG_FR !== 'undefined' && window.LANG_FR) {
-            return window.LANG_FR;
-        }
-        if (langCode === 'de' && typeof window.LANG_DE !== 'undefined' && window.LANG_DE) {
-            return window.LANG_DE;
-        }
-        if (langCode === 'it' && typeof window.LANG_IT !== 'undefined' && window.LANG_IT) {
-            return window.LANG_IT;
-        }
-        if (langCode === 'ru' && typeof window.LANG_RU !== 'undefined' && window.LANG_RU) {
-            return window.LANG_RU;
-        }
-        if (langCode === 'sv' && typeof window.LANG_SV !== 'undefined' && window.LANG_SV) {
-            return window.LANG_SV;
-        }
-        if (langCode === 'pt' && typeof window.LANG_PT !== 'undefined' && window.LANG_PT) {
-            return window.LANG_PT;
-        }
-        if (langCode === 'hi' && typeof window.LANG_HI !== 'undefined' && window.LANG_HI) {
-            return window.LANG_HI;
-        }
-        if (langCode === 'ar' && typeof window.LANG_AR !== 'undefined' && window.LANG_AR) {
-            return window.LANG_AR;
-        }
-        if (langCode === 'fa' && typeof window.LANG_FA !== 'undefined' && window.LANG_FA) {
-            return window.LANG_FA;
-        }
-        if (langCode === 'bn' && typeof window.LANG_BN !== 'undefined' && window.LANG_BN) {
-            return window.LANG_BN;
-        }
-        if (langCode === 'cs' && typeof window.LANG_CS !== 'undefined' && window.LANG_CS) {
-            return window.LANG_CS;
-        }
-        if (langCode === 'th' && typeof window.LANG_TH !== 'undefined' && window.LANG_TH) {
-            return window.LANG_TH;
-        }
-        if (langCode === 'tr' && typeof window.LANG_TR !== 'undefined' && window.LANG_TR) {
-            return window.LANG_TR;
-        }
-        if (langCode === 'vi' && typeof window.LANG_VI !== 'undefined' && window.LANG_VI) {
-            return window.LANG_VI;
-        }
-        if (langCode === 'id' && typeof window.LANG_ID !== 'undefined' && window.LANG_ID) {
-            return window.LANG_ID;
-        }
-        if (langCode === 'ms' && typeof window.LANG_MS !== 'undefined' && window.LANG_MS) {
-            return window.LANG_MS;
-        }
-        return null;
+        const globalName = LANGUAGE_DATA_GLOBALS.get(langCode);
+        return (globalName && window[globalName]) || null;
     }
 
     /**
      * Keep the public language list aligned with language files actually loaded.
      */
     function refreshAvailableLanguages() {
-        var hasDefaultLanguage = false;
+        let hasDefaultLanguage = false;
         AVAILABLE_LANGUAGES.length = 0;
 
-        for (var i = 0; i < LANGUAGE_CODES.length; i++) {
-            var code = LANGUAGE_CODES[i];
+        for (let i = 0; i < LANGUAGE_CODES.length; i++) {
+            const code = LANGUAGE_CODES[i];
             if (getLanguageData(code)) {
                 AVAILABLE_LANGUAGES.push(code);
                 if (code === DEFAULT_LANGUAGE) {
@@ -210,14 +151,14 @@
 
         if (keyPath === lastKeyPath) return lastKeyPathSegments;
 
-        var cached = keyPathCache.get(keyPath);
+        const cached = keyPathCache.get(keyPath);
         if (cached) {
             lastKeyPath = keyPath;
             lastKeyPathSegments = cached;
             return cached;
         }
 
-        var keys = keyPath.split(".");
+        const keys = keyPath.split(".");
         lastKeyPath = keyPath;
         lastKeyPathSegments = keys;
         if (keyPathCache.size < KEY_PATH_CACHE_LIMIT) {
@@ -228,9 +169,9 @@
 
     function getNestedValue(obj, keyPath) {
         if (!obj || !keyPath) return null;
-        var keys = getKeyPathSegments(keyPath);
-        var value = obj;
-        for (var i = 0; i < keys.length; i++) {
+        const keys = getKeyPathSegments(keyPath);
+        let value = obj;
+        for (let i = 0; i < keys.length; i++) {
             if (value && typeof value === "object" && keys[i] in value) {
                 value = value[keys[i]];
             } else {
@@ -253,7 +194,7 @@
         }
 
         // Try current language
-        var value = getNestedValue(languageData, keyPath);
+        let value = getNestedValue(languageData, keyPath);
 
         // Try fallback language
         if (value === null && fallbackData) {
@@ -283,10 +224,10 @@
         refreshAvailableLanguages();
 
         // Get saved language
-        var savedLang = getStoredLanguage();
+        let savedLang = getStoredLanguage();
 
         if (!savedLang || AVAILABLE_LANGUAGES.indexOf(savedLang) === -1) {
-            var invalidSavedLang = savedLang;
+            const invalidSavedLang = savedLang;
             savedLang = DEFAULT_LANGUAGE;
 
             // Old index-based backups can map an unrelated value (for example
@@ -304,7 +245,7 @@
         fallbackData = getLanguageData(DEFAULT_LANGUAGE) || {};
 
         // Load selected language
-        var data = getLanguageData(savedLang);
+        const data = getLanguageData(savedLang);
         if (data) {
             languageData = data;
             currentLanguage = savedLang;
@@ -353,7 +294,7 @@
             return Promise.resolve(true);
         }
 
-        var newData = getLanguageData(langCode);
+        const newData = getLanguageData(langCode);
         if (!newData) {
             console.error("[I18n] Language data not found: " + langCode);
             return Promise.resolve(false);
@@ -384,7 +325,7 @@
         refreshAvailableLanguages();
 
         return AVAILABLE_LANGUAGES.map(function (code) {
-            return { code: code, name: LANGUAGE_NAMES[code] || code };
+            return { code, name: LANGUAGE_NAMES[code] || code };
         });
     }
 
@@ -404,12 +345,12 @@
     function getAllTranslations(keyPath) {
         if (!keyPath) return [];
         keyPath = RESEARCH_KEY_ALIASES[keyPath] || keyPath;
-        var translations = [];
-        var availableLanguages = refreshAvailableLanguages();
-        for (var i = 0; i < availableLanguages.length; i++) {
-            var langData = getLanguageData(availableLanguages[i]);
+        const translations = [];
+        const availableLanguages = refreshAvailableLanguages();
+        for (let i = 0; i < availableLanguages.length; i++) {
+            const langData = getLanguageData(availableLanguages[i]);
             if (langData) {
-                var value = getNestedValue(langData, keyPath);
+                const value = getNestedValue(langData, keyPath);
                 if (value && translations.indexOf(value) === -1) {
                     translations.push(value);
                 }
@@ -428,19 +369,19 @@
     refreshAvailableLanguages();
 
     // Create the I18n object
-    var I18n = {
-        init: init,
-        initSync: initSync,
-        getString: getString,
+    const I18n = {
+        init,
+        initSync,
+        getString,
         t: getString,
-        getAllTranslations: getAllTranslations,
-        getCurrentLanguage: getCurrentLanguage,
-        setLanguage: setLanguage,
-        getAvailableLanguages: getAvailableLanguages,
-        getLanguageName: getLanguageName,
-        isInitialized: isInitialized,
-        AVAILABLE_LANGUAGES: AVAILABLE_LANGUAGES,
-        DEFAULT_LANGUAGE: DEFAULT_LANGUAGE
+        getAllTranslations,
+        getCurrentLanguage,
+        setLanguage,
+        getAvailableLanguages,
+        getLanguageName,
+        isInitialized,
+        AVAILABLE_LANGUAGES,
+        DEFAULT_LANGUAGE
     };
 
     // Export to window

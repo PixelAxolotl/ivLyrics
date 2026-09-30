@@ -93,6 +93,53 @@ const wrapVideoSyncTime = (targetVideoTime, duration) => {
     return safeTarget;
 };
 
+// 두 동기화 effect(HTML5 helper 모드, YouTube 모드)에서 동일하게 반복되던
+// "현재 Spotify 위치 + 오프셋 → resolveVideoSyncState" 계산을 모은다.
+// videoDuration은 재생 소스마다 다르게 얻으므로(video.duration vs player.getDuration())
+// 호출부에서 wrapVideoSyncTime과 함께 별도로 처리한다.
+const computeVideoSyncState = ({ firstLyricTime, videoInfo, trackOffsetMs }) => {
+    const spotifyTime = Spicetify.Player.getProgress() / 1000;
+    const lyricsStartTime = getLyricsStartTimeSeconds(firstLyricTime);
+    const globalDelayMs = typeof CONFIG !== "undefined" && CONFIG.visual ? Number(CONFIG.visual.delay || 0) : 0;
+    const globalSyncOffsetMs = Number(window.Utils?.getGlobalSyncOffset?.() ?? CONFIG?.visual?.["global-sync-offset"] ?? 0) || 0;
+    const additionalDelaySeconds = (trackOffsetMs + globalDelayMs + globalSyncOffsetMs) / 1000;
+    return resolveVideoSyncState({
+        spotifyTime,
+        lyricsStartTime,
+        videoInfo,
+        additionalDelaySeconds,
+        mapVideoTime: Utils.mapVideoTimeWithSkipSegments.bind(Utils),
+    });
+};
+
+// loadVideoInfo에서 커뮤니티 YouTube 조회 API URL을 조립하는 순수 계산 부분.
+// setState/isMounted 같은 부작용 없이 입력만으로 최종 URL 문자열을 만든다.
+// searchParams 설정 순서와 shouldBypassServerCache 호출 위치는 원본과 동일하게 유지한다.
+const buildYouTubeVideoApiUrl = ({ trackIsrc, trackId, spotifyData, clientVersion }) => {
+    const useCommunity = true;
+    const youtubeApiUrl = new URL('https://ivlis.kr/ivLyrics/openvideo/youtube');
+    youtubeApiUrl.searchParams.set('isrc', trackIsrc);
+    youtubeApiUrl.searchParams.set('trackId', trackId);
+    youtubeApiUrl.searchParams.set('useCommunity', useCommunity ? "true" : "false");
+    youtubeApiUrl.searchParams.set('client', 'ivLyrics');
+    youtubeApiUrl.searchParams.set('clientVersion', clientVersion);
+    youtubeApiUrl.searchParams.set('requestVersion', '2');
+
+    if (spotifyData?.name) {
+        youtubeApiUrl.searchParams.set('trackName', spotifyData.name);
+        if (spotifyData.artists?.length) {
+            youtubeApiUrl.searchParams.set('trackArtists', spotifyData.artists.join(', '));
+        }
+        if (spotifyData.album || spotifyData.albumName) {
+            youtubeApiUrl.searchParams.set('album', spotifyData.album || spotifyData.albumName);
+        }
+    }
+    if (window.SyncDataService?.shouldBypassServerCache?.(trackIsrc)) {
+        youtubeApiUrl.searchParams.set('bypassCache', '1');
+    }
+    return youtubeApiUrl.toString();
+};
+
 const syncYouTubePlayerTimeline = ({
     player,
     targetVideoTime,
@@ -282,22 +329,34 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
         isHolding: false,
         primePending: false,
     });
-    const brightnessValue = Math.min(Math.max(Number(brightness) || 0, 0), 100);
-    const brightnessRatio = brightnessValue / 100;
-    const blurValue = Math.min(Math.max(Number(blurAmount) || 0, 0), 80);
-    const useCoverMode = coverMode === true;
-    const videoScaleValue = Math.min(Math.max(Number(videoScale) || 105, 50), 200);
-    const videoScaleRatio = videoScaleValue / 100;
-    const videoScaleTransform = videoScaleRatio !== 1 ? ` scale(${videoScaleRatio})` : "";
-    const blurCompositeStyle = blurValue ? {
-        willChange: "filter, transform, opacity",
-        backfaceVisibility: "hidden",
-        WebkitBackfaceVisibility: "hidden",
-        contain: "paint",
-    } : {};
-    const videoTransform = useCoverMode
-        ? `translate3d(-50%, -50%, 0)${videoScaleTransform}`
-        : (blurValue || videoScaleTransform ? `translateZ(0)${videoScaleTransform}` : undefined);
+    const computeVideoBackgroundTransform = () => {
+        const brightnessValue = Math.min(Math.max(Number(brightness) || 0, 0), 100);
+        const brightnessRatio = brightnessValue / 100;
+        const blurValue = Math.min(Math.max(Number(blurAmount) || 0, 0), 80);
+        const useCoverMode = coverMode === true;
+        const videoScaleValue = Math.min(Math.max(Number(videoScale) || 105, 50), 200);
+        const videoScaleRatio = videoScaleValue / 100;
+        const videoScaleTransform = videoScaleRatio !== 1 ? ` scale(${videoScaleRatio})` : "";
+        const blurCompositeStyle = blurValue ? {
+            willChange: "filter, transform, opacity",
+            backfaceVisibility: "hidden",
+            WebkitBackfaceVisibility: "hidden",
+            contain: "paint",
+        } : {};
+        const videoTransform = useCoverMode
+            ? `translate3d(-50%, -50%, 0)${videoScaleTransform}`
+            : (blurValue || videoScaleTransform ? `translateZ(0)${videoScaleTransform}` : undefined);
+        return {
+            brightnessValue, brightnessRatio, blurValue, useCoverMode,
+            videoScaleValue, videoScaleRatio, videoScaleTransform,
+            blurCompositeStyle, videoTransform
+        };
+    };
+    const {
+        brightnessValue, brightnessRatio, blurValue, useCoverMode,
+        videoScaleValue, videoScaleRatio, videoScaleTransform,
+        blurCompositeStyle, videoTransform
+    } = computeVideoBackgroundTransform();
 
     const albumArtUrl =
         Spicetify.Player.data?.item?.metadata?.image_xlarge_url ||
@@ -651,28 +710,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                     (typeof Utils !== "undefined" && Utils.currentVersion) ||
                     window.CONFIG?.version ||
                     "unknown";
-                const useCommunity = true;
-                const youtubeApiUrl = new URL('https://ivlis.kr/ivLyrics/openvideo/youtube');
-                youtubeApiUrl.searchParams.set('isrc', trackIsrc);
-                youtubeApiUrl.searchParams.set('trackId', trackId);
-                youtubeApiUrl.searchParams.set('useCommunity', useCommunity ? "true" : "false");
-                youtubeApiUrl.searchParams.set('client', 'ivLyrics');
-                youtubeApiUrl.searchParams.set('clientVersion', clientVersion);
-                youtubeApiUrl.searchParams.set('requestVersion', '2');
-
-                if (spotifyData?.name) {
-                    youtubeApiUrl.searchParams.set('trackName', spotifyData.name);
-                    if (spotifyData.artists?.length) {
-                        youtubeApiUrl.searchParams.set('trackArtists', spotifyData.artists.join(', '));
-                    }
-                    if (spotifyData.album || spotifyData.albumName) {
-                        youtubeApiUrl.searchParams.set('album', spotifyData.album || spotifyData.albumName);
-                    }
-                }
-                if (window.SyncDataService?.shouldBypassServerCache?.(trackIsrc)) {
-                    youtubeApiUrl.searchParams.set('bypassCache', '1');
-                }
-                const youtubeUrl = youtubeApiUrl.toString();
+                const youtubeUrl = buildYouTubeVideoApiUrl({ trackIsrc, trackId, spotifyData, clientVersion });
 
                 // API 요청 로깅
                 let logId = null;
@@ -799,7 +837,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
         videoBackgroundDebug(`[VideoBackground] Helper mode: requesting video ${videoId}`);
 
         // 응답이 늦어질 때 알약의 메시지를 준비 중 상태로 갱신합니다.
-        let preparingToastTimeout = setTimeout(() => {
+        const preparingToastTimeout = setTimeout(() => {
             if (!isActive) return;
             reportVideoBackgroundStatus("loading", {
                 label: I18n.t("videoBackground.preparing"),
@@ -1079,7 +1117,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                         buffered: '-',
                         videoId: videoInfo?.youtubeVideoId || '-',
                         videoHelper: 'Helper (Local)',
-                        helperStatus: helperStatus  //
+                        helperStatus
                     });
                     return;
                 }
@@ -1097,7 +1135,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                         buffered: `${bufferedPercent}%`,
                         videoId: videoInfo?.youtubeVideoId || '-',
                         videoHelper: 'Helper (Local)',
-                        helperStatus: helperStatus
+                        helperStatus
                     });
                 } catch (e) {}
             }
@@ -1219,18 +1257,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
         const video = videoRef.current;
 
         const syncVideo = () => {
-            const spotifyTime = Spicetify.Player.getProgress() / 1000;
-            const lyricsStartTime = getLyricsStartTimeSeconds(firstLyricTime);
-            const globalDelayMs = typeof CONFIG !== "undefined" && CONFIG.visual ? Number(CONFIG.visual.delay || 0) : 0;
-            const globalSyncOffsetMs = Number(window.Utils?.getGlobalSyncOffset?.() ?? CONFIG?.visual?.["global-sync-offset"] ?? 0) || 0;
-            const additionalDelaySeconds = (trackOffsetMs + globalDelayMs + globalSyncOffsetMs) / 1000;
-            const syncState = resolveVideoSyncState({
-                spotifyTime,
-                lyricsStartTime,
-                videoInfo,
-                additionalDelaySeconds,
-                mapVideoTime: Utils.mapVideoTimeWithSkipSegments.bind(Utils),
-            });
+            const syncState = computeVideoSyncState({ firstLyricTime, videoInfo, trackOffsetMs });
             const targetVideoTime = wrapVideoSyncTime(syncState.targetVideoTime, video.duration);
             const currentVideoTime = video.currentTime;
 
@@ -1340,13 +1367,13 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
             }
 
             // Ensure container is empty before creating new player
-            // containerRef.current.innerHTML = ""; // YT.Player replaces the element, so we need a wrapper or let it replace a child. 
+            // containerRef.current.innerHTML = ""; // YT.Player replaces the element, so we need a wrapper or let it replace a child.
             // Actually YT.Player replaces the target element. If we use a ref to a div, that div gets replaced by the iframe.
             // If we destroy the player, does it restore the div? No.
             // So we need to ensure we have a fresh target element.
-            // The easiest way is to let React handle the DOM node. 
+            // The easiest way is to let React handle the DOM node.
             // If we destroy the player, the iframe is removed. We might need to recreate the container div?
-            // Actually, YT.Player(id|element) replaces the element. 
+            // Actually, YT.Player(id|element) replaces the element.
             // If we use a ref, we should probably use a wrapper and append a child to it, or handle the ref carefully.
 
             // Better approach: Create a temporary div inside the container
@@ -1458,18 +1485,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                 }
             } catch (e) {}
 
-            const spotifyTime = Spicetify.Player.getProgress() / 1000;
-            const lyricsStartTime = getLyricsStartTimeSeconds(firstLyricTime);
-            const globalDelayMs = typeof CONFIG !== "undefined" && CONFIG.visual ? Number(CONFIG.visual.delay || 0) : 0;
-            const globalSyncOffsetMs = Number(window.Utils?.getGlobalSyncOffset?.() ?? CONFIG?.visual?.["global-sync-offset"] ?? 0) || 0;
-            const additionalDelaySeconds = (trackOffsetMs + globalDelayMs + globalSyncOffsetMs) / 1000;
-            const syncState = resolveVideoSyncState({
-                spotifyTime,
-                lyricsStartTime,
-                videoInfo,
-                additionalDelaySeconds,
-                mapVideoTime: Utils.mapVideoTimeWithSkipSegments.bind(Utils),
-            });
+            const syncState = computeVideoSyncState({ firstLyricTime, videoInfo, trackOffsetMs });
             const videoDuration = typeof player.getDuration === 'function'
                 ? player.getDuration()
                 : 0;
@@ -1546,22 +1562,8 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
         ...blurCompositeStyle,
     };
 
-    return react.createElement("div", {
-        style: {
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            overflow: "hidden",
-            zIndex: 0,
-            isolation: "isolate",
-        }
-    },
-        renderFallback(),
-
-
-        showStats && react.createElement("div", {
+    const renderStatsPanel = () =>
+        react.createElement("div", {
             style: {
                 position: "absolute",
                 top: "20px",
@@ -1659,19 +1661,22 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                     textAlign: "center"
                 }
             }, "Press Shift+S to toggle")
-        ),
+        )
+    ;
 
-        // 헬퍼 모드: HTML5 video 태그
-        useHelper && react.createElement("video", {
+    const renderHelperVideo = () =>
+        react.createElement("video", {
             ref: videoRef,
             className: "ivlyrics-video-background-media",
             style: helperVideoStyle,
             muted: true,
             playsInline: true,
             loop: false,
-        }),
-        // 일반 모드: YouTube IFrame 컨테이너
-        !useHelper && react.createElement("div", {
+        })
+    ;
+
+    const renderYouTubeContainer = () =>
+        react.createElement("div", {
             ref: containerRef,
             className: "ivlyrics-video-background-media",
             style: {
@@ -1690,7 +1695,10 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                 filter: blurValue ? `blur(${blurValue}px)` : "none",
                 ...blurCompositeStyle,
             }
-        }),
+        })
+    ;
+
+    const renderBrightnessOverlay = () =>
         react.createElement("div", {
             style: {
                 position: "absolute",
@@ -1704,6 +1712,30 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                 pointerEvents: "none"
             }
         })
+    ;
+
+    return react.createElement("div", {
+        style: {
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            overflow: "hidden",
+            zIndex: 0,
+            isolation: "isolate",
+        }
+    },
+        renderFallback(),
+
+
+        showStats && renderStatsPanel(),
+
+        // 헬퍼 모드: HTML5 video 태그
+        useHelper && renderHelperVideo(),
+        // 일반 모드: YouTube IFrame 컨테이너
+        !useHelper && renderYouTubeContainer(),
+        renderBrightnessOverlay()
     );
 };
 

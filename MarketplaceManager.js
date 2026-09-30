@@ -46,13 +46,48 @@
     const DB_NAME = 'ivLyrics_marketplace';
     const DB_VERSION = 1;
     const STORE_NAME = 'addons';
-    const STORAGE_PREFIX = 'ivLyrics:marketplace:';
     const FETCH_TIMEOUT = 15000;
     const DIRECT_ADDON_MAX_BYTES = 2 * 1024 * 1024;
     const GITHUB_TOPIC = 'ivlyrics-addon';
     const GITHUB_SEARCH_URL = `https://api.github.com/search/repositories?q=topic:${encodeURIComponent(GITHUB_TOPIC)}&per_page=100&sort=stars&order=desc`;
     const BLACKLIST_URL_LOCAL = 'blacklist.json';
     const BLACKLIST_URL_REMOTE = 'https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/refs/heads/main/blacklist.json';
+
+    // 타입별로 해당 매니저에 마켓플레이스 에드온으로 표시
+    function markMarketplaceAddonByType(type, runtimeId) {
+        if (type === 'lyrics' && window.LyricsAddonManager) {
+            window.LyricsAddonManager.markAsMarketplaceAddon(runtimeId);
+        } else if (type === 'ai' && window.AIAddonManager) {
+            window.AIAddonManager.markAsMarketplaceAddon(runtimeId);
+        }
+    }
+
+    // IndexedDB에 저장할 에드온 엔트리 생성 (install/update 공통 형태)
+    // metadata 마지막 4개 필드와 installedAt은 호출자가 계산해 overrides로 전달하며,
+    // updatedAt은 항상 마지막에 새로 생성한다.
+    function buildMarketplaceAddonEntry(id, code, addonInfo, overrides) {
+        return {
+            id,
+            code,
+            metadata: {
+                name: addonInfo.name,
+                type: addonInfo.type,
+                author: addonInfo.author,
+                version: addonInfo.version,
+                description: addonInfo.description,
+                preview: addonInfo.preview,
+                downloadUrl: addonInfo.downloadUrl,
+                updated: addonInfo.updated,
+                minAppVersion: addonInfo.minAppVersion,
+                source: overrides.source,
+                runtimeId: overrides.runtimeId,
+                sourceRepo: overrides.sourceRepo,
+                githubUrl: overrides.githubUrl
+            },
+            installedAt: overrides.installedAt,
+            updatedAt: new Date().toISOString()
+        };
+    }
 
     // ============================================
     // MarketplaceManager Class
@@ -260,11 +295,7 @@
                     if (this._loadErrors.has(addon.id)) continue;
                     const type = addon.metadata?.type;
                     const runtimeId = addon.metadata?.runtimeId || addon.id;
-                    if (type === 'lyrics' && window.LyricsAddonManager) {
-                        window.LyricsAddonManager.markAsMarketplaceAddon(runtimeId);
-                    } else if (type === 'ai' && window.AIAddonManager) {
-                        window.AIAddonManager.markAsMarketplaceAddon(runtimeId);
-                    }
+                    markMarketplaceAddonByType(type, runtimeId);
                 }
             }, 500);
 
@@ -292,27 +323,30 @@
                         return;
                     }
 
-                    const blob = new Blob([addon.code], { type: 'text/javascript' });
-                    const url = URL.createObjectURL(blob);
-                    const script = document.createElement('script');
+                    const loadScriptAddon = () => {
+                        const blob = new Blob([addon.code], { type: 'text/javascript' });
+                        const url = URL.createObjectURL(blob);
+                        const script = document.createElement('script');
 
-                    script.src = url;
-                    script.dataset.marketplaceAddon = addon.id;
+                        script.src = url;
+                        script.dataset.marketplaceAddon = addon.id;
 
-                    script.onload = () => {
-                        URL.revokeObjectURL(url);
-                        this._loadedScripts.set(addon.id, script);
-                        marketplaceDebug(`[MarketplaceManager] Loaded addon: ${addon.id}`);
-                        resolve();
+                        script.onload = () => {
+                            URL.revokeObjectURL(url);
+                            this._loadedScripts.set(addon.id, script);
+                            marketplaceDebug(`[MarketplaceManager] Loaded addon: ${addon.id}`);
+                            resolve();
+                        };
+
+                        script.onerror = (e) => {
+                            URL.revokeObjectURL(url);
+                            script.remove();
+                            reject(new Error(`Script load failed for ${addon.id}`));
+                        };
+
+                        document.head.appendChild(script);
                     };
-
-                    script.onerror = (e) => {
-                        URL.revokeObjectURL(url);
-                        script.remove();
-                        reject(new Error(`Script load failed for ${addon.id}`));
-                    };
-
-                    document.head.appendChild(script);
+                    loadScriptAddon();
                 } catch (e) {
                     reject(e);
                 }
@@ -518,22 +552,26 @@
                 }
 
                 const seenIds = new Set();
-                const addons = [];
-                for (const addon of discoveredAddons) {
-                    const normalizedId = String(addon.id || '').toLowerCase();
-                    if (!normalizedId) continue;
-                    if (blacklist.blockedAddonIds.has(normalizedId)) continue;
-                    if (seenIds.has(normalizedId)) continue;
-                    seenIds.add(normalizedId);
+                const buildAddonList = () => {
+                    const addons = [];
+                    for (const addon of discoveredAddons) {
+                        const normalizedId = String(addon.id || '').toLowerCase();
+                        if (!normalizedId) continue;
+                        if (blacklist.blockedAddonIds.has(normalizedId)) continue;
+                        if (seenIds.has(normalizedId)) continue;
+                        seenIds.add(normalizedId);
 
-                    addons.push({
-                        ...addon,
-                        isInstalled: this._installedAddons.has(addon.id),
-                        installedVersion: this._installedAddons.get(addon.id)?.metadata?.version || null,
-                        hasUpdate: this._installedAddons.has(addon.id) &&
-                            this._compareVersions(addon.version, this._installedAddons.get(addon.id)?.metadata?.version) > 0
-                    });
-                }
+                        addons.push({
+                            ...addon,
+                            isInstalled: this._installedAddons.has(addon.id),
+                            installedVersion: this._installedAddons.get(addon.id)?.metadata?.version || null,
+                            hasUpdate: this._installedAddons.has(addon.id) &&
+                                this._compareVersions(addon.version, this._installedAddons.get(addon.id)?.metadata?.version) > 0
+                        });
+                    }
+                    return addons;
+                };
+                const addons = buildAddonList();
 
                 // Sort by stars descending
                 addons.sort((a, b) => (b.stars || 0) - (a.stars || 0));
@@ -637,7 +675,7 @@
             if (start < 0) return '';
             const block = String(code).slice(start, start + 24000);
             const escapedProperty = String(propertyName).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            const match = block.match(new RegExp(`(?:^|[,{\\n\\r])\\s*${escapedProperty}\\s*:\\s*(['\"\\x60])([^'\"\\x60\\r\\n]+)\\1`, 'm'));
+            const match = block.match(new RegExp(`(?:^|[,{\\n\\r])\\s*${escapedProperty}\\s*:\\s*(['"\\x60])([^'"\\x60\\r\\n]+)\\1`, 'm'));
             return match ? match[2].trim() : '';
         }
 
@@ -731,27 +769,13 @@
                 const code = await this._downloadAddonCode(downloadUrl);
 
                 // IndexedDB에 저장
-                const entry = {
-                    id,
-                    code,
-                    metadata: {
-                        name: addonInfo.name,
-                        type: addonInfo.type,
-                        author: addonInfo.author,
-                        version: addonInfo.version,
-                        description: addonInfo.description,
-                        preview: addonInfo.preview,
-                        downloadUrl: addonInfo.downloadUrl,
-                        updated: addonInfo.updated,
-                        minAppVersion: addonInfo.minAppVersion,
-                        source: addonInfo.source || 'marketplace',
-                        runtimeId: addonInfo.runtimeId || id,
-                        sourceRepo: addonInfo.sourceRepo || '',
-                        githubUrl: addonInfo.githubUrl || ''
-                    },
-                    installedAt: new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                };
+                const entry = buildMarketplaceAddonEntry(id, code, addonInfo, {
+                    source: addonInfo.source || 'marketplace',
+                    runtimeId: addonInfo.runtimeId || id,
+                    sourceRepo: addonInfo.sourceRepo || '',
+                    githubUrl: addonInfo.githubUrl || '',
+                    installedAt: new Date().toISOString()
+                });
 
                 await this._dbPut(entry);
                 this._installedAddons.set(id, entry);
@@ -768,11 +792,7 @@
                 // 매니저에 마켓플레이스 에드온으로 표시
                 setTimeout(() => {
                     const runtimeId = entry.metadata.runtimeId || id;
-                    if (type === 'lyrics' && window.LyricsAddonManager) {
-                        window.LyricsAddonManager.markAsMarketplaceAddon(runtimeId);
-                    } else if (type === 'ai' && window.AIAddonManager) {
-                        window.AIAddonManager.markAsMarketplaceAddon(runtimeId);
-                    }
+                    markMarketplaceAddonByType(type, runtimeId);
                 }, 300);
 
                 // Provider 순서에 추가 (맨 앞에)
@@ -818,7 +838,7 @@
             }
 
             const now = new Date().toISOString();
-            const entry = {
+            const buildDirectAddonEntry = () => ({
                 id: addonInfo.id,
                 code,
                 metadata: {
@@ -838,7 +858,8 @@
                 },
                 installedAt: now,
                 updatedAt: now
-            };
+            });
+            const entry = buildDirectAddonEntry();
 
             try {
                 await this._dbPut(entry);
@@ -933,37 +954,26 @@
                 // 매니저에서 기존 등록 해제
                 const type = addonInfo.type;
                 const runtimeId = this._installedAddons.get(id)?.metadata?.runtimeId || id;
-                if (type === 'lyrics' && window.LyricsAddonManager) {
-                    window.LyricsAddonManager.unregister(runtimeId);
-                } else if (type === 'ai' && window.AIAddonManager) {
-                    window.AIAddonManager.unregister(runtimeId);
-                }
+                const unregisterExistingRuntime = () => {
+                    if (type === 'lyrics' && window.LyricsAddonManager) {
+                        window.LyricsAddonManager.unregister(runtimeId);
+                    } else if (type === 'ai' && window.AIAddonManager) {
+                        window.AIAddonManager.unregister(runtimeId);
+                    }
+                };
+                unregisterExistingRuntime();
 
                 // 새 코드 다운로드
                 const code = await this._downloadAddonCode(addonInfo.downloadUrl);
 
                 // IndexedDB 업데이트
-                const entry = {
-                    id,
-                    code,
-                    metadata: {
-                        name: addonInfo.name,
-                        type: addonInfo.type,
-                        author: addonInfo.author,
-                        version: addonInfo.version,
-                        description: addonInfo.description,
-                        preview: addonInfo.preview,
-                        downloadUrl: addonInfo.downloadUrl,
-                        updated: addonInfo.updated,
-                        minAppVersion: addonInfo.minAppVersion,
-                        source: addonInfo.source || this._installedAddons.get(id)?.metadata?.source || 'marketplace',
-                        runtimeId: addonInfo.runtimeId || runtimeId,
-                        sourceRepo: addonInfo.sourceRepo || this._installedAddons.get(id)?.metadata?.sourceRepo || '',
-                        githubUrl: addonInfo.githubUrl || this._installedAddons.get(id)?.metadata?.githubUrl || ''
-                    },
-                    installedAt: this._installedAddons.get(id)?.installedAt || new Date().toISOString(),
-                    updatedAt: new Date().toISOString()
-                };
+                const entry = buildMarketplaceAddonEntry(id, code, addonInfo, {
+                    source: addonInfo.source || this._installedAddons.get(id)?.metadata?.source || 'marketplace',
+                    runtimeId: addonInfo.runtimeId || runtimeId,
+                    sourceRepo: addonInfo.sourceRepo || this._installedAddons.get(id)?.metadata?.sourceRepo || '',
+                    githubUrl: addonInfo.githubUrl || this._installedAddons.get(id)?.metadata?.githubUrl || '',
+                    installedAt: this._installedAddons.get(id)?.installedAt || new Date().toISOString()
+                });
 
                 await this._dbPut(entry);
 

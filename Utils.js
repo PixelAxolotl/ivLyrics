@@ -65,7 +65,6 @@ if (!window.ApiTracker) {
 
 // 하위 호환성을 위해 LyricsCache 별칭 생성 (기존 코드에서 LyricsCache 직접 참조하는 경우)
 const LyricsCache = window.LyricsCache;
-const ApiTracker = window.ApiTracker;
 const HAN_CHARACTER_REGEX = /\p{Script=Han}/u;
 const KANJI_CHARACTER_REGEX = /[\u4E00-\u9FAF\u3400-\u4DBF]/;
 const CLEAN_HTML_RT_REGEX = /<rt[^>]*>.*?<\/rt>/gi;
@@ -383,6 +382,22 @@ setTimeout(() => window.ivLyricsSpeakerColors?.applyCssVariables?.(), 0);
 const discordAuthOperations = new WeakMap();
 const DISCORD_AUTH_OPERATION_MAX_AGE_MS = 30_000;
 
+// Parses a creator-profile account API response, throwing with the same message
+// precedence (server error -> localized key -> literal fallback) on failure and
+// returning `data.data` on success. Mirrors the identical validate-and-return
+// tail duplicated across several creator-profile fetch helpers.
+const readCreatorProfileApiResponseData = async (response, failureI18nKey, fallbackMessage) => {
+  const data = await response.json();
+
+  if (!response.ok || !data.success || !data.data) {
+    throw new Error(
+      data.error || I18n.t(failureI18nKey) || fallbackMessage
+    );
+  }
+
+  return data.data;
+};
+
 const Utils = {
   // LRU caches for frequently used operations (최적화 #10 - LRU 캐시 적용)
   _colorCache: new LRUCache(100),
@@ -529,7 +544,7 @@ const Utils = {
       /^\s*\[\s*(verse|chorus|bridge|intro|outro|pre-?chorus|hook|refrain)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
       /^\s*\[\s*(절|후렴|브릿지|인트로|아웃트로|간주|부분)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
       /^\s*\[\s*(ヴァース|コーラス|ブリッジ|イントロ|アウトロ)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
-      /^\s*\[\s*(verse|chorus|bridge|intro|outro)\s*(\d+)?\s*(:|：)?\s*[^,\[\]]*\]\s*$/i,
+      /^\s*\[\s*(verse|chorus|bridge|intro|outro)\s*(\d+)?\s*(:|：)?\s*[^,[\]]*\]\s*$/i,
     ];
 
     // 패턴 중 하나라도 매칭되면 섹션 헤더로 판단
@@ -1130,7 +1145,6 @@ const Utils = {
         // Try to convert even if not fully initialized - it will return original text if not ready
         const result = window.FuriganaConverter.convertToFurigana(text);
         return result || text;
-      } else {
       }
       return text;
     } catch (error) {
@@ -2330,8 +2344,6 @@ const Utils = {
             : "none";
         this.setCachedDiscordSupportTier(normalizedId, tier);
         return tier;
-      } catch (error) {
-        throw error;
       } finally {
         clearTimeout(timeoutId);
       }
@@ -2773,17 +2785,12 @@ const Utils = {
         Pragma: "no-cache",
       }),
     });
-    const data = await response.json();
 
-    if (!response.ok || !data.success || !data.data) {
-      throw new Error(
-        data.error ||
-          I18n.t("settingsAdvanced.aboutTab.account.creatorPrivacy.loadFailed") ||
-          "Failed to load creator profile privacy."
-      );
-    }
-
-    return data.data;
+    return await readCreatorProfileApiResponseData(
+      response,
+      "settingsAdvanced.aboutTab.account.creatorPrivacy.loadFailed",
+      "Failed to load creator profile privacy."
+    );
   },
 
   async setSyncCreatorPrivacy(isPrivate) {
@@ -2805,17 +2812,12 @@ const Utils = {
       }),
       body: JSON.stringify({ isPrivate: !!isPrivate }),
     });
-    const data = await response.json();
 
-    if (!response.ok || !data.success || !data.data) {
-      throw new Error(
-        data.error ||
-          I18n.t("settingsAdvanced.aboutTab.account.creatorPrivacy.saveFailed") ||
-          "Failed to update creator profile privacy."
-      );
-    }
-
-    return data.data;
+    return await readCreatorProfileApiResponseData(
+      response,
+      "settingsAdvanced.aboutTab.account.creatorPrivacy.saveFailed",
+      "Failed to update creator profile privacy."
+    );
   },
 
   async fetchSyncCreatorGreetingTranslation(userHash, locale) {
@@ -2844,17 +2846,12 @@ const Utils = {
         }),
       }
     );
-    const data = await response.json();
 
-    if (!response.ok || !data.success || !data.data) {
-      throw new Error(
-        data.error ||
-          I18n.t("creatorProfile.greetingTranslateFailed") ||
-          "Failed to translate creator greeting."
-      );
-    }
-
-    return data.data;
+    return await readCreatorProfileApiResponseData(
+      response,
+      "creatorProfile.greetingTranslateFailed",
+      "Failed to translate creator greeting."
+    );
   },
 
   async setSyncCreatorGreeting(greeting, options = {}) {

@@ -161,7 +161,6 @@
     let panelObserver = moduleState.panelObserver;
     let lyricsRoot = null;
     let starryNightBarRoot = null; // Starry Night 테마용 렌더링 루트
-    let stylesInjected = false;
     let pageObserver = moduleState.pageObserver;
     let pageObserverTimeout = moduleState.pageObserverTimeout;
     let historyUnlisten = moduleState.historyUnlisten;
@@ -170,7 +169,7 @@
     let insertTimer = moduleState.insertTimer;
 
     // ============================================
-    // CSS 스타일 
+    // CSS 스타일
     // 앨범 색상 배경의 카드 박스, 동적 폰트 설정
     // ============================================
     const getPanelStyles = () => {
@@ -1701,7 +1700,6 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         if (existingStyle) {
             // 기존 스타일이 있으면 업데이트
             existingStyle.textContent = getPanelStyles();
-            stylesInjected = true;
             return;
         }
 
@@ -1709,7 +1707,6 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         styleElement.id = PANEL_STYLE_ID;
         styleElement.textContent = getPanelStyles();
         document.head.appendChild(styleElement);
-        stylesInjected = true;
         panelDebug("[NowPlayingPanelLyrics] Styles injected");
     };
 
@@ -1753,7 +1750,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     };
 
     // 현재 가사 상태
-    let currentLyricsState = {
+    const currentLyricsState = {
         lyrics: [],
         currentIndex: 0,
         isPlaying: false,
@@ -1924,24 +1921,6 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         const normalizedText = typeof text === "string" ? text : "";
         return KARAOKE_RTL_STRONG_CHAR_REGEX.test(normalizedText) ||
             KARAOKE_JOINING_SCRIPT_REGEX.test(normalizedText);
-    };
-
-    const getKaraokeDetectedLanguage = (text) => {
-        const normalizedText = typeof text === "string" ? text : "";
-
-        try {
-            const detected = window.Utils?.getDetectedLanguage?.();
-            if (detected) return detected;
-        } catch { }
-
-        try {
-            const detected = window.LyricsService?.detectLanguage?.([{ text: normalizedText }]);
-            if (detected) return detected;
-        } catch { }
-
-        if (/[\u3040-\u30ff\uff66-\uff9f]/u.test(normalizedText)) return "ja";
-        if (/[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/u.test(normalizedText)) return "zh";
-        return null;
     };
 
     const shouldWrapKaraokeByWord = (text) => {
@@ -2451,7 +2430,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             /^\s*\[\s*(verse|chorus|bridge|intro|outro|pre-?chorus|hook|refrain)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
             /^\s*\[\s*(절|후렴|브릿지|인트로|아웃트로|간주|부분)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
             /^\s*\[\s*(ヴァース|コーラス|ブリッジ|イントロ|アウトロ)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
-            /^\s*\[\s*(verse|chorus|bridge|intro|outro)\s*(\d+)?\s*(:|：)?\s*[^,\[\]]*\]\s*$/i
+            /^\s*\[\s*(verse|chorus|bridge|intro|outro)\s*(\d+)?\s*(:|：)?\s*[^,[\]]*\]\s*$/i
         ].some(pattern => pattern.test(normalizedText));
     };
 
@@ -2521,7 +2500,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         };
         const isNoteLine = (text) => {
             const value = String(text || '').trim();
-            return !value || /^[\s♪♩♫♬·•・。、…~\-]+$/.test(value);
+            return !value || /^[\s♪♩♫♬·•・。、…~-]+$/.test(value);
         };
         const processPhoneticHyphen = (text) => {
             const mode = getVisualSetting('phonetic-hyphen-replace', 'keep');
@@ -2708,7 +2687,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         const value = typeof text === 'string' ? text.trim() : '';
         if (!value || rowCount <= 1) return [];
 
-        const separatorParts = value.split(/\s*[\/|／｜]\s*/).filter(Boolean);
+        const separatorParts = value.split(/\s*[/|／｜]\s*/).filter(Boolean);
         if (separatorParts.length === rowCount) {
             return separatorParts;
         }
@@ -4730,8 +4709,6 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 // 설정값 읽기
                 const bgType = getStorageValue(BG_TYPE_KEY, DEFAULT_BG_TYPE);
                 const bgColor = getStorageValue(BG_COLOR_KEY, DEFAULT_BG_COLOR);
-                const bgGradient1 = getStorageValue(BG_GRADIENT_1_KEY, DEFAULT_BG_GRADIENT_1);
-                const bgGradient2 = getStorageValue(BG_GRADIENT_2_KEY, DEFAULT_BG_GRADIENT_2);
                 const bgOpacity = getStorageValue(BG_OPACITY_KEY, DEFAULT_BG_OPACITY) / 100;
                 const borderEnabled = getStorageValue(BORDER_ENABLED_KEY, DEFAULT_BORDER_ENABLED);
                 const borderColor = getStorageValue(BORDER_COLOR_KEY, DEFAULT_BORDER_COLOR);
@@ -4952,16 +4929,6 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         }, [lyrics, isEnabled, trackOffset, globalOffset, karaokeSource, pseudoKaraokeAdvanceMs, autoInstrumentalBreakEnabled, hasKaraokeTiming, reducePanelMotion, panelPlaybackTimeline]); // currentIndex 의존성 제거
 
         // 스크롤 애니메이션 비활성화 - Now Playing 탭 스크롤 문제 방지
-        // useEffect(() => {
-        //     if (!scrollRef.current || !isEnabled) return;
-        //     const activeElement = scrollRef.current.querySelector('.ivlyrics-panel-line.active');
-        //     if (activeElement) {
-        //         activeElement.scrollIntoView({
-        //             behavior: 'smooth',
-        //             block: 'center'
-        //         });
-        //     }
-        // }, [currentIndex, isEnabled]);
 
         const visibleLineCount = DEFAULT_LINES;
 
@@ -5233,10 +5200,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             textEffectRevision
         });
 
-        // 비활성화 또는 가사 없음
-        if (!isEnabled) return null;
-        if (!lyrics || lyrics.length === 0) {
-            return react.createElement("div", {
+        const renderPanelEmptyState = () => react.createElement("div", {
                 className: sectionClassName,
                 ref: containerRef,
                 onClick: handleContainerClick,
@@ -5250,9 +5214,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     translatePanelText("syncCreator.loadingLyrics", "가사 불러오는 중")
                 )
             );
-        }
 
-        return react.createElement("div", {
+        const renderPanelLyricsTree = () => react.createElement("div", {
             className: sectionClassName,
             ref: containerRef,
             onClick: handleContainerClick,
@@ -5281,6 +5244,14 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 )
             )
         );
+
+        // 비활성화 또는 가사 없음
+        if (!isEnabled) return null;
+        if (!lyrics || lyrics.length === 0) {
+            return renderPanelEmptyState();
+        }
+
+        return renderPanelLyricsTree();
     };
 
     // ============================================
@@ -5455,6 +5426,33 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         const container = document.createElement('div');
         container.className = PANEL_CONTAINER_CLASS;
 
+        const placeLyricsContainer = () => {
+            const contextItemInfo = panel.querySelector('.main-nowPlayingView-contextItemInfo');
+
+            if (contextItemInfo && contextItemInfo.parentElement) {
+                // contextItemInfo 바로 다음에 삽입
+                const parent = contextItemInfo.parentElement;
+                const nextSibling = contextItemInfo.nextElementSibling;
+                if (nextSibling) {
+                    parent.insertBefore(container, nextSibling);
+                } else {
+                    parent.appendChild(container);
+                }
+                panelDebug("[NowPlayingPanelLyrics] Inserted after contextItemInfo");
+            } else {
+                // 폴백: 관련 뮤직비디오 섹션 앞에 삽입
+                const relatedSection = panel.querySelector('.main-nowPlayingView-section');
+                if (relatedSection && relatedSection.parentElement) {
+                    relatedSection.parentElement.insertBefore(container, relatedSection);
+                    panelDebug("[NowPlayingPanelLyrics] Inserted before related section");
+                } else {
+                    // 최종 폴백: 패널 끝에 삽입
+                    panel.appendChild(container);
+                    panelDebug("[NowPlayingPanelLyrics] Used fallback - appended to panel");
+                }
+            }
+        };
+
         // 곡 정보 (곡명, 아티스트) 바로 **아래**에 삽입
         // Now Playing 패널 구조:
         // main-nowPlayingView-nowPlayingGrid
@@ -5466,30 +5464,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         // 가사는 main-nowPlayingView-contextItemInfo 바로 **다음**에 삽입해야 함
 
         // contextItemInfo 찾기 (곡제목, 아티스트, 버튼들을 포함하는 컨테이너)
-        const contextItemInfo = panel.querySelector('.main-nowPlayingView-contextItemInfo');
-
-        if (contextItemInfo && contextItemInfo.parentElement) {
-            // contextItemInfo 바로 다음에 삽입
-            const parent = contextItemInfo.parentElement;
-            const nextSibling = contextItemInfo.nextElementSibling;
-            if (nextSibling) {
-                parent.insertBefore(container, nextSibling);
-            } else {
-                parent.appendChild(container);
-            }
-            panelDebug("[NowPlayingPanelLyrics] Inserted after contextItemInfo");
-        } else {
-            // 폴백: 관련 뮤직비디오 섹션 앞에 삽입
-            const relatedSection = panel.querySelector('.main-nowPlayingView-section');
-            if (relatedSection && relatedSection.parentElement) {
-                relatedSection.parentElement.insertBefore(container, relatedSection);
-                panelDebug("[NowPlayingPanelLyrics] Inserted before related section");
-            } else {
-                // 최종 폴백: 패널 끝에 삽입
-                panel.appendChild(container);
-                panelDebug("[NowPlayingPanelLyrics] Used fallback - appended to panel");
-            }
-        }
+        placeLyricsContainer();
 
         if (renderPanelLyricsIntoContainer(container)) {
             panelDebug("[NowPlayingPanelLyrics] Panel lyrics inserted successfully");
@@ -5827,8 +5802,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             });
         },
         getLyricsSnapshot: (trackUri) => getSharedLyricsSnapshot(trackUri),
-        updateStyles: updateStyles,
-        updateCSSVariables: updateCSSVariables,
+        updateStyles,
+        updateCSSVariables,
         destroy: () => {
             if (settingsListener) {
                 window.removeEventListener('ivLyrics', settingsListener);

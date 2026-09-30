@@ -1,16 +1,3 @@
-const OptionsMenuItemIcon = react.createElement(
-  "svg",
-  {
-    width: 16,
-    height: 16,
-    viewBox: "0 0 16 16",
-    fill: "currentColor",
-  },
-  react.createElement("path", {
-    d: "M13.985 2.383L5.127 12.754 1.388 8.375l-.658.77 4.397 5.149 9.618-11.262z",
-  })
-);
-
 // Keep toolbar tooltips outside the scrollable toolbar and independent of
 // Spotify's private menu context. Cloning without a ref preserves button refs.
 const IvLyricsTooltip = ({ label, children }) => {
@@ -1999,28 +1986,6 @@ function ensureFluentModalStyles() {
   document.head.appendChild(style);
 }
 
-// Optimized OptionsMenuItem with better performance
-const OptionsMenuItem = react.memo(({ onSelect, value, isSelected }) => {
-  // React 130 방지: Hook 순서 일관성 유지
-  const menuItemProps = useMemo(
-    () => ({
-      onClick: onSelect,
-      icon: isSelected ? OptionsMenuItemIcon : null,
-      trailingIcon: isSelected ? OptionsMenuItemIcon : null,
-    }),
-    [onSelect, isSelected]
-  );
-
-  // React 31 방지: value가 유효한지 확인
-  const safeValue = value || "";
-
-  return react.createElement(
-    Spicetify.ReactComponent.MenuItem,
-    menuItemProps,
-    safeValue
-  );
-});
-
 const OptionsMenu = react.memo(
   ({ options, onSelect, selected, defaultValue, bold = false }) => {
     // Custom Dropdown State
@@ -2037,16 +2002,17 @@ const OptionsMenu = react.memo(
     );
 
     // 초기 선택 값 결정 (selected 또는 defaultValue에서)
-    const getInitialSelected = () => {
-      let initialItem = selected || defaultValue;
-      if (initialItem && typeof initialItem !== 'object') {
-        initialItem = optionByKey.get(initialItem);
-      } else if (initialItem && initialItem.key && !initialItem.value) {
-        const found = optionByKey.get(initialItem.key);
-        if (found) initialItem = found;
+    const resolveOptionItem = (candidate) => {
+      let item = candidate;
+      if (item && typeof item !== 'object') {
+        item = optionByKey.get(item);
+      } else if (item && item.key && !item.value) {
+        const found = optionByKey.get(item.key);
+        if (found) item = found;
       }
-      return initialItem;
+      return item;
     };
+    const getInitialSelected = () => resolveOptionItem(selected || defaultValue);
 
     // 내부 상태로 선택된 항목 관리
     const [selectedItem, setSelectedItem] = react.useState(getInitialSelected);
@@ -2057,13 +2023,7 @@ const OptionsMenu = react.memo(
     }, [selected, defaultValue, optionByKey]);
 
     // Resolve default item for display fallback
-    let defaultItem = defaultValue;
-    if (defaultValue && typeof defaultValue !== 'object') {
-      defaultItem = optionByKey.get(defaultValue);
-    } else if (defaultValue && defaultValue.key && !defaultValue.value) {
-      const found = optionByKey.get(defaultValue.key);
-      if (found) defaultItem = found;
-    }
+    const defaultItem = resolveOptionItem(defaultValue);
 
     // Determine display text
     const displayValue = selectedItem?.value || defaultItem?.value || (typeof defaultValue === 'string' ? defaultValue : "") || "";
@@ -2142,7 +2102,7 @@ const OptionsMenu = react.memo(
           return react.createElement(
             "div",
             {
-              key: key,
+              key,
               className: `optionsMenu-item ${isSelected ? "selected" : ""}`,
               onMouseDown: (e) => {
                 // onClick 대신 onMouseDown 사용: window의 mousedown 리스너가 먼저 실행되어 메뉴를 닫는 것을 방지
@@ -2386,7 +2346,7 @@ const IvConfigButton = react.memo(({ text, onClick }) => {
     "button",
     {
       className: "ivlyrics-fluent-btn",
-      onClick: onClick,
+      onClick,
     },
     text
   );
@@ -2423,7 +2383,7 @@ const IvOptionList = react.memo(({ items, onChange }) => {
 
       return react.createElement(
         "div",
-        { key: key, className: `ivlyrics-popup-setting-row${control ? "" : " no-control"}` },
+        { key, className: `ivlyrics-popup-setting-row${control ? "" : " no-control"}` },
         react.createElement(
           "div",
           { className: "ivlyrics-popup-setting-row-content" },
@@ -2637,19 +2597,22 @@ function openFirstLanguagePrompt({ sourceLang, modeKey }) {
 
     const header = document.createElement("div");
     header.className = "ivlyrics-first-language-header";
-    const icon = document.createElement("span");
-    icon.className = "ivlyrics-first-language-icon";
-    icon.setAttribute("aria-hidden", "true");
-    icon.textContent = "文A";
-    const title = document.createElement("h2");
-    title.id = titleId;
-    title.className = "ivlyrics-first-language-title";
-    title.textContent = I18n.t("firstLanguagePrompt.title", { language: languageName });
-    const description = document.createElement("p");
-    description.id = descriptionId;
-    description.className = "ivlyrics-first-language-description";
-    description.textContent = I18n.t("firstLanguagePrompt.description");
-    header.append(icon, title, description);
+    const buildFirstLanguageHeader = () => {
+      const icon = document.createElement("span");
+      icon.className = "ivlyrics-first-language-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = "文A";
+      const title = document.createElement("h2");
+      title.id = titleId;
+      title.className = "ivlyrics-first-language-title";
+      title.textContent = I18n.t("firstLanguagePrompt.title", { language: languageName });
+      const description = document.createElement("p");
+      description.id = descriptionId;
+      description.className = "ivlyrics-first-language-description";
+      description.textContent = I18n.t("firstLanguagePrompt.description");
+      header.append(icon, title, description);
+    };
+    buildFirstLanguageHeader();
 
     const body = document.createElement("div");
     body.className = "ivlyrics-first-language-body";
@@ -2866,42 +2829,147 @@ const LocalLyricsLrclibSearchModal = ({ trackInfo = {}, onApplyLocalLyrics, onCl
     }
   };
 
-  return react.createElement(
-    react.Fragment,
-    null,
+  const renderSearchHeader = () => react.createElement(
+    "div",
+    { className: "ivlyrics-fluent-header" },
     react.createElement(
       "div",
-      { className: "ivlyrics-fluent-header" },
+      { className: "ivlyrics-fluent-title-wrap" },
+      react.createElement("h2", { className: "ivlyrics-fluent-title" }, getOptionsText("menu.localLyricsLrclibSearch", "LRCLIB 가사 검색")),
+      react.createElement(
+        "p",
+        { className: "ivlyrics-fluent-subtitle" },
+        getOptionsText("menu.localLyricsLrclibSearchSubtitle", "로컬 곡에는 ivLyrics 서버를 사용하지 않고 선택한 가사만 이 기기에 저장합니다.")
+      )
+    ),
+    react.createElement(
+      "button",
+      {
+        className: "ivlyrics-fluent-close",
+        type: "button",
+        onClick: onClose,
+      },
+      react.createElement("svg", {
+        viewBox: "0 0 16 16",
+        fill: "currentColor",
+        dangerouslySetInnerHTML: {
+          __html: '<path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>',
+        },
+      })
+    )
+  );
+
+  const renderLrclibCandidate = (candidate, index) => {
+    const candidateKey = candidate.candidateKey || `${candidate.id || "candidate"}-${index}`;
+    const title = candidate.trackName || candidate.name || getOptionsText("menu.unknownTitle", "Unknown title");
+    const artist = candidate.artistName || getOptionsText("menu.unknownArtist", "Unknown artist");
+    const album = candidate.albumName || "";
+    const duration = formatLrclibCandidateDuration(candidate.duration);
+    const previewLines = getLrclibCandidatePreviewLines(candidate);
+    const badges = [
+      (candidate.hasSyncedLyrics || candidate.syncedLyrics) && getOptionsText("syncCreator.lrclibBadgeSynced", "Synced"),
+      (candidate.hasPlainLyrics || candidate.plainLyrics) && getOptionsText("syncCreator.lrclibBadgePlain", "Plain"),
+      candidate.instrumental && getOptionsText("syncCreator.lrclibBadgeInstrumental", "Instrumental"),
+    ].filter(Boolean);
+
+    return react.createElement(
+      "div",
+      {
+        key: candidateKey,
+        style: {
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) auto",
+          gap: "12px",
+          padding: "12px",
+          border: "1px solid rgba(255,255,255,0.1)",
+          background: "rgba(255,255,255,0.04)",
+        },
+      },
       react.createElement(
         "div",
-        { className: "ivlyrics-fluent-title-wrap" },
-        react.createElement("h2", { className: "ivlyrics-fluent-title" }, getOptionsText("menu.localLyricsLrclibSearch", "LRCLIB 가사 검색")),
+        { style: { minWidth: 0 } },
         react.createElement(
-          "p",
-          { className: "ivlyrics-fluent-subtitle" },
-          getOptionsText("menu.localLyricsLrclibSearchSubtitle", "로컬 곡에는 ivLyrics 서버를 사용하지 않고 선택한 가사만 이 기기에 저장합니다.")
+          "div",
+          {
+            style: {
+              fontWeight: 700,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            },
+            title,
+          },
+          title
+        ),
+        react.createElement(
+          "div",
+          {
+            style: {
+              marginTop: "3px",
+              color: "rgba(255,255,255,0.7)",
+              fontSize: "13px",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            },
+            title: [artist, album, duration].filter(Boolean).join(" · "),
+          },
+          [artist, album, duration].filter(Boolean).join(" · ")
+        ),
+        badges.length > 0 && react.createElement(
+          "div",
+          {
+            style: {
+              display: "flex",
+              gap: "6px",
+              flexWrap: "wrap",
+              marginTop: "8px",
+            },
+          },
+          badges.map((badge) => react.createElement(
+            "span",
+            {
+              key: badge,
+              style: {
+                padding: "2px 6px",
+                border: "1px solid rgba(255,255,255,0.12)",
+                fontSize: "11px",
+                color: "rgba(255,255,255,0.78)",
+              },
+            },
+            badge
+          ))
+        ),
+        previewLines.length > 0 && react.createElement(
+          "div",
+          {
+            style: {
+              marginTop: "8px",
+              color: "rgba(255,255,255,0.58)",
+              fontSize: "12px",
+              lineHeight: 1.45,
+            },
+          },
+          previewLines.join(" / ")
         )
       ),
       react.createElement(
         "button",
         {
-          className: "ivlyrics-fluent-close",
+          className: "ivlyrics-fluent-btn",
           type: "button",
-          onClick: onClose,
+          onClick: () => void applyCandidate(candidate),
+          disabled: !!applyingKey,
+          style: { alignSelf: "start" },
         },
-        react.createElement("svg", {
-          viewBox: "0 0 16 16",
-          fill: "currentColor",
-          dangerouslySetInnerHTML: {
-            __html: '<path d="M2.146 2.854a.5.5 0 1 1 .708-.708L8 7.293l5.146-5.147a.5.5 0 0 1 .708.708L8.707 8l5.147 5.146a.5.5 0 0 1-.708.708L8 8.707l-5.146 5.147a.5.5 0 0 1-.708-.708L7.293 8 2.146 2.854Z"/>',
-          },
-        })
+        applyingKey === candidateKey
+          ? getOptionsText("menu.localLyricsApplying", "적용 중")
+          : getOptionsText("menu.apply", "적용")
       )
-    ),
-    react.createElement(
-      "div",
-      { className: "ivlyrics-fluent-body ivlyrics-options-modal-body" },
-      react.createElement(
+    );
+  };
+
+  const renderLrclibSearchBar = () => react.createElement(
         "div",
         {
           style: {
@@ -2939,7 +3007,16 @@ const LocalLyricsLrclibSearchModal = ({ trackInfo = {}, onApplyLocalLyrics, onCl
             ? getOptionsText("menu.localLyricsSearching", "검색 중")
             : getOptionsText("menu.search", "검색")
         )
-      ),
+      );
+
+  return react.createElement(
+    react.Fragment,
+    null,
+    renderSearchHeader(),
+    react.createElement(
+      "div",
+      { className: "ivlyrics-fluent-body ivlyrics-options-modal-body" },
+      renderLrclibSearchBar(),
       statusText && react.createElement(
         "div",
         {
@@ -2960,115 +3037,7 @@ const LocalLyricsLrclibSearchModal = ({ trackInfo = {}, onApplyLocalLyrics, onCl
             gap: "8px",
           },
         },
-        candidates.map((candidate, index) => {
-          const candidateKey = candidate.candidateKey || `${candidate.id || "candidate"}-${index}`;
-          const title = candidate.trackName || candidate.name || getOptionsText("menu.unknownTitle", "Unknown title");
-          const artist = candidate.artistName || getOptionsText("menu.unknownArtist", "Unknown artist");
-          const album = candidate.albumName || "";
-          const duration = formatLrclibCandidateDuration(candidate.duration);
-          const previewLines = getLrclibCandidatePreviewLines(candidate);
-          const badges = [
-            (candidate.hasSyncedLyrics || candidate.syncedLyrics) && getOptionsText("syncCreator.lrclibBadgeSynced", "Synced"),
-            (candidate.hasPlainLyrics || candidate.plainLyrics) && getOptionsText("syncCreator.lrclibBadgePlain", "Plain"),
-            candidate.instrumental && getOptionsText("syncCreator.lrclibBadgeInstrumental", "Instrumental"),
-          ].filter(Boolean);
-
-          return react.createElement(
-            "div",
-            {
-              key: candidateKey,
-              style: {
-                display: "grid",
-                gridTemplateColumns: "minmax(0, 1fr) auto",
-                gap: "12px",
-                padding: "12px",
-                border: "1px solid rgba(255,255,255,0.1)",
-                background: "rgba(255,255,255,0.04)",
-              },
-            },
-            react.createElement(
-              "div",
-              { style: { minWidth: 0 } },
-              react.createElement(
-                "div",
-                {
-                  style: {
-                    fontWeight: 700,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  },
-                  title,
-                },
-                title
-              ),
-              react.createElement(
-                "div",
-                {
-                  style: {
-                    marginTop: "3px",
-                    color: "rgba(255,255,255,0.7)",
-                    fontSize: "13px",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  },
-                  title: [artist, album, duration].filter(Boolean).join(" · "),
-                },
-                [artist, album, duration].filter(Boolean).join(" · ")
-              ),
-              badges.length > 0 && react.createElement(
-                "div",
-                {
-                  style: {
-                    display: "flex",
-                    gap: "6px",
-                    flexWrap: "wrap",
-                    marginTop: "8px",
-                  },
-                },
-                badges.map((badge) => react.createElement(
-                  "span",
-                  {
-                    key: badge,
-                    style: {
-                      padding: "2px 6px",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      fontSize: "11px",
-                      color: "rgba(255,255,255,0.78)",
-                    },
-                  },
-                  badge
-                ))
-              ),
-              previewLines.length > 0 && react.createElement(
-                "div",
-                {
-                  style: {
-                    marginTop: "8px",
-                    color: "rgba(255,255,255,0.58)",
-                    fontSize: "12px",
-                    lineHeight: 1.45,
-                  },
-                },
-                previewLines.join(" / ")
-              )
-            ),
-            react.createElement(
-              "button",
-              {
-                className: "ivlyrics-fluent-btn",
-                type: "button",
-                onClick: () => void applyCandidate(candidate),
-                disabled: !!applyingKey,
-                style: { alignSelf: "start" },
-              },
-              applyingKey === candidateKey
-                ? getOptionsText("menu.localLyricsApplying", "적용 중")
-                : getOptionsText("menu.apply", "적용")
-            )
-          );
-        })
+        candidates.map(renderLrclibCandidate)
       )
     )
   );
@@ -3199,9 +3168,9 @@ const TranslationMenu = react.memo(({ friendlyLanguage, hasTranslation }) => {
     ];
 
     // 현재 트랙의 언어 오버라이드 상태 (비동기로 로드)
-    let currentOverride = window.lyricContainer?.trackLanguageOverride || null;
+    const currentOverride = window.lyricContainer?.trackLanguageOverride || null;
 
-    const items = [
+    const buildTranslationMenuItems = () => [
       {
         section: I18n.t("menu.detectedLanguage"),
         subtitle: I18n.t("menu.detectedLanguageInfo"),
@@ -3316,7 +3285,9 @@ const TranslationMenu = react.memo(({ friendlyLanguage, hasTranslation }) => {
       },
     ];
 
-    openOptionsModal(I18n.t("menu.translationSettings"), items, async (name, value) => {
+    const items = buildTranslationMenuItems();
+
+    const handleTranslationMenuChange = async (name, value) => {
       // Skip processing for button items
       if (name === "open-api-settings") {
         return;
@@ -3386,7 +3357,9 @@ const TranslationMenu = react.memo(({ friendlyLanguage, hasTranslation }) => {
       }
 
       lyricContainerUpdate?.();
-    });
+    };
+
+    openOptionsModal(I18n.t("menu.translationSettings"), items, handleTranslationMenuChange);
   };
 
   return react.createElement(
@@ -4018,8 +3991,7 @@ const TrackSyncAdjustPill = react.memo(({ trackUri }) => {
     compactControls.push(renderStepButton(control));
   });
 
-  const movementFeedback = interactionFeedback
-    ? react.createElement(
+  const renderTrackSyncMovementFeedback = () => react.createElement(
       "span",
       {
         key: `flow-${interactionFeedback.id}`,
@@ -4043,7 +4015,10 @@ const TrackSyncAdjustPill = react.memo(({ trackUri }) => {
           className: "lyrics-track-sync-value-impact is-reset",
         })
         : null
-    )
+    );
+
+  const movementFeedback = interactionFeedback
+    ? renderTrackSyncMovementFeedback()
     : null;
 
   if (!trackUri) return null;
@@ -4292,8 +4267,7 @@ const SyncAdjustButtonFluent = react.memo(({
       )
     )
   );
-  const modalOverlay = isOpen
-    ? react.createElement(
+  const renderSyncAdjustOverlay = () => react.createElement(
         "div",
         {
           className: "lyrics-sync-adjust-floating",
@@ -4363,7 +4337,10 @@ const SyncAdjustButtonFluent = react.memo(({
               : globalControls
           )
         )
-      )
+      );
+
+  const modalOverlay = isOpen
+    ? renderSyncAdjustOverlay()
     : null;
 
   return react.createElement(
@@ -4414,8 +4391,8 @@ function openCommunityVideoSelector(trackUri, currentVideoId, onVideoSelect, def
     removeExisting: false,
     render: (closeModal) =>
       react.createElement(CommunityVideoSelector, {
-        trackUri: trackUri,
-        currentVideoId: currentVideoId,
+        trackUri,
+        currentVideoId,
         defaultStartTime,
         onVideoSelect: async (newVideoInfo) => {
           try {
@@ -5362,8 +5339,8 @@ async function openSyncDataCreator(trackInfo, initialData = null) {
   }
 
   const creatorComponent = react.createElement(SyncDataCreator, {
-    trackInfo: trackInfo,
-    initialData: initialData,
+    trackInfo,
+    initialData,
     onClose: closeModal
   });
 

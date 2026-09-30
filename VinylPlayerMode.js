@@ -206,20 +206,21 @@ const VinylPlayerMode = (() => {
     ]);
 
     const PresentationIcon = ({ name }) => {
+        const renderFramedPresentationIcon = (pathD) => react.createElement("svg", {
+            viewBox: "0 0 24 24",
+            "aria-hidden": "true"
+        },
+            react.createElement("rect", {
+                x: 3,
+                y: 5,
+                width: 18,
+                height: 14,
+                rx: 3
+            }),
+            react.createElement("path", { d: pathD })
+        );
         if (name === "standard") {
-            return react.createElement("svg", {
-                viewBox: "0 0 24 24",
-                "aria-hidden": "true"
-            },
-                react.createElement("rect", {
-                    x: 3,
-                    y: 5,
-                    width: 18,
-                    height: 14,
-                    rx: 3
-                }),
-                react.createElement("path", { d: "M10 5v14" })
-            );
+            return renderFramedPresentationIcon("M10 5v14");
         }
         if (name === "vinyl") {
             return react.createElement("svg", {
@@ -246,19 +247,7 @@ const VinylPlayerMode = (() => {
                 react.createElement("circle", { cx: 12, cy: 12, r: 2 })
             );
         }
-        return react.createElement("svg", {
-            viewBox: "0 0 24 24",
-            "aria-hidden": "true"
-        },
-            react.createElement("rect", {
-                x: 3,
-                y: 5,
-                width: 18,
-                height: 14,
-                rx: 3
-            }),
-            react.createElement("path", { d: "m10 9 5 3-5 3z" })
-        );
+        return renderFramedPresentationIcon("m10 9 5 3-5 3z");
     };
 
     const PresentationSwitcher = react.memo(({
@@ -980,6 +969,7 @@ const VinylPlayerMode = (() => {
             commitSeek(nextPosition);
         }, [canScrub, commitSeek, onTogglePlayback, safeDuration, safePosition]);
 
+        const computeVinylPlayerPresentation = () => {
         const playLabel = I18n.t(isPlaying ? "fullscreen.controls.pause" : "fullscreen.controls.play");
         const vinylModeLabel = I18n.t("vinyl.mode") || "LP";
         const albumLabel = I18n.t("vinyl.closeHint")
@@ -1002,23 +992,11 @@ const VinylPlayerMode = (() => {
             `tonearm-finish-${tonearmFinish}`,
             className
         ].filter(Boolean).join(" ");
+        return { playLabel, vinylModeLabel, albumLabel, tonearmLabel, isDraggingTonearm, isCueingTonearm, isEjectingTonearm, rootClassName };
+        };
+        const { playLabel, vinylModeLabel, albumLabel, tonearmLabel, isDraggingTonearm, isCueingTonearm, isEjectingTonearm, rootClassName } = computeVinylPlayerPresentation();
 
-        return react.createElement("div", {
-            className: rootClassName,
-            style: {
-                ...style,
-                "--iv-vinyl-tonearm-angle": `${tonearmAngle.toFixed(3)}deg`,
-                "--iv-vinyl-tonearm-linear-x": `${(-VINYL_TONEARM_LINEAR_TRAVEL * tonearmProgress).toFixed(3)}px`,
-                "--iv-vinyl-tonearm-linear-rest-x": `${(-VINYL_TONEARM_LINEAR_TRAVEL * VINYL_TONEARM_LINEAR_REST_PROGRESS).toFixed(3)}px`,
-                "--iv-vinyl-tonearm-scale": (Number(style["--iv-vinyl-record-scale"]) || 1) * safeTonearmScale,
-                "--iv-vinyl-tonearm-housing-fill": tonearmAppearance.housing,
-                "--iv-vinyl-tonearm-housing-edge": tonearmAppearance.housingEdge,
-                "--iv-vinyl-tonearm-highlight-color": tonearmAppearance.highlight,
-                "--iv-vinyl-tonearm-needle-color": tonearmAppearance.needle
-            },
-            role: "group",
-            "aria-label": vinylModeLabel
-        },
+        const renderVinylVisualGroup = () => (
             react.createElement("div", { className: "ivlyrics-vinyl-visual-group" },
                 react.createElement("div", { className: "ivlyrics-vinyl-outgoing-pair" },
                     react.createElement("button", {
@@ -1076,7 +1054,9 @@ const VinylPlayerMode = (() => {
                         idPrefix: "ivlyrics-vinyl-incoming"
                     })
                 )
-            ),
+            )
+        );
+        const renderVinylTonearm = () => (
             react.createElement("svg", {
                 ref: tonearmRef,
                 className: "ivlyrics-vinyl-tonearm",
@@ -1147,6 +1127,25 @@ const VinylPlayerMode = (() => {
                         )
                     )
             )
+        );
+        return react.createElement("div", {
+            className: rootClassName,
+            style: {
+                ...style,
+                "--iv-vinyl-tonearm-angle": `${tonearmAngle.toFixed(3)}deg`,
+                "--iv-vinyl-tonearm-linear-x": `${(-VINYL_TONEARM_LINEAR_TRAVEL * tonearmProgress).toFixed(3)}px`,
+                "--iv-vinyl-tonearm-linear-rest-x": `${(-VINYL_TONEARM_LINEAR_TRAVEL * VINYL_TONEARM_LINEAR_REST_PROGRESS).toFixed(3)}px`,
+                "--iv-vinyl-tonearm-scale": (Number(style["--iv-vinyl-record-scale"]) || 1) * safeTonearmScale,
+                "--iv-vinyl-tonearm-housing-fill": tonearmAppearance.housing,
+                "--iv-vinyl-tonearm-housing-edge": tonearmAppearance.housingEdge,
+                "--iv-vinyl-tonearm-highlight-color": tonearmAppearance.highlight,
+                "--iv-vinyl-tonearm-needle-color": tonearmAppearance.needle
+            },
+            role: "group",
+            "aria-label": vinylModeLabel
+        },
+            renderVinylVisualGroup(),
+            renderVinylTonearm()
         );
     });
 
@@ -1455,6 +1454,7 @@ const VinylPlayerMode = (() => {
             trackTransition
         ]);
 
+        const computeModeLyricState = () => {
         const activeVinylLyric = String(activeLyric || "")
             .replace(/\s+/g, " ")
             .trim();
@@ -1489,6 +1489,9 @@ const VinylPlayerMode = (() => {
             Array.isArray(displayedSourceLine?.culturalNote)
                 ? displayedSourceLine.culturalNote.length > 0
                 : !!displayedSourceLine?.culturalNote;
+        return { ActiveLyricRenderer, transitionClass, displayedLyric, hasVisibleLyric, hasVisibleCulturalAnnotation };
+        };
+        const { ActiveLyricRenderer, transitionClass, displayedLyric, hasVisibleLyric, hasVisibleCulturalAnnotation } = computeModeLyricState();
 
         const renderLyricLayer = (snapshot) => {
             if (!snapshot) return null;
@@ -1521,31 +1524,7 @@ const VinylPlayerMode = (() => {
                 : snapshot.plainText);
         };
 
-        return react.createElement("div", {
-            className: [
-                "fullscreen-vinyl-overlay",
-                isClosing ? "is-closing" : "is-open",
-                isPortraitLayout ? "is-portrait-layout" : "is-landscape-layout",
-                `is-presentation-${normalizedPresentationMode}`,
-                isFullVinylPresentation ? "has-full-vinyl-stage" : "",
-                isCompactVinylPresentation ? "has-compact-vinyl-stage" : "",
-                isVideoPresentation ? "has-video-stage" : "",
-                animationsEnabled ? "" : "is-motion-disabled",
-                transitionClass,
-                lyricsEnabled ? "has-lyric-slot" : "",
-                hasVisibleLyric ? "has-active-lyric" : "",
-                hasVisibleCulturalAnnotation ? "has-cultural-annotation" : ""
-            ].filter(Boolean).join(" "),
-            role: "dialog",
-            "aria-modal": "true",
-            "aria-label": I18n.t(
-                normalizedPresentationMode === "compact-vinyl"
-                    ? "vinyl.presentation.compactLabel"
-                    : normalizedPresentationMode === "video"
-                        ? "vinyl.presentation.videoLabel"
-                        : "vinyl.presentation.vinylLabel"
-            ) || I18n.t("vinyl.mode") || "LP",
-            style: {
+        const vinylOverlayStyle = {
                 "--iv-vinyl-original-font-family": `'${String(vinylSettings.originalFontFamily || "Pretendard Variable").replace(/'/g, "\\'")}'`,
                 "--iv-vinyl-original-font-size": `${Number(vinylSettings.originalFontSize) || 31}px`,
                 "--iv-vinyl-original-font-weight": Number(vinylSettings.originalFontWeight) || 600,
@@ -1592,7 +1571,32 @@ const VinylPlayerMode = (() => {
                 "--iv-video-stage-lyric-background-color": String(vinylSettings.videoStageLyricBackgroundColor || "#000000"),
                 "--iv-video-stage-lyric-background-opacity": `${Math.min(100, Math.max(0, Number(vinylSettings.videoStageLyricBackgroundOpacity) || 0))}%`,
                 "--iv-vinyl-background-blur": `${backgroundBlur}px`
-            }
+        };
+        const renderModeOverlay = () => react.createElement("div", {
+            className: [
+                "fullscreen-vinyl-overlay",
+                isClosing ? "is-closing" : "is-open",
+                isPortraitLayout ? "is-portrait-layout" : "is-landscape-layout",
+                `is-presentation-${normalizedPresentationMode}`,
+                isFullVinylPresentation ? "has-full-vinyl-stage" : "",
+                isCompactVinylPresentation ? "has-compact-vinyl-stage" : "",
+                isVideoPresentation ? "has-video-stage" : "",
+                animationsEnabled ? "" : "is-motion-disabled",
+                transitionClass,
+                lyricsEnabled ? "has-lyric-slot" : "",
+                hasVisibleLyric ? "has-active-lyric" : "",
+                hasVisibleCulturalAnnotation ? "has-cultural-annotation" : ""
+            ].filter(Boolean).join(" "),
+            role: "dialog",
+            "aria-modal": "true",
+            "aria-label": I18n.t(
+                normalizedPresentationMode === "compact-vinyl"
+                    ? "vinyl.presentation.compactLabel"
+                    : normalizedPresentationMode === "video"
+                        ? "vinyl.presentation.videoLabel"
+                        : "vinyl.presentation.vinylLabel"
+            ) || I18n.t("vinyl.mode") || "LP",
+            style: vinylOverlayStyle
         },
             isFullVinylPresentation ? react.createElement(VinylPlayer, {
                 className: [
@@ -1678,6 +1682,8 @@ const VinylPlayerMode = (() => {
                 renderLyricLayer(displayedLyric)
             ) : null
         );
+
+        return renderModeOverlay();
     });
 
     Mode.PresentationSwitcher = PresentationSwitcher;

@@ -1,6 +1,6 @@
 /**
  * VideoHelperService - 로컬 헬퍼 프로그램과 통신하는 서비스
- * 
+ *
  * 헬퍼 프로그램은 YouTube 영상을 다운로드하여 로컬에서 제공합니다.
  * API 엔드포인트: localhost:15123
  */
@@ -218,7 +218,6 @@ const VideoHelperService = (() => {
                   if (videoUrl && videoUrl.startsWith('http')) {
                     window.__ivLyricsDebugLog?.("[VideoHelperService] Final buffer complete, URL:", videoUrl);
                     onComplete?.(videoUrl);
-                    return;
                   }
                 }
               } catch (e) {

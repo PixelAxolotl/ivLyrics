@@ -113,11 +113,6 @@
     // Helper Functions
     // ============================================
 
-    function getLocalizedText(textObj, lang) {
-        if (typeof textObj === 'string') return textObj;
-        return textObj[lang] || textObj['en'] || Object.values(textObj)[0] || '';
-    }
-
     function getSetting(key, defaultValue = null) {
         return window.AIAddonManager?.getAddonSetting(ADDON_INFO.id, key, defaultValue) ?? defaultValue;
     }
@@ -332,7 +327,7 @@
                             'Authorization': `Bearer ${apiKey}`
                         },
                         body: JSON.stringify({
-                            model: model,
+                            model,
                             messages: buildPromptMessages(prompt),
                             ...getAdvancedRequestParams()
                         })
@@ -462,6 +457,7 @@
                     if (!response.ok) {
                         throw await createPaxsenixAPIError(response);
                     }
+                    const consumePaxsenixStream = async () => {
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let sseBuffer = '', accumulated = '';
@@ -535,6 +531,9 @@
                     }
 
                     return transformed;
+                    };
+
+                    return await consumePaxsenixStream();
                 } catch (e) {
                     lastError = e;
                     const isPermanentError = (e.status >= 400 && e.status < 500 && e.status !== 429)
@@ -613,7 +612,7 @@
             if (!trimmed.includes('{')) return false;
             return !trimmed.endsWith('}') || trimmed.lastIndexOf('}') < trimmed.lastIndexOf('{');
         };
-        let cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+        const cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
 
         try {
             return JSON.parse(cleaned);
@@ -735,8 +734,7 @@
                 const showCustomModel = usingCustomModel || isUnknownSelectedModel;
                 const hasApiKey = getApiKeys().length > 0;
 
-                return React.createElement('div', { className: 'ai-addon-settings paxsenix-settings' },
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                const renderApiKeyRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, 'API Key(s)'),
                         React.createElement('div', { className: 'ai-addon-input-group' },
                             React.createElement('input', {
@@ -751,8 +749,8 @@
                             }, 'Get API Key')
                         ),
                         React.createElement('small', null, 'Enter a single key or JSON array for rotation')
-                    ),
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderModelRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, 'Model'),
                         React.createElement('div', { className: 'ai-addon-input-group' },
                             React.createElement('select', {
@@ -775,19 +773,25 @@
                             }, modelsLoading ? '...' : '↻')
                         ),
                         availableModels.length > 0 && React.createElement('small', null, `${availableModels.length} models available`)
-                    ),
-                    showCustomModel &&
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderCustomModelRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, 'Custom Model ID'),
                         React.createElement('input', { type: 'text', value: customModel, onChange: handleCustomModelChange, placeholder: 'Enter a model ID' })
-                    ),
-                    React.createElement(AdvancedParamsSection),
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderTestRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('button', { onClick: handleTest, className: 'ai-addon-btn-primary' }, 'Test Connection'),
                         testStatus && React.createElement('span', {
                             className: `ai-addon-test-status ${testStatus.startsWith('✓') ? 'success' : testStatus.startsWith('✗') ? 'error' : ''}`
                         }, testStatus)
-                    )
+                    );
+
+                return React.createElement('div', { className: 'ai-addon-settings paxsenix-settings' },
+                    renderApiKeyRow(),
+                    renderModelRow(),
+                    showCustomModel &&
+                    renderCustomModelRow(),
+                    React.createElement(AdvancedParamsSection),
+                    renderTestRow()
                 );
             };
 
@@ -845,11 +849,7 @@
                 ? await callPaxsenixAPIStream(prompt, onLine, onStreamReset, undefined, parseLines)
                 : await callPaxsenixAPIRaw(prompt, undefined, parseLines);
 
-            if (wantSmartPhonetic) {
-                return { phonetic: lines };
-            } else {
-                return { translation: lines };
-            }
+            return wantSmartPhonetic ? { phonetic: lines } : { translation: lines };
         },
 
         async generateCharacterPronunciation({ lines, characterPronunciationPrompt }) {

@@ -559,10 +559,6 @@ const FullscreenOverlay = (() => {
         return createPlaylistTrackMatch();
     };
 
-    const playlistContainsTrack = async (playlist, trackUri) => {
-        return (await getPlaylistTrackMatch(playlist, trackUri)).contains;
-    };
-
     const addTrackToSpotifyPlaylist = async (playlist, trackUri) => {
         const playlistUri = playlist?.uri || (playlist?.id ? `spotify:playlist:${playlist.id}` : "");
         if (Spicetify?.Platform?.PlaylistAPI?.add && playlistUri) {
@@ -1195,18 +1191,21 @@ const FullscreenOverlay = (() => {
 
             setAddingPlaylistId(playlist.id);
             let attemptedPlaylistRemoval = false;
+            const markPlaylistTrackRemoved = () => {
+                setPlaylistTrackStatus((previousStatus) => ({
+                    ...previousStatus,
+                    [playlist.id]: { status: "missing", uids: [] }
+                }));
+                Toast.success(
+                    (I18n.t("fullscreen.controls.playlistRemoved") || "Removed from {playlist}.")
+                        .replace("{playlist}", playlist.name || "playlist")
+                );
+            };
             try {
                 if (getPlaylistStatusValue(playlistTrackStatus[playlist.id]) === "contains") {
                     attemptedPlaylistRemoval = true;
                     await removeTrackFromSpotifyPlaylist(playlist, trackUri, getPlaylistStatusUids(playlistTrackStatus[playlist.id]));
-                    setPlaylistTrackStatus((previousStatus) => ({
-                        ...previousStatus,
-                        [playlist.id]: { status: "missing", uids: [] }
-                    }));
-                    Toast.success(
-                        (I18n.t("fullscreen.controls.playlistRemoved") || "Removed from {playlist}.")
-                            .replace("{playlist}", playlist.name || "playlist")
-                    );
+                    markPlaylistTrackRemoved();
                     return;
                 }
 
@@ -1218,14 +1217,7 @@ const FullscreenOverlay = (() => {
                     }));
                     attemptedPlaylistRemoval = true;
                     await removeTrackFromSpotifyPlaylist(playlist, trackUri, trackMatch.uids);
-                    setPlaylistTrackStatus((previousStatus) => ({
-                        ...previousStatus,
-                        [playlist.id]: { status: "missing", uids: [] }
-                    }));
-                    Toast.success(
-                        (I18n.t("fullscreen.controls.playlistRemoved") || "Removed from {playlist}.")
-                            .replace("{playlist}", playlist.name || "playlist")
-                    );
+                    markPlaylistTrackRemoved();
                     return;
                 }
 
@@ -1266,8 +1258,7 @@ const FullscreenOverlay = (() => {
             height: `${buttonSize - 4}px`
         }), [buttonSize]);
 
-        const handleVolumeChange = (e) => {
-            const newVolume = parseFloat(e.target.value);
+        const applyVolumeChange = (newVolume) => {
             setVolume(newVolume);
             Spicetify.Player.setVolume(newVolume);
             setIsMuted(newVolume === 0);
@@ -1277,6 +1268,11 @@ const FullscreenOverlay = (() => {
             volumeChangeTimeoutRef.current = setTimeout(() => setIsVolumeChanging(false), 1000);
         };
 
+        const handleVolumeChange = (e) => {
+            const newVolume = parseFloat(e.target.value);
+            applyVolumeChange(newVolume);
+        };
+
         const handleVolumeWheel = (e) => {
             if (!isVolumeHovered) return;
             e.preventDefault();
@@ -1284,13 +1280,7 @@ const FullscreenOverlay = (() => {
             const delta = e.deltaY > 0 ? -step : step;
             const newVolume = Math.min(1, Math.max(0, volume + delta));
 
-            setVolume(newVolume);
-            Spicetify.Player.setVolume(newVolume);
-            setIsMuted(newVolume === 0);
-
-            setIsVolumeChanging(true);
-            if (volumeChangeTimeoutRef.current) clearTimeout(volumeChangeTimeoutRef.current);
-            volumeChangeTimeoutRef.current = setTimeout(() => setIsVolumeChanging(false), 1000);
+            applyVolumeChange(newVolume);
         };
 
         const toggleMute = () => {
@@ -1306,10 +1296,51 @@ const FullscreenOverlay = (() => {
             }
         };
 
-        return react.createElement("div", {
-            className: `fullscreen-player-controls ${showBackground ? 'with-background' : ''}`
-        },
-            // Main control row: like, shuffle, prev, play, next, repeat, add-to-playlist
+        const renderPlaylistPickerItem = (playlist) => {
+                            const playlistState = playlistTrackStatus[playlist.id];
+                            const playlistStatus = getPlaylistStatusValue(playlistState);
+                            const isCheckingPlaylist = playlistStatus === "checking";
+                            const alreadyContainsTrack = playlistStatus === "contains";
+                            const isAddingPlaylist = addingPlaylistId === playlist.id;
+
+                            return react.createElement("button", {
+                                key: playlist.id,
+                                className: `fullscreen-playlist-item ${alreadyContainsTrack ? 'contains-current-track' : ''}`,
+                                onClick: () => handlePlaylistItemAction(playlist),
+                                disabled: !!addingPlaylistId || isCheckingPlaylist,
+                                role: "menuitem"
+                            },
+                                playlist.image
+                                    ? react.createElement("img", {
+                                        src: playlist.image,
+                                        className: "fullscreen-playlist-item-image",
+                                        alt: ""
+                                    })
+                                    : react.createElement("span", { className: "fullscreen-playlist-item-fallback" }, "♪"),
+                                react.createElement("span", { className: "fullscreen-playlist-item-text" },
+                                    react.createElement("span", { className: "fullscreen-playlist-item-name" }, playlist.name),
+                                    react.createElement("span", { className: "fullscreen-playlist-item-count" },
+                                        `${playlist.total} ${I18n.t("fullscreen.controls.playlistTracks") || "tracks"}`
+                                    )
+                                ),
+                                isAddingPlaylist
+                                    ? react.createElement("span", { className: "fullscreen-playlist-item-loading" }, "...")
+                                    : isCheckingPlaylist
+                                        ? react.createElement("span", { className: "fullscreen-playlist-item-status checking" },
+                                            I18n.t("fullscreen.controls.playlistChecking") || "Checking..."
+                                        )
+                                        : alreadyContainsTrack && react.createElement("span", { className: "fullscreen-playlist-item-status contains" },
+                                            react.createElement("span", { className: "fullscreen-playlist-item-status-default" },
+                                                I18n.t("fullscreen.controls.playlistAlreadyInList") || "Already in"
+                                            ),
+                                            react.createElement("span", { className: "fullscreen-playlist-item-status-remove" },
+                                                I18n.t("fullscreen.controls.playlistRemove") || "Remove"
+                                            )
+                                        )
+                            );
+        };
+
+        const renderMainControlRow = () =>
             react.createElement("div", { className: "fullscreen-control-row fullscreen-control-main-row" },
                 // Like button (left side)
                 react.createElement("button", {
@@ -1323,7 +1354,7 @@ const FullscreenOverlay = (() => {
                         fill: isLiked ? "currentColor" : "none",
                         stroke: "currentColor",
                         strokeWidth: isLiked ? "0" : "1.5",
-                        dangerouslySetInnerHTML: { __html: Spicetify.SVGIcons["heart"] }
+                        dangerouslySetInnerHTML: { __html: Spicetify.SVGIcons.heart }
                     })
                 ),
                 // Shuffle
@@ -1428,54 +1459,14 @@ const FullscreenOverlay = (() => {
                             I18n.t("fullscreen.controls.playlistLoading") || "Loading playlists..."
                         ),
                         !isPlaylistsLoading && playlistError && react.createElement("div", { className: "fullscreen-playlist-state error" }, playlistError),
-                        !isPlaylistsLoading && !playlistError && playlists.map((playlist) => {
-                            const playlistState = playlistTrackStatus[playlist.id];
-                            const playlistStatus = getPlaylistStatusValue(playlistState);
-                            const isCheckingPlaylist = playlistStatus === "checking";
-                            const alreadyContainsTrack = playlistStatus === "contains";
-                            const isAddingPlaylist = addingPlaylistId === playlist.id;
-
-                            return react.createElement("button", {
-                                key: playlist.id,
-                                className: `fullscreen-playlist-item ${alreadyContainsTrack ? 'contains-current-track' : ''}`,
-                                onClick: () => handlePlaylistItemAction(playlist),
-                                disabled: !!addingPlaylistId || isCheckingPlaylist,
-                                role: "menuitem"
-                            },
-                                playlist.image
-                                    ? react.createElement("img", {
-                                        src: playlist.image,
-                                        className: "fullscreen-playlist-item-image",
-                                        alt: ""
-                                    })
-                                    : react.createElement("span", { className: "fullscreen-playlist-item-fallback" }, "♪"),
-                                react.createElement("span", { className: "fullscreen-playlist-item-text" },
-                                    react.createElement("span", { className: "fullscreen-playlist-item-name" }, playlist.name),
-                                    react.createElement("span", { className: "fullscreen-playlist-item-count" },
-                                        `${playlist.total} ${I18n.t("fullscreen.controls.playlistTracks") || "tracks"}`
-                                    )
-                                ),
-                                isAddingPlaylist
-                                    ? react.createElement("span", { className: "fullscreen-playlist-item-loading" }, "...")
-                                    : isCheckingPlaylist
-                                        ? react.createElement("span", { className: "fullscreen-playlist-item-status checking" },
-                                            I18n.t("fullscreen.controls.playlistChecking") || "Checking..."
-                                        )
-                                        : alreadyContainsTrack && react.createElement("span", { className: "fullscreen-playlist-item-status contains" },
-                                            react.createElement("span", { className: "fullscreen-playlist-item-status-default" },
-                                                I18n.t("fullscreen.controls.playlistAlreadyInList") || "Already in"
-                                            ),
-                                            react.createElement("span", { className: "fullscreen-playlist-item-status-remove" },
-                                                I18n.t("fullscreen.controls.playlistRemove") || "Remove"
-                                            )
-                                        )
-                            );
-                        })
+                        !isPlaylistsLoading && !playlistError && playlists.map((playlist) => renderPlaylistPickerItem(playlist))
                     )
                 )
-            ),
-            // Volume row
-            showVolume && react.createElement("div", { className: "fullscreen-control-row fullscreen-control-volume-row" },
+            )
+        ;
+
+        const renderVolumeRow = () =>
+            react.createElement("div", { className: "fullscreen-control-row fullscreen-control-volume-row" },
                 react.createElement("div", {
                     className: "fullscreen-volume-wrapper",
                     onMouseEnter: () => setIsVolumeHovered(true),
@@ -1521,6 +1512,15 @@ const FullscreenOverlay = (() => {
                     }, `${Math.round(volume * 100)}%`)
                 )
             )
+        ;
+
+        return react.createElement("div", {
+            className: `fullscreen-player-controls ${showBackground ? 'with-background' : ''}`
+        },
+            // Main control row: like, shuffle, prev, play, next, repeat, add-to-playlist
+            renderMainControlRow(),
+            // Volume row
+            showVolume && renderVolumeRow()
         );
     };
 
@@ -1619,6 +1619,26 @@ const FullscreenOverlay = (() => {
 
                     // 다음 곡들 (최대 15곡) - Unknown 트랙 이후 필터링
                     const next = [];
+                    // 큐/최근 항목에서 contextTrack·metadata·식별자(uri/uid/contextUri)를 동일한 규칙으로 추출한다.
+                    const resolveQueueTrackFields = (track) => {
+                        const contextTrack = track?.contextTrack || track || {};
+                        const meta = contextTrack.metadata || track?.metadata || {};
+                        return {
+                            meta,
+                            ids: {
+                                uri: contextTrack.uri || track?.uri || "",
+                                uid: contextTrack.uid || track?.uid || "",
+                                contextUri:
+                                    contextTrack.contextUri ||
+                                    contextTrack.context_uri ||
+                                    contextTrack.context?.uri ||
+                                    track?.contextUri ||
+                                    track?.context_uri ||
+                                    track?.context?.uri ||
+                                    ""
+                            }
+                        };
+                    };
                     const appendNextTracks = (items, source, allowContextPlayback = true) => {
                         if (!Array.isArray(items) || next.length >= 15) {
                             return false;
@@ -1626,26 +1646,14 @@ const FullscreenOverlay = (() => {
 
                         // Unknown 트랙의 인덱스 찾기 (컨텍스트 끝 마커)
                         for (const track of items) {
-                            const contextTrack = track?.contextTrack || track || {};
-                            const meta = contextTrack.metadata || track?.metadata || {};
+                            const { meta, ids } = resolveQueueTrackFields(track);
                             if (isUnknownTrackMetadata(meta)) {
                                 return true;
                             }
 
                             next.push(createQueueTrackInfo(
                                 meta,
-                                {
-                                    uri: contextTrack.uri || track?.uri || "",
-                                    uid: contextTrack.uid || track?.uid || "",
-                                    contextUri:
-                                        contextTrack.contextUri ||
-                                        contextTrack.context_uri ||
-                                        contextTrack.context?.uri ||
-                                        track?.contextUri ||
-                                        track?.context_uri ||
-                                        track?.context?.uri ||
-                                        ""
-                                },
+                                ids,
                                 {
                                     source,
                                     fallbackContextUri: currentContextUri,
@@ -1679,22 +1687,10 @@ const FullscreenOverlay = (() => {
                         const prev = [];
                         for (let i = prevSource.length - 1; i >= 0 && prev.length < 10; i--) {
                             const track = prevSource[i];
-                            const contextTrack = track?.contextTrack || track || {};
-                            const meta = contextTrack.metadata || track?.metadata || {};
+                            const { meta, ids } = resolveQueueTrackFields(track);
                             prev.push(createQueueTrackInfo(
                                 meta,
-                                {
-                                    uri: contextTrack.uri || track?.uri || "",
-                                    uid: contextTrack.uid || track?.uid || "",
-                                    contextUri:
-                                        contextTrack.contextUri ||
-                                        contextTrack.context_uri ||
-                                        contextTrack.context?.uri ||
-                                        track?.contextUri ||
-                                        track?.context_uri ||
-                                        track?.context?.uri ||
-                                        ""
-                                },
+                                ids,
                                 {
                                     source: "recent",
                                     fallbackContextUri: currentContextUri,
@@ -1793,24 +1789,7 @@ const FullscreenOverlay = (() => {
 
         if (!show || !isFullscreen) return null;
 
-        return react.createElement("div", {
-            className: "fullscreen-queue-wrapper",
-            onMouseLeave: () => setIsHovered(false)
-        },
-            // Hover trigger area (투명한 오른쪽 영역)
-            react.createElement("div", {
-                className: "fullscreen-queue-trigger-area",
-                onMouseEnter: () => setIsHovered(true)
-            }),
-
-            // Queue panel (항상 렌더링, visible 클래스로 애니메이션 제어)
-            react.createElement("div", {
-                className: `fullscreen-queue-panel ${isHovered ? 'visible' : ''}`,
-                onMouseEnter: () => setIsHovered(true)
-            },
-                // Content
-                react.createElement("div", { className: "fullscreen-queue-content" },
-                    activeTab === 'queue' ? react.createElement(react.Fragment, null,
+        const renderQueueTabContent = () => react.createElement(react.Fragment, null,
                         // 현재 재생 중
                         currentTrack && react.createElement("div", { className: "fullscreen-queue-section" },
                             react.createElement("div", { className: "fullscreen-queue-section-title" },
@@ -1861,7 +1840,9 @@ const FullscreenOverlay = (() => {
                         nextTracks.length === 0 && react.createElement("div", { className: "fullscreen-queue-empty" },
                             I18n.t("fullscreen.queue.empty")
                         )
-                    ) : react.createElement(react.Fragment, null,
+        );
+
+        const renderRecentTabContent = () => react.createElement(react.Fragment, null,
                         // 최근 재생 곡들
                         recentTracks.length > 0 ? react.createElement("div", { className: "fullscreen-queue-list" },
                             recentTracks.map((track, idx) =>
@@ -1870,7 +1851,26 @@ const FullscreenOverlay = (() => {
                         ) : react.createElement("div", { className: "fullscreen-queue-empty" },
                             I18n.t("fullscreen.queue.noRecent")
                         )
-                    )
+        );
+
+        return react.createElement("div", {
+            className: "fullscreen-queue-wrapper",
+            onMouseLeave: () => setIsHovered(false)
+        },
+            // Hover trigger area (투명한 오른쪽 영역)
+            react.createElement("div", {
+                className: "fullscreen-queue-trigger-area",
+                onMouseEnter: () => setIsHovered(true)
+            }),
+
+            // Queue panel (항상 렌더링, visible 클래스로 애니메이션 제어)
+            react.createElement("div", {
+                className: `fullscreen-queue-panel ${isHovered ? 'visible' : ''}`,
+                onMouseEnter: () => setIsHovered(true)
+            },
+                // Content
+                react.createElement("div", { className: "fullscreen-queue-content" },
+                    activeTab === 'queue' ? renderQueueTabContent() : renderRecentTabContent()
                 ),
 
                 // Footer with tabs (하단에 탭 버튼)
@@ -2299,59 +2299,83 @@ const FullscreenOverlay = (() => {
             uiVisibleRef.current = uiVisible;
         }, [uiVisible]);
 
-        // Get settings from CONFIG
-        const showAlbum = CONFIG?.visual?.["fullscreen-show-album"] !== false;
-        const showInfo = CONFIG?.visual?.["fullscreen-show-info"] !== false;
-        const albumSize = Number(CONFIG?.visual?.["fullscreen-album-size"]) || 400;
-        const albumRadiusValue = Number(CONFIG?.visual?.["fullscreen-album-radius"]);
-        const albumRadius = isNaN(albumRadiusValue) ? 12 : albumRadiusValue;
-        const vinylAnimationsEnabled = CONFIG?.visual?.["fullscreen-vinyl-animations"] !== false;
-        const titleSize = Number(CONFIG?.visual?.["fullscreen-title-size"]) || 48;
-        const artistSize = Number(CONFIG?.visual?.["fullscreen-artist-size"]) || 24;
+        const computeOverlaySettings = () => {
+            // Get settings from CONFIG
+            const showAlbum = CONFIG?.visual?.["fullscreen-show-album"] !== false;
+            const showInfo = CONFIG?.visual?.["fullscreen-show-info"] !== false;
+            const albumSize = Number(CONFIG?.visual?.["fullscreen-album-size"]) || 400;
+            const albumRadiusValue = Number(CONFIG?.visual?.["fullscreen-album-radius"]);
+            const albumRadius = isNaN(albumRadiusValue) ? 12 : albumRadiusValue;
+            const vinylAnimationsEnabled = CONFIG?.visual?.["fullscreen-vinyl-animations"] !== false;
+            const titleSize = Number(CONFIG?.visual?.["fullscreen-title-size"]) || 48;
+            const artistSize = Number(CONFIG?.visual?.["fullscreen-artist-size"]) || 24;
 
-        // UI element settings
-        const showClock = CONFIG?.visual?.["fullscreen-show-clock"] !== false;
-        const clockShowSeconds = CONFIG?.visual?.["fullscreen-clock-show-seconds"] === true;
-        const clockSize = Number(CONFIG?.visual?.["fullscreen-clock-size"]) || 48;
-        const showContext = CONFIG?.visual?.["fullscreen-show-context"] !== false;
-        const showContextImage = CONFIG?.visual?.["fullscreen-show-context-image"] !== false;
-        const showNextTrack = CONFIG?.visual?.["fullscreen-show-next-track"] !== false;
-        const nextTrackSeconds = Number(CONFIG?.visual?.["fullscreen-next-track-seconds"]) || 15;
-        const showControls = CONFIG?.visual?.["fullscreen-show-controls"] !== false;
-        const showVolume = CONFIG?.visual?.["fullscreen-show-volume"] !== false;
-        const showProgress = CONFIG?.visual?.["fullscreen-show-progress"] !== false;
-        const showLyricsProgress = CONFIG?.visual?.["fullscreen-show-lyrics-progress"] === true;
-        const showQueue = CONFIG?.visual?.["fullscreen-show-queue"] !== false;
-        const autoHideUI = CONFIG?.visual?.["fullscreen-auto-hide-ui"] !== false;
-        const autoHideDelay = (Number(CONFIG?.visual?.["fullscreen-auto-hide-delay"]) || 3) * 1000;
+            // UI element settings
+            const showClock = CONFIG?.visual?.["fullscreen-show-clock"] !== false;
+            const clockShowSeconds = CONFIG?.visual?.["fullscreen-clock-show-seconds"] === true;
+            const clockSize = Number(CONFIG?.visual?.["fullscreen-clock-size"]) || 48;
+            const showContext = CONFIG?.visual?.["fullscreen-show-context"] !== false;
+            const showContextImage = CONFIG?.visual?.["fullscreen-show-context-image"] !== false;
+            const showNextTrack = CONFIG?.visual?.["fullscreen-show-next-track"] !== false;
+            const nextTrackSeconds = Number(CONFIG?.visual?.["fullscreen-next-track-seconds"]) || 15;
+            const showControls = CONFIG?.visual?.["fullscreen-show-controls"] !== false;
+            const showVolume = CONFIG?.visual?.["fullscreen-show-volume"] !== false;
+            const showProgress = CONFIG?.visual?.["fullscreen-show-progress"] !== false;
+            const showLyricsProgress = CONFIG?.visual?.["fullscreen-show-lyrics-progress"] === true;
+            const showQueue = CONFIG?.visual?.["fullscreen-show-queue"] !== false;
+            const autoHideUI = CONFIG?.visual?.["fullscreen-auto-hide-ui"] !== false;
+            const autoHideDelay = (Number(CONFIG?.visual?.["fullscreen-auto-hide-delay"]) || 3) * 1000;
 
-        // TMI Font size settings
-        const tmiScale = (Number(CONFIG?.visual?.["fullscreen-tmi-font-size"]) || 100) / 100;
+            // TMI Font size settings
+            const tmiScale = (Number(CONFIG?.visual?.["fullscreen-tmi-font-size"]) || 100) / 100;
 
-        // Control style settings
-        const controlButtonSize = Number(CONFIG?.visual?.["fullscreen-control-button-size"]) || 36;
-        const controlsBackground = CONFIG?.visual?.["fullscreen-controls-background"] === true;
-        const controlsCompact = CONFIG?.visual?.["fullscreen-controls-compact"] === true;
+            // Control style settings
+            const controlButtonSize = Number(CONFIG?.visual?.["fullscreen-control-button-size"]) || 36;
+            const controlsBackground = CONFIG?.visual?.["fullscreen-controls-background"] === true;
 
-        // Layout settings
-        const controlsPosition = CONFIG?.visual?.["fullscreen-controls-position"] || "left-panel";
-        const albumShadow = CONFIG?.visual?.["fullscreen-album-shadow"] !== false;
-        const infoGapVal = CONFIG?.visual?.["fullscreen-info-gap"];
-        const infoGap = (infoGapVal !== undefined && infoGapVal !== null) ? Number(infoGapVal) : 24;
+            // Layout settings
+            const controlsPosition = CONFIG?.visual?.["fullscreen-controls-position"] || "left-panel";
+            const albumShadow = CONFIG?.visual?.["fullscreen-album-shadow"] !== false;
+            const infoGapVal = CONFIG?.visual?.["fullscreen-info-gap"];
+            const infoGap = (infoGapVal !== undefined && infoGapVal !== null) ? Number(infoGapVal) : 24;
 
-        // TV Mode settings
-        const tvModeEnabled = CONFIG?.visual?.["fullscreen-tv-mode"] === true;
-        const tvAlbumSize = Number(CONFIG?.visual?.["fullscreen-tv-album-size"]) || 140;
-        const trimTitleEnabled = CONFIG?.visual?.["fullscreen-trim-title"] === true;
+            // TV Mode settings
+            const tvModeEnabled = CONFIG?.visual?.["fullscreen-tv-mode"] === true;
+            const tvAlbumSize = Number(CONFIG?.visual?.["fullscreen-tv-album-size"]) || 140;
+            const trimTitleEnabled = CONFIG?.visual?.["fullscreen-trim-title"] === true;
 
-        // Normal mode settings
-        const normalShowAlbumName = CONFIG?.visual?.["fullscreen-show-album-name"] !== false;
+            // Normal mode settings
+            const normalShowAlbumName = CONFIG?.visual?.["fullscreen-show-album-name"] !== false;
 
-        // TV Mode specific settings
-        const tvShowAlbumName = CONFIG?.visual?.["fullscreen-tv-show-album-name"] !== false;
-        const tvShowControls = CONFIG?.visual?.["fullscreen-tv-show-controls"] !== false;
-        const tvShowProgress = CONFIG?.visual?.["fullscreen-tv-show-progress"] !== false;
-        const isLayoutReversed = CONFIG?.visual?.["fullscreen-layout-reverse"] === true;
+            // TV Mode specific settings
+            const tvShowAlbumName = CONFIG?.visual?.["fullscreen-tv-show-album-name"] !== false;
+            const tvShowControls = CONFIG?.visual?.["fullscreen-tv-show-controls"] !== false;
+            const tvShowProgress = CONFIG?.visual?.["fullscreen-tv-show-progress"] !== false;
+            const isLayoutReversed = CONFIG?.visual?.["fullscreen-layout-reverse"] === true;
+
+            return {
+                showAlbum, showInfo, albumSize, albumRadiusValue, albumRadius,
+                vinylAnimationsEnabled, titleSize, artistSize,
+                showClock, clockShowSeconds, clockSize, showContext, showContextImage,
+                showNextTrack, nextTrackSeconds, showControls, showVolume, showProgress,
+                showLyricsProgress, showQueue, autoHideUI, autoHideDelay,
+                tmiScale, controlButtonSize, controlsBackground,
+                controlsPosition, albumShadow, infoGapVal, infoGap,
+                tvModeEnabled, tvAlbumSize, trimTitleEnabled, normalShowAlbumName,
+                tvShowAlbumName, tvShowControls, tvShowProgress, isLayoutReversed
+            };
+        };
+        const {
+            showAlbum, showInfo, albumSize, albumRadiusValue, albumRadius,
+            vinylAnimationsEnabled, titleSize, artistSize,
+            showClock, clockShowSeconds, clockSize, showContext, showContextImage,
+            showNextTrack, nextTrackSeconds, showControls, showVolume, showProgress,
+            showLyricsProgress, showQueue, autoHideUI, autoHideDelay,
+            tmiScale, controlButtonSize, controlsBackground,
+            controlsPosition, albumShadow, infoGapVal, infoGap,
+            tvModeEnabled, tvAlbumSize, trimTitleEnabled, normalShowAlbumName,
+            tvShowAlbumName, tvShowControls, tvShowProgress, isLayoutReversed
+        } = computeOverlaySettings();
 
         useEffect(() => {
             if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
@@ -2735,29 +2759,43 @@ const FullscreenOverlay = (() => {
             }
         }, [closeTmiMode, tmiMode, trackUri]);
 
-        const currentPlayerItem = Spicetify.Player.data?.item;
-        const currentPlayerMetadata = currentPlayerItem?.metadata;
-        const currentTrackUri = getFirstSpotifyUri(currentPlayerItem?.uri, trackUri);
-        const currentArtistUri = getCurrentArtistUri();
-        const currentAlbumUri = getCurrentAlbumUri();
-        const currentCoverUrl = currentPlayerMetadata?.image_xlarge_url
-            || currentPlayerMetadata?.image_large_url
-            || currentPlayerItem?.album?.images?.[0]?.url
-            || currentPlayerMetadata?.image_url
-            || coverUrl;
-        const currentVinylTitle = currentPlayerMetadata?.title || title || "LP";
-        const currentVinylArtist = currentPlayerMetadata?.artist_name || artist || "";
-        const currentVinylAlbum = currentPlayerMetadata?.album_title || currentVinylTitle;
-        const liveVinylTrack = {
-            uri: currentTrackUri || `${currentVinylTitle}\u0000${currentVinylArtist}`,
-            coverUrl: currentCoverUrl,
-            title: currentVinylTitle,
-            artist: currentVinylArtist,
-            album: currentVinylAlbum,
-            accent: currentTrackUri && currentTrackUri === trackAccentUri
-                ? String(trackAccent || "").trim()
-                : ""
+        const computeLiveVinylTrack = () => {
+            const currentPlayerItem = Spicetify.Player.data?.item;
+            const currentPlayerMetadata = currentPlayerItem?.metadata;
+            const currentTrackUri = getFirstSpotifyUri(currentPlayerItem?.uri, trackUri);
+            const currentArtistUri = getCurrentArtistUri();
+            const currentAlbumUri = getCurrentAlbumUri();
+            const currentCoverUrl = currentPlayerMetadata?.image_xlarge_url
+                || currentPlayerMetadata?.image_large_url
+                || currentPlayerItem?.album?.images?.[0]?.url
+                || currentPlayerMetadata?.image_url
+                || coverUrl;
+            const currentVinylTitle = currentPlayerMetadata?.title || title || "LP";
+            const currentVinylArtist = currentPlayerMetadata?.artist_name || artist || "";
+            const currentVinylAlbum = currentPlayerMetadata?.album_title || currentVinylTitle;
+            const liveVinylTrack = {
+                uri: currentTrackUri || `${currentVinylTitle}\u0000${currentVinylArtist}`,
+                coverUrl: currentCoverUrl,
+                title: currentVinylTitle,
+                artist: currentVinylArtist,
+                album: currentVinylAlbum,
+                accent: currentTrackUri && currentTrackUri === trackAccentUri
+                    ? String(trackAccent || "").trim()
+                    : ""
+            };
+            return {
+                currentPlayerItem, currentPlayerMetadata, currentTrackUri,
+                currentArtistUri, currentAlbumUri, currentCoverUrl,
+                currentVinylTitle, currentVinylArtist, currentVinylAlbum,
+                liveVinylTrack
+            };
         };
+        const {
+            currentPlayerItem, currentPlayerMetadata, currentTrackUri,
+            currentArtistUri, currentAlbumUri, currentCoverUrl,
+            currentVinylTitle, currentVinylArtist, currentVinylAlbum,
+            liveVinylTrack
+        } = computeLiveVinylTrack();
 
         const albumActionCopy = {
             click: I18n.t("vinyl.click"),
@@ -2837,30 +2875,7 @@ const FullscreenOverlay = (() => {
 
         if (!isFullscreen) return null;
 
-        if (focusedLyricsActive) {
-            return react.createElement(react.Fragment, null,
-                react.createElement(VinylMode, {
-                track: liveVinylTrack,
-                albumRadius,
-                isClosing: lpModeClosing,
-                isPortraitLayout: isPortraitViewport,
-                presentationMode: normalizedPresentationMode,
-                controlsVisible: uiVisible,
-                onPresentationModeChange: handlePresentationModeChange,
-                isPlaying,
-                position,
-                duration,
-                interactionProps: albumInteractionProps,
-                activeLyric,
-                activeLyrics,
-                lyricsTrackUri: trackUri,
-                activeLineIndex: currentLyricIndex,
-                activeLyricsKaraoke,
-                karaokeSource,
-                lyricsSettingsRevision,
-                showStageControls: showControls,
-                showStageProgress: showProgress,
-                vinylSettings: {
+        const computeVinylSettings = () => ({
                     albumSize: CONFIG?.visual?.["fullscreen-vinyl-album-size"] ?? 100,
                     recordSize: CONFIG?.visual?.["fullscreen-vinyl-record-size"] ?? 100,
                     backgroundBlur: CONFIG?.visual?.["fullscreen-vinyl-background-blur"] ?? 0,
@@ -2905,7 +2920,31 @@ const FullscreenOverlay = (() => {
                     videoStageCulturalFontFamily: CONFIG?.visual?.["fullscreen-video-stage-cultural-font-family"] || CONFIG?.visual?.["cultural-annotations-vinyl-font-family"] || "Pretendard Variable",
                     videoStageLyricBackgroundColor: CONFIG?.visual?.["fullscreen-video-stage-lyric-background-color"] || "#000000",
                     videoStageLyricBackgroundOpacity: CONFIG?.visual?.["fullscreen-video-stage-lyric-background-opacity"] ?? 46
-                },
+        });
+
+        const renderFocusedLyricsView = () => react.createElement(react.Fragment, null,
+                react.createElement(VinylMode, {
+                track: liveVinylTrack,
+                albumRadius,
+                isClosing: lpModeClosing,
+                isPortraitLayout: isPortraitViewport,
+                presentationMode: normalizedPresentationMode,
+                controlsVisible: uiVisible,
+                onPresentationModeChange: handlePresentationModeChange,
+                isPlaying,
+                position,
+                duration,
+                interactionProps: albumInteractionProps,
+                activeLyric,
+                activeLyrics,
+                lyricsTrackUri: trackUri,
+                activeLineIndex: currentLyricIndex,
+                activeLyricsKaraoke,
+                karaokeSource,
+                lyricsSettingsRevision,
+                showStageControls: showControls,
+                showStageProgress: showProgress,
+                vinylSettings: computeVinylSettings(),
                 onPrevious: () => Spicetify.Player.back(),
                 onSeek: (nextPosition) => {
                     window.Utils?.clearSafePlayerProgressCorrection?.();
@@ -2922,7 +2961,10 @@ const FullscreenOverlay = (() => {
                     onNext: () => Spicetify.Player.next()
                 }),
                 renderResearchConsentDialog()
-            );
+        );
+
+        if (focusedLyricsActive) {
+            return renderFocusedLyricsView();
         }
 
         const CompactAlbumVinyl = VinylMode?.CompactAlbumVinyl;
@@ -2972,6 +3014,87 @@ const FullscreenOverlay = (() => {
         ].filter(Boolean).join(" ");
         const leftPlayerControlsClass = `${leftControlsClass} left-controls-player`;
         const leftProgressOnlyClass = `${leftControlsClass} left-controls-progress-only`;
+
+        // TMI FullView의 trackName/artistName IIFE에서 반복되던 표시 모드 해석 로직.
+        // 축소 레이아웃(TV/Portrait 위 오버레이)은 translated/romanized 두 모드만 처리하고,
+        // 전체 레이아웃은 original-translated/original-romanized/all 합성 모드까지 처리하던
+        // 동작 차이를 includeCompositeModes 플래그로 명시적으로 유지한다.
+        const resolveTmiMetadataName = (mode, original, trans, rom, includeCompositeModes) => {
+            if (mode === "translated") return trans || original;
+            if (mode === "romanized") return rom || original;
+            if (includeCompositeModes) {
+                if (mode === "original-translated") return (trans && trans !== original) ? `${original} (${trans})` : original;
+                if (mode === "original-romanized") return (rom && rom !== original) ? `${original} (${rom})` : original;
+                if (mode === "all") return (trans && trans !== original) ? `${original} (${trans})` : original;
+            }
+            return original;
+        };
+
+        // Normal-mode 좌측 패널의 제목/아티스트 렌더는 동일한 switch(mode) 구조로
+        // "원어/번역/발음" div들을 push한다. 제목과 아티스트는 className 접두사·key 접두사·
+        // 보조 줄 폰트 크기만 다르므로, 그 값들을 인자로 받아 동일 로직을 재사용한다.
+        // 반환 요소(div key/className/style/자식)는 두 원본과 바이트 단위로 동일하다.
+        const buildOverlayMetadataLines = ({
+            mode,
+            original,
+            translated,
+            romanized,
+            applyTrim,
+            keyPrefix,
+            mainClass,
+            translatedClass,
+            romanizedClass,
+            mainSize,
+            translatedSize,
+            romanizedSize,
+            includeRomanizedInAll,
+        }) => {
+            const elements = [];
+            const pushLine = (key, className, size, value) => {
+                elements.push(react.createElement("div", {
+                    key,
+                    className,
+                    style: { fontSize: `${size}px` }
+                }, applyTrim(value)));
+            };
+
+            switch (mode) {
+                case "translated":
+                    pushLine(`${keyPrefix}-main`, mainClass, mainSize, translated || original);
+                    break;
+
+                case "romanized":
+                    pushLine(`${keyPrefix}-main`, mainClass, mainSize, romanized || original);
+                    break;
+
+                case "original-translated":
+                    pushLine(`${keyPrefix}-original`, mainClass, mainSize, original);
+                    if (translated && translated !== original) {
+                        pushLine(`${keyPrefix}-translated`, translatedClass, translatedSize, translated);
+                    }
+                    break;
+
+                case "original-romanized":
+                    pushLine(`${keyPrefix}-original`, mainClass, mainSize, original);
+                    if (romanized && romanized !== original) {
+                        pushLine(`${keyPrefix}-romanized`, romanizedClass, romanizedSize, romanized);
+                    }
+                    break;
+
+                case "all":
+                default:
+                    pushLine(`${keyPrefix}-original`, mainClass, mainSize, original);
+                    if (translated && translated !== original) {
+                        pushLine(`${keyPrefix}-translated`, translatedClass, translatedSize, translated);
+                    }
+                    if (includeRomanizedInAll && romanized && romanized !== original && romanized !== translated) {
+                        pushLine(`${keyPrefix}-romanized`, romanizedClass, romanizedSize, romanized);
+                    }
+                    break;
+            }
+
+            return elements;
+        };
 
         const resolveTvMetadataLines = (mode, originalValue, translatedValue, romanizedValue) => {
             const values = {
@@ -3032,57 +3155,47 @@ const FullscreenOverlay = (() => {
             }, line.value));
         };
 
+        // TMI 로딩/전체 뷰 선택은 축소 오버레이와 전체 좌측 패널 두 곳에서 동일하다.
+        // 유일한 차이인 메타데이터 표시 모드 폭(includeCompositeModes)만 인자로 받는다.
+        // 컴포넌트가 아니라 createElement 서브트리를 반환하는 순수 렌더 헬퍼이므로
+        // 두 호출부에서 같은 위치에 그대로 끼워 넣어 요소 정체성을 바꾸지 않는다.
+        const renderTmiModeView = (includeCompositeModes) => (
+            tmiLoading && !tmiData ?
+                react.createElement(window.SongInfoTMI?.TMILoadingView || 'div', {
+                    onClose: closeTmiMode,
+                    tmiScale,
+                    webSearchFallback: tmiWebSearchFallback
+                }) :
+                react.createElement(window.SongInfoTMI?.TMIFullView || 'div', {
+                    info: tmiData,
+                    isGenerating: tmiLoading,
+                    webSearchFallback: tmiWebSearchFallback,
+                    onClose: closeTmiMode,
+                    tmiScale,
+                    trackName: (() => {
+                        const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
+                        const original = title || Spicetify.Player.data?.item?.metadata?.title;
+                        const trans = translatedMetadata?.translated?.title;
+                        const rom = translatedMetadata?.romanized?.title;
+                        return resolveTmiMetadataName(mode, original, trans, rom, includeCompositeModes);
+                    })(),
+                    artistName: (() => {
+                        const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
+                        const original = artist || Spicetify.Player.data?.item?.metadata?.artist_name;
+                        const trans = translatedMetadata?.translated?.artist;
+                        const rom = translatedMetadata?.romanized?.artist;
+                        return resolveTmiMetadataName(mode, original, trans, rom, includeCompositeModes);
+                    })(),
+                    coverUrl: coverUrl || Spicetify.Player.data?.item?.metadata?.image_url,
+                    onRegenerate: handleRegenerate
+                })
+        );
+
         // In TV mode, hide the left panel (album/info shown at bottom-left instead)
         const hideLeftPanelForTvMode = tvModeEnabled;
         const PresentationSwitcher = VinylMode?.PresentationSwitcher;
 
-        return react.createElement(react.Fragment, null,
-            renderResearchConsentDialog(),
-            !tvModeEnabled && !tmiMode && PresentationSwitcher && react.createElement(PresentationSwitcher, {
-                activeMode: normalizedPresentationMode,
-                visible: true,
-                onChange: handlePresentationModeChange
-            }),
-            // TMI Overlay for TV Mode & Portrait Mode (rendered above everything when active)
-            (tvModeEnabled || isPortraitFullscreen) && tmiMode && react.createElement("div", {
-                className: "fullscreen-tv-tmi-overlay"
-            },
-                tmiLoading && !tmiData ?
-                    react.createElement(window.SongInfoTMI?.TMILoadingView || 'div', {
-                        onClose: closeTmiMode,
-                        tmiScale: tmiScale,
-                        webSearchFallback: tmiWebSearchFallback
-                    }) :
-                    react.createElement(window.SongInfoTMI?.TMIFullView || 'div', {
-                        info: tmiData,
-                        isGenerating: tmiLoading,
-                        webSearchFallback: tmiWebSearchFallback,
-                        onClose: closeTmiMode,
-                        tmiScale: tmiScale,
-                        trackName: (() => {
-                            const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
-                            const original = title || Spicetify.Player.data?.item?.metadata?.title;
-                            const trans = translatedMetadata?.translated?.title;
-                            const rom = translatedMetadata?.romanized?.title;
-                            if (mode === "translated") return trans || original;
-                            if (mode === "romanized") return rom || original;
-                            return original;
-                        })(),
-                        artistName: (() => {
-                            const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
-                            const original = artist || Spicetify.Player.data?.item?.metadata?.artist_name;
-                            const trans = translatedMetadata?.translated?.artist;
-                            const rom = translatedMetadata?.romanized?.artist;
-                            if (mode === "translated") return trans || original;
-                            if (mode === "romanized") return rom || original;
-                            return original;
-                        })(),
-                        coverUrl: coverUrl || Spicetify.Player.data?.item?.metadata?.image_url,
-                        onRegenerate: handleRegenerate
-                    })
-            ),
-            // Bottom-left: TV Mode Song Info OR Context info
-            tvModeEnabled ? react.createElement(react.Fragment, null,
+        const renderTvModeSongInfo = () => react.createElement(react.Fragment, null,
                 react.createElement("div", {
                     className: "fullscreen-tv-song-info"
                 },
@@ -3228,31 +3341,9 @@ const FullscreenOverlay = (() => {
                         react.createElement("span", { className: "fullscreen-tv-time total" }, formatTime(duration))
                     )
                 )
-            ) : react.createElement("div", {
-                className: `fullscreen-bottom-left ${!uiVisible ? 'hidden' : ''}`
-            },
-                react.createElement(ContextInfo, { show: showContextInOverlay, showImage: showContextImage })
-            ),
-            // Top-right: Clock & Next track
-            react.createElement("div", {
-                className: `fullscreen-top-right ${!uiVisible ? 'hidden' : ''}`
-            },
-                react.createElement("div", {
-                    className: "fullscreen-clock-wrapper"
-                },
-                    react.createElement(Clock, {
-                        show: showClockInOverlay,
-                        showSeconds: clockShowSeconds,
-                        size: clockSizeInOverlay
-                    })
-                ),
-                react.createElement(NextTrackPreview, {
-                    show: showNextTrackInOverlay,
-                    secondsBeforeEnd: nextTrackSeconds
-                })
-            ),
-            // Portrait mode overlays (세로모드 전용 오버레이)
-            isPortraitFullscreen && react.createElement(react.Fragment, null,
+        );
+
+        const renderPortraitOverlays = () => react.createElement(react.Fragment, null,
                 // [상단 오버레이] 앨범아트 + 곡정보
                 (showAlbum || showInfo) && react.createElement("div", {
                     className: `portrait-overlay-top ${!uiVisible ? 'hidden' : ''} ${isLayoutReversed ? 'layout-reversed' : ''}`
@@ -3401,60 +3492,21 @@ const FullscreenOverlay = (() => {
                     showProgress && react.createElement(ProgressBar, { show: true }),
                     showControls && react.createElement(PlayerControls, {
                         show: true,
-                        showVolume: showVolume,
+                        showVolume,
                         buttonSize: controlButtonSize,
                         showBackground: controlsBackground
                     })
                 )
-            ),
-            // Left panel (Album, Info & Controls) OR TMI View - Hidden in TV Mode & Portrait Mode
-            !isPortraitFullscreen && isTwoColumn && !hideLeftPanel && !hideLeftPanelForTvMode && react.createElement("div", {
+        );
+
+        const renderLeftPanel = () =>
+            react.createElement("div", {
                 className: `lyrics-fullscreen-left-panel ${!uiVisible && showControlsInLeftPanel ? 'controls-hidden' : ''} ${tmiMode ? 'tmi-mode' : ''}`,
                 ref: setAlbumLyricsPanelRef
             },
                 // TMI Mode View
                 tmiMode ? (
-                    tmiLoading && !tmiData ?
-                        react.createElement(window.SongInfoTMI?.TMILoadingView || 'div', {
-                            onClose: closeTmiMode,
-                            tmiScale: tmiScale,
-                            webSearchFallback: tmiWebSearchFallback
-                        }) :
-                        react.createElement(window.SongInfoTMI?.TMIFullView || 'div', {
-                            info: tmiData,
-                            isGenerating: tmiLoading,
-                            webSearchFallback: tmiWebSearchFallback,
-                            onClose: closeTmiMode,
-                            tmiScale: tmiScale,
-                            trackName: (() => {
-                                const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
-                                const original = title || Spicetify.Player.data?.item?.metadata?.title;
-                                const trans = translatedMetadata?.translated?.title;
-                                const rom = translatedMetadata?.romanized?.title;
-
-                                if (mode === "translated") return trans || original;
-                                if (mode === "romanized") return rom || original;
-                                if (mode === "original-translated") return (trans && trans !== original) ? `${original} (${trans})` : original;
-                                if (mode === "original-romanized") return (rom && rom !== original) ? `${original} (${rom})` : original;
-                                if (mode === "all") return (trans && trans !== original) ? `${original} (${trans})` : original;
-                                return original;
-                            })(),
-                            artistName: (() => {
-                                const mode = CONFIG?.visual?.["translate-metadata-mode"] || "translated";
-                                const original = artist || Spicetify.Player.data?.item?.metadata?.artist_name;
-                                const trans = translatedMetadata?.translated?.artist;
-                                const rom = translatedMetadata?.romanized?.artist;
-
-                                if (mode === "translated") return trans || original;
-                                if (mode === "romanized") return rom || original;
-                                if (mode === "original-translated") return (trans && trans !== original) ? `${original} (${trans})` : original;
-                                if (mode === "original-romanized") return (rom && rom !== original) ? `${original} (${rom})` : original;
-                                if (mode === "all") return (trans && trans !== original) ? `${original} (${trans})` : original;
-                                return original;
-                            })(),
-                            coverUrl: coverUrl || Spicetify.Player.data?.item?.metadata?.image_url,
-                            onRegenerate: handleRegenerate
-                        })
+                    renderTmiModeView(true)
                 ) :
                     // Normal Mode
                     react.createElement("div", {
@@ -3493,88 +3545,25 @@ const FullscreenOverlay = (() => {
                                     const originalTitle = title || Spicetify.Player.data?.item?.metadata?.title;
                                     const translatedTitle = translatedMetadata?.translated?.title;
                                     const romanizedTitle = translatedMetadata?.romanized?.title;
-                                    const elements = [];
 
                                     // Apply trimTitle if enabled
                                     const applyTrim = (text) => trimTitleEnabled ? trimTitle(text) : text;
 
-                                    switch (mode) {
-                                        case "translated":
-                                            // 번역만 표시 (없으면 원어)
-                                            elements.push(react.createElement("div", {
-                                                key: "title-main",
-                                                className: "lyrics-fullscreen-title",
-                                                style: { fontSize: `${titleSize}px` }
-                                            }, applyTrim(translatedTitle || originalTitle)));
-                                            break;
-
-                                        case "romanized":
-                                            // 발음만 표시 (없으면 원어)
-                                            elements.push(react.createElement("div", {
-                                                key: "title-main",
-                                                className: "lyrics-fullscreen-title",
-                                                style: { fontSize: `${titleSize}px` }
-                                            }, applyTrim(romanizedTitle || originalTitle)));
-                                            break;
-
-                                        case "original-translated":
-                                            // 원어 + 번역
-                                            elements.push(react.createElement("div", {
-                                                key: "title-original",
-                                                className: "lyrics-fullscreen-title",
-                                                style: { fontSize: `${titleSize}px` }
-                                            }, applyTrim(originalTitle)));
-                                            if (translatedTitle && translatedTitle !== originalTitle) {
-                                                elements.push(react.createElement("div", {
-                                                    key: "title-translated",
-                                                    className: "lyrics-fullscreen-title-translated",
-                                                    style: { fontSize: `${Math.round(titleSize * 0.6)}px` }
-                                                }, applyTrim(translatedTitle)));
-                                            }
-                                            break;
-
-                                        case "original-romanized":
-                                            // 원어 + 발음
-                                            elements.push(react.createElement("div", {
-                                                key: "title-original",
-                                                className: "lyrics-fullscreen-title",
-                                                style: { fontSize: `${titleSize}px` }
-                                            }, applyTrim(originalTitle)));
-                                            if (romanizedTitle && romanizedTitle !== originalTitle) {
-                                                elements.push(react.createElement("div", {
-                                                    key: "title-romanized",
-                                                    className: "lyrics-fullscreen-title-romanized",
-                                                    style: { fontSize: `${Math.round(titleSize * 0.5)}px` }
-                                                }, applyTrim(romanizedTitle)));
-                                            }
-                                            break;
-
-                                        case "all":
-                                        default:
-                                            // 모두 표시 (원어 + 번역 + 발음)
-                                            elements.push(react.createElement("div", {
-                                                key: "title-original",
-                                                className: "lyrics-fullscreen-title",
-                                                style: { fontSize: `${titleSize}px` }
-                                            }, applyTrim(originalTitle)));
-                                            if (translatedTitle && translatedTitle !== originalTitle) {
-                                                elements.push(react.createElement("div", {
-                                                    key: "title-translated",
-                                                    className: "lyrics-fullscreen-title-translated",
-                                                    style: { fontSize: `${Math.round(titleSize * 0.6)}px` }
-                                                }, applyTrim(translatedTitle)));
-                                            }
-                                            if (romanizedTitle && romanizedTitle !== originalTitle && romanizedTitle !== translatedTitle) {
-                                                elements.push(react.createElement("div", {
-                                                    key: "title-romanized",
-                                                    className: "lyrics-fullscreen-title-romanized",
-                                                    style: { fontSize: `${Math.round(titleSize * 0.5)}px` }
-                                                }, applyTrim(romanizedTitle)));
-                                            }
-                                            break;
-                                    }
-
-                                    return elements;
+                                    return buildOverlayMetadataLines({
+                                        mode,
+                                        original: originalTitle,
+                                        translated: translatedTitle,
+                                        romanized: romanizedTitle,
+                                        applyTrim,
+                                        keyPrefix: "title",
+                                        mainClass: "lyrics-fullscreen-title",
+                                        translatedClass: "lyrics-fullscreen-title-translated",
+                                        romanizedClass: "lyrics-fullscreen-title-romanized",
+                                        mainSize: titleSize,
+                                        translatedSize: Math.round(titleSize * 0.6),
+                                        romanizedSize: Math.round(titleSize * 0.5),
+                                        includeRomanizedInAll: true,
+                                    });
                                 })()
                             ),
                             // Artist (based on display mode)
@@ -3584,76 +3573,25 @@ const FullscreenOverlay = (() => {
                                     const originalArtist = artist || Spicetify.Player.data?.item?.metadata?.artist_name;
                                     const translatedArtist = translatedMetadata?.translated?.artist;
                                     const romanizedArtist = translatedMetadata?.romanized?.artist;
-                                    const elements = [];
 
                                     // Apply trimTitle if enabled
                                     const applyTrim = (text) => trimTitleEnabled ? trimTitle(text) : text;
 
-                                    switch (mode) {
-                                        case "translated":
-                                            elements.push(react.createElement("div", {
-                                                key: "artist-main",
-                                                className: "lyrics-fullscreen-artist",
-                                                style: { fontSize: `${artistSize}px` }
-                                            }, applyTrim(translatedArtist || originalArtist)));
-                                            break;
-
-                                        case "romanized":
-                                            elements.push(react.createElement("div", {
-                                                key: "artist-main",
-                                                className: "lyrics-fullscreen-artist",
-                                                style: { fontSize: `${artistSize}px` }
-                                            }, applyTrim(romanizedArtist || originalArtist)));
-                                            break;
-
-                                        case "original-translated":
-                                            elements.push(react.createElement("div", {
-                                                key: "artist-original",
-                                                className: "lyrics-fullscreen-artist",
-                                                style: { fontSize: `${artistSize}px` }
-                                            }, applyTrim(originalArtist)));
-                                            if (translatedArtist && translatedArtist !== originalArtist) {
-                                                elements.push(react.createElement("div", {
-                                                    key: "artist-translated",
-                                                    className: "lyrics-fullscreen-artist-translated",
-                                                    style: { fontSize: `${Math.round(artistSize * 0.8)}px` }
-                                                }, applyTrim(translatedArtist)));
-                                            }
-                                            break;
-
-                                        case "original-romanized":
-                                            elements.push(react.createElement("div", {
-                                                key: "artist-original",
-                                                className: "lyrics-fullscreen-artist",
-                                                style: { fontSize: `${artistSize}px` }
-                                            }, applyTrim(originalArtist)));
-                                            if (romanizedArtist && romanizedArtist !== originalArtist) {
-                                                elements.push(react.createElement("div", {
-                                                    key: "artist-romanized",
-                                                    className: "lyrics-fullscreen-artist-romanized",
-                                                    style: { fontSize: `${Math.round(artistSize * 0.8)}px` }
-                                                }, applyTrim(romanizedArtist)));
-                                            }
-                                            break;
-
-                                        case "all":
-                                        default:
-                                            elements.push(react.createElement("div", {
-                                                key: "artist-original",
-                                                className: "lyrics-fullscreen-artist",
-                                                style: { fontSize: `${artistSize}px` }
-                                            }, applyTrim(originalArtist)));
-                                            if (translatedArtist && translatedArtist !== originalArtist) {
-                                                elements.push(react.createElement("div", {
-                                                    key: "artist-translated",
-                                                    className: "lyrics-fullscreen-artist-translated",
-                                                    style: { fontSize: `${Math.round(artistSize * 0.8)}px` }
-                                                }, applyTrim(translatedArtist)));
-                                            }
-                                            break;
-                                    }
-
-                                    return elements;
+                                    return buildOverlayMetadataLines({
+                                        mode,
+                                        original: originalArtist,
+                                        translated: translatedArtist,
+                                        romanized: romanizedArtist,
+                                        applyTrim,
+                                        keyPrefix: "artist",
+                                        mainClass: "lyrics-fullscreen-artist",
+                                        translatedClass: "lyrics-fullscreen-artist-translated",
+                                        romanizedClass: "lyrics-fullscreen-artist-romanized",
+                                        mainSize: artistSize,
+                                        translatedSize: Math.round(artistSize * 0.8),
+                                        romanizedSize: Math.round(artistSize * 0.8),
+                                        includeRomanizedInAll: false,
+                                    });
                                 })()
                             ),
                             // Album name (optional)
@@ -3690,7 +3628,55 @@ const FullscreenOverlay = (() => {
                             react.createElement(ProgressBar, { show: true })
                         )
                     )
+            )
+        ;
+
+        const renderTopRightOverlay = () =>
+            react.createElement("div", {
+                className: `fullscreen-top-right ${!uiVisible ? 'hidden' : ''}`
+            },
+                react.createElement("div", {
+                    className: "fullscreen-clock-wrapper"
+                },
+                    react.createElement(Clock, {
+                        show: showClockInOverlay,
+                        showSeconds: clockShowSeconds,
+                        size: clockSizeInOverlay
+                    })
+                ),
+                react.createElement(NextTrackPreview, {
+                    show: showNextTrackInOverlay,
+                    secondsBeforeEnd: nextTrackSeconds
+                })
+            )
+        ;
+
+        return react.createElement(react.Fragment, null,
+            renderResearchConsentDialog(),
+            !tvModeEnabled && !tmiMode && PresentationSwitcher && react.createElement(PresentationSwitcher, {
+                activeMode: normalizedPresentationMode,
+                visible: true,
+                onChange: handlePresentationModeChange
+            }),
+            // TMI Overlay for TV Mode & Portrait Mode (rendered above everything when active)
+            (tvModeEnabled || isPortraitFullscreen) && tmiMode && react.createElement("div", {
+                className: "fullscreen-tv-tmi-overlay"
+            },
+                renderTmiModeView(false)
             ),
+            // Bottom-left: TV Mode Song Info OR Context info
+            tvModeEnabled ? renderTvModeSongInfo()
+            : react.createElement("div", {
+                className: `fullscreen-bottom-left ${!uiVisible ? 'hidden' : ''}`
+            },
+                react.createElement(ContextInfo, { show: showContextInOverlay, showImage: showContextImage })
+            ),
+            // Top-right: Clock & Next track
+            renderTopRightOverlay(),
+            // Portrait mode overlays (세로모드 전용 오버레이)
+            isPortraitFullscreen && renderPortraitOverlays(),
+            // Left panel (Album, Info & Controls) OR TMI View - Hidden in TV Mode & Portrait Mode
+            !isPortraitFullscreen && isTwoColumn && !hideLeftPanel && !hideLeftPanelForTvMode && renderLeftPanel(),
             // Bottom: Player controls (alternative position) - landscape only
             !isPortraitFullscreen && showControlsInBottom && react.createElement("div", {
                 className: `fullscreen-bottom ${!uiVisible ? 'hidden' : ''}`
@@ -3698,7 +3684,7 @@ const FullscreenOverlay = (() => {
                 showProgress && react.createElement(ProgressBar, { show: true }),
                 react.createElement(PlayerControls, {
                     show: true,
-                    showVolume: showVolume,
+                    showVolume,
                     buttonSize: controlButtonSize,
                     showBackground: controlsBackground
                 })
@@ -3722,7 +3708,7 @@ const FullscreenOverlay = (() => {
             // Queue panel (right side hover)
             react.createElement(QueuePanel, {
                 show: showQueueInOverlay,
-                isFullscreen: isFullscreen
+                isFullscreen
             })
         );
     };

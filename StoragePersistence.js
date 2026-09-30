@@ -162,34 +162,37 @@
       request.onerror = () => reject(request.error || new Error("Failed to open settings backup."));
     });
 
-  const readIndexedRecord = async () => {
+  const withDatabase = async (run) => {
     const database = await openDatabase();
     try {
-      return await new Promise((resolve, reject) => {
-        const transaction = database.transaction(STORE_NAME, "readonly");
-        const request = transaction.objectStore(STORE_NAME).get(getNamespace());
-        request.onsuccess = () => resolve(normalizeRecord(request.result));
-        request.onerror = () => reject(request.error || new Error("Failed to read settings backup."));
-      });
+      return await run(database);
     } finally {
       database.close();
     }
   };
 
-  const writeIndexedRecord = async (record) => {
-    const database = await openDatabase();
-    try {
-      await new Promise((resolve, reject) => {
-        const transaction = database.transaction(STORE_NAME, "readwrite");
-        transaction.objectStore(STORE_NAME).put(record);
-        transaction.oncomplete = () => resolve();
-        transaction.onerror = () => reject(transaction.error || new Error("Failed to save settings backup."));
-        transaction.onabort = () => reject(transaction.error || new Error("Settings backup was aborted."));
-      });
-    } finally {
-      database.close();
-    }
-  };
+  const readIndexedRecord = async () =>
+    withDatabase(
+      (database) =>
+        new Promise((resolve, reject) => {
+          const transaction = database.transaction(STORE_NAME, "readonly");
+          const request = transaction.objectStore(STORE_NAME).get(getNamespace());
+          request.onsuccess = () => resolve(normalizeRecord(request.result));
+          request.onerror = () => reject(request.error || new Error("Failed to read settings backup."));
+        })
+    );
+
+  const writeIndexedRecord = async (record) =>
+    withDatabase(
+      (database) =>
+        new Promise((resolve, reject) => {
+          const transaction = database.transaction(STORE_NAME, "readwrite");
+          transaction.objectStore(STORE_NAME).put(record);
+          transaction.oncomplete = () => resolve();
+          transaction.onerror = () => reject(transaction.error || new Error("Failed to save settings backup."));
+          transaction.onabort = () => reject(transaction.error || new Error("Settings backup was aborted."));
+        })
+    );
 
   const queueIndexedWrite = () => {
     if (!moduleState.record) {

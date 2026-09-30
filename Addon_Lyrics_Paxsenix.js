@@ -41,7 +41,7 @@
     const DISPLAY_UPPERCASE_PATTERN = /[A-Z]/u;
     const DISPLAY_LOWERCASE_PATTERN = /[a-z]/u;
     const DISPLAY_NUMBER_PATTERN = /\p{Number}/u;
-    const DISPLAY_PUNCTUATION_PATTERN = /[.,'’!?;:()\-]/u;
+    const DISPLAY_PUNCTUATION_PATTERN = /[.,'’!?;:()-]/u;
 
     const SPEAKER_PALETTE = [
         { color: '#a8ccff', fallback: 'MALE 1' },
@@ -607,7 +607,7 @@
 
         const sourceLineKey = String(line.paxsenixSourceLineKey || line.paxsenixLineKey || 'line');
         const fragmentCount = plan.length - 1;
-        const fragments = plan.slice(0, -1).map((startIndex, fragmentIndex) => {
+        const buildJapaneseLineFragment = (startIndex, fragmentIndex) => {
             const endIndex = plan[fragmentIndex + 1];
             const fragmentSyllables = syllables.slice(startIndex, endIndex);
             const first = fragmentSyllables[0];
@@ -625,8 +625,10 @@
                 paxsenixSegmentIndex: fragmentIndex,
                 paxsenixSegmentCount: fragmentCount
             };
-        });
+        };
+        const fragments = plan.slice(0, -1).map(buildJapaneseLineFragment);
 
+        const isJapaneseLineSplitSafe = () => {
         const flattenedSyllables = fragments.flatMap(fragment => fragment.syllables);
         const preservesSyllables = flattenedSyllables.length === syllables.length
             && flattenedSyllables.every((syllable, index) => syllable === syllables[index]);
@@ -640,7 +642,9 @@
                 && fragments[index - 1].endTime <= fragment.startTime
             )
         ));
-        return preservesSyllables && preservesText && hasSafeFragmentTiming
+        return preservesSyllables && preservesText && hasSafeFragmentTiming;
+        };
+        return isJapaneseLineSplitSafe()
             ? fragments
             : [line];
     }
@@ -774,36 +778,6 @@
         return isContributorNameList(normalized);
     }
 
-    function isLikelyLeadingHeaderName(text) {
-        const normalized = String(text || '').normalize('NFKC').trim();
-        if (!normalized || normalized.length > 160 || /[:：]/u.test(normalized)) return false;
-        return isContributorNameList(normalized, true);
-    }
-
-    function identitiesOverlap(expected, actual) {
-        if (!expected || !actual) return false;
-        if (expected === actual) return true;
-        return Math.min(expected.length, actual.length) >= 4
-            && (expected.includes(actual) || actual.includes(expected));
-    }
-
-    function isDashSeparatedHeaderLikeText(text) {
-        const normalized = String(text || '').normalize('NFKC').trim();
-        if (!normalized || normalized.length > 240) return false;
-
-        for (const separator of normalized.matchAll(/[-‐‑‒–—]/gu)) {
-            const title = normalized.slice(0, separator.index).trim();
-            const annotatedArtists = normalized.slice(separator.index + separator[0].length).trim();
-            if (!/[\p{L}\p{N}]/u.test(title) || !/[\p{L}\p{N}]/u.test(annotatedArtists)) continue;
-
-            const artists = annotatedArtists
-                .replace(/\([^)]*\)|（[^）]*）|\[[^\]]*\]|【[^】]*】/gu, ' ')
-                .trim();
-            if (artists && isContributorNameList(artists)) return true;
-        }
-        return false;
-    }
-
     function getEarlyCreditAnchorIndex(allLines, _info, referenceLines) {
         const lookahead = Math.min(allLines.length, 10);
         for (let index = 0; index < lookahead; index += 1) {
@@ -926,7 +900,7 @@
         const syncType = String(payload?.syncType || '').toLowerCase();
         const hasSyllableSync = syncType === 'syllable';
 
-        const parsedLines = rawLines.map((line, index) => {
+        const parseStructuredLine = (line, index) => {
             const startTime = rawStarts[index];
             const nextStart = rawStarts[index + 1];
             let endTime = toMilliseconds(line?.endtime)
@@ -985,7 +959,8 @@
                 }
             }
             return parsed;
-        }).filter(Boolean).sort((left, right) => left.startTime - right.startTime);
+        };
+        const parsedLines = rawLines.map(parseStructuredLine).filter(Boolean).sort((left, right) => left.startTime - right.startTime);
 
         if (!parsedLines.length) return null;
         const displayLines = hasSyllableSync && isJapaneseLyricsPayload(payload)

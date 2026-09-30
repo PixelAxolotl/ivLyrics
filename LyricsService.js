@@ -60,9 +60,7 @@
             };
         };
 
-        const buildTimedSegments = (items, options = {}) => {
-            if (!Array.isArray(items) || items.length === 0) return [];
-
+        const resolveTimingAccessors = (options) => {
             const getText = typeof options.getText === "function"
                 ? options.getText
                 : (item) => item?.text ?? item?.char ?? "";
@@ -72,6 +70,13 @@
             const getEndTime = typeof options.getEndTime === "function"
                 ? options.getEndTime
                 : (item) => item?.endTime;
+            return { getText, getStartTime, getEndTime };
+        };
+
+        const buildTimedSegments = (items, options = {}) => {
+            if (!Array.isArray(items) || items.length === 0) return [];
+
+            const { getText, getStartTime, getEndTime } = resolveTimingAccessors(options);
             const segments = [];
             let wordEntries = [];
             let spaceEntries = [];
@@ -118,15 +123,7 @@
         const applyLatinWordFillTiming = (items, options = {}) => {
             if (!Array.isArray(items) || items.length === 0) return [];
 
-            const getText = typeof options.getText === "function"
-                ? options.getText
-                : (item) => item?.text ?? item?.char ?? "";
-            const getStartTime = typeof options.getStartTime === "function"
-                ? options.getStartTime
-                : (item) => item?.startTime;
-            const getEndTime = typeof options.getEndTime === "function"
-                ? options.getEndTime
-                : (item) => item?.endTime;
+            const { getText, getStartTime, getEndTime } = resolveTimingAccessors(options);
             const result = [...items];
             let wordEntries = [];
 
@@ -734,7 +731,7 @@
                 /^\s*\[\s*(verse|chorus|bridge|intro|outro|pre-?chorus|hook|refrain)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
                 /^\s*\[\s*(절|후렴|브릿지|인트로|아웃트로|간주|부분)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
                 /^\s*\[\s*(ヴァース|コーラス|ブリッジ|イントロ|アウトロ)\s*(\d+)?\s*(:|：)?\s*.*\]\s*$/i,
-                /^\s*\[\s*(verse|chorus|bridge|intro|outro)\s*(\d+)?\s*(:|：)?\s*[^,\[\]]*\]\s*$/i
+                /^\s*\[\s*(verse|chorus|bridge|intro|outro)\s*(\d+)?\s*(:|：)?\s*[^,[\]]*\]\s*$/i
             ];
 
             return sectionPatterns.some(pattern => pattern.test(normalizedText));
@@ -1182,7 +1179,7 @@
             // above letters several languages share.
             const countOf = (match) => (match ? match.length : 0);
 
-            const diacriticCandidates = [
+            const computeDiacriticFallbackCandidates = () => [
                 ["vi", countOf(vietnameseUniqueMatch) * 3 + countOf(vietnameseMatch)],
                 ["cs", countOf(czechUniqueMatch) * 3 + countOf(czechMatch)],
                 ["tr", countOf(turkishUniqueMatch) * 3 + countOf(turkishMatch)],
@@ -1194,6 +1191,7 @@
                 ["es", countOf(spanishMatch)]
             ].sort((left, right) => right[1] - left[1]);
 
+            const diacriticCandidates = computeDiacriticFallbackCandidates();
             const [diacriticLanguage, diacriticScore] = diacriticCandidates[0];
             if (diacriticScore >= 4) {
                 this._cacheLanguageResult(cacheKey, diacriticLanguage);
@@ -1427,6 +1425,56 @@
 
     // IndexedDB 기반 로컬 캐시 시스템
     // ============================================
+    const awaitIdbRequest = (request) => new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+
+    const awaitIdbTransaction = (tx) => new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+    });
+
+    // Deletes a track's cached translation entries by walking the
+    // 'translations' object store cursor. Shared verbatim by
+    // clearTranslationForTrack (resolves true) and clearTrack (resolves
+    // undefined); resolveValue keeps each caller's original resolution.
+    const deleteTrackCacheTranslations = (db, trackId, trackKeyRange, resolveValue) =>
+        new Promise((resolve, reject) => {
+            const transTx = db.transaction('translations', 'readwrite');
+            const transStore = transTx.objectStore('translations');
+            const transRequest = transStore.openCursor(trackKeyRange || undefined);
+
+            transRequest.onsuccess = (event) => {
+                const cursor = event.target.result;
+                if (cursor) {
+                    if (trackKeyRange || cursor.value.trackId === trackId) cursor.delete();
+                    cursor.continue();
+                }
+            };
+
+            transTx.oncomplete = () => resolve(resolveValue);
+            transTx.onerror = () => reject(transTx.error);
+        });
+
+    // Reads a `${trackId}:${lang}`-keyed entry from a readonly cache store and
+    // returns its data when present and unexpired, otherwise null. Shared by
+    // getMetadata and getTMI (store name and expiry type differ); each caller
+    // keeps its own try/catch so its error label is unchanged.
+    const readTrackLangCacheData = async (cache, db, storeName, expiryType, trackId, lang) => {
+        const tx = db.transaction(storeName, 'readonly');
+        const store = tx.objectStore(storeName);
+        const cacheKey = `${trackId}:${lang}`;
+
+        const result = await awaitIdbRequest(store.get(cacheKey));
+
+        if (result && !cache._isExpired(result.cachedAt, expiryType)) {
+            return result.data;
+        }
+
+        return null;
+    };
+
     const LyricsCache = {
         DB_NAME: 'ivLyricsCache',
         DB_VERSION: 7,
@@ -1620,11 +1668,7 @@
                 const store = tx.objectStore('lyrics');
                 const cacheKey = this._getLyricsKey(trackId, provider);
 
-                const result = await new Promise((resolve, reject) => {
-                    const request = store.get(cacheKey);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
+                const result = await awaitIdbRequest(store.get(cacheKey));
 
                 if (result && !this._isExpired(result.cachedAt, 'lyrics')) {
                     return redactLyricsCacheDataForPersistence(result.data);
@@ -1652,10 +1696,7 @@
                     cachedAt: Date.now()
                 }));
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
+                await awaitIdbTransaction(tx);
 
                 this._scheduleSizeEnforcement();
                 return true;
@@ -1684,11 +1725,7 @@
                 const store = tx.objectStore('translations');
                 const cacheKey = this._getTranslationKey(trackId, lang, isPhonetic, provider, sourceHash);
 
-                const result = await new Promise((resolve, reject) => {
-                    const request = store.get(cacheKey);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
+                const result = await awaitIdbRequest(store.get(cacheKey));
 
                 const type = isPhonetic ? 'phonetic' : 'translation';
                 if (result && !this._isExpired(result.cachedAt, type)) {
@@ -1720,10 +1757,7 @@
                     cachedAt: Date.now()
                 }));
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
+                await awaitIdbTransaction(tx);
 
                 this._scheduleSizeEnforcement();
                 return true;
@@ -1749,11 +1783,7 @@
                     provider,
                     sourceHash
                 );
-                const result = await new Promise((resolve, reject) => {
-                    const request = store.get(cacheKey);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
+                const result = await awaitIdbRequest(store.get(cacheKey));
 
                 if (result && !this._isExpired(result.cachedAt, 'cultural')) {
                     return result.data;
@@ -1789,10 +1819,7 @@
                     cachedAt: Date.now()
                 }));
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
+                await awaitIdbTransaction(tx);
                 this._scheduleSizeEnforcement();
                 return true;
             } catch (error) {
@@ -1840,21 +1867,7 @@
         async getMetadata(trackId, lang) {
             try {
                 const db = await this._openDB();
-                const tx = db.transaction('metadata', 'readonly');
-                const store = tx.objectStore('metadata');
-                const cacheKey = `${trackId}:${lang}`;
-
-                const result = await new Promise((resolve, reject) => {
-                    const request = store.get(cacheKey);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
-
-                if (result && !this._isExpired(result.cachedAt, 'metadata')) {
-                    return result.data;
-                }
-
-                return null;
+                return await readTrackLangCacheData(this, db, 'metadata', 'metadata', trackId, lang);
             } catch (error) {
                 console.error('[LyricsCache] getMetadata error:', error);
                 return null;
@@ -1876,10 +1889,7 @@
                     cachedAt: Date.now()
                 }));
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
+                await awaitIdbTransaction(tx);
 
                 this._scheduleSizeEnforcement();
                 return true;
@@ -1895,11 +1905,7 @@
                 const tx = db.transaction('youtube', 'readonly');
                 const store = tx.objectStore('youtube');
 
-                const result = await new Promise((resolve, reject) => {
-                    const request = store.get(trackId);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
+                const result = await awaitIdbRequest(store.get(trackId));
 
                 if (result && !this._isExpired(result.cachedAt, 'youtube')) {
                     return result.data;
@@ -1924,10 +1930,7 @@
                     cachedAt: Date.now()
                 }));
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
+                await awaitIdbTransaction(tx);
 
                 this._scheduleSizeEnforcement();
                 return true;
@@ -1948,11 +1951,7 @@
                 const tx = db.transaction('sync', 'readonly');
                 const store = tx.objectStore('sync');
 
-                const result = await new Promise((resolve, reject) => {
-                    const request = store.get(trackId);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
+                const result = await awaitIdbRequest(store.get(trackId));
 
                 if (result && !this._isExpired(result.cachedAt, 'sync')) {
                     return result.data;
@@ -1982,10 +1981,7 @@
                     cachedAt: Date.now()
                 }));
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
+                await awaitIdbTransaction(tx);
 
                 this._scheduleSizeEnforcement();
                 return true;
@@ -2008,10 +2004,7 @@
 
                 store.delete(trackId);
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
+                await awaitIdbTransaction(tx);
 
                 return true;
             } catch (error) {
@@ -2028,21 +2021,7 @@
                     return null;
                 }
 
-                const tx = db.transaction('tmi', 'readonly');
-                const store = tx.objectStore('tmi');
-                const cacheKey = `${trackId}:${lang}`;
-
-                const result = await new Promise((resolve, reject) => {
-                    const request = store.get(cacheKey);
-                    request.onsuccess = () => resolve(request.result);
-                    request.onerror = () => reject(request.error);
-                });
-
-                if (result && !this._isExpired(result.cachedAt, 'tmi')) {
-                    return result.data;
-                }
-
-                return null;
+                return await readTrackLangCacheData(this, db, 'tmi', 'tmi', trackId, lang);
             } catch (error) {
                 console.error('[LyricsCache] getTMI error:', error);
                 return null;
@@ -2069,10 +2048,7 @@
                     cachedAt: Date.now()
                 }));
 
-                await new Promise((resolve, reject) => {
-                    tx.oncomplete = () => resolve();
-                    tx.onerror = () => reject(tx.error);
-                });
+                await awaitIdbTransaction(tx);
 
                 this._scheduleSizeEnforcement();
                 return true;
@@ -2131,24 +2107,7 @@
                 const db = await this._openDB();
                 const trackKeyRange = this._getTrackCacheKeyRange(trackId);
 
-                return new Promise((resolve, reject) => {
-                    const transTx = db.transaction('translations', 'readwrite');
-                    const transStore = transTx.objectStore('translations');
-                    const transRequest = transStore.openCursor(trackKeyRange || undefined);
-
-                    transRequest.onsuccess = (event) => {
-                        const cursor = event.target.result;
-                        if (cursor) {
-                            if (trackKeyRange || cursor.value.trackId === trackId) cursor.delete();
-                            cursor.continue();
-                        }
-                    };
-
-                    transTx.oncomplete = () => {
-                        resolve(true);
-                    };
-                    transTx.onerror = () => reject(transTx.error);
-                });
+                return deleteTrackCacheTranslations(db, trackId, trackKeyRange, true);
             } catch (error) {
                 console.error('[LyricsCache] clearTranslationForTrack error:', error);
                 return false;
@@ -2179,20 +2138,7 @@
                 }));
 
                 // 번역 삭제
-                deletePromises.push(new Promise((resolve, reject) => {
-                    const transTx = db.transaction('translations', 'readwrite');
-                    const transStore = transTx.objectStore('translations');
-                    const transRequest = transStore.openCursor(trackKeyRange || undefined);
-                    transRequest.onsuccess = (event) => {
-                        const cursor = event.target.result;
-                        if (cursor) {
-                            if (trackKeyRange || cursor.value.trackId === trackId) cursor.delete();
-                            cursor.continue();
-                        }
-                    };
-                    transTx.oncomplete = () => resolve();
-                    transTx.onerror = () => reject(transTx.error);
-                }));
+                deletePromises.push(deleteTrackCacheTranslations(db, trackId, trackKeyRange));
 
                 // YouTube 삭제
                 deletePromises.push(new Promise((resolve, reject) => {
@@ -3772,7 +3718,7 @@
                     return await _inflightRequests.get(inflightKey);
                 }
 
-                fetchPromise = (async () => {
+                const runSyncDataFetch = async () => {
                     const url = new URL(`${API_BASE}/lyrics/sync-data`);
                     const reportsMetadata = appendSyncDataQueryParams(url, identity, metadata, queryProvider);
                     let requestUrl = url.toString();
@@ -3868,7 +3814,9 @@
                         return syncData;
                     }
                     return null;
-                })();
+                };
+
+                fetchPromise = runSyncDataFetch();
 
                 _inflightRequests.set(inflightKey, fetchPromise);
                 const result = await fetchPromise;
@@ -5012,96 +4960,103 @@
                 return null;
             }
 
-            const syncBody = syncData.syncData;
-            const syncLines = expandSyncDataCompactLines(syncBody.lines);
-            const syncSource = syncBody.source || syncData.source || null;
-            const hasNormalizedSourceLineShape = Array.isArray(syncSource?.lineCharCounts)
-                && syncSource.lineCharCounts.length > 0;
-            const shouldNormalizeParentheticalLines =
-                Number(syncBody.version ?? syncData.version ?? 1) >= 2
-                || hasNormalizedSourceLineShape;
-            const baseLyricsLines = getSyncDataBaseLyricsLines(lyrics, shouldNormalizeParentheticalLines);
-            const baseLyricsTimingRows = getSyncDataBaseLyricsTimingRows(lyrics);
-            const baseLyricsText = baseLyricsLines.join('\n');
-            let normalizedSyncLines = syncLines;
-            let sourceLinePrefix = 0;
-            let hasExactSourceLineShape = false;
-            const sourceLineCharCounts = hasNormalizedSourceLineShape ? syncSource.lineCharCounts : null;
-            if (sourceLineCharCounts) {
-                const baseLineCharCounts = getSyncDataLineCharCounts(baseLyricsLines);
-                hasExactSourceLineShape = hasExactSyncDataLineShape(sourceLineCharCounts, baseLineCharCounts);
-                sourceLinePrefix = findSyncDataLineShapePrefix(sourceLineCharCounts, baseLineCharCounts);
-                if (sourceLinePrefix < 0) {
-                    window.__ivLyricsDebugLog?.('[SyncDataService] Sync-data source line shape mismatch; skipping karaoke render', {
-                        expectedLineCount: sourceLineCharCounts.length,
-                        actualLineCount: baseLineCharCounts.length,
-                        expectedPreview: sourceLineCharCounts.slice(0, 12),
-                        actualPreview: baseLineCharCounts.slice(0, 12),
-                        provider: syncData.provider,
-                        sourceProvider: syncSource?.provider,
-                        lrclibId: syncSource?.lrclibId
-                    });
-                    return null;
-                }
-                if (sourceLinePrefix > 0) {
-                    const sourceCharOffset = getSyncDataLeadingCharOffset(sourceLineCharCounts, sourceLinePrefix);
-                    normalizedSyncLines = shiftSyncDataLineIndexes(syncLines, sourceCharOffset);
-                    window.__ivLyricsDebugLog?.('[SyncDataService] Trimmed leading sync-data source lines', {
-                        prefixLineCount: sourceLinePrefix,
-                        sourceCharOffset,
-                        provider: syncData.provider,
-                        sourceProvider: syncSource?.provider,
-                        lrclibId: syncSource?.lrclibId
-                    });
-                }
-            }
-            if (sourceLinePrefix === 0 && syncSource?.lyricsFingerprint) {
-                const baseLyricsFingerprint = getSyncDataLyricsFingerprint(baseLyricsText);
-                if (syncSource.lyricsFingerprint !== baseLyricsFingerprint) {
-                    const currentLrclibId = options?.currentLrclibId
-                        ?? options?.result?.lrclibId
-                        ?? null;
-                    const canApplyLrclibFingerprintFallback = SyncDataSourceCompatibility
-                        .canApplyLrclibFingerprintFallback({
-                            syncSource,
-                            currentProvider: options?.result?.provider ?? options?.provider,
-                            currentLrclibId,
-                            hasExactLineShape: hasExactSourceLineShape
-                        });
-                    if (canApplyLrclibFingerprintFallback) {
-                        window.__ivLyricsDebugLog?.('[SyncDataService] LRCLIB lyrics fingerprint changed with the same source ID and exact line shape; applying sync-data compatibility fallback', {
-                            expected: syncSource.lyricsFingerprint,
-                            actual: baseLyricsFingerprint,
-                            provider: syncData.provider,
-                            sourceProvider: syncSource?.provider,
-                            lrclibId: syncSource?.lrclibId
-                        });
-                    } else {
-                        window.__ivLyricsDebugLog?.('[SyncDataService] Sync-data source fingerprint mismatch; skipping karaoke render', {
-                            expected: syncSource.lyricsFingerprint,
-                            actual: baseLyricsFingerprint,
+            const resolveNormalizedSyncLines = () => {
+                const syncBody = syncData.syncData;
+                const syncLines = expandSyncDataCompactLines(syncBody.lines);
+                const syncSource = syncBody.source || syncData.source || null;
+                const hasNormalizedSourceLineShape = Array.isArray(syncSource?.lineCharCounts)
+                    && syncSource.lineCharCounts.length > 0;
+                const shouldNormalizeParentheticalLines =
+                    Number(syncBody.version ?? syncData.version ?? 1) >= 2
+                    || hasNormalizedSourceLineShape;
+                const baseLyricsLines = getSyncDataBaseLyricsLines(lyrics, shouldNormalizeParentheticalLines);
+                const baseLyricsTimingRows = getSyncDataBaseLyricsTimingRows(lyrics);
+                const baseLyricsText = baseLyricsLines.join('\n');
+                let normalizedSyncLines = syncLines;
+                let sourceLinePrefix = 0;
+                let hasExactSourceLineShape = false;
+                const sourceLineCharCounts = hasNormalizedSourceLineShape ? syncSource.lineCharCounts : null;
+                if (sourceLineCharCounts) {
+                    const baseLineCharCounts = getSyncDataLineCharCounts(baseLyricsLines);
+                    hasExactSourceLineShape = hasExactSyncDataLineShape(sourceLineCharCounts, baseLineCharCounts);
+                    sourceLinePrefix = findSyncDataLineShapePrefix(sourceLineCharCounts, baseLineCharCounts);
+                    if (sourceLinePrefix < 0) {
+                        window.__ivLyricsDebugLog?.('[SyncDataService] Sync-data source line shape mismatch; skipping karaoke render', {
+                            expectedLineCount: sourceLineCharCounts.length,
+                            actualLineCount: baseLineCharCounts.length,
+                            expectedPreview: sourceLineCharCounts.slice(0, 12),
+                            actualPreview: baseLineCharCounts.slice(0, 12),
                             provider: syncData.provider,
                             sourceProvider: syncSource?.provider,
                             lrclibId: syncSource?.lrclibId
                         });
                         return null;
                     }
+                    if (sourceLinePrefix > 0) {
+                        const sourceCharOffset = getSyncDataLeadingCharOffset(sourceLineCharCounts, sourceLinePrefix);
+                        normalizedSyncLines = shiftSyncDataLineIndexes(syncLines, sourceCharOffset);
+                        window.__ivLyricsDebugLog?.('[SyncDataService] Trimmed leading sync-data source lines', {
+                            prefixLineCount: sourceLinePrefix,
+                            sourceCharOffset,
+                            provider: syncData.provider,
+                            sourceProvider: syncSource?.provider,
+                            lrclibId: syncSource?.lrclibId
+                        });
+                    }
                 }
-            }
-            const durationAdjustment = getSyncDataDurationOffsetMs(syncData, syncBody, options);
-            if (durationAdjustment.offsetMs) {
-                normalizedSyncLines = applySyncDataDurationOffsetToLines(normalizedSyncLines, durationAdjustment.offsetMs);
-                window.__ivLyricsDebugLog?.('[SyncDataService] Applied duration mismatch offset to sync-data', {
-                    provider: syncData.provider,
-                    isrc: syncData.isrc || null,
-                    registeredDurationMs: durationAdjustment.registeredDurationMs,
-                    currentDurationMs: durationAdjustment.currentDurationMs,
-                    diffMs: durationAdjustment.diffMs,
-                    frontOffsetMs: durationAdjustment.offsetMs,
-                    rearRemainderMs: durationAdjustment.diffMs - durationAdjustment.offsetMs,
-                    frontRatio: SYNC_DATA_DURATION_FRONT_OFFSET_RATIO
-                });
-            }
+                if (sourceLinePrefix === 0 && syncSource?.lyricsFingerprint) {
+                    const baseLyricsFingerprint = getSyncDataLyricsFingerprint(baseLyricsText);
+                    if (syncSource.lyricsFingerprint !== baseLyricsFingerprint) {
+                        const currentLrclibId = options?.currentLrclibId
+                            ?? options?.result?.lrclibId
+                            ?? null;
+                        const canApplyLrclibFingerprintFallback = SyncDataSourceCompatibility
+                            .canApplyLrclibFingerprintFallback({
+                                syncSource,
+                                currentProvider: options?.result?.provider ?? options?.provider,
+                                currentLrclibId,
+                                hasExactLineShape: hasExactSourceLineShape
+                            });
+                        if (canApplyLrclibFingerprintFallback) {
+                            window.__ivLyricsDebugLog?.('[SyncDataService] LRCLIB lyrics fingerprint changed with the same source ID and exact line shape; applying sync-data compatibility fallback', {
+                                expected: syncSource.lyricsFingerprint,
+                                actual: baseLyricsFingerprint,
+                                provider: syncData.provider,
+                                sourceProvider: syncSource?.provider,
+                                lrclibId: syncSource?.lrclibId
+                            });
+                        } else {
+                            window.__ivLyricsDebugLog?.('[SyncDataService] Sync-data source fingerprint mismatch; skipping karaoke render', {
+                                expected: syncSource.lyricsFingerprint,
+                                actual: baseLyricsFingerprint,
+                                provider: syncData.provider,
+                                sourceProvider: syncSource?.provider,
+                                lrclibId: syncSource?.lrclibId
+                            });
+                            return null;
+                        }
+                    }
+                }
+                const durationAdjustment = getSyncDataDurationOffsetMs(syncData, syncBody, options);
+                if (durationAdjustment.offsetMs) {
+                    normalizedSyncLines = applySyncDataDurationOffsetToLines(normalizedSyncLines, durationAdjustment.offsetMs);
+                    window.__ivLyricsDebugLog?.('[SyncDataService] Applied duration mismatch offset to sync-data', {
+                        provider: syncData.provider,
+                        isrc: syncData.isrc || null,
+                        registeredDurationMs: durationAdjustment.registeredDurationMs,
+                        currentDurationMs: durationAdjustment.currentDurationMs,
+                        diffMs: durationAdjustment.diffMs,
+                        frontOffsetMs: durationAdjustment.offsetMs,
+                        rearRemainderMs: durationAdjustment.diffMs - durationAdjustment.offsetMs,
+                        frontRatio: SYNC_DATA_DURATION_FRONT_OFFSET_RATIO
+                    });
+                }
+                return { syncSource, baseLyricsLines, baseLyricsTimingRows, normalizedSyncLines };
+            };
+            const syncLineNormalization = resolveNormalizedSyncLines();
+            if (!syncLineNormalization) return null;
+            const { syncSource, baseLyricsLines, baseLyricsTimingRows } = syncLineNormalization;
+            let normalizedSyncLines = syncLineNormalization.normalizedSyncLines;
 
             // 전체 가사 텍스트를 하나로 합침 (줄바꿈 없이 - SyncDataCreator와 동일하게)
             // SyncDataCreator에서는 각 줄의 글자 수만 계산하고 줄바꿈은 포함하지 않음
@@ -5181,129 +5136,133 @@
                 }
                 return grouped;
             };
-            const rawLineCharTimes = normalizedSyncLines.map(line => (
-                line.chars.map(getSyncDataMilliseconds)
-            ));
-            let baseCharOffset = 0;
-            const baseLineCharSpans = baseLyricsLines.map((line, index) => {
-                const start = baseCharOffset;
-                const charCount = Array.from(line).length;
-                baseCharOffset += charCount;
-                return { index, start, end: baseCharOffset - 1 };
-            });
-            const providerLineBounds = normalizedSyncLines.map((line) => {
-                const rangeStart = Number(line?.start);
-                const rangeEnd = Number(line?.end);
-                const firstSpan = baseLineCharSpans.find(span => (
-                    Number.isFinite(rangeStart) && rangeStart >= span.start && rangeStart <= span.end
+            const computeLineTimingPlan = () => {
+                const rawLineCharTimes = normalizedSyncLines.map(line => (
+                    line.chars.map(getSyncDataMilliseconds)
                 ));
-                const lastSpan = [...baseLineCharSpans].reverse().find(span => (
-                    Number.isFinite(rangeEnd) && rangeEnd >= span.start && rangeEnd <= span.end
-                )) || firstSpan;
-                const firstTimingRow = firstSpan ? baseLyricsTimingRows[firstSpan.index] : null;
-                const lastTimingRow = lastSpan ? baseLyricsTimingRows[lastSpan.index] : firstTimingRow;
-                const nextTimingRow = lastSpan ? baseLyricsTimingRows[lastSpan.index + 1] : null;
-                const fallbackStartTime = Number.isFinite(firstTimingRow?.startTime)
-                    ? firstTimingRow.startTime
-                    : null;
-                const fallbackEndTime = Number.isFinite(nextTimingRow?.startTime)
-                    && Number.isFinite(fallbackStartTime)
-                    && nextTimingRow.startTime > fallbackStartTime
-                    ? nextTimingRow.startTime
-                    : (Number.isFinite(lastTimingRow?.endTime)
+                let baseCharOffset = 0;
+                const baseLineCharSpans = baseLyricsLines.map((line, index) => {
+                    const start = baseCharOffset;
+                    const charCount = Array.from(line).length;
+                    baseCharOffset += charCount;
+                    return { index, start, end: baseCharOffset - 1 };
+                });
+                const providerLineBounds = normalizedSyncLines.map((line) => {
+                    const rangeStart = Number(line?.start);
+                    const rangeEnd = Number(line?.end);
+                    const firstSpan = baseLineCharSpans.find(span => (
+                        Number.isFinite(rangeStart) && rangeStart >= span.start && rangeStart <= span.end
+                    ));
+                    const lastSpan = [...baseLineCharSpans].reverse().find(span => (
+                        Number.isFinite(rangeEnd) && rangeEnd >= span.start && rangeEnd <= span.end
+                    )) || firstSpan;
+                    const firstTimingRow = firstSpan ? baseLyricsTimingRows[firstSpan.index] : null;
+                    const lastTimingRow = lastSpan ? baseLyricsTimingRows[lastSpan.index] : firstTimingRow;
+                    const nextTimingRow = lastSpan ? baseLyricsTimingRows[lastSpan.index + 1] : null;
+                    const fallbackStartTime = Number.isFinite(firstTimingRow?.startTime)
+                        ? firstTimingRow.startTime
+                        : null;
+                    const fallbackEndTime = Number.isFinite(nextTimingRow?.startTime)
                         && Number.isFinite(fallbackStartTime)
-                        && lastTimingRow.endTime > fallbackStartTime
-                        ? lastTimingRow.endTime
-                        : null);
-                return { fallbackStartTime, fallbackEndTime };
-            });
-            const fallbackCandidates = rawLineCharTimes.map((times, index) => {
-                const line = normalizedSyncLines[index];
-                if (normalizeSyncDataGranularity(line?.granularity) !== 'character') return null;
-                const { fallbackStartTime, fallbackEndTime } = providerLineBounds[index];
-                if (!times.length
-                    || !Number.isFinite(fallbackStartTime)
-                    || !Number.isFinite(fallbackEndTime)
-                    || (Array.isArray(line?.parallel?.parts) && line.parallel.parts.length > 1)) {
-                    return null;
-                }
+                        && nextTimingRow.startTime > fallbackStartTime
+                        ? nextTimingRow.startTime
+                        : (Number.isFinite(lastTimingRow?.endTime)
+                            && Number.isFinite(fallbackStartTime)
+                            && lastTimingRow.endTime > fallbackStartTime
+                            ? lastTimingRow.endTime
+                            : null);
+                    return { fallbackStartTime, fallbackEndTime };
+                });
+                const fallbackCandidates = rawLineCharTimes.map((times, index) => {
+                    const line = normalizedSyncLines[index];
+                    if (normalizeSyncDataGranularity(line?.granularity) !== 'character') return null;
+                    const { fallbackStartTime, fallbackEndTime } = providerLineBounds[index];
+                    if (!times.length
+                        || !Number.isFinite(fallbackStartTime)
+                        || !Number.isFinite(fallbackEndTime)
+                        || (Array.isArray(line?.parallel?.parts) && line.parallel.parts.length > 1)) {
+                        return null;
+                    }
 
-                const finiteTimes = times.filter(Number.isFinite);
-                let prefixClusterLength = 1;
-                while (Number.isFinite(times[0])
-                    && prefixClusterLength < times.length
-                    && times[prefixClusterLength] === times[0]) {
-                    prefixClusterLength++;
-                }
-                const isFullyCollapsed = finiteTimes.length > 0
-                    && finiteTimes.every(time => time === finiteTimes[0]);
-                const hasDisplacedPrefixCluster = prefixClusterLength >= 4
-                    && fallbackStartTime > times[0] + 250;
-                return isFullyCollapsed || hasDisplacedPrefixCluster ? fallbackStartTime : null;
-            });
-            const sourceLineStarts = rawLineCharTimes.map((times, index) => {
-                if (Number.isFinite(times[0])) return times[0];
-                if (Number.isFinite(providerLineBounds[index].fallbackStartTime)) {
-                    return providerLineBounds[index].fallbackStartTime;
-                }
-                return times.find(Number.isFinite) ?? null;
-            });
-            const proposedLineStarts = rawLineCharTimes.map((times, index) => (
-                Number.isFinite(fallbackCandidates[index])
-                    ? fallbackCandidates[index]
-                    : sourceLineStarts[index]
-            ));
-            const effectiveLineStarts = [...proposedLineStarts];
-            const acceptedLineFallbacks = fallbackCandidates.map(Number.isFinite);
-            let fallbackPlanChanged = true;
-            while (fallbackPlanChanged) {
-                fallbackPlanChanged = false;
-                for (let index = 0; index < effectiveLineStarts.length; index++) {
-                    if (!acceptedLineFallbacks[index]) continue;
-                    const previousStart = index > 0 ? effectiveLineStarts[index - 1] : -Infinity;
-                    const nextStart = index + 1 < effectiveLineStarts.length
-                        ? effectiveLineStarts[index + 1]
-                        : providerLineBounds[index].fallbackEndTime;
-                    if (effectiveLineStarts[index] <= previousStart
-                        || !Number.isFinite(nextStart)
-                        || effectiveLineStarts[index] >= nextStart) {
-                        effectiveLineStarts[index] = sourceLineStarts[index];
-                        acceptedLineFallbacks[index] = false;
-                        fallbackPlanChanged = true;
+                    const finiteTimes = times.filter(Number.isFinite);
+                    let prefixClusterLength = 1;
+                    while (Number.isFinite(times[0])
+                        && prefixClusterLength < times.length
+                        && times[prefixClusterLength] === times[0]) {
+                        prefixClusterLength++;
+                    }
+                    const isFullyCollapsed = finiteTimes.length > 0
+                        && finiteTimes.every(time => time === finiteTimes[0]);
+                    const hasDisplacedPrefixCluster = prefixClusterLength >= 4
+                        && fallbackStartTime > times[0] + 250;
+                    return isFullyCollapsed || hasDisplacedPrefixCluster ? fallbackStartTime : null;
+                });
+                const sourceLineStarts = rawLineCharTimes.map((times, index) => {
+                    if (Number.isFinite(times[0])) return times[0];
+                    if (Number.isFinite(providerLineBounds[index].fallbackStartTime)) {
+                        return providerLineBounds[index].fallbackStartTime;
+                    }
+                    return times.find(Number.isFinite) ?? null;
+                });
+                const proposedLineStarts = rawLineCharTimes.map((times, index) => (
+                    Number.isFinite(fallbackCandidates[index])
+                        ? fallbackCandidates[index]
+                        : sourceLineStarts[index]
+                ));
+                const effectiveLineStarts = [...proposedLineStarts];
+                const acceptedLineFallbacks = fallbackCandidates.map(Number.isFinite);
+                let fallbackPlanChanged = true;
+                while (fallbackPlanChanged) {
+                    fallbackPlanChanged = false;
+                    for (let index = 0; index < effectiveLineStarts.length; index++) {
+                        if (!acceptedLineFallbacks[index]) continue;
+                        const previousStart = index > 0 ? effectiveLineStarts[index - 1] : -Infinity;
+                        const nextStart = index + 1 < effectiveLineStarts.length
+                            ? effectiveLineStarts[index + 1]
+                            : providerLineBounds[index].fallbackEndTime;
+                        if (effectiveLineStarts[index] <= previousStart
+                            || !Number.isFinite(nextStart)
+                            || effectiveLineStarts[index] >= nextStart) {
+                            effectiveLineStarts[index] = sourceLineStarts[index];
+                            acceptedLineFallbacks[index] = false;
+                            fallbackPlanChanged = true;
+                        }
                     }
                 }
-            }
-            const lineTimingRepairs = rawLineCharTimes.map((times, index) => {
-                if (normalizeSyncDataGranularity(normalizedSyncLines[index]?.granularity) !== 'character') {
-                    return {
-                        times,
-                        changed: false,
-                        usedLineFallback: false,
-                        duplicateCount: 0,
-                        unresolvedDuplicateCount: 0,
-                        longestCluster: 1
-                    };
-                }
-                const forceLineFallback = acceptedLineFallbacks[index];
-                const nextLineStart = effectiveLineStarts[index + 1];
-                const fallbackEndTime = Number.isFinite(nextLineStart)
-                    ? nextLineStart
-                    : providerLineBounds[index].fallbackEndTime;
-                const lastFiniteTime = [...times].reverse().find(Number.isFinite);
-                const endBound = Number.isFinite(nextLineStart)
-                    ? nextLineStart
-                    : (Number.isFinite(fallbackEndTime)
-                        ? fallbackEndTime
-                        : (Number.isFinite(lastFiniteTime)
-                            ? lastFiniteTime + 2000
-                            : effectiveLineStarts[index] + 2000));
-                return normalizeSyncDataTimestampSequence(times, {
-                    fallbackStartMs: effectiveLineStarts[index],
-                    fallbackEndMs: fallbackEndTime,
-                    endBoundMs: endBound,
-                    forceLineFallback
+                const lineTimingRepairs = rawLineCharTimes.map((times, index) => {
+                    if (normalizeSyncDataGranularity(normalizedSyncLines[index]?.granularity) !== 'character') {
+                        return {
+                            times,
+                            changed: false,
+                            usedLineFallback: false,
+                            duplicateCount: 0,
+                            unresolvedDuplicateCount: 0,
+                            longestCluster: 1
+                        };
+                    }
+                    const forceLineFallback = acceptedLineFallbacks[index];
+                    const nextLineStart = effectiveLineStarts[index + 1];
+                    const fallbackEndTime = Number.isFinite(nextLineStart)
+                        ? nextLineStart
+                        : providerLineBounds[index].fallbackEndTime;
+                    const lastFiniteTime = [...times].reverse().find(Number.isFinite);
+                    const endBound = Number.isFinite(nextLineStart)
+                        ? nextLineStart
+                        : (Number.isFinite(fallbackEndTime)
+                            ? fallbackEndTime
+                            : (Number.isFinite(lastFiniteTime)
+                                ? lastFiniteTime + 2000
+                                : effectiveLineStarts[index] + 2000));
+                    return normalizeSyncDataTimestampSequence(times, {
+                        fallbackStartMs: effectiveLineStarts[index],
+                        fallbackEndMs: fallbackEndTime,
+                        endBoundMs: endBound,
+                        forceLineFallback
+                    });
                 });
-            });
+                return { providerLineBounds, effectiveLineStarts, lineTimingRepairs };
+            };
+            const { providerLineBounds, effectiveLineStarts, lineTimingRepairs } = computeLineTimingPlan();
             lineTimingRepairs.forEach(recordTimingRepair);
 
             for (let i = 0; i < normalizedSyncLines.length; i++) {
@@ -5333,25 +5292,31 @@
                 const lineCharTimes = lineTimingRepair.times;
 
                 // 라인 시작/종료 시간 계산 (일단 다음 줄 시작 전까지로 잡지만, 아래에서 조정함)
-                let lineStartTime = lineCharTimes[0];
-                let lineEndTime = lineTimingRepairs[i + 1]
-                    ? lineTimingRepairs[i + 1].times[0]
-                    : (lineCharTimes[lineCharTimes.length - 1] ?? lineStartTime) + 2000;
-                if (lineTimingRepair.usedLineFallback) {
-                    const safeFallbackEnd = effectiveLineStarts[i + 1]
-                        ?? providerLineBounds[i].fallbackEndTime;
-                    if (Number.isFinite(safeFallbackEnd) && safeFallbackEnd > lineStartTime) {
-                        lineEndTime = safeFallbackEnd;
+                const computeLineCharTiming = () => {
+                    const lineStartTime = lineCharTimes[0];
+                    let lineEndTime = lineTimingRepairs[i + 1]
+                        ? lineTimingRepairs[i + 1].times[0]
+                        : (lineCharTimes[lineCharTimes.length - 1] ?? lineStartTime) + 2000;
+                    if (lineTimingRepair.usedLineFallback) {
+                        const safeFallbackEnd = effectiveLineStarts[i + 1]
+                            ?? providerLineBounds[i].fallbackEndTime;
+                        if (Number.isFinite(safeFallbackEnd) && safeFallbackEnd > lineStartTime) {
+                            lineEndTime = safeFallbackEnd;
+                        }
                     }
-                }
 
-                // 평균 글자 지속 시간 계산 (초 단위)
-                const lineDuration = Math.max(0, lineEndTime - lineStartTime) / 1000;
-                const avgCharDuration = Math.max(0.2, lineDuration / Math.max(1, lineData.chars.length));
+                    // 평균 글자 지속 시간 계산 (초 단위)
+                    const lineDuration = Math.max(0, lineEndTime - lineStartTime) / 1000;
+                    const avgCharDuration = Math.max(0.2, lineDuration / Math.max(1, lineData.chars.length));
 
-                // 마지막 글자의 자연스러운 최대 지속 시간 (평균의 2.5배 또는 최대 1.5초)
-                // 너무 짧게 끊기지 않도록 최소 0.5초는 보장
-                const lastCharMaxDuration = Math.max(0.5, Math.min(1.5, avgCharDuration * 2.5));
+                    // 마지막 글자의 자연스러운 최대 지속 시간 (평균의 2.5배 또는 최대 1.5초)
+                    // 너무 짧게 끊기지 않도록 최소 0.5초는 보장
+                    const lastCharMaxDuration = Math.max(0.5, Math.min(1.5, avgCharDuration * 2.5));
+                    return { lineStartTime, lineEndTime, lineDuration, avgCharDuration, lastCharMaxDuration };
+                };
+                const lineCharTiming = computeLineCharTiming();
+                const { lineStartTime, lineDuration, avgCharDuration, lastCharMaxDuration } = lineCharTiming;
+                let lineEndTime = lineCharTiming.lineEndTime;
 
                 // 각 글자별 syllable 생성
                 let syllables = [];
@@ -5389,13 +5354,11 @@
                     let partSyllables = [];
                     const partGranularity = normalizeSyncDataGranularity(part.granularity || lineData.granularity);
                     let partCharIndex = 0;
-                    let text = '';
 
                     part.ranges.forEach((range, rangeIndex) => {
                         if (rangeIndex > 0) {
                             const joinMode = Array.isArray(part.join) ? Number(part.join[rangeIndex - 1]) : 1;
                             if (joinMode === 1 || joinMode === 2) {
-                                text += ' ';
                                 const previousPartTime = getSyncDataMilliseconds(
                                     part.chars[Math.max(0, partCharIndex - 1)]
                                 );
@@ -5471,7 +5434,6 @@
                             }
                             charEnd = Math.max(charStart, charEnd);
 
-                            text += char;
 							partSyllables.push(applyInlineStyle({
                                 text: char,
                                 startTime: charStart,
@@ -5631,7 +5593,7 @@
         const JAPANESE_PARTICLES = new Set(['は', 'が', 'を', 'に', 'へ', 'と', 'も', 'で', 'の', 'ね', 'よ', 'か', 'な', 'さ']);
         const HAN_PARTICLES = new Set(['的', '了', '吗', '呢', '啊', '呀', '吧', '啦', '嘛', '着', '过']);
         const LATIN_CONNECTOR_WORDS = new Set(['a', 'an', 'the', 'to', 'of', 'in', 'on', 'at', 'for', 'and', 'or', 'but']);
-        const UNIT_PUNCTUATION_REGEX = /[.,!?;:'"()[\]{}\-]/;
+        const UNIT_PUNCTUATION_REGEX = /[.,!?;:'"()[\]{}-]/;
         const _analysisCache = new Map();
         const _inflightAnalysis = new Map();
         const _analysisHintsCache = new WeakMap();
@@ -6560,6 +6522,16 @@
             const spans = [];
             let currentSpan = null;
 
+            const flushSilenceSpan = () => {
+                if (currentSpan && (currentSpan.end - currentSpan.start) >= minSpanMs) {
+                    spans.push({
+                        ...currentSpan,
+                        avgMass: currentSpan.totalMass / Math.max(1, currentSpan.count),
+                        center: Math.round((currentSpan.start + currentSpan.end) / 2)
+                    });
+                }
+            };
+
             for (let index = 0; index < frames.length; index++) {
                 const frame = frames[index];
                 const nextTime = frames[index + 1]?.time ?? endTime;
@@ -6584,23 +6556,11 @@
                     continue;
                 }
 
-                if (currentSpan && (currentSpan.end - currentSpan.start) >= minSpanMs) {
-                    spans.push({
-                        ...currentSpan,
-                        avgMass: currentSpan.totalMass / Math.max(1, currentSpan.count),
-                        center: Math.round((currentSpan.start + currentSpan.end) / 2)
-                    });
-                }
+                flushSilenceSpan();
                 currentSpan = null;
             }
 
-            if (currentSpan && (currentSpan.end - currentSpan.start) >= minSpanMs) {
-                spans.push({
-                    ...currentSpan,
-                    avgMass: currentSpan.totalMass / Math.max(1, currentSpan.count),
-                    center: Math.round((currentSpan.start + currentSpan.end) / 2)
-                });
-            }
+            flushSilenceSpan();
 
             return spans;
         }
@@ -6936,7 +6896,7 @@
                 const unitText = phraseUnits[unitIndex - 1] || '';
                 const trimmedUnit = unitText.trim();
                 const isWhitespaceOnly = !trimmedUnit && /\s/.test(unitText);
-                const isPunctuationOnly = !!trimmedUnit && /^[.,!?;:'"()[\]{}\-]+$/.test(trimmedUnit);
+                const isPunctuationOnly = !!trimmedUnit && /^[.,!?;:'"()[\]{}-]+$/.test(trimmedUnit);
                 const isLexicalUnit = !!trimmedUnit && !isPunctuationOnly;
                 const minCandidateIndex = unitIndex;
                 const maxCandidateIndex = isFinalUnit
@@ -7157,10 +7117,17 @@
             return merged.filter((unit) => unit.length > 0);
         }
 
-        function buildPseudoKaraokeLine(line, analysis) {
+        function normalizePseudoKaraokeLineBounds(line) {
             const text = line?.text || '';
             const startTime = Number.isFinite(line?.startTime) ? line.startTime : 0;
-            const endTime = Number.isFinite(line?.endTime) && line.endTime > startTime ? line.endTime : startTime + 2500;
+            const endTime = Number.isFinite(line?.endTime) && line.endTime > startTime
+                ? line.endTime
+                : startTime + 2500;
+            return { text, startTime, endTime };
+        }
+
+        function buildPseudoKaraokeLine(line, analysis) {
+            const { text, startTime, endTime } = normalizePseudoKaraokeLineBounds(line);
 
             if (!text.trim()) {
                 return { startTime, endTime, text, syllables: [] };
@@ -7250,11 +7217,7 @@
         }
 
         function buildLineTimingPseudoKaraokeLine(line) {
-            const text = line?.text || '';
-            const startTime = Number.isFinite(line?.startTime) ? line.startTime : 0;
-            const endTime = Number.isFinite(line?.endTime) && line.endTime > startTime
-                ? line.endTime
-                : startTime + 2500;
+            const { text, startTime, endTime } = normalizePseudoKaraokeLineBounds(line);
 
             if (!text.trim()) {
                 return { startTime, endTime, text, syllables: [] };
@@ -7994,7 +7957,6 @@
                 }
 
                 // 설정을 LocalStorage에서 직접 읽기
-                const translationProvider = Spicetify.LocalStorage.get("ivLyrics:visual:translate:translated-lyrics-source") || "auto";
                 const modeKey = friendlyLanguage || "gemini";
 
                 // 설정 키: translation-mode:japanese, translation-mode-2:japanese 등
@@ -8017,41 +7979,45 @@
                 // Keep AI mode handling available during a partial update where
                 // the shared conversion helper has not loaded yet.
                 const translationModes = window.ivLyricsTranslationModes || {};
-                const normalizeMode = typeof translationModes.normalizeMode === 'function'
-                    ? translationModes.normalizeMode
-                    : (mode) => String(mode ?? '').trim().toLowerCase();
-                const isActiveMode = typeof translationModes.isActiveMode === 'function'
-                    ? translationModes.isActiveMode
-                    : (mode) => {
-                        const normalized = normalizeMode(mode);
-                        return normalized !== '' && normalized !== 'none';
-                    };
-                const isPronunciationMode = typeof translationModes.isPronunciationMode === 'function'
-                    ? translationModes.isPronunciationMode
-                    : (mode) => new Set([
-                        'gemini_romaji', 'romaji', 'romaja', 'pinyin',
-                        'hiragana', 'katakana', 'furigana'
-                    ]).has(normalizeMode(mode));
-                const getModeTargetField = typeof translationModes.getTargetField === 'function'
-                    ? translationModes.getTargetField
-                    : (mode) => isPronunciationMode(mode) ? 'phonetic' : 'translation';
-                const isAiMode = typeof translationModes.isAiMode === 'function'
-                    ? translationModes.isAiMode
-                    : (mode) => normalizeMode(mode).startsWith('gemini');
-                const needsTraditionalConverter = typeof translationModes.needsTraditionalConverter === 'function'
-                    ? translationModes.needsTraditionalConverter
-                    : (language, mode) => {
-                        const source = String(language || '').toLowerCase().replace(/_/g, '-');
-                        const target = normalizeMode(mode);
-                        if (source === 'ja' || source.startsWith('ja-')) {
-                            return ['romaji', 'furigana', 'hiragana', 'katakana'].includes(target);
-                        }
-                        if (source === 'ko' || source.startsWith('ko-')) return target === 'romaja';
-                        const chinese = source === 'zh' || source === 'zh-hans' || source === 'zh-cn'
-                            || source === 'zh-sg' || source === 'zh-hant' || source === 'zh-tw' || source === 'zh-hk';
-                        return chinese && ['pinyin', 'cn', 'tw', 'hk'].includes(target)
-                            && !(source !== 'zh-hant' && source !== 'zh-tw' && source !== 'zh-hk' && target === 'cn');
-                    };
+                const resolveTranslationModeHelpers = () => {
+                    const normalizeMode = typeof translationModes.normalizeMode === 'function'
+                        ? translationModes.normalizeMode
+                        : (mode) => String(mode ?? '').trim().toLowerCase();
+                    const isActiveMode = typeof translationModes.isActiveMode === 'function'
+                        ? translationModes.isActiveMode
+                        : (mode) => {
+                            const normalized = normalizeMode(mode);
+                            return normalized !== '' && normalized !== 'none';
+                        };
+                    const isPronunciationMode = typeof translationModes.isPronunciationMode === 'function'
+                        ? translationModes.isPronunciationMode
+                        : (mode) => new Set([
+                            'gemini_romaji', 'romaji', 'romaja', 'pinyin',
+                            'hiragana', 'katakana', 'furigana'
+                        ]).has(normalizeMode(mode));
+                    const getModeTargetField = typeof translationModes.getTargetField === 'function'
+                        ? translationModes.getTargetField
+                        : (mode) => isPronunciationMode(mode) ? 'phonetic' : 'translation';
+                    const isAiMode = typeof translationModes.isAiMode === 'function'
+                        ? translationModes.isAiMode
+                        : (mode) => normalizeMode(mode).startsWith('gemini');
+                    const needsTraditionalConverter = typeof translationModes.needsTraditionalConverter === 'function'
+                        ? translationModes.needsTraditionalConverter
+                        : (language, mode) => {
+                            const source = String(language || '').toLowerCase().replace(/_/g, '-');
+                            const target = normalizeMode(mode);
+                            if (source === 'ja' || source.startsWith('ja-')) {
+                                return ['romaji', 'furigana', 'hiragana', 'katakana'].includes(target);
+                            }
+                            if (source === 'ko' || source.startsWith('ko-')) return target === 'romaja';
+                            const chinese = source === 'zh' || source === 'zh-hans' || source === 'zh-cn'
+                                || source === 'zh-sg' || source === 'zh-hant' || source === 'zh-tw' || source === 'zh-hk';
+                            return chinese && ['pinyin', 'cn', 'tw', 'hk'].includes(target)
+                                && !(source !== 'zh-hant' && source !== 'zh-tw' && source !== 'zh-hk' && target === 'cn');
+                        };
+                    return { isActiveMode, getModeTargetField, isAiMode, needsTraditionalConverter };
+                };
+                const { isActiveMode, getModeTargetField, isAiMode, needsTraditionalConverter } = resolveTranslationModeHelpers();
                 const translationConfigured = [mode1, mode2].some(isActiveMode);
                 const needsTranslation = translationConfigured && !skipTranslation;
                 // multi-vocal 라인은 각 파트를 별도 요청 줄로 펼친 뒤 다시 파트별로 매핑한다.
@@ -8206,22 +8172,26 @@
                         .map(result => result.value);
 
                     if (successfulSlots.length > 0) {
-                        const requestResultsByLine = new Map();
-                        successfulSlots.forEach(({ slot, targetField, lines }) => {
-                            translationRequests.forEach((request, requestIndex) => {
-                                const value = String(lines[requestIndex] ?? '').trim();
-                                const entry = {
-                                    ...request,
-                                    slot,
-                                    [`${targetField}Text`]: value || null
-                                };
-                                const entries = requestResultsByLine.get(request.lineIndex) || [];
-                                entries.push(entry);
-                                requestResultsByLine.set(request.lineIndex, entries);
+                        const buildRequestResultsByLine = () => {
+                            const requestResultsByLine = new Map();
+                            successfulSlots.forEach(({ slot, targetField, lines }) => {
+                                translationRequests.forEach((request, requestIndex) => {
+                                    const value = String(lines[requestIndex] ?? '').trim();
+                                    const entry = {
+                                        ...request,
+                                        slot,
+                                        [`${targetField}Text`]: value || null
+                                    };
+                                    const entries = requestResultsByLine.get(request.lineIndex) || [];
+                                    entries.push(entry);
+                                    requestResultsByLine.set(request.lineIndex, entries);
+                                });
                             });
-                        });
+                            return requestResultsByLine;
+                        };
+                        const requestResultsByLine = buildRequestResultsByLine();
 
-                        lyrics = lyrics.map((line, idx) => {
+                        const mergeSlotResultsIntoLine = (line, idx) => {
                             const isKaraokeLine = Array.isArray(line.syllables)
                                 || Array.isArray(line.vocals?.lead?.syllables);
                             const originalText = isKaraokeLine && line.originalText
@@ -8282,7 +8252,8 @@
                                 translation: transText || line.translation || null,
                                 translationText: transText || line.translationText || null
                             };
-                        });
+                        };
+                        lyrics = lyrics.map(mergeSlotResultsIntoLine);
                         serviceDebug('[LyricsService] 발음/번역 완료:', {
                             successful: successfulSlots.length,
                             requested: activeSlots.length
@@ -8914,12 +8885,8 @@
         }
 
         async initializeAsync(lang) {
-            try {
-                await this.injectExternals(lang);
-                await this.createTranslator(lang);
-            } catch (error) {
-                throw error;
-            }
+            await this.injectExternals(lang);
+            await this.createTranslator(lang);
         }
 
         static async callGemini({
@@ -9073,44 +9040,40 @@
 
         async injectExternals(lang) {
             const langCode = lang?.slice(0, 2);
-            try {
-                switch (langCode) {
-                    case "ja":
-                        await Promise.all([
-                            this.includeExternal(kuromojiPath),
-                            this.includeExternal(kuroshiroPath),
-                        ]);
-                        break;
-                    case "ko":
-                        await this.includeExternal(aromanize);
-                        break;
-                    case "zh":
-                        await this.includeExternal(openCCPath);
-                        this.includeExternal(pinyinProPath).catch(() => { });
-                        this.includeExternal(tinyPinyinPath).catch(() => { });
-                        break;
-                    case "ru":
-                    case "vi":
-                    case "de":
-                    case "en":
-                    case "es":
-                    case "fr":
-                    case "it":
-                    case "pt":
-                    case "nl":
-                    case "pl":
-                    case "tr":
-                    case "cs":
-                    case "ar":
-                    case "hi":
-                    case "th":
-                    case "id":
-                    case "ms":
-                        this.finished[langCode] = true;
-                        break;
-                }
-            } catch (error) {
-                throw error;
+            switch (langCode) {
+                case "ja":
+                    await Promise.all([
+                        this.includeExternal(kuromojiPath),
+                        this.includeExternal(kuroshiroPath),
+                    ]);
+                    break;
+                case "ko":
+                    await this.includeExternal(aromanize);
+                    break;
+                case "zh":
+                    await this.includeExternal(openCCPath);
+                    this.includeExternal(pinyinProPath).catch(() => { });
+                    this.includeExternal(tinyPinyinPath).catch(() => { });
+                    break;
+                case "ru":
+                case "vi":
+                case "de":
+                case "en":
+                case "es":
+                case "fr":
+                case "it":
+                case "pt":
+                case "nl":
+                case "pl":
+                case "tr":
+                case "cs":
+                case "ar":
+                case "hi":
+                case "th":
+                case "id":
+                case "ms":
+                    this.finished[langCode] = true;
+                    break;
             }
         }
 
@@ -9224,7 +9187,7 @@
             await this.awaitFinished("ja");
             const out = await this.kuroshiro.convert(text, {
                 to: target,
-                mode: mode,
+                mode,
                 romajiSystem: "hepburn",
             });
             return window.Translator.normalizeRomajiString(out);
@@ -9242,7 +9205,7 @@
         async convertChinese(text, from, target) {
             await this.awaitFinished("zh");
             const converter = this.OpenCC.Converter({
-                from: from,
+                from,
                 to: target,
             });
             return converter(text);
@@ -10359,7 +10322,7 @@
                     title: currentTitle,
                     artist: currentArtist,
                     album: currentAlbum,
-                    albumArt: albumArt,
+                    albumArt,
                     duration: Spicetify.Player.getDuration() || 0
                 },
                 lyrics: mappedLines,
@@ -10507,7 +10470,7 @@
                                 title: this.formatMetadataText(currentItem?.metadata?.title || currentItem?.name || ''),
                                 artist: this.formatMetadataText(currentItem?.metadata?.artist_name || ''),
                                 album: currentItem?.metadata?.album_title || '',
-                                albumArt: albumArt
+                                albumArt
                             };
                         } catch (e) { }
                     }
@@ -10523,7 +10486,7 @@
                                 nextTrack = {
                                     title: this.formatMetadataText(next.contextTrack.metadata.title || ''),
                                     artist: this.formatMetadataText(next.contextTrack.metadata.artist_name || ''),
-                                    albumArt: albumArt
+                                    albumArt
                                 };
                             }
                         }
@@ -10531,12 +10494,12 @@
 
                     await this.sendProgressPayload('/progress', {
                         trackUri: currentUri || null,
-                        position: position,
+                        position,
                         isPlaying: getOverlayProgressIsPlaying(),
-                        duration: duration,
-                        remaining: remaining,
-                        currentTrack: currentTrack,
-                        nextTrack: nextTrack
+                        duration,
+                        remaining,
+                        currentTrack,
+                        nextTrack
                     }, currentUri);
                 } finally {
                     if (this._worker === sendingWorker) this._isSendingProgress = false;
@@ -11038,7 +11001,7 @@
                         title: currentTitle,
                         artist: currentArtist,
                         album: currentAlbum,
-                        albumArt: albumArt,
+                        albumArt,
                         duration: Spicetify.Player.getDuration() || 0
                     },
                     lyrics: mappedLines,
@@ -11251,7 +11214,7 @@
                                     title: currentItem?.metadata?.title || currentItem?.name || '',
                                     artist: currentItem?.metadata?.artist_name || '',
                                     album: currentItem?.metadata?.album_title || '',
-                                    albumArt: albumArt
+                                    albumArt
                                 };
                             } catch (e) { }
                         }
@@ -11267,7 +11230,7 @@
                                     nextTrack = {
                                         title: next.contextTrack.metadata.title || '',
                                         artist: next.contextTrack.metadata.artist_name || '',
-                                        albumArt: albumArt
+                                        albumArt
                                     };
                                 }
                             }
@@ -11275,12 +11238,12 @@
 
                         // 새로운 엔드포인트 사용: /lyrics/progress
                         await this.sendProgressPayload('/lyrics/progress', {
-                            position: position,
+                            position,
                             isPlaying: getOverlayProgressIsPlaying(),
-                            duration: duration,
-                            remaining: remaining,
-                            currentTrack: currentTrack,
-                            nextTrack: nextTrack
+                            duration,
+                            remaining,
+                            currentTrack,
+                            nextTrack
                         }, currentUri);
                     } finally {
                         if (this._worker === sendingWorker) this._isSendingProgress = false;

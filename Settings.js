@@ -24,26 +24,6 @@ const ButtonSVG = react.memo(
   }
 );
 
-const SwapButton = ({ icon, disabled, onClick }) => {
-  return react.createElement(
-    "button",
-    {
-      className: "swap-button",
-      onClick,
-      disabled,
-    },
-    react.createElement("svg", {
-      width: 12,
-      height: 12,
-      viewBox: "0 0 16 16",
-      fill: "currentColor",
-      dangerouslySetInnerHTML: {
-        __html: icon,
-      },
-    })
-  );
-};
-
 function buildOrderedProviderList(providers, providerOrder) {
   const safeProviders = Array.isArray(providers) ? providers : [];
   const safeProviderOrder = Array.isArray(providerOrder) ? providerOrder : [];
@@ -226,20 +206,6 @@ const OverlaySettings = () => {
     }
   };
 
-  // 연결 확인
-  const handleCheckConnection = async () => {
-    if (!window.OverlaySender) return;
-    setChecking(true);
-    await window.OverlaySender.checkConnection();
-    setIsConnected(window.OverlaySender.isConnected);
-    setChecking(false);
-  };
-
-  // 앱 열기
-  const handleOpenApp = () => {
-    window.OverlaySender?.openOverlayApp?.();
-  };
-
   // 다운로드 URL
   const handleDownload = () => {
     const url = window.OverlaySender?.getDownloadUrl?.() || 'https://ivlis.kr/ivLyrics/extensions/#overlay';
@@ -253,15 +219,7 @@ const OverlaySettings = () => {
     return I18n.t("overlay.status.disconnected");
   };
 
-  const getStatusColor = () => {
-    if (checking) return "#fbbf24";
-    if (isConnected) return "#4ade80";
-    return "#ef4444";
-  };
-
-  return react.createElement(
-    "div",
-    { className: "option-list-wrapper" },
+  const renderOverlayEnableRow = () =>
     // Enable/Disable Row
     react.createElement(
       "div",
@@ -329,7 +287,9 @@ const OverlaySettings = () => {
           )
         )
       )
-    ),
+    );
+
+  const renderOverlayTrimRow = () =>
     react.createElement(
       "div",
       { className: "setting-row", "data-setting-key": "overlay-trim-metadata" },
@@ -353,7 +313,9 @@ const OverlaySettings = () => {
           })
         )
       )
-    ),
+    );
+
+  const renderOverlayPortRow = () =>
     // Port Setting Row (Only shown when enabled)
     enabled && react.createElement(
       "div",
@@ -396,7 +358,16 @@ const OverlaySettings = () => {
           })
         )
       )
-    )
+    );
+
+  return react.createElement(
+    "div",
+    { className: "option-list-wrapper" },
+    // Enable/Disable Row
+    renderOverlayEnableRow(),
+    renderOverlayTrimRow(),
+    // Port Setting Row (Only shown when enabled)
+    renderOverlayPortRow()
   );
 };
 
@@ -905,163 +876,8 @@ const AccountSection = () => {
     }
   };
 
-  if (loading) {
-    return react.createElement(
-      "div",
-      {
-        className: "info-card",
-        style: {
-          padding: "20px",
-          background: "linear-gradient(145deg, rgba(88, 101, 242, 0.1) 0%, rgba(46, 51, 122, 0.16) 100%)",
-          border: "1px solid rgba(88, 101, 242, 0.22)",
-          borderRadius: "0 0 12px 12px",
-          marginBottom: "24px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          minHeight: "110px",
-        },
-      },
-      react.createElement(
-        "span",
-        { style: { color: themeTokens.textSecondary, fontSize: "14px" } },
-        copy.loading
-      )
-    );
-  }
-
-  if (!accountInfo) {
-    return react.createElement(
-      "div",
-      {
-        className: "info-card",
-        style: {
-          padding: "20px",
-          background: "linear-gradient(145deg, rgba(88, 101, 242, 0.1) 0%, rgba(46, 51, 122, 0.16) 100%)",
-          border: "1px solid rgba(88, 101, 242, 0.22)",
-          borderRadius: "0 0 12px 12px",
-          backdropFilter: "blur(30px) saturate(150%)",
-          WebkitBackdropFilter: "blur(30px) saturate(150%)",
-          marginBottom: "24px",
-        },
-      },
-      react.createElement(
-        "div",
-        {
-          style: {
-            display: "flex",
-            alignItems: "center",
-            gap: "16px",
-            marginBottom: "16px",
-          },
-        },
-        react.createElement(
-          "div",
-          {
-            style: {
-              width: "52px",
-              height: "52px",
-              borderRadius: "16px",
-              background: "linear-gradient(135deg, #5865f2 0%, #7983f5 100%)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              flexShrink: 0,
-            },
-          },
-          react.createElement(
-            "svg",
-            {
-              width: "24",
-              height: "24",
-              viewBox: "0 0 24 24",
-              fill: "currentColor",
-            },
-            react.createElement("path", {
-              d: "M20.317 4.369A19.791 19.791 0 0 0 15.126 3c-.23.408-.499.957-.682 1.384a18.27 18.27 0 0 0-4.888 0A13.67 13.67 0 0 0 8.874 3a19.736 19.736 0 0 0-5.19 1.368C.533 9.067-.321 13.65.106 18.168a19.9 19.9 0 0 0 6.357 3.208c.513-.693.97-1.425 1.36-2.197-.748-.284-1.462-.634-2.134-1.04.178-.13.353-.267.522-.408 4.118 1.88 8.59 1.88 12.66 0 .17.141.344.278.523.408-.673.407-1.388.757-2.136 1.041.39.771.847 1.503 1.36 2.196a19.873 19.873 0 0 0 6.36-3.209c.5-5.238-.854-9.78-3.16-13.799ZM8.02 15.331c-1.24 0-2.26-1.131-2.26-2.525 0-1.394 1-2.525 2.26-2.525 1.26 0 2.279 1.15 2.26 2.525 0 1.394-1 2.525-2.26 2.525Zm7.96 0c-1.24 0-2.26-1.131-2.26-2.525 0-1.394 1-2.525 2.26-2.525 1.26 0 2.279 1.15 2.26 2.525 0 1.394-1 2.525-2.26 2.525Z",
-            })
-          )
-        ),
-        react.createElement(
-          "div",
-          { style: { flex: 1 } },
-          react.createElement(
-            "h3",
-            {
-              style: {
-                margin: "0 0 4px",
-                fontSize: "17px",
-                color: themeTokens.textPrimary,
-                fontWeight: "700",
-              },
-            },
-            copy.provider
-          ),
-          react.createElement(
-            "p",
-            {
-              style: {
-                margin: 0,
-                fontSize: "13px",
-                color: themeTokens.textSecondary,
-              },
-            },
-            copy.description
-          )
-        )
-      ),
-      react.createElement(
-        "p",
-        {
-          style: {
-            margin: "0 0 16px",
-            fontSize: "13px",
-            color: themeTokens.textSecondary,
-            lineHeight: "1.7",
-          },
-        },
-        copy.info
-      ),
-      error &&
-        react.createElement(
-          "p",
-          {
-            style: {
-              margin: "0 0 12px",
-              fontSize: "12px",
-              color: "#f87171",
-            },
-          },
-          error
-        ),
-      react.createElement(
-        "button",
-        {
-          onClick: openLoginPage,
-          disabled: loginLoading || logoutLoading,
-          style: {
-            width: "100%",
-            padding: "12px 20px",
-            background: "linear-gradient(135deg, #5865f2 0%, #7983f5 100%)",
-            border: "none",
-            borderRadius: "10px",
-            color: "#ffffff",
-            fontSize: "14px",
-            fontWeight: "700",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-          },
-        },
-        loginLoading ? copy.loggingIn : copy.loginButton
-      )
-    );
-  }
-
-  return react.createElement(
+  const renderAccountLinkedCard = () =>
+react.createElement(
     "div",
     {
       className: "info-card",
@@ -1272,6 +1088,167 @@ const AccountSection = () => {
     react.createElement(CreatorPrivacySection, { userHash: Utils.getUserHash() }),
     react.createElement(SettingsBackup, { userHash: Utils.getUserHash() })
   );
+  const renderAccountUnlinkedCard = () =>
+react.createElement(
+      "div",
+      {
+        className: "info-card",
+        style: {
+          padding: "20px",
+          background: "linear-gradient(145deg, rgba(88, 101, 242, 0.1) 0%, rgba(46, 51, 122, 0.16) 100%)",
+          border: "1px solid rgba(88, 101, 242, 0.22)",
+          borderRadius: "0 0 12px 12px",
+          backdropFilter: "blur(30px) saturate(150%)",
+          WebkitBackdropFilter: "blur(30px) saturate(150%)",
+          marginBottom: "24px",
+        },
+      },
+      react.createElement(
+        "div",
+        {
+          style: {
+            display: "flex",
+            alignItems: "center",
+            gap: "16px",
+            marginBottom: "16px",
+          },
+        },
+        react.createElement(
+          "div",
+          {
+            style: {
+              width: "52px",
+              height: "52px",
+              borderRadius: "16px",
+              background: "linear-gradient(135deg, #5865f2 0%, #7983f5 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              flexShrink: 0,
+            },
+          },
+          react.createElement(
+            "svg",
+            {
+              width: "24",
+              height: "24",
+              viewBox: "0 0 24 24",
+              fill: "currentColor",
+            },
+            react.createElement("path", {
+              d: "M20.317 4.369A19.791 19.791 0 0 0 15.126 3c-.23.408-.499.957-.682 1.384a18.27 18.27 0 0 0-4.888 0A13.67 13.67 0 0 0 8.874 3a19.736 19.736 0 0 0-5.19 1.368C.533 9.067-.321 13.65.106 18.168a19.9 19.9 0 0 0 6.357 3.208c.513-.693.97-1.425 1.36-2.197-.748-.284-1.462-.634-2.134-1.04.178-.13.353-.267.522-.408 4.118 1.88 8.59 1.88 12.66 0 .17.141.344.278.523.408-.673.407-1.388.757-2.136 1.041.39.771.847 1.503 1.36 2.196a19.873 19.873 0 0 0 6.36-3.209c.5-5.238-.854-9.78-3.16-13.799ZM8.02 15.331c-1.24 0-2.26-1.131-2.26-2.525 0-1.394 1-2.525 2.26-2.525 1.26 0 2.279 1.15 2.26 2.525 0 1.394-1 2.525-2.26 2.525Zm7.96 0c-1.24 0-2.26-1.131-2.26-2.525 0-1.394 1-2.525 2.26-2.525 1.26 0 2.279 1.15 2.26 2.525 0 1.394-1 2.525-2.26 2.525Z",
+            })
+          )
+        ),
+        react.createElement(
+          "div",
+          { style: { flex: 1 } },
+          react.createElement(
+            "h3",
+            {
+              style: {
+                margin: "0 0 4px",
+                fontSize: "17px",
+                color: themeTokens.textPrimary,
+                fontWeight: "700",
+              },
+            },
+            copy.provider
+          ),
+          react.createElement(
+            "p",
+            {
+              style: {
+                margin: 0,
+                fontSize: "13px",
+                color: themeTokens.textSecondary,
+              },
+            },
+            copy.description
+          )
+        )
+      ),
+      react.createElement(
+        "p",
+        {
+          style: {
+            margin: "0 0 16px",
+            fontSize: "13px",
+            color: themeTokens.textSecondary,
+            lineHeight: "1.7",
+          },
+        },
+        copy.info
+      ),
+      error &&
+        react.createElement(
+          "p",
+          {
+            style: {
+              margin: "0 0 12px",
+              fontSize: "12px",
+              color: "#f87171",
+            },
+          },
+          error
+        ),
+      react.createElement(
+        "button",
+        {
+          onClick: openLoginPage,
+          disabled: loginLoading || logoutLoading,
+          style: {
+            width: "100%",
+            padding: "12px 20px",
+            background: "linear-gradient(135deg, #5865f2 0%, #7983f5 100%)",
+            border: "none",
+            borderRadius: "10px",
+            color: "#ffffff",
+            fontSize: "14px",
+            fontWeight: "700",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+          },
+        },
+        loginLoading ? copy.loggingIn : copy.loginButton
+      )
+    );
+  const renderAccountLoadingCard = () =>
+react.createElement(
+      "div",
+      {
+        className: "info-card",
+        style: {
+          padding: "20px",
+          background: "linear-gradient(145deg, rgba(88, 101, 242, 0.1) 0%, rgba(46, 51, 122, 0.16) 100%)",
+          border: "1px solid rgba(88, 101, 242, 0.22)",
+          borderRadius: "0 0 12px 12px",
+          marginBottom: "24px",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "110px",
+        },
+      },
+      react.createElement(
+        "span",
+        { style: { color: themeTokens.textSecondary, fontSize: "14px" } },
+        copy.loading
+      )
+    );
+  if (loading) {
+    return renderAccountLoadingCard();
+  }
+
+  if (!accountInfo) {
+    return renderAccountUnlinkedCard();
+  }
+
+  return renderAccountLinkedCard();
 };
 
 // AI Addon 개별 카드 컴포넌트 (아코디언 스타일 - LyricsProviderCard와 동일 스타일)
@@ -1311,7 +1288,7 @@ const AddonSettingsCard = ({ addon, isEnabled, onToggle, isExpanded, onExpandTog
     const normalizedZh = baseLang === 'zh'
       ? ((/tw|hant/i.test(storedLang) || storedLang === 'zh-TW') ? 'zh-TW' : 'zh-CN')
       : null;
-    return desc[storedLang] || (normalizedZh && desc[normalizedZh]) || desc[baseLang] || desc['en'] || Object.values(desc)[0] || '';
+    return desc[storedLang] || (normalizedZh && desc[normalizedZh]) || desc[baseLang] || desc.en || Object.values(desc)[0] || '';
   };
 
   // 아코디언 헤더 클릭 핸들러
@@ -1471,7 +1448,7 @@ const LyricsProviderCard = ({ provider, isEnabled, onToggle, isExpanded, onExpan
     const normalizedZh = baseLang === 'zh'
       ? ((/tw|hant/i.test(storedLang) || storedLang === 'zh-TW') ? 'zh-TW' : 'zh-CN')
       : null;
-    return desc[storedLang] || (normalizedZh && desc[normalizedZh]) || desc[baseLang] || desc['en'] || Object.values(desc)[0] || '';
+    return desc[storedLang] || (normalizedZh && desc[normalizedZh]) || desc[baseLang] || desc.en || Object.values(desc)[0] || '';
   };
 
   const handleHeaderClick = (e) => {
@@ -2022,12 +1999,7 @@ const AIProvidersTab = () => {
     }));
   };
 
-  // 정렬된 provider 목록
-  const sortedProviders = buildOrderedProviderList(providers, providerOrder);
-
-  return react.createElement("div", { className: "settings-section lyrics-providers-section" },
-    // 통합 컨테이너
-    react.createElement("div", { className: "lyrics-providers-container" },
+  const renderAiTranslationStylePanel = () =>
       react.createElement("section", {
         className: "ai-translation-style-panel",
         "aria-labelledby": "ai-translation-style-title"
@@ -2072,29 +2044,9 @@ const AIProvidersTab = () => {
             );
           })
         )
-      ),
-      react.createElement(OptionList, {
-        items: [
-          {
-            desc: I18n.t("settings.aiProviders.retryCount.label") || "Retries per provider",
-            key: "ai-provider-retry-count",
-            info: I18n.t("settings.aiProviders.retryCount.description")
-              || "Number of additional attempts after a failed request. Set to 0 to switch to the next provider immediately.",
-            type: ConfigSliderRange,
-            defaultValue: providerRetryCount,
-            min: 0,
-            max: 5,
-            step: 1,
-            showStepMarkers: true,
-          },
-        ],
-        onChange: (_name, value) => {
-          const numericValue = Number(value);
-          const nextValue = window.AIAddonManager?.setProviderRetryCount?.(value)
-            ?? (Number.isFinite(numericValue) ? numericValue : 2);
-          setProviderRetryCount(nextValue);
-        },
-      }),
+      );
+
+  const renderCulturalAnnotationGroup = () =>
       react.createElement("div", {
         className: `cultural-annotation-group${culturalAnnotationsEnabled ? " is-enabled" : ""}${culturalDetailsExpanded ? " is-expanded" : ""}`,
         "data-setting-key": "cultural-annotations-group",
@@ -2210,7 +2162,38 @@ const AIProvidersTab = () => {
         ],
           onChange: handleCulturalSettingChange,
         }))
-      ),
+      );
+
+  // 정렬된 provider 목록
+  const sortedProviders = buildOrderedProviderList(providers, providerOrder);
+
+  return react.createElement("div", { className: "settings-section lyrics-providers-section" },
+    // 통합 컨테이너
+    react.createElement("div", { className: "lyrics-providers-container" },
+      renderAiTranslationStylePanel(),
+      react.createElement(OptionList, {
+        items: [
+          {
+            desc: I18n.t("settings.aiProviders.retryCount.label") || "Retries per provider",
+            key: "ai-provider-retry-count",
+            info: I18n.t("settings.aiProviders.retryCount.description")
+              || "Number of additional attempts after a failed request. Set to 0 to switch to the next provider immediately.",
+            type: ConfigSliderRange,
+            defaultValue: providerRetryCount,
+            min: 0,
+            max: 5,
+            step: 1,
+            showStepMarkers: true,
+          },
+        ],
+        onChange: (_name, value) => {
+          const numericValue = Number(value);
+          const nextValue = window.AIAddonManager?.setProviderRetryCount?.(value)
+            ?? (Number.isFinite(numericValue) ? numericValue : 2);
+          setProviderRetryCount(nextValue);
+        },
+      }),
+      renderCulturalAnnotationGroup(),
       // Provider 목록
       providers.length > 0 && react.createElement("div", { className: "lyrics-providers-list", role: "list" },
         renderSettingsProviderItems({
@@ -2523,9 +2506,7 @@ const LocalCacheManager = () => {
     )
     .replace("{providerCount}", openDbInfo?.providerCount || 0);
 
-  return react.createElement(
-    "div",
-    { className: "option-list-wrapper cache-management-list" },
+  const renderLocalCacheRow = () =>
     react.createElement(
       "div",
       { className: "setting-row" },
@@ -2570,7 +2551,9 @@ const LocalCacheManager = () => {
         )
       )
     )
-    ),
+    );
+
+  const renderOpenDbCacheRow = () =>
     react.createElement(
       "div",
       { className: "setting-row opendb-cache-row" },
@@ -2678,7 +2661,13 @@ const LocalCacheManager = () => {
           )
         )
       )
-    )
+    );
+
+  return react.createElement(
+    "div",
+    { className: "option-list-wrapper cache-management-list" },
+    renderLocalCacheRow(),
+    renderOpenDbCacheRow()
   );
 };
 
@@ -2752,7 +2741,7 @@ const DebugInfoPanel = () => {
         client: {
           clientId: Spicetify.LocalStorage.get("ivLyrics:user-hash") || "",
           platform: Utils.detectPlatform(),
-          language: CONFIG.visual["language"] || "en"
+          language: CONFIG.visual.language || "en"
         }
       };
     } catch (e) {
@@ -2883,20 +2872,7 @@ const DebugInfoPanel = () => {
     );
   }
 
-  return react.createElement(
-    "div",
-    {
-      className: "info-card debug-info-panel",
-      style: {
-        padding: "20px",
-        background: "rgba(255, 255, 255, 0.03)",
-        border: "1px solid rgba(255, 255, 255, 0.08)",
-        borderRadius: "0 0 12px 12px",
-        backdropFilter: "blur(30px) saturate(150%)",
-        WebkitBackdropFilter: "blur(30px) saturate(150%)",
-        marginBottom: "24px"
-      }
-    },
+  const renderDebugHeader = () =>
     // 헤더 (새로고침 버튼 포함)
     react.createElement(
       "div",
@@ -2928,7 +2904,9 @@ const DebugInfoPanel = () => {
         }),
         I18n.t("settingsAdvanced.debugTab.refresh")
       )
-    ),
+    );
+
+  const renderDebugTrackInfo = () =>
     // 트랙 정보
     debugInfo.track && react.createElement(
       "div",
@@ -2958,7 +2936,9 @@ const DebugInfoPanel = () => {
           }, debugInfo.track.id)
         )
       )
-    ),
+    );
+
+  const renderDebugApiLogs = () =>
     // API 요청 로그 섹션
     react.createElement(
       "div",
@@ -3022,7 +3002,7 @@ const DebugInfoPanel = () => {
             // 엔드포인트 URL (축약)
             react.createElement("div", {
               className: "debug-api-endpoint"
-            }, log.endpoint?.replace(/https?:\/\/[^\/]+/, '') || '-'),
+            }, log.endpoint?.replace(/https?:\/\/[^/]+/, '') || '-'),
             // 상세 정보 (토글)
             showApiDetails[log.id] && react.createElement(
               "div",
@@ -3048,7 +3028,9 @@ const DebugInfoPanel = () => {
             )
           ))
       )
-    ),
+    );
+
+  const renderDebugLyricsInfo = () =>
     // 가사 정보
     react.createElement(
       "div",
@@ -3090,7 +3072,9 @@ const DebugInfoPanel = () => {
           )
         ) : react.createElement("span", { className: "debug-info-empty" }, I18n.t("settingsAdvanced.debugTab.noLyrics"))
       )
-    ),
+    );
+
+  const renderDebugActions = () =>
     // 복사 버튼들
     react.createElement(
       "div",
@@ -3142,7 +3126,32 @@ const DebugInfoPanel = () => {
         }),
         I18n.t("settingsAdvanced.debugTab.sendToDiscord")
       )
-    )
+    );
+
+  return react.createElement(
+    "div",
+    {
+      className: "info-card debug-info-panel",
+      style: {
+        padding: "20px",
+        background: "rgba(255, 255, 255, 0.03)",
+        border: "1px solid rgba(255, 255, 255, 0.08)",
+        borderRadius: "0 0 12px 12px",
+        backdropFilter: "blur(30px) saturate(150%)",
+        WebkitBackdropFilter: "blur(30px) saturate(150%)",
+        marginBottom: "24px"
+      }
+    },
+    // 헤더 (새로고침 버튼 포함)
+    renderDebugHeader(),
+    // 트랙 정보
+    renderDebugTrackInfo(),
+    // API 요청 로그 섹션
+    renderDebugApiLogs(),
+    // 가사 정보
+    renderDebugLyricsInfo(),
+    // 복사 버튼들
+    renderDebugActions()
   );
 };
 
@@ -4036,98 +4045,7 @@ const ConfigSettingsPresets = () => {
     }
   }, [presets, persistPresets]);
 
-  return react.createElement(
-    "div",
-    {
-      className: "setting-row",
-    },
-    react.createElement(
-      "div",
-      {
-        className: "setting-row-content",
-        style: {
-          flexDirection: "column",
-          alignItems: "stretch",
-          gap: "14px",
-        },
-      },
-      react.createElement(
-        "div",
-        { className: "setting-row-left" },
-        react.createElement(
-          "div",
-          { className: "setting-name" },
-          getSettingsPresetText("nameLabel", "Preset name")
-        ),
-        react.createElement(
-          "div",
-          { className: "setting-description" },
-          getSettingsPresetText(
-            "excludedSecrets",
-            "Current visual and behavior settings are saved. API keys are excluded."
-          )
-        )
-      ),
-      react.createElement(
-        "div",
-        {
-          style: {
-            display: "grid",
-            gridTemplateColumns: "minmax(0, 1fr) auto",
-            gap: "10px",
-          },
-        },
-        react.createElement("input", {
-          className: "config-text-input",
-          type: "text",
-          value: presetName,
-          placeholder: getSettingsPresetText("namePlaceholder", "My preset"),
-          onChange: (event) => setPresetName(event.target.value),
-          onKeyDown: (event) => {
-            if (event.key === "Enter") {
-              handleSave();
-            }
-          },
-        }),
-        react.createElement(
-          "button",
-          {
-            className: "btn",
-            type: "button",
-            onClick: handleSave,
-          },
-          getSettingsPresetText("saveCurrent", "Save current")
-        )
-      ),
-      react.createElement(
-        "div",
-        {
-          style: {
-            display: "flex",
-            flexDirection: "column",
-            gap: "8px",
-          },
-        },
-        react.createElement(
-          "div",
-          {
-            className: "setting-name",
-            style: { fontSize: "13px" },
-          },
-          getSettingsPresetText("savedPresets", "Saved presets")
-        ),
-        presets.length === 0
-          ? react.createElement(
-              "div",
-              {
-                className: "setting-description",
-                style: {
-                  padding: "12px 0",
-                },
-              },
-              getSettingsPresetText("empty", "No presets saved yet.")
-            )
-          : presets.map((preset) =>
+  const renderPresetRow = (preset) =>
               react.createElement(
                 "div",
                 {
@@ -4207,9 +4125,105 @@ const ConfigSettingsPresets = () => {
                     getSettingsPresetText("delete", "Delete")
                   )
                 )
-              )
+              );
+
+  const renderPresetsSaveBlock = () =>
+react.createElement(
+        "div",
+        {
+          style: {
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr) auto",
+            gap: "10px",
+          },
+        },
+        react.createElement("input", {
+          className: "config-text-input",
+          type: "text",
+          value: presetName,
+          placeholder: getSettingsPresetText("namePlaceholder", "My preset"),
+          onChange: (event) => setPresetName(event.target.value),
+          onKeyDown: (event) => {
+            if (event.key === "Enter") {
+              handleSave();
+            }
+          },
+        }),
+        react.createElement(
+          "button",
+          {
+            className: "btn",
+            type: "button",
+            onClick: handleSave,
+          },
+          getSettingsPresetText("saveCurrent", "Save current")
+        )
+      );
+  const renderPresetsSavedListBlock = () =>
+react.createElement(
+        "div",
+        {
+          style: {
+            display: "flex",
+            flexDirection: "column",
+            gap: "8px",
+          },
+        },
+        react.createElement(
+          "div",
+          {
+            className: "setting-name",
+            style: { fontSize: "13px" },
+          },
+          getSettingsPresetText("savedPresets", "Saved presets")
+        ),
+        presets.length === 0
+          ? react.createElement(
+              "div",
+              {
+                className: "setting-description",
+                style: {
+                  padding: "12px 0",
+                },
+              },
+              getSettingsPresetText("empty", "No presets saved yet.")
             )
-      )
+          : presets.map((preset) => renderPresetRow(preset))
+      );
+  return react.createElement(
+    "div",
+    {
+      className: "setting-row",
+    },
+    react.createElement(
+      "div",
+      {
+        className: "setting-row-content",
+        style: {
+          flexDirection: "column",
+          alignItems: "stretch",
+          gap: "14px",
+        },
+      },
+      react.createElement(
+        "div",
+        { className: "setting-row-left" },
+        react.createElement(
+          "div",
+          { className: "setting-name" },
+          getSettingsPresetText("nameLabel", "Preset name")
+        ),
+        react.createElement(
+          "div",
+          { className: "setting-description" },
+          getSettingsPresetText(
+            "excludedSecrets",
+            "Current visual and behavior settings are saved. API keys are excluded."
+          )
+        )
+      ),
+      renderPresetsSaveBlock(),
+      renderPresetsSavedListBlock()
     )
   );
 };
@@ -4767,54 +4781,6 @@ const ConfigSelection = ({
   );
 };
 
-const createInstrumentalBreakPreviewChildren = (icon) => {
-  const span = (key, props = {}) => react.createElement("span", { key, ...props });
-
-  switch (icon) {
-    case "dotWave":
-      return [0, 1, 2, 3, 4].map((index) => span(index));
-    case "ripples":
-    case "orbit":
-    case "vinyl":
-      return span("main");
-    case "diamonds":
-    case "stack":
-      return [0, 1, 2].map((index) => span(index));
-    case "signal":
-      return react.createElement(
-        "svg",
-        { viewBox: "0 0 112 32", "aria-hidden": "true" },
-        react.createElement("path", {
-          d: "M2 18 H20 L26 9 L34 25 L43 14 L50 18 H68 L74 9 L82 25 L91 14 L98 18 H110",
-        })
-      );
-    case "spark":
-      return [0, 1, 2, 3, 4, 5, 6, 7].map((index) => span(index, { style: { "--i": index } }));
-    case "splitBars":
-    case "strings":
-      return [0, 1, 2, 3].map((index) => span(index));
-    case "reels":
-      return [0, 1].map((index) => span(index));
-    case "piano":
-      return [0, 1, 2, 3, 4].map((index) => span(index));
-    case "bloom":
-      return [0, 1, 2, 3].map((index) => span(index));
-    case "scan":
-    case "arcs":
-    case "pulseDot":
-    case "metronome":
-    case "beat":
-    case "triangle":
-    case "morph":
-    case "speaker":
-    case "crossfade":
-      return null;
-    case "equalizer":
-    default:
-      return [0, 1, 2, 3].map((index) => span(index));
-  }
-};
-
 const getInstrumentalBreakPreviewStyle = () => {
   const speed = Number(CONFIG?.visual?.["instrumental-break-animation-speed"] ?? 100);
   const safeSpeed = Number.isFinite(speed) ? Math.max(50, Math.min(200, speed)) : 100;
@@ -4848,7 +4814,8 @@ const InstrumentalBreakIconPreview = ({ icon }) => {
       style: getInstrumentalBreakPreviewStyle(),
       "aria-hidden": "true",
     },
-    createInstrumentalBreakPreviewChildren(icon)
+    // Same markup as the in-lyrics break indicator (Pages.js, shared bundle scope).
+    createBreakIconChildren(icon)
   );
 };
 
@@ -5542,6 +5509,70 @@ const NowPlayingPanelPreview = () => {
     } : { r: 99, g: 102, b: 241 };
   };
 
+  const renderPreviewLine = (line, idx) =>
+          react.createElement(
+            "div",
+            {
+              key: idx,
+              style: {
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+                flex: `0 0 ${previewLineSlotHeight}px`,
+                minHeight: `${previewLineSlotHeight}px`,
+                gap: "2px",
+                padding: "4px 0",
+                opacity: line.active ? 1 : 0.5,
+                transition: "opacity 0.3s ease",
+              }
+            },
+            // 원문 (가장 먼저)
+            react.createElement(
+              "div",
+              {
+                style: {
+                  fontSize: `${originalSize * scale}px`,
+                  fontWeight: line.active ? 800 : 700,
+                  color: line.active ? "#ffffff" : "rgba(255, 255, 255, 0.7)",
+                  lineHeight: 1.4,
+                  fontFamily: originalFontFamily,
+                  textShadow: createOutsideTextOutlineShadow(originalOutlineWidth, originalOutlineColor),
+                }
+              },
+              line.original
+            ),
+            // 발음 (두 번째)
+            react.createElement(
+              "div",
+              {
+                style: {
+                  fontSize: `${phoneticSize * scale}px`,
+                  fontWeight: 400,
+                  color: line.active ? "rgba(255, 255, 255, 0.75)" : "rgba(255, 255, 255, 0.55)",
+                  lineHeight: 1.35,
+                  fontFamily: phoneticFontFamily,
+                  textShadow: createOutsideTextOutlineShadow(phoneticOutlineWidth, phoneticOutlineColor),
+                }
+              },
+              line.phonetic
+            ),
+            // 번역 (마지막)
+            react.createElement(
+              "div",
+              {
+                style: {
+                  fontSize: `${translationSize * scale}px`,
+                  fontWeight: 500,
+                  color: line.active ? "rgba(255, 255, 255, 0.8)" : "rgba(255, 255, 255, 0.5)",
+                  lineHeight: 1.35,
+                  fontFamily: translationFontFamily,
+                  textShadow: createOutsideTextOutlineShadow(translationOutlineWidth, translationOutlineColor),
+                }
+              },
+              line.translation
+            )
+          );
+
   const previewBackgroundStyle = bgType === "transparent"
     ? "transparent"
     : `linear-gradient(rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.38)), ${getBackgroundStyle()}`;
@@ -5604,122 +5635,8 @@ const NowPlayingPanelPreview = () => {
             zIndex: 1,
           }
         },
-        ...sampleLyrics.map((line, idx) =>
-          react.createElement(
-            "div",
-            {
-              key: idx,
-              style: {
-                display: "flex",
-                flexDirection: "column",
-                justifyContent: "center",
-                flex: `0 0 ${previewLineSlotHeight}px`,
-                minHeight: `${previewLineSlotHeight}px`,
-                gap: "2px",
-                padding: "4px 0",
-                opacity: line.active ? 1 : 0.5,
-                transition: "opacity 0.3s ease",
-              }
-            },
-            // 원문 (가장 먼저)
-            react.createElement(
-              "div",
-              {
-                style: {
-                  fontSize: `${originalSize * scale}px`,
-                  fontWeight: line.active ? 800 : 700,
-                  color: line.active ? "#ffffff" : "rgba(255, 255, 255, 0.7)",
-                  lineHeight: 1.4,
-                  fontFamily: originalFontFamily,
-                  textShadow: createOutsideTextOutlineShadow(originalOutlineWidth, originalOutlineColor),
-                }
-              },
-              line.original
-            ),
-            // 발음 (두 번째)
-            react.createElement(
-              "div",
-              {
-                style: {
-                  fontSize: `${phoneticSize * scale}px`,
-                  fontWeight: 400,
-                  color: line.active ? "rgba(255, 255, 255, 0.75)" : "rgba(255, 255, 255, 0.55)",
-                  lineHeight: 1.35,
-                  fontFamily: phoneticFontFamily,
-                  textShadow: createOutsideTextOutlineShadow(phoneticOutlineWidth, phoneticOutlineColor),
-                }
-              },
-              line.phonetic
-            ),
-            // 번역 (마지막)
-            react.createElement(
-              "div",
-              {
-                style: {
-                  fontSize: `${translationSize * scale}px`,
-                  fontWeight: 500,
-                  color: line.active ? "rgba(255, 255, 255, 0.8)" : "rgba(255, 255, 255, 0.5)",
-                  lineHeight: 1.35,
-                  fontFamily: translationFontFamily,
-                  textShadow: createOutsideTextOutlineShadow(translationOutlineWidth, translationOutlineColor),
-                }
-              },
-              line.translation
-            )
-          )
-        )
+        ...sampleLyrics.map((line, idx) => renderPreviewLine(line, idx))
       )
-    )
-  );
-};
-
-const ConfigAdjust = ({
-  name,
-  defaultValue,
-  step,
-  min,
-  max,
-  onChange = () => { },
-}) => {
-  const [value, setValue] = useState(defaultValue);
-
-  useEffect(() => {
-    setValue(defaultValue);
-  }, [defaultValue]);
-
-  function adjust(dir) {
-    let temp = value + dir * step;
-    if (temp < min) {
-      temp = min;
-    } else if (temp > max) {
-      temp = max;
-    }
-    setValue(temp);
-    onChange(temp);
-  }
-  return react.createElement(
-    "div",
-    { className: "adjust-container" },
-    react.createElement(
-      "button",
-      {
-        className: "adjust-button",
-        onClick: () => adjust(-1),
-        disabled: value === min,
-        "aria-label": "Decrease",
-      },
-      "-"
-    ),
-    react.createElement("span", { className: "adjust-value" }, value),
-    react.createElement(
-      "button",
-      {
-        className: "adjust-button",
-        onClick: () => adjust(1),
-        disabled: value === max,
-        "aria-label": "Increase",
-      },
-      "+"
     )
   );
 };
@@ -5752,7 +5669,6 @@ const normalizeKaraokeFillCurvePoints = (value) => {
 
   const points = KARAOKE_FILL_CURVE_DEFAULT_POINTS.map((defaultPoint, index) => {
     const source = Array.isArray(parsed) ? parsed[index] : null;
-    const sourceX = Array.isArray(source) ? source[0] : source?.x;
     const sourceY = Array.isArray(source) ? source[1] : source?.y;
     return {
       x: defaultPoint.x,
@@ -6435,12 +6351,6 @@ const OptionList = ({ type, items, onChange }) => {
   );
 };
 
-// Pre-defined styles to avoid recreation on each render
-const MODAL_STYLES = {
-  header: { margin: 0, fontSize: "18px", fontWeight: "600" },
-  previewTitle: { marginTop: 0, marginBottom: "10px" },
-};
-
 const getEffectiveReducedMotionPreference = () =>
   CONFIG.visual["reduce-motion"] === true;
 
@@ -6687,7 +6597,7 @@ const getCurrentSettingsBackgroundMode = () => {
   if (CONFIG.visual["solid-background"]) return "solid-background";
   if (CONFIG.visual["blur-gradient-background"]) return "blur-gradient-background";
   if (CONFIG.visual["gradient-background"]) return "gradient-background";
-  if (CONFIG.visual["colorful"]) return "colorful";
+  if (CONFIG.visual.colorful) return "colorful";
   return "none";
 };
 
@@ -7102,590 +7012,614 @@ const ConfigModal = ({
 
   // 검색 가능한 설정 항목 정의
   // i18nKeys: 모든 언어의 번역을 검색 대상에 포함시키기 위한 i18n 키 경로 배열
-  const searchableSettings = react.useMemo(() => [
+  const searchableSettings = react.useMemo(() => {
     // 일반 탭 - 언어
-    {
-      section: I18n.t("tabs.general"),
-      sectionKey: "general",
-      settingKey: "language",
-      name: I18n.t("settings.language.label"),
-      desc: I18n.t("settings.language.desc"),
-      i18nKeys: ["tabs.general", "settings.language.label", "settings.language.desc"]
-    },
+    const buildGeneralLanguageSettings = () => [
+      {
+        section: I18n.t("tabs.general"),
+        sectionKey: "general",
+        settingKey: "language",
+        name: I18n.t("settings.language.label"),
+        desc: I18n.t("settings.language.desc"),
+        i18nKeys: ["tabs.general", "settings.language.label", "settings.language.desc"]
+      },
+    ];
     // 일반 탭 - 시각 효과
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "alignment",
-      name: I18n.t("settings.alignment.label"),
-      desc: I18n.t("settings.alignment.desc"),
-      i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.alignment.label", "settings.alignment.desc"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "noise",
-      name: I18n.t("settings.noise.label"),
-      desc: I18n.t("settings.noise.desc"),
-      i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.noise.label", "settings.noise.desc"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "reduce-motion",
-      name: I18n.t("settings.reduceMotion.label"),
-      desc: I18n.t("settings.reduceMotion.desc"),
-      i18nKeys: ["tabs.appearance", "sections.motion", "settings.reduceMotion.label", "settings.reduceMotion.desc"]
-    },
-    {
-      section: I18n.t("tabs.performance"),
-      sectionKey: "performance",
-      settingKey: "performance-frame-rate",
-      name: I18n.t("settingsAdvanced.performance.frameRate.label"),
-      desc: I18n.t("settingsAdvanced.performance.frameRate.desc"),
-      i18nKeys: ["tabs.performance", "settingsAdvanced.performance.rendering.title", "settingsAdvanced.performance.frameRate.label", "settingsAdvanced.performance.frameRate.desc"]
-    },
-    {
-      section: I18n.t("tabs.performance"),
-      sectionKey: "performance",
-      settingKey: "karaoke-line-transition",
-      name: I18n.t("settingsAdvanced.karaokeMode.lineTransition.label"),
-      desc: I18n.t("settingsAdvanced.karaokeMode.lineTransition.desc"),
-      i18nKeys: ["tabs.performance", "settingsAdvanced.performance.rendering.title", "settingsAdvanced.karaokeMode.lineTransition.label", "settingsAdvanced.karaokeMode.lineTransition.desc"]
-    },
-    {
-      section: I18n.t("tabs.performance"),
-      sectionKey: "performance",
-      settingKey: "karaoke-text-effects",
-      name: I18n.t("settingsAdvanced.performance.textEffects.label"),
-      desc: I18n.t("settingsAdvanced.performance.textEffects.desc"),
-      i18nKeys: ["tabs.performance", "settingsAdvanced.performance.rendering.title", "settingsAdvanced.performance.textEffects.label", "settingsAdvanced.performance.textEffects.desc"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "colorful",
-      name: I18n.t("settings.colorful.label"),
-      desc: I18n.t("settings.colorful.desc"),
-      i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.colorful.label", "settings.colorful.desc"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "gradient-background",
-      name: I18n.t("settings.gradientBackground.label"),
-      desc: I18n.t("settings.gradientBackground.desc"),
-      i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.gradientBackground.label", "settings.gradientBackground.desc"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "solid-background",
-      name: I18n.t("settings.solidBackground.label"),
-      desc: I18n.t("settings.solidBackground.desc"),
-      i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.solidBackground.label", "settings.solidBackground.desc"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "video-background",
-      name: I18n.t("settings.videoBackground.label"),
-      desc: I18n.t("settings.videoBackground.desc"),
-      i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.videoBackground.label", "settings.videoBackground.desc"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "background-brightness",
-      name: I18n.t("settings.backgroundBrightness.label"),
-      desc: I18n.t("settings.backgroundBrightness.desc"),
-      i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.backgroundBrightness.label", "settings.backgroundBrightness.desc"]
-    },
+    const buildAppearanceVisualSettings = () => [
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "alignment",
+        name: I18n.t("settings.alignment.label"),
+        desc: I18n.t("settings.alignment.desc"),
+        i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.alignment.label", "settings.alignment.desc"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "noise",
+        name: I18n.t("settings.noise.label"),
+        desc: I18n.t("settings.noise.desc"),
+        i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.noise.label", "settings.noise.desc"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "reduce-motion",
+        name: I18n.t("settings.reduceMotion.label"),
+        desc: I18n.t("settings.reduceMotion.desc"),
+        i18nKeys: ["tabs.appearance", "sections.motion", "settings.reduceMotion.label", "settings.reduceMotion.desc"]
+      },
+      {
+        section: I18n.t("tabs.performance"),
+        sectionKey: "performance",
+        settingKey: "performance-frame-rate",
+        name: I18n.t("settingsAdvanced.performance.frameRate.label"),
+        desc: I18n.t("settingsAdvanced.performance.frameRate.desc"),
+        i18nKeys: ["tabs.performance", "settingsAdvanced.performance.rendering.title", "settingsAdvanced.performance.frameRate.label", "settingsAdvanced.performance.frameRate.desc"]
+      },
+      {
+        section: I18n.t("tabs.performance"),
+        sectionKey: "performance",
+        settingKey: "karaoke-line-transition",
+        name: I18n.t("settingsAdvanced.karaokeMode.lineTransition.label"),
+        desc: I18n.t("settingsAdvanced.karaokeMode.lineTransition.desc"),
+        i18nKeys: ["tabs.performance", "settingsAdvanced.performance.rendering.title", "settingsAdvanced.karaokeMode.lineTransition.label", "settingsAdvanced.karaokeMode.lineTransition.desc"]
+      },
+      {
+        section: I18n.t("tabs.performance"),
+        sectionKey: "performance",
+        settingKey: "karaoke-text-effects",
+        name: I18n.t("settingsAdvanced.performance.textEffects.label"),
+        desc: I18n.t("settingsAdvanced.performance.textEffects.desc"),
+        i18nKeys: ["tabs.performance", "settingsAdvanced.performance.rendering.title", "settingsAdvanced.performance.textEffects.label", "settingsAdvanced.performance.textEffects.desc"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "colorful",
+        name: I18n.t("settings.colorful.label"),
+        desc: I18n.t("settings.colorful.desc"),
+        i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.colorful.label", "settings.colorful.desc"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "gradient-background",
+        name: I18n.t("settings.gradientBackground.label"),
+        desc: I18n.t("settings.gradientBackground.desc"),
+        i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.gradientBackground.label", "settings.gradientBackground.desc"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "solid-background",
+        name: I18n.t("settings.solidBackground.label"),
+        desc: I18n.t("settings.solidBackground.desc"),
+        i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.solidBackground.label", "settings.solidBackground.desc"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "video-background",
+        name: I18n.t("settings.videoBackground.label"),
+        desc: I18n.t("settings.videoBackground.desc"),
+        i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.videoBackground.label", "settings.videoBackground.desc"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "background-brightness",
+        name: I18n.t("settings.backgroundBrightness.label"),
+        desc: I18n.t("settings.backgroundBrightness.desc"),
+        i18nKeys: ["tabs.appearance", "sections.visualEffects", "settings.backgroundBrightness.label", "settings.backgroundBrightness.desc"]
+      },
+    ];
     // 일반 탭 - 데스크탑 오버레이
-    {
-      section: I18n.t("tabs.general"),
-      sectionKey: "general",
-      settingKey: "overlay-enabled",
-      name: I18n.t("overlay.enabled.label"),
-      desc: I18n.t("overlay.enabled.desc"),
-      i18nKeys: ["tabs.general", "overlay.enabled.label", "overlay.enabled.desc"]
-    },
-    {
-      section: I18n.t("tabs.general"),
-      sectionKey: "general",
-      settingKey: "overlay-trim-metadata",
-      name: I18n.t("overlay.trimMetadata.label"),
-      desc: I18n.t("overlay.trimMetadata.desc"),
-      i18nKeys: ["tabs.general", "sections.desktopOverlay", "overlay.trimMetadata.label", "overlay.trimMetadata.desc"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "sync-mode",
-      name: I18n.t("settingsAdvanced.syncMode.title"),
-      desc: I18n.t("settingsAdvanced.syncMode.subtitle"),
-      i18nKeys: ["tabs.appearance", "settingsAdvanced.syncMode.title", "settingsAdvanced.syncMode.subtitle", "sections.visualEffects"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "multi-vocal-colors",
-      name: I18n.t("settingsAdvanced.multiVocalColors.title"),
-      desc: I18n.t("settingsAdvanced.multiVocalColors.subtitle"),
-      i18nKeys: [
-        "tabs.appearance",
-        "settingsAdvanced.multiVocalColors.title",
-        "settingsAdvanced.multiVocalColors.subtitle",
-        "settingsAdvanced.multiVocalColors.description",
-        "settingsAdvanced.multiVocalColors.useCreatorColors.label",
-        "settingsAdvanced.multiVocalColors.useCreatorColors.desc",
-      ],
-      keywords: ["multi vocal speaker color male female duet karaoke creator custom sync data"]
-    },
+    const buildGeneralOverlaySettings = () => [
+      {
+        section: I18n.t("tabs.general"),
+        sectionKey: "general",
+        settingKey: "overlay-enabled",
+        name: I18n.t("overlay.enabled.label"),
+        desc: I18n.t("overlay.enabled.desc"),
+        i18nKeys: ["tabs.general", "overlay.enabled.label", "overlay.enabled.desc"]
+      },
+      {
+        section: I18n.t("tabs.general"),
+        sectionKey: "general",
+        settingKey: "overlay-trim-metadata",
+        name: I18n.t("overlay.trimMetadata.label"),
+        desc: I18n.t("overlay.trimMetadata.desc"),
+        i18nKeys: ["tabs.general", "sections.desktopOverlay", "overlay.trimMetadata.label", "overlay.trimMetadata.desc"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "sync-mode",
+        name: I18n.t("settingsAdvanced.syncMode.title"),
+        desc: I18n.t("settingsAdvanced.syncMode.subtitle"),
+        i18nKeys: ["tabs.appearance", "settingsAdvanced.syncMode.title", "settingsAdvanced.syncMode.subtitle", "sections.visualEffects"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "multi-vocal-colors",
+        name: I18n.t("settingsAdvanced.multiVocalColors.title"),
+        desc: I18n.t("settingsAdvanced.multiVocalColors.subtitle"),
+        i18nKeys: [
+          "tabs.appearance",
+          "settingsAdvanced.multiVocalColors.title",
+          "settingsAdvanced.multiVocalColors.subtitle",
+          "settingsAdvanced.multiVocalColors.description",
+          "settingsAdvanced.multiVocalColors.useCreatorColors.label",
+          "settingsAdvanced.multiVocalColors.useCreatorColors.desc",
+        ],
+        keywords: ["multi vocal speaker color male female duet karaoke creator custom sync data"]
+      },
 
+    ];
     // 외관 탭
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "original-style",
-      name: I18n.t("settingsAdvanced.originalStyle.title"),
-      desc: I18n.t("settingsAdvanced.originalStyle.subtitle"),
-      i18nKeys: ["tabs.appearance", "settingsAdvanced.originalStyle.title", "settingsAdvanced.originalStyle.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "pronunciation-style",
-      name: I18n.t("settingsAdvanced.pronunciationStyle.title"),
-      desc: I18n.t("settingsAdvanced.pronunciationStyle.subtitle"),
-      i18nKeys: ["tabs.appearance", "settingsAdvanced.pronunciationStyle.title", "settingsAdvanced.pronunciationStyle.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "translation-style",
-      name: I18n.t("settingsAdvanced.translationStyle.title"),
-      desc: I18n.t("settingsAdvanced.translationStyle.subtitle"),
-      i18nKeys: ["tabs.appearance", "settingsAdvanced.translationStyle.title", "settingsAdvanced.translationStyle.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "furigana-style",
-      name: I18n.t("settingsAdvanced.furiganaStyle.title"),
-      desc: I18n.t("settingsAdvanced.furiganaStyle.subtitle"),
-      i18nKeys: ["tabs.appearance", "settingsAdvanced.furiganaStyle.title", "settingsAdvanced.furiganaStyle.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.appearance"),
-      sectionKey: "appearance",
-      settingKey: "text-shadow",
-      name: I18n.t("settingsAdvanced.textShadow.title"),
-      desc: I18n.t("settingsAdvanced.textShadow.subtitle"),
-      i18nKeys: ["tabs.appearance", "settingsAdvanced.textShadow.title", "settingsAdvanced.textShadow.subtitle"]
-    },
+    const buildAppearanceTabSettings = () => [
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "original-style",
+        name: I18n.t("settingsAdvanced.originalStyle.title"),
+        desc: I18n.t("settingsAdvanced.originalStyle.subtitle"),
+        i18nKeys: ["tabs.appearance", "settingsAdvanced.originalStyle.title", "settingsAdvanced.originalStyle.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "pronunciation-style",
+        name: I18n.t("settingsAdvanced.pronunciationStyle.title"),
+        desc: I18n.t("settingsAdvanced.pronunciationStyle.subtitle"),
+        i18nKeys: ["tabs.appearance", "settingsAdvanced.pronunciationStyle.title", "settingsAdvanced.pronunciationStyle.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "translation-style",
+        name: I18n.t("settingsAdvanced.translationStyle.title"),
+        desc: I18n.t("settingsAdvanced.translationStyle.subtitle"),
+        i18nKeys: ["tabs.appearance", "settingsAdvanced.translationStyle.title", "settingsAdvanced.translationStyle.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "furigana-style",
+        name: I18n.t("settingsAdvanced.furiganaStyle.title"),
+        desc: I18n.t("settingsAdvanced.furiganaStyle.subtitle"),
+        i18nKeys: ["tabs.appearance", "settingsAdvanced.furiganaStyle.title", "settingsAdvanced.furiganaStyle.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.appearance"),
+        sectionKey: "appearance",
+        settingKey: "text-shadow",
+        name: I18n.t("settingsAdvanced.textShadow.title"),
+        desc: I18n.t("settingsAdvanced.textShadow.subtitle"),
+        i18nKeys: ["tabs.appearance", "settingsAdvanced.textShadow.title", "settingsAdvanced.textShadow.subtitle"]
+      },
 
+    ];
     // 동작 탭
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "auto-scroll",
-      name: I18n.t("settings.autoScroll.label"),
-      desc: I18n.t("settings.autoScroll.desc"),
-      i18nKeys: ["tabs.behavior", "settings.autoScroll.label", "settings.autoScroll.desc"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "animation",
-      name: I18n.t("settings.animation.label"),
-      desc: I18n.t("settings.animation.desc"),
-      i18nKeys: ["tabs.behavior", "settings.animation.label", "settings.animation.desc"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "karaoke",
-      name: I18n.t("settings.karaoke.label"),
-      desc: I18n.t("settings.karaoke.desc"),
-      i18nKeys: ["tabs.behavior", "settings.karaoke.label", "settings.karaoke.desc"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "blur-inactive",
-      name: I18n.t("settings.blurInactive.label"),
-      desc: I18n.t("settings.blurInactive.desc"),
-      i18nKeys: ["tabs.behavior", "settings.blurInactive.label", "settings.blurInactive.desc"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "synced-fallback",
-      name: I18n.t("settings.syncedAsFallback.label"),
-      desc: I18n.t("settings.syncedAsFallback.desc"),
-      i18nKeys: ["tabs.behavior", "settings.syncedAsFallback.label", "settings.syncedAsFallback.desc"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "unsynced-fallback",
-      name: I18n.t("settings.unsyncedAsFallback.label"),
-      desc: I18n.t("settings.unsyncedAsFallback.desc"),
-      i18nKeys: ["tabs.behavior", "settings.unsyncedAsFallback.label", "settings.unsyncedAsFallback.desc"]
-    },
+    const buildBehaviorTabSettings = () => [
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "auto-scroll",
+        name: I18n.t("settings.autoScroll.label"),
+        desc: I18n.t("settings.autoScroll.desc"),
+        i18nKeys: ["tabs.behavior", "settings.autoScroll.label", "settings.autoScroll.desc"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "animation",
+        name: I18n.t("settings.animation.label"),
+        desc: I18n.t("settings.animation.desc"),
+        i18nKeys: ["tabs.behavior", "settings.animation.label", "settings.animation.desc"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "karaoke",
+        name: I18n.t("settings.karaoke.label"),
+        desc: I18n.t("settings.karaoke.desc"),
+        i18nKeys: ["tabs.behavior", "settings.karaoke.label", "settings.karaoke.desc"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "blur-inactive",
+        name: I18n.t("settings.blurInactive.label"),
+        desc: I18n.t("settings.blurInactive.desc"),
+        i18nKeys: ["tabs.behavior", "settings.blurInactive.label", "settings.blurInactive.desc"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "synced-fallback",
+        name: I18n.t("settings.syncedAsFallback.label"),
+        desc: I18n.t("settings.syncedAsFallback.desc"),
+        i18nKeys: ["tabs.behavior", "settings.syncedAsFallback.label", "settings.syncedAsFallback.desc"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "unsynced-fallback",
+        name: I18n.t("settings.unsyncedAsFallback.label"),
+        desc: I18n.t("settings.unsyncedAsFallback.desc"),
+        i18nKeys: ["tabs.behavior", "settings.unsyncedAsFallback.label", "settings.unsyncedAsFallback.desc"]
+      },
 
+    ];
     // 고급 탭
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "playback",
-      name: I18n.t("settingsAdvanced.playback.title"),
-      desc: I18n.t("settingsAdvanced.playback.subtitle"),
-      i18nKeys: ["tabs.behavior", "settingsAdvanced.playback.title", "settingsAdvanced.playback.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "quick-sync-controls-enabled",
-      name: I18n.t("settingsAdvanced.playback.quickSyncControls.label"),
-      desc: I18n.t("settingsAdvanced.playback.quickSyncControls.info"),
-      i18nKeys: [
-        "tabs.behavior",
-        "settingsAdvanced.playback.quickSyncControls.label",
-        "settingsAdvanced.playback.quickSyncControls.info",
-      ]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "sync-creator-settings",
-      name: getSettingsText("settings.syncCreatorSettings.title", "Sync Creator Settings"),
-      desc: getSettingsText("settings.syncCreatorSettings.subtitle", "Configure Sync Creator keyboard behavior and recording shortcuts."),
-      i18nKeys: [
-        "tabs.behavior",
-        "settings.syncCreatorSettings.title",
-        "settings.syncCreatorSettings.subtitle",
-        "settings.syncCreatorSettings.autoBoundaryChars.label",
-        "settings.syncCreatorSettings.autoBoundaryChars.desc",
-        "settings.syncCreatorSettings.fillCurve.label",
-        "settings.syncCreatorSettings.fillCurve.desc",
-        "settings.syncCreatorSettings.fillCurve.reset"
-      ],
-      keywords: ["sync creator shortcuts hotkeys keybinds karaoke recording syllable word character drag slash punctuation space special characters fill curve graph correction easing quadratic"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "karaoke-mode",
-      name: I18n.t("settingsAdvanced.karaokeMode.title"),
-      desc: I18n.t("settingsAdvanced.karaokeMode.subtitle"),
-      i18nKeys: ["tabs.behavior", "settingsAdvanced.karaokeMode.title", "settingsAdvanced.karaokeMode.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "prefetch",
-      name: I18n.t("settingsAdvanced.prefetch.title"),
-      desc: I18n.t("settingsAdvanced.prefetch.subtitle"),
-      i18nKeys: ["tabs.behavior", "settingsAdvanced.prefetch.title", "settingsAdvanced.prefetch.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "cache-management",
-      name: I18n.t("settingsAdvanced.cacheManagement.title"),
-      desc: I18n.t("settingsAdvanced.cacheManagement.subtitle"),
-      i18nKeys: ["tabs.behavior", "settingsAdvanced.cacheManagement.title", "settingsAdvanced.cacheManagement.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.behavior"),
-      sectionKey: "lyrics",
-      settingKey: "lyrics-helper",
-      name: I18n.t("settings.lyricsHelper.sectionTitle") || "Helper Integration",
-      desc:
-        I18n.t("settings.lyricsHelper.sectionSubtitle") ||
-        "Send lyrics to external helper applications",
-      i18nKeys: ["tabs.behavior", "settings.lyricsHelper.sectionTitle", "settings.lyricsHelper.sectionSubtitle"]
-    },
-    {
-      section: I18n.t("tabs.advanced"),
-      sectionKey: "advanced",
-      settingKey: "language-detection",
-      name: I18n.t("settingsAdvanced.languageDetection.title"),
-      desc: I18n.t("settingsAdvanced.languageDetection.subtitle"),
-      i18nKeys: ["tabs.advanced", "settingsAdvanced.languageDetection.title", "settingsAdvanced.languageDetection.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.advanced"),
-      sectionKey: "advanced",
-      settingKey: "cloud-sync",
-      name: I18n.t("settingsAdvanced.cloudSync.title"),
-      desc: I18n.t("settingsAdvanced.cloudSync.monthlyRequired"),
-      i18nKeys: ["tabs.advanced", "settingsAdvanced.cloudSync.title", "settingsAdvanced.cloudSync.monthlyRequired"]
-    },
-    {
-      section: I18n.t("tabs.advanced"),
-      sectionKey: "advanced",
-      settingKey: "export-import",
-      name: I18n.t("settingsAdvanced.exportImport.title"),
-      desc: I18n.t("settingsAdvanced.exportImport.subtitle"),
-      i18nKeys: ["tabs.advanced", "settingsAdvanced.exportImport.title", "settingsAdvanced.exportImport.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.advanced"),
-      sectionKey: "advanced",
-      settingKey: "settings-presets",
-      name: I18n.t("settingsAdvanced.settingsPresets.title"),
-      desc: I18n.t("settingsAdvanced.settingsPresets.subtitle"),
-      i18nKeys: ["tabs.advanced", "settingsAdvanced.settingsPresets.title", "settingsAdvanced.settingsPresets.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.advanced"),
-      sectionKey: "advanced",
-      settingKey: "db-export-import",
-      name: I18n.t("settingsAdvanced.dbExportImport.title"),
-      desc: I18n.t("settingsAdvanced.dbExportImport.subtitle"),
-      i18nKeys: ["tabs.advanced", "settingsAdvanced.dbExportImport.title", "settingsAdvanced.dbExportImport.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.advanced"),
-      sectionKey: "advanced",
-      settingKey: "reset-settings",
-      name: I18n.t("settingsAdvanced.resetSettings.title"),
-      desc: I18n.t("settingsAdvanced.resetSettings.subtitle"),
-      i18nKeys: ["tabs.advanced", "settingsAdvanced.resetSettings.title", "settingsAdvanced.resetSettings.subtitle"]
-    },
+    const buildAdvancedTabSettings = () => [
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "playback",
+        name: I18n.t("settingsAdvanced.playback.title"),
+        desc: I18n.t("settingsAdvanced.playback.subtitle"),
+        i18nKeys: ["tabs.behavior", "settingsAdvanced.playback.title", "settingsAdvanced.playback.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "quick-sync-controls-enabled",
+        name: I18n.t("settingsAdvanced.playback.quickSyncControls.label"),
+        desc: I18n.t("settingsAdvanced.playback.quickSyncControls.info"),
+        i18nKeys: [
+          "tabs.behavior",
+          "settingsAdvanced.playback.quickSyncControls.label",
+          "settingsAdvanced.playback.quickSyncControls.info",
+        ]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "sync-creator-settings",
+        name: getSettingsText("settings.syncCreatorSettings.title", "Sync Creator Settings"),
+        desc: getSettingsText("settings.syncCreatorSettings.subtitle", "Configure Sync Creator keyboard behavior and recording shortcuts."),
+        i18nKeys: [
+          "tabs.behavior",
+          "settings.syncCreatorSettings.title",
+          "settings.syncCreatorSettings.subtitle",
+          "settings.syncCreatorSettings.autoBoundaryChars.label",
+          "settings.syncCreatorSettings.autoBoundaryChars.desc",
+          "settings.syncCreatorSettings.fillCurve.label",
+          "settings.syncCreatorSettings.fillCurve.desc",
+          "settings.syncCreatorSettings.fillCurve.reset"
+        ],
+        keywords: ["sync creator shortcuts hotkeys keybinds karaoke recording syllable word character drag slash punctuation space special characters fill curve graph correction easing quadratic"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "karaoke-mode",
+        name: I18n.t("settingsAdvanced.karaokeMode.title"),
+        desc: I18n.t("settingsAdvanced.karaokeMode.subtitle"),
+        i18nKeys: ["tabs.behavior", "settingsAdvanced.karaokeMode.title", "settingsAdvanced.karaokeMode.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "prefetch",
+        name: I18n.t("settingsAdvanced.prefetch.title"),
+        desc: I18n.t("settingsAdvanced.prefetch.subtitle"),
+        i18nKeys: ["tabs.behavior", "settingsAdvanced.prefetch.title", "settingsAdvanced.prefetch.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "cache-management",
+        name: I18n.t("settingsAdvanced.cacheManagement.title"),
+        desc: I18n.t("settingsAdvanced.cacheManagement.subtitle"),
+        i18nKeys: ["tabs.behavior", "settingsAdvanced.cacheManagement.title", "settingsAdvanced.cacheManagement.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.behavior"),
+        sectionKey: "lyrics",
+        settingKey: "lyrics-helper",
+        name: I18n.t("settings.lyricsHelper.sectionTitle") || "Helper Integration",
+        desc:
+          I18n.t("settings.lyricsHelper.sectionSubtitle") ||
+          "Send lyrics to external helper applications",
+        i18nKeys: ["tabs.behavior", "settings.lyricsHelper.sectionTitle", "settings.lyricsHelper.sectionSubtitle"]
+      },
+      {
+        section: I18n.t("tabs.advanced"),
+        sectionKey: "advanced",
+        settingKey: "language-detection",
+        name: I18n.t("settingsAdvanced.languageDetection.title"),
+        desc: I18n.t("settingsAdvanced.languageDetection.subtitle"),
+        i18nKeys: ["tabs.advanced", "settingsAdvanced.languageDetection.title", "settingsAdvanced.languageDetection.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.advanced"),
+        sectionKey: "advanced",
+        settingKey: "cloud-sync",
+        name: I18n.t("settingsAdvanced.cloudSync.title"),
+        desc: I18n.t("settingsAdvanced.cloudSync.monthlyRequired"),
+        i18nKeys: ["tabs.advanced", "settingsAdvanced.cloudSync.title", "settingsAdvanced.cloudSync.monthlyRequired"]
+      },
+      {
+        section: I18n.t("tabs.advanced"),
+        sectionKey: "advanced",
+        settingKey: "export-import",
+        name: I18n.t("settingsAdvanced.exportImport.title"),
+        desc: I18n.t("settingsAdvanced.exportImport.subtitle"),
+        i18nKeys: ["tabs.advanced", "settingsAdvanced.exportImport.title", "settingsAdvanced.exportImport.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.advanced"),
+        sectionKey: "advanced",
+        settingKey: "settings-presets",
+        name: I18n.t("settingsAdvanced.settingsPresets.title"),
+        desc: I18n.t("settingsAdvanced.settingsPresets.subtitle"),
+        i18nKeys: ["tabs.advanced", "settingsAdvanced.settingsPresets.title", "settingsAdvanced.settingsPresets.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.advanced"),
+        sectionKey: "advanced",
+        settingKey: "db-export-import",
+        name: I18n.t("settingsAdvanced.dbExportImport.title"),
+        desc: I18n.t("settingsAdvanced.dbExportImport.subtitle"),
+        i18nKeys: ["tabs.advanced", "settingsAdvanced.dbExportImport.title", "settingsAdvanced.dbExportImport.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.advanced"),
+        sectionKey: "advanced",
+        settingKey: "reset-settings",
+        name: I18n.t("settingsAdvanced.resetSettings.title"),
+        desc: I18n.t("settingsAdvanced.resetSettings.subtitle"),
+        i18nKeys: ["tabs.advanced", "settingsAdvanced.resetSettings.title", "settingsAdvanced.resetSettings.subtitle"]
+      },
 
+    ];
     // 전체화면 탭
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "fullscreen-mode",
-      name: I18n.t("settingsAdvanced.fullscreenMode.title"),
-      desc: I18n.t("settingsAdvanced.fullscreenMode.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.fullscreenMode.title", "settingsAdvanced.fullscreenMode.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "vinyl-mode",
-      name: I18n.t("vinyl.mode"),
-      desc: I18n.t("vinyl.settings.subtitle"),
-      i18nKeys: [
-        "tabs.fullscreen",
-        "vinyl.mode",
-        "vinyl.settings.subtitle",
-        "vinyl.presentation.settingsTitle",
-        "vinyl.presentation.settingsDescription",
-        "vinyl.presentation.vinylLabel",
-        "vinyl.presentation.compactLabel",
-        "vinyl.presentation.videoLabel",
-        "vinyl.settings.backgroundBlurLabel",
-        "vinyl.settings.backgroundBlurDesc"
-      ]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "normal-mode",
-      name: I18n.t("settingsAdvanced.normalMode.title"),
-      desc: I18n.t("settingsAdvanced.normalMode.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.normalMode.title", "settingsAdvanced.normalMode.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "tv-mode",
-      name: I18n.t("settingsAdvanced.tvMode.title"),
-      desc: I18n.t("settingsAdvanced.tvMode.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.tvMode.title", "settingsAdvanced.tvMode.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "metadata-display",
-      name: I18n.t("settingsAdvanced.metadataDisplay.title"),
-      desc: I18n.t("settingsAdvanced.metadataDisplay.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.metadataDisplay.title", "settingsAdvanced.metadataDisplay.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "fullscreen-style",
-      name: I18n.t("settingsAdvanced.fullscreenStyle.title"),
-      desc: I18n.t("settingsAdvanced.fullscreenStyle.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.fullscreenStyle.title", "settingsAdvanced.fullscreenStyle.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "fullscreen-ui",
-      name: I18n.t("settingsAdvanced.fullscreenUI.title"),
-      desc: I18n.t("settingsAdvanced.fullscreenUI.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.fullscreenUI.title", "settingsAdvanced.fullscreenUI.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "controller-style",
-      name: I18n.t("settingsAdvanced.controllerStyle.title"),
-      desc: I18n.t("settingsAdvanced.controllerStyle.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.controllerStyle.title", "settingsAdvanced.controllerStyle.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "auto-hide",
-      name: I18n.t("settingsAdvanced.autoHide.title"),
-      desc: I18n.t("settingsAdvanced.autoHide.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.autoHide.title", "settingsAdvanced.autoHide.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.fullscreen"),
-      sectionKey: "fullscreen",
-      settingKey: "tmi-style",
-      name: I18n.t("settingsAdvanced.tmiStyle.title"),
-      desc: I18n.t("settingsAdvanced.tmiStyle.subtitle"),
-      i18nKeys: ["tabs.fullscreen", "settingsAdvanced.tmiStyle.title", "settingsAdvanced.tmiStyle.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.nowplaying"),
-      sectionKey: "nowplaying",
-      settingKey: "panel-lyrics-general",
-      name: I18n.t("settingsAdvanced.nowPlayingPanel.title"),
-      desc: I18n.t("settingsAdvanced.nowPlayingPanel.subtitle"),
-      i18nKeys: ["tabs.nowplaying", "settingsAdvanced.nowPlayingPanel.title", "settingsAdvanced.nowPlayingPanel.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.nowplaying"),
-      sectionKey: "nowplaying",
-      settingKey: "panel-background",
-      name: I18n.t("settingsAdvanced.nowPlayingPanel.background.title"),
-      desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.subtitle"),
-      i18nKeys: ["tabs.nowplaying", "settingsAdvanced.nowPlayingPanel.background.title", "settingsAdvanced.nowPlayingPanel.background.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.nowplaying"),
-      sectionKey: "nowplaying",
-      settingKey: "panel-border",
-      name: I18n.t("settingsAdvanced.nowPlayingPanel.border.title"),
-      desc: I18n.t("settingsAdvanced.nowPlayingPanel.border.subtitle"),
-      i18nKeys: ["tabs.nowplaying", "settingsAdvanced.nowPlayingPanel.border.title", "settingsAdvanced.nowPlayingPanel.border.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
-      sectionKey: "lyrics-providers",
-      settingKey: "lyrics-providers",
-      name: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
-      desc: I18n.t("settings.lyricsProviders.description") || "Choose and order lyrics providers",
-      i18nKeys: ["tabs.lyricsProviders", "settings.lyricsProviders.title", "settings.lyricsProviders.description"]
-    },
-    {
-      section: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
-      sectionKey: "lyrics-providers",
-      settingKey: "prefer-sync-data-provider",
-      name: I18n.t("settings.lyricsProviders.preferSyncDataProvider.label") || "Prioritize providers with sync data",
-      desc: I18n.t("settings.lyricsProviders.preferSyncDataProvider.desc") || "Try the matching lyrics provider first when sync data is available",
-      i18nKeys: [
-        "tabs.lyricsProviders",
-        "settings.lyricsProviders.preferSyncDataProvider.label",
-        "settings.lyricsProviders.preferSyncDataProvider.desc"
-      ]
-    },
-    {
-      section: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
-      sectionKey: "lyrics-providers",
-      settingKey: "prefer-lyrics-type-over-provider-order",
-      name: I18n.t("settings.lyricsProviders.preferLyricsTypeOverProviderOrder.label") || "Prioritize lyrics type over provider order",
-      desc: I18n.t("settings.lyricsProviders.preferLyricsTypeOverProviderOrder.desc") || "Try karaoke across all providers before synced and plain lyrics",
-      i18nKeys: [
-        "tabs.lyricsProviders",
-        "settings.lyricsProviders.preferLyricsTypeOverProviderOrder.label",
-        "settings.lyricsProviders.preferLyricsTypeOverProviderOrder.desc"
-      ]
-    },
-    {
-      section: I18n.t("tabs.aiProviders"),
-      sectionKey: "ai-providers",
-      settingKey: "ai-providers",
-      name: I18n.t("tabs.aiProviders"),
-      desc: I18n.t("settings.aiProviders.description") || "Configure AI providers and capabilities",
-      i18nKeys: [
-        "tabs.aiProviders",
-        "settings.aiProviders.title",
-        "settings.aiProviders.description",
-        "settings.aiProviders.translationStyle.title",
-        "settings.aiProviders.translationStyle.description",
-        "settings.aiProviders.translationStyle.natural.label",
-        "settings.aiProviders.translationStyle.literal.label",
-        "settings.aiProviders.translationStyle.adaptive.label",
-        "settings.aiProviders.retryCount.label",
-        "settings.aiProviders.retryCount.description"
-      ]
-    },
-    {
-      section: I18n.t("tabs.aiProviders"),
-      sectionKey: "ai-providers",
-      settingKey: "ai-provider-retry-count",
-      name: I18n.t("settings.aiProviders.retryCount.label") || "Retries per provider",
-      desc: I18n.t("settings.aiProviders.retryCount.description")
-        || "Number of additional attempts after a failed request. Set to 0 to switch to the next provider immediately.",
-      i18nKeys: [
-        "tabs.aiProviders",
-        "settings.aiProviders.retryCount.label",
-        "settings.aiProviders.retryCount.description"
-      ]
-    },
-    {
-      section: I18n.t("tabs.about"),
-      sectionKey: "about",
-      settingKey: "about-account",
-      name: I18n.t("settingsAdvanced.aboutTab.account.title"),
-      desc: I18n.t("settingsAdvanced.aboutTab.account.subtitle"),
-      i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.account.title", "settingsAdvanced.aboutTab.account.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.about"),
-      sectionKey: "about",
-      settingKey: "about-app-info",
-      name: I18n.t("settingsAdvanced.aboutTab.appInfo.title"),
-      desc: I18n.t("settingsAdvanced.aboutTab.subtitle"),
-      i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.appInfo.title", "settingsAdvanced.aboutTab.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.about"),
-      sectionKey: "about",
-      settingKey: "about-client-info",
-      name: I18n.t("settingsAdvanced.aboutTab.clientInfo.title"),
-      desc: I18n.t("settingsAdvanced.aboutTab.clientInfo.subtitle"),
-      i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.clientInfo.title", "settingsAdvanced.aboutTab.clientInfo.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.about"),
-      sectionKey: "about",
-      settingKey: "about-update",
-      name: I18n.t("settingsAdvanced.aboutTab.update.title"),
-      desc: I18n.t("settingsAdvanced.aboutTab.update.subtitle"),
-      i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.update.title", "settingsAdvanced.aboutTab.update.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.about"),
-      sectionKey: "about",
-      settingKey: "about-patch-notes",
-      name: I18n.t("settingsAdvanced.aboutTab.patchNotes.title"),
-      desc: I18n.t("settingsAdvanced.aboutTab.patchNotes.subtitle"),
-      i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.patchNotes.title", "settingsAdvanced.aboutTab.patchNotes.subtitle"]
-    },
-    {
-      section: I18n.t("tabs.debug"),
-      sectionKey: "debug",
-      settingKey: "debug-overview",
-      name: I18n.t("settingsAdvanced.debugTab.title"),
-      desc: I18n.t("settingsAdvanced.debugTab.subtitle"),
-      i18nKeys: ["tabs.debug", "settingsAdvanced.debugTab.title", "settingsAdvanced.debugTab.subtitle"]
-    },
-  ], []);
+    const buildFullscreenTabSettings = () => [
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "fullscreen-mode",
+        name: I18n.t("settingsAdvanced.fullscreenMode.title"),
+        desc: I18n.t("settingsAdvanced.fullscreenMode.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.fullscreenMode.title", "settingsAdvanced.fullscreenMode.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "vinyl-mode",
+        name: I18n.t("vinyl.mode"),
+        desc: I18n.t("vinyl.settings.subtitle"),
+        i18nKeys: [
+          "tabs.fullscreen",
+          "vinyl.mode",
+          "vinyl.settings.subtitle",
+          "vinyl.presentation.settingsTitle",
+          "vinyl.presentation.settingsDescription",
+          "vinyl.presentation.vinylLabel",
+          "vinyl.presentation.compactLabel",
+          "vinyl.presentation.videoLabel",
+          "vinyl.settings.backgroundBlurLabel",
+          "vinyl.settings.backgroundBlurDesc"
+        ]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "normal-mode",
+        name: I18n.t("settingsAdvanced.normalMode.title"),
+        desc: I18n.t("settingsAdvanced.normalMode.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.normalMode.title", "settingsAdvanced.normalMode.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "tv-mode",
+        name: I18n.t("settingsAdvanced.tvMode.title"),
+        desc: I18n.t("settingsAdvanced.tvMode.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.tvMode.title", "settingsAdvanced.tvMode.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "metadata-display",
+        name: I18n.t("settingsAdvanced.metadataDisplay.title"),
+        desc: I18n.t("settingsAdvanced.metadataDisplay.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.metadataDisplay.title", "settingsAdvanced.metadataDisplay.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "fullscreen-style",
+        name: I18n.t("settingsAdvanced.fullscreenStyle.title"),
+        desc: I18n.t("settingsAdvanced.fullscreenStyle.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.fullscreenStyle.title", "settingsAdvanced.fullscreenStyle.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "fullscreen-ui",
+        name: I18n.t("settingsAdvanced.fullscreenUI.title"),
+        desc: I18n.t("settingsAdvanced.fullscreenUI.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.fullscreenUI.title", "settingsAdvanced.fullscreenUI.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "controller-style",
+        name: I18n.t("settingsAdvanced.controllerStyle.title"),
+        desc: I18n.t("settingsAdvanced.controllerStyle.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.controllerStyle.title", "settingsAdvanced.controllerStyle.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "auto-hide",
+        name: I18n.t("settingsAdvanced.autoHide.title"),
+        desc: I18n.t("settingsAdvanced.autoHide.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.autoHide.title", "settingsAdvanced.autoHide.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "tmi-style",
+        name: I18n.t("settingsAdvanced.tmiStyle.title"),
+        desc: I18n.t("settingsAdvanced.tmiStyle.subtitle"),
+        i18nKeys: ["tabs.fullscreen", "settingsAdvanced.tmiStyle.title", "settingsAdvanced.tmiStyle.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.nowplaying"),
+        sectionKey: "nowplaying",
+        settingKey: "panel-lyrics-general",
+        name: I18n.t("settingsAdvanced.nowPlayingPanel.title"),
+        desc: I18n.t("settingsAdvanced.nowPlayingPanel.subtitle"),
+        i18nKeys: ["tabs.nowplaying", "settingsAdvanced.nowPlayingPanel.title", "settingsAdvanced.nowPlayingPanel.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.nowplaying"),
+        sectionKey: "nowplaying",
+        settingKey: "panel-background",
+        name: I18n.t("settingsAdvanced.nowPlayingPanel.background.title"),
+        desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.subtitle"),
+        i18nKeys: ["tabs.nowplaying", "settingsAdvanced.nowPlayingPanel.background.title", "settingsAdvanced.nowPlayingPanel.background.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.nowplaying"),
+        sectionKey: "nowplaying",
+        settingKey: "panel-border",
+        name: I18n.t("settingsAdvanced.nowPlayingPanel.border.title"),
+        desc: I18n.t("settingsAdvanced.nowPlayingPanel.border.subtitle"),
+        i18nKeys: ["tabs.nowplaying", "settingsAdvanced.nowPlayingPanel.border.title", "settingsAdvanced.nowPlayingPanel.border.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
+        sectionKey: "lyrics-providers",
+        settingKey: "lyrics-providers",
+        name: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
+        desc: I18n.t("settings.lyricsProviders.description") || "Choose and order lyrics providers",
+        i18nKeys: ["tabs.lyricsProviders", "settings.lyricsProviders.title", "settings.lyricsProviders.description"]
+      },
+      {
+        section: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
+        sectionKey: "lyrics-providers",
+        settingKey: "prefer-sync-data-provider",
+        name: I18n.t("settings.lyricsProviders.preferSyncDataProvider.label") || "Prioritize providers with sync data",
+        desc: I18n.t("settings.lyricsProviders.preferSyncDataProvider.desc") || "Try the matching lyrics provider first when sync data is available",
+        i18nKeys: [
+          "tabs.lyricsProviders",
+          "settings.lyricsProviders.preferSyncDataProvider.label",
+          "settings.lyricsProviders.preferSyncDataProvider.desc"
+        ]
+      },
+      {
+        section: I18n.t("tabs.lyricsProviders") || "Lyrics Providers",
+        sectionKey: "lyrics-providers",
+        settingKey: "prefer-lyrics-type-over-provider-order",
+        name: I18n.t("settings.lyricsProviders.preferLyricsTypeOverProviderOrder.label") || "Prioritize lyrics type over provider order",
+        desc: I18n.t("settings.lyricsProviders.preferLyricsTypeOverProviderOrder.desc") || "Try karaoke across all providers before synced and plain lyrics",
+        i18nKeys: [
+          "tabs.lyricsProviders",
+          "settings.lyricsProviders.preferLyricsTypeOverProviderOrder.label",
+          "settings.lyricsProviders.preferLyricsTypeOverProviderOrder.desc"
+        ]
+      },
+      {
+        section: I18n.t("tabs.aiProviders"),
+        sectionKey: "ai-providers",
+        settingKey: "ai-providers",
+        name: I18n.t("tabs.aiProviders"),
+        desc: I18n.t("settings.aiProviders.description") || "Configure AI providers and capabilities",
+        i18nKeys: [
+          "tabs.aiProviders",
+          "settings.aiProviders.title",
+          "settings.aiProviders.description",
+          "settings.aiProviders.translationStyle.title",
+          "settings.aiProviders.translationStyle.description",
+          "settings.aiProviders.translationStyle.natural.label",
+          "settings.aiProviders.translationStyle.literal.label",
+          "settings.aiProviders.translationStyle.adaptive.label",
+          "settings.aiProviders.retryCount.label",
+          "settings.aiProviders.retryCount.description"
+        ]
+      },
+      {
+        section: I18n.t("tabs.aiProviders"),
+        sectionKey: "ai-providers",
+        settingKey: "ai-provider-retry-count",
+        name: I18n.t("settings.aiProviders.retryCount.label") || "Retries per provider",
+        desc: I18n.t("settings.aiProviders.retryCount.description")
+          || "Number of additional attempts after a failed request. Set to 0 to switch to the next provider immediately.",
+        i18nKeys: [
+          "tabs.aiProviders",
+          "settings.aiProviders.retryCount.label",
+          "settings.aiProviders.retryCount.description"
+        ]
+      },
+      {
+        section: I18n.t("tabs.about"),
+        sectionKey: "about",
+        settingKey: "about-account",
+        name: I18n.t("settingsAdvanced.aboutTab.account.title"),
+        desc: I18n.t("settingsAdvanced.aboutTab.account.subtitle"),
+        i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.account.title", "settingsAdvanced.aboutTab.account.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.about"),
+        sectionKey: "about",
+        settingKey: "about-app-info",
+        name: I18n.t("settingsAdvanced.aboutTab.appInfo.title"),
+        desc: I18n.t("settingsAdvanced.aboutTab.subtitle"),
+        i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.appInfo.title", "settingsAdvanced.aboutTab.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.about"),
+        sectionKey: "about",
+        settingKey: "about-client-info",
+        name: I18n.t("settingsAdvanced.aboutTab.clientInfo.title"),
+        desc: I18n.t("settingsAdvanced.aboutTab.clientInfo.subtitle"),
+        i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.clientInfo.title", "settingsAdvanced.aboutTab.clientInfo.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.about"),
+        sectionKey: "about",
+        settingKey: "about-update",
+        name: I18n.t("settingsAdvanced.aboutTab.update.title"),
+        desc: I18n.t("settingsAdvanced.aboutTab.update.subtitle"),
+        i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.update.title", "settingsAdvanced.aboutTab.update.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.about"),
+        sectionKey: "about",
+        settingKey: "about-patch-notes",
+        name: I18n.t("settingsAdvanced.aboutTab.patchNotes.title"),
+        desc: I18n.t("settingsAdvanced.aboutTab.patchNotes.subtitle"),
+        i18nKeys: ["tabs.about", "settingsAdvanced.aboutTab.patchNotes.title", "settingsAdvanced.aboutTab.patchNotes.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.debug"),
+        sectionKey: "debug",
+        settingKey: "debug-overview",
+        name: I18n.t("settingsAdvanced.debugTab.title"),
+        desc: I18n.t("settingsAdvanced.debugTab.subtitle"),
+        i18nKeys: ["tabs.debug", "settingsAdvanced.debugTab.title", "settingsAdvanced.debugTab.subtitle"]
+      },
+    ];
+
+    return [
+      ...buildGeneralLanguageSettings(),
+      ...buildAppearanceVisualSettings(),
+      ...buildGeneralOverlaySettings(),
+      ...buildAppearanceTabSettings(),
+      ...buildBehaviorTabSettings(),
+      ...buildAdvancedTabSettings(),
+      ...buildFullscreenTabSettings(),
+    ];
+  }, []);
 
   const [discoveredSearchSettings, setDiscoveredSearchSettings] = react.useState([]);
   const discoveredSearchSignatureRef = react.useRef("");
@@ -9179,6 +9113,7 @@ const ConfigModal = ({
       return () => window.removeEventListener("ivLyrics", handleConfigChange);
     }, []);
 
+    const buildModeSpecificItems = () => {
     const modeSpecificItems = [];
 
     if (
@@ -9275,6 +9210,9 @@ const ConfigModal = ({
         unit: "%",
       });
     }
+      return modeSpecificItems;
+    };
+    const modeSpecificItems = buildModeSpecificItems();
 
     return react.createElement(
       react.Fragment,
@@ -9639,95 +9577,49 @@ const ConfigModal = ({
     );
   };
 
-  return react.createElement(
-    "div",
-    {
-      id: `${APP_NAME}-config-container`,
-      className: shouldReduceMotion ? "motion-reduced" : "",
-      "data-ui-theme": uiTheme,
-      "data-ui-theme-preference": uiThemePreference,
-    },
-    react.createElement("style", {
-      dangerouslySetInnerHTML: {
-        __html: SETTINGS_MODAL_CSS,
-      },
-    }),
-    renderHeaderSection(),
-    react.createElement(
-      SettingsSidebarShell,
-      { sidebarRef: settingsSidebarRef },
-      react.createElement(
-        "div",
-        { className: "settings-search-container" },
-        react.createElement(
-          "div",
-          { className: `settings-search-wrapper${searchQuery ? " has-query" : ""}` },
-          react.createElement(
-            "svg",
-            {
-              className: "settings-search-icon",
-              viewBox: "0 0 20 20",
-              fill: "currentColor",
-              "aria-hidden": "true",
-            },
-            react.createElement("path", {
-              fillRule: "evenodd",
-              d: "M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z",
-              clipRule: "evenodd",
-            })
-          ),
-          react.createElement("input", {
-            type: "search",
-            className: "settings-search-input",
-            placeholder: I18n.t("search.placeholder"),
-            "aria-label": I18n.t("search.placeholder"),
-            value: searchQuery,
-            onChange: handleSearchChange,
-            onKeyDown: (event) => {
-              if (event.key === "Escape" && searchQuery) {
-                event.preventDefault();
-                event.stopPropagation();
-                handleClearSearch();
-              }
-            },
-          }),
-          searchQuery && react.createElement(
-            "button",
-            {
-              className: "settings-search-clear",
-              type: "button",
-              onClick: handleClearSearch,
-              title: I18n.t("search.clear"),
-              "aria-label": I18n.t("search.clear"),
-            },
-            "×"
-          )
-        )
-      ),
-      renderSidebarNavigation()
-    ),
-    react.createElement(
-      SettingsMainPanelShell,
-      {
-        contentRef: settingsContentRef,
-        badge: activeNavigationGroup?.badge || activeTabMeta?.badge,
-        label: activeNavigationGroup?.label || activeTabMeta?.label,
-        description:
-          activeNavigationGroup?.description || activeTabMeta?.description,
-      },
-      // 검색 결과 탭
-      activeTab === "search" &&
-        react.createElement(
-          "div",
-          {
-            className: `tab-content ${activeTab === "search" ? "active" : ""}`,
-            "data-tab-id": "search",
-          },
-        renderSearchResults()
-      ),
-      // 일반 탭 (동작 관련 설정)
-      activeTab === "general" &&
-        react.createElement(
+  // 시각 설정 변경: 설정을 저장하고 가사 컨테이너를 갱신한 뒤 config 이벤트를 발생
+  const handleVisualConfigChange = (name, value) => {
+    CONFIG.visual[name] = value;
+    StorageManager.saveConfig(name, value);
+    lyricContainerUpdate?.();
+    window.dispatchEvent(
+      new CustomEvent("ivLyrics", {
+        detail: { type: "config", name, value },
+      })
+    );
+  };
+
+  // 외형 미리보기 설정 변경: setItem으로 저장하고 미리보기 스타일을 동기화한 뒤 config 이벤트를 발생
+  const handleAppearancePreviewChange = (name, value) => {
+    CONFIG.visual[name] = value;
+    StorageManager.setItem(`${APP_NAME}:visual:${name}`, value);
+    syncSettingsLyricsPreviewStyles();
+    lyricContainerUpdate?.();
+    window.dispatchEvent(
+      new CustomEvent("ivLyrics", {
+        detail: { type: "config", name, value },
+      })
+    );
+  };
+
+  // 나우플레잉 패널 설정 변경: 설정 저장 후 config 이벤트와 미리보기 이벤트를 함께 발생
+  const handleNowPlayingPanelChange = (name, value) => {
+    CONFIG.visual[name] = value;
+    StorageManager.saveConfig(name, value);
+    window.dispatchEvent(
+      new CustomEvent("ivLyrics", {
+        detail: { type: "config", name, value },
+      })
+    );
+    window.dispatchEvent(
+      new CustomEvent("ivLyrics:panel-preview-update", {
+        detail: { name, value },
+      })
+    );
+  };
+
+  const renderGeneralTab = () =>
+react.createElement(
           "div",
           {
             className: `tab-content ${activeTab === "general" ? "active" : ""}`,
@@ -9795,480 +9687,10 @@ const ConfigModal = ({
           sectionKey: "overlay-enabled",
         }),
         react.createElement(OverlaySettings)
-      ),
-      // 외관 탭 (시각 효과 + 타이포그래피)
-      activeTab === "appearance" &&
-      react.createElement(
-        "div",
-        {
-          className: `tab-content ${activeTab === "appearance" ? "active" : ""
-            }`,
-          "data-tab-id": "appearance",
-        },
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("sections.visualEffects"),
-          subtitle: I18n.t("sections.visualEffectsSubtitle"),
-          sectionKey: "background-experience",
-        }),
-        isFadActive &&
-        react.createElement(
-          "div",
-          {
-            className: "setting-row",
-            style: {
-              backgroundColor: "rgba(var(--spice-rgb-warning), 0.1)",
-            },
-          },
-          react.createElement(
-            "div",
-            { className: "setting-row-content" },
-            react.createElement(
-              "div",
-              { className: "setting-row-left" },
-              react.createElement(
-                "div",
-                {
-                  className: "setting-name",
-                  style: { color: "var(--spice-text)", fontWeight: "600" },
-                },
-                I18n.t("sections.fadWarningTitle")
-              ),
-              react.createElement(
-                "div",
-                {
-                  className: "setting-description",
-                  style: { color: "var(--spice-subtext)" },
-                },
-                I18n.t("sections.fadWarningDesc"),
-                react.createElement("br"),
-                I18n.t("sections.fadWarningTip")
-              )
-            )
-          )
-        ),
-        react.createElement(BackgroundExperienceSection, { isFadActive }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.syncMode.title"),
-          subtitle: I18n.t("settingsAdvanced.syncMode.subtitle"),
-          sectionKey: "sync-mode",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.syncMode.linesBefore.label"),
-              key: "lines-before",
-              info: I18n.t("settingsAdvanced.syncMode.linesBefore.desc"),
-              type: ConfigSelection,
-              options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            },
-            {
-              desc: I18n.t("settingsAdvanced.syncMode.linesAfter.label"),
-              key: "lines-after",
-              info: I18n.t("settingsAdvanced.syncMode.linesAfter.desc"),
-              type: ConfigSelection,
-              options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            },
-            {
-              desc: I18n.t("settingsAdvanced.syncMode.fadeoutBlur.label"),
-              key: "fade-blur",
-              info: I18n.t("settingsAdvanced.syncMode.fadeoutBlur.desc"),
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.syncMode.highlightMode.label"),
-              key: "highlight-mode",
-              info: I18n.t("settingsAdvanced.syncMode.highlightMode.desc"),
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.syncMode.highlightIntensity.label"),
-              key: "highlight-intensity",
-              info: I18n.t("settingsAdvanced.syncMode.highlightIntensity.desc"),
-              type: ConfigSliderRange,
-              min: 30,
-              max: 90,
-              step: 5,
-              unit: "%",
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            const configChange = new CustomEvent("ivLyrics", {
-              detail: {
-                type: "config",
-                name: name,
-                value: value,
-              },
-            });
-            window.dispatchEvent(configChange);
-          },
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.multiVocalColors.title") || "Multi-vocal Colors",
-          subtitle: I18n.t("settingsAdvanced.multiVocalColors.subtitle") || "Customize male, female, and duet speaker colors.",
-          sectionKey: "multi-vocal-colors",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.multiVocalColors.useCreatorColors.label") || "Use sync creator custom colors",
-              key: "sync-data-custom-speaker-colors-enabled",
-              info: I18n.t("settingsAdvanced.multiVocalColors.useCreatorColors.desc") || "Use custom speaker colors embedded by sync creators. When disabled, CUSTOM speakers use the fallback selected by the sync creator.",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["sync-data-custom-speaker-colors-enabled"] ?? true,
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(new CustomEvent("ivLyrics", {
-              detail: { type: "config", name, value },
-            }));
-          },
-        }),
-        react.createElement(ConfigMultiVocalColorSettings),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.instrumentalBreak.title") || "Instrumental Marker",
-          subtitle: I18n.t("settingsAdvanced.instrumentalBreak.subtitle") || "Replace long blank or note-only lyric gaps with an icon",
-          sectionKey: "instrumental-break",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.instrumentalBreak.autoDetect.label") || "Auto-detect instrumental gaps",
-              key: "instrumental-break-auto-detect",
-              info: I18n.t("settingsAdvanced.instrumentalBreak.autoDetect.desc") || "After a karaoke lyric line finishes, show an instrumental marker for a long gap before the next line.",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["instrumental-break-auto-detect"] ?? true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.instrumentalBreak.icon.label") || "Icon Design",
-              key: "instrumental-break-icon",
-              info: I18n.t("settingsAdvanced.instrumentalBreak.icon.desc") || "Choose the animation shown for instrumental gaps longer than 0.5 seconds",
-              type: ConfigInstrumentalBreakIconPicker,
-              options: {
-                equalizer: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.equalizer") || "01 Equalizer",
-                dotWave: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.dotWave") || "02 Dot Wave",
-                ripples: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.ripples") || "03 Ripples",
-                orbit: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.orbit") || "04 Orbit",
-                diamonds: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.diamonds") || "05 Diamonds",
-                scan: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.scan") || "06 Scan",
-                arcs: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.arcs") || "07 Arcs",
-                signal: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.signal") || "08 Signal",
-                pulseDot: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.pulseDot") || "09 Pulse Dot",
-                stack: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.stack") || "10 Stack",
-                spark: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.spark") || "11 Spark",
-                splitBars: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.splitBars") || "12 Split Bars",
-                metronome: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.metronome") || "13 Metronome",
-                vinyl: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.vinyl") || "14 Vinyl",
-                beat: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.beat") || "15 Beat",
-                reels: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.reels") || "16 Reels",
-                triangle: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.triangle") || "17 Triangle",
-                morph: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.morph") || "18 Morph",
-                strings: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.strings") || "19 Strings",
-                piano: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.piano") || "20 Piano",
-                bloom: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.bloom") || "21 Bloom",
-                speaker: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.speaker") || "22 Speaker",
-                crossfade: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.crossfade") || "23 Crossfade",
-              },
-            },
-            {
-              desc: I18n.t("settingsAdvanced.instrumentalBreak.showLabel.label") || "Show Text Label",
-              key: "instrumental-break-show-label",
-              info: I18n.t("settingsAdvanced.instrumentalBreak.showLabel.desc") || "Show Intro, Break, or Outro next to the icon based on lyric position",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontFamily.label") || "Text Label Font",
-              key: "instrumental-break-label-font-family",
-              info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontFamily.desc") || "Select the font for the Intro, Break, or Outro label",
-              type: ConfigFontSelector,
-              defaultValue: getInstrumentalBreakLabelStyleDefault("font-family", "original-font-family", "Pretendard Variable"),
-              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontSize.label") || "Text Label Size",
-              key: "instrumental-break-label-font-size",
-              info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontSize.desc") || "Font size for the text label",
-              type: ConfigSliderRange,
-              min: 12,
-              max: 128,
-              step: 2,
-              unit: "px",
-              defaultValue: getInstrumentalBreakLabelStyleDefault("font-size", null, 20),
-              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontWeight.label") || "Text Label Weight",
-              key: "instrumental-break-label-font-weight",
-              info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontWeight.desc") || "Font weight for the text label",
-              type: ConfigFontWeightSlider,
-              defaultValue: getInstrumentalBreakLabelStyleDefault("font-weight", null, 200),
-              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.opacity.label") || "Text Label Opacity",
-              key: "instrumental-break-label-opacity",
-              info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.opacity.desc") || "Opacity for the text label",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 100,
-              step: 5,
-              unit: "%",
-              defaultValue: getInstrumentalBreakLabelStyleDefault("opacity", null, 65),
-              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
-            },
-            ...createTextOutlineSettingItems("instrumental-break-label", {
-              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
-            }),
-            {
-              desc: I18n.t("settingsAdvanced.instrumentalBreak.speed.label") || "Animation Speed",
-              key: "instrumental-break-animation-speed",
-              info: I18n.t("settingsAdvanced.instrumentalBreak.speed.desc") || "Adjust the animation speed for the instrumental marker",
-              type: ConfigSliderRange,
-              min: 50,
-              max: 200,
-              step: 5,
-              unit: "%",
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            if (name === "instrumental-break-label-font-family") {
-              loadGoogleFontFamily(value);
-            }
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        }),
-        react.createElement("div", {
-          className: "settings-live-preview-spacer",
-          "aria-hidden": "true",
-        }),
-        react.createElement(
-          "div",
-          {
-            className: "settings-live-preview-sticky",
-          },
-          react.createElement(SettingsSectionTitle, {
-            title: I18n.t("settingsAdvanced.livePreview.title"),
-            subtitle: I18n.t("settingsAdvanced.livePreview.subtitle"),
-            sectionKey: "live-preview",
-          }),
-          react.createElement(
-            "div",
-            {
-              className: "font-preview-container",
-            },
-            react.createElement(
-              "div",
-              {
-                className: "font-preview settings-live-preview-lyrics lyrics-lyricsContainer-LyricsContainer",
-                id: "settings-live-lyrics-preview",
-                style: getSettingsLyricsPreviewStyle(),
-                "data-furigana-enabled": CONFIG.visual["furigana-enabled"] === true
-                  ? "true"
-                  : "false",
-              },
-              react.createElement(
-                "div",
-                {
-                  className: `settings-live-preview-stage lyrics-lyricsContainer-SyncedLyricsPage is-karaoke${CONFIG.visual["karaoke-line-transition"] ? " karaoke-line-transition-enabled" : ""}`,
-                },
-                react.createElement(
-                  "div",
-                  { className: "settings-live-preview-line lyrics-lyricsContainer-SyncedLyrics" },
-                  react.createElement(
-                    "div",
-                    {
-                      className: "lyrics-lyricsContainer-LyricsLine lyrics-lyricsContainer-LyricsLine-active",
-                      style: {
-                        "--position-index": 0,
-                        "--offset": "0px",
-                        "--animation-index": 0,
-                      },
-                    },
-                    react.createElement(
-                      "p",
-                      null,
-                      react.createElement(KaraokeLine, {
-                        line: SETTINGS_LYRICS_PREVIEW_LINE,
-                        position: SETTINGS_LYRICS_PREVIEW_LINE.endTime,
-                        isActive: true,
-                        furiganaMapOverride: SETTINGS_LYRICS_PREVIEW_FURIGANA,
-                      })
-                    ),
-                    react.createElement(
-                      "p",
-                      { className: "lyrics-lyricsContainer-LyricsLine-phonetic" },
-                      I18n.t("settingsAdvanced.livePreview.sampleTextPhonetic")
-                    ),
-                    react.createElement(
-                      "p",
-                      { className: "lyrics-lyricsContainer-LyricsLine-translation" },
-                      I18n.t("settingsAdvanced.livePreview.sampleText")
-                    )
-                  )
-                )
-              )
-            )
-          )
-        ),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("sections.motion"),
-          subtitle: I18n.t("settings.reduceMotion.desc"),
-          sectionKey: "reduce-motion",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settings.reduceMotion.label"),
-              info: I18n.t("settings.reduceMotion.desc"),
-              key: "reduce-motion",
-              defaultValue: CONFIG.visual["reduce-motion"] ?? false,
-              type: ConfigSlider,
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.setItem(`${APP_NAME}:visual:${name}`, value);
-            applySettingsMotionClasses();
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        }),
-        ...renderLyricsTypographySections({ onChange: saveLyricsTypographySetting }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.furiganaStyle.title"),
-          subtitle: I18n.t("settingsAdvanced.furiganaStyle.subtitle"),
-          sectionKey: "furigana-style",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.languageDetection.furigana.label"),
-              info: I18n.t("settingsAdvanced.languageDetection.furigana.desc"),
-              key: "furigana-enabled",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.furiganaStyle.fontSize.label"),
-              info: I18n.t("settingsAdvanced.furiganaStyle.fontSize.desc"),
-              key: "furigana-font-size",
-              type: ConfigSliderRange,
-              min: 8,
-              max: 48,
-              step: 1,
-              unit: "px",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.furiganaStyle.fontWeight.label"),
-              info: I18n.t("settingsAdvanced.furiganaStyle.fontWeight.desc"),
-              key: "furigana-font-weight",
-              type: ConfigFontWeightSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.furiganaStyle.opacity.label"),
-              info: I18n.t("settingsAdvanced.furiganaStyle.opacity.desc"),
-              key: "furigana-opacity",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 100,
-              step: 5,
-              unit: "%",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.furiganaStyle.spacing.label"),
-              info: I18n.t("settingsAdvanced.furiganaStyle.spacing.desc"),
-              key: "furigana-spacing",
-              type: ConfigSliderRange,
-              min: -5,
-              max: 20,
-              step: 1,
-              unit: "px",
-            },
-            ...createTextOutlineSettingItems("furigana"),
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.setItem(`${APP_NAME}:visual:${name}`, value);
-            syncSettingsLyricsPreviewStyles();
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.textShadow.title"),
-          subtitle: I18n.t("settingsAdvanced.textShadow.subtitle"),
-          sectionKey: "text-shadow",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.textShadow.enabled.label"),
-              info: I18n.t("settingsAdvanced.textShadow.enabled.desc"),
-              key: "text-shadow-enabled",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.textShadow.color.label"),
-              info: I18n.t("settingsAdvanced.textShadow.color.desc"),
-              key: "text-shadow-color",
-              type: ConfigColorPicker,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.textShadow.opacity.label"),
-              info: I18n.t("settingsAdvanced.textShadow.opacity.desc"),
-              key: "text-shadow-opacity",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 100,
-              step: 5,
-              unit: "%",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.textShadow.blur.label"),
-              info: I18n.t("settingsAdvanced.textShadow.blur.desc"),
-              key: "text-shadow-blur",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 10,
-              step: 1,
-              unit: "px",
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.setItem(`${APP_NAME}:visual:${name}`, value);
-            syncSettingsLyricsPreviewStyles();
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        })
-      ),
-      // 성능 탭
-      activeTab === "performance" &&
-      react.createElement(
+      );
+
+  const renderPerformanceTab = () =>
+react.createElement(
         "div",
         {
           className: `tab-content ${activeTab === "performance" ? "active" : ""}`,
@@ -10383,320 +9805,637 @@ const ConfigModal = ({
           ],
           onChange: handlePerformanceSettingChange,
         })
-      ),
-      // 가사 탭 (가사 동기화 및 동작)
-      activeTab === "lyrics" &&
-      react.createElement(
-        "div",
+      );
+
+  const renderLyricsTab = () => {
+    const renderLyricsPlaybackSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.playback.title"),
+            subtitle: I18n.t("settingsAdvanced.playback.subtitle"),
+            sectionKey: "playback",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.playback.replaceButton.label"),
+                key: "playbar-button",
+                info: I18n.t("settingsAdvanced.playback.replaceButton.info") || "Replaces Spotify's default lyrics button with ivLyrics",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.playback.replaceFullscreenButton.label"),
+                key: "fullscreen-button",
+                info: I18n.t("settingsAdvanced.playback.replaceFullscreenButton.info") || "Replaces Spotify's default fullscreen button with ivLyrics fullscreen",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.playback.quickSyncControls.label"),
+                key: "quick-sync-controls-enabled",
+                info: I18n.t("settingsAdvanced.playback.quickSyncControls.info"),
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["quick-sync-controls-enabled"] ?? true,
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+    ];
+    const renderLyricsSyncControlsSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: getSettingsText("settings.syncCreatorSettings.title", "Sync Creator Settings"),
+            subtitle: getSettingsText("settings.syncCreatorSettings.subtitle", "Configure Sync Creator keyboard behavior and recording shortcuts."),
+            sectionKey: "sync-creator-settings",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: getSettingsText("settings.syncCreatorSettings.autoBoundaryChars.label", "Auto-handle spaces and punctuation"),
+                info: getSettingsText("settings.syncCreatorSettings.autoBoundaryChars.desc", "When using keyboard sync, automatically include nearby spaces and punctuation. Turn this off to time those characters manually."),
+                key: "sync-creator-auto-boundary-chars",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["sync-creator-auto-boundary-chars"] ?? true,
+              },
+              {
+                desc: getSettingsText("settings.syncCreatorSettings.fillCurve.label", "Karaoke fill correction curve"),
+                info: getSettingsText("settings.syncCreatorSettings.fillCurve.desc", "Drag the three middle points to adjust how word and character fill progresses during karaoke playback. The default diagonal line keeps the current timing."),
+                key: "karaoke-fill-correction-curve",
+                type: ConfigKaraokeFillCurveEditor,
+                defaultValue: CONFIG.visual["karaoke-fill-correction-curve"],
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.charForward", "Advance one character")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
+                key: "sync-creator-char-forward-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-char-forward-key"] ?? "right",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.charForward", "Advance one character")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+                key: "sync-creator-char-forward-alt-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-char-forward-alt-key"] ?? "",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.charBack", "Revert one character")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
+                key: "sync-creator-char-back-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-char-back-key"] ?? "left",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.charBack", "Revert one character")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+                key: "sync-creator-char-back-alt-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-char-back-alt-key"] ?? "",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.wordForward", "Advance one word")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
+                key: "sync-creator-word-forward-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-word-forward-key"] ?? ".",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.wordForward", "Advance one word")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+                key: "sync-creator-word-forward-alt-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-word-forward-alt-key"] ?? "",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.wordBack", "Revert one word")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
+                key: "sync-creator-word-back-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-word-back-key"] ?? ",",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.wordBack", "Revert one word")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+                key: "sync-creator-word-back-alt-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-word-back-alt-key"] ?? "",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.syllable", "Advance one syllable")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
+                key: "sync-creator-syllable-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-syllable-key"] ?? ";",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.syllable", "Advance one syllable")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+                key: "sync-creator-syllable-alt-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-syllable-alt-key"] ?? "",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.drag", "Hold to drag")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
+                key: "sync-creator-drag-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-drag-key"] ?? "/",
+              },
+              {
+                desc: `${getSettingsText("syncCreator.shortcuts.drag", "Hold to drag")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+                key: "sync-creator-drag-alt-key",
+                type: ConfigHotkey,
+                defaultValue: CONFIG.visual["sync-creator-drag-alt-key"] ?? "numpaddivide",
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+    ];
+    const renderLyricsLanguageSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.karaokeMode.title"),
+            subtitle: I18n.t("settingsAdvanced.karaokeMode.subtitle"),
+            sectionKey: "karaoke-mode",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.karaokeMode.enabled.label"),
+                info: I18n.t("settingsAdvanced.karaokeMode.enabled.desc"),
+                key: "karaoke-mode-enabled",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.karaokeMode.bounce.label"),
+                info: I18n.t("settingsAdvanced.karaokeMode.bounce.desc"),
+                key: "karaoke-bounce",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.karaokeMode.lineTransition.label"),
+                info: I18n.t("settingsAdvanced.karaokeMode.lineTransition.desc"),
+                key: "karaoke-line-transition",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.karaokeMode.spotifyFakeKaraoke.label"),
+                info: I18n.t("settingsAdvanced.karaokeMode.spotifyFakeKaraoke.desc"),
+                key: "spotify-fake-karaoke-enabled",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.karaokeMode.pseudoKaraokeRenderAdvance.label"),
+                info: I18n.t("settingsAdvanced.karaokeMode.pseudoKaraokeRenderAdvance.desc"),
+                key: "pseudo-karaoke-render-advance",
+                type: ConfigSliderRange,
+                min: 0,
+                max: 500,
+                step: 10,
+                unit: "ms",
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+    ];
+    const renderLyricsProviderPrioritySection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.prefetch.title"),
+            subtitle: I18n.t("settingsAdvanced.prefetch.subtitle"),
+            sectionKey: "prefetch",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.prefetch.enabled.label"),
+                info: I18n.t("settingsAdvanced.prefetch.enabled.desc"),
+                key: "prefetch-enabled",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.prefetch.videoEnabled.label"),
+                info: I18n.t("settingsAdvanced.prefetch.videoEnabled.desc"),
+                key: "prefetch-video-enabled",
+                type: ConfigSlider,
+              },
+            ],
+            onChange: (name, value) => {
+              CONFIG.visual[name] = value;
+              StorageManager.saveConfig(name, value);
+            },
+          }),
+    ];
+    const renderLyricsCacheSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.cacheManagement.title"),
+            subtitle: I18n.t("settingsAdvanced.cacheManagement.subtitle"),
+            sectionKey: "cache-management",
+          }),
+          // 로컬 캐시 관리 (IndexedDB) - 메모리 캐시와 통합됨
+          react.createElement(LocalCacheManager),
+    ];
+    const renderLyricsHelperSection = () => [
+          // 헬퍼 연동 섹션
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settings.lyricsHelper.sectionTitle") || "Helper Integration",
+            subtitle: I18n.t("settings.lyricsHelper.sectionSubtitle") || "Send lyrics to external helper applications",
+            sectionKey: "lyrics-helper",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settings.lyricsHelper.label"),
+                info: I18n.t("settings.lyricsHelper.desc"),
+                key: "lyrics-helper-enabled",
+                type: LyricsHelperToggle,
+                disabled: isFadActive,
+              },
+              {
+                desc: "",
+                key: "lyrics-helper-info",
+                type: ConfigInfo,
+                message: I18n.t("settings.lyricsHelper.info") || "Helper app allows external applications to display synced lyrics",
+                buttonText: I18n.t("settings.lyricsHelper.download") || "Download Helper",
+                onButtonClick: () => {
+                  window.open("https://ivlis.kr/ivLyrics/extensions/#helper", "_blank");
+                },
+                when: () => !CONFIG.visual["lyrics-helper-enabled"],
+              },
+            ],
+            onChange: (name, value) => {
+              CONFIG.visual[name] = value;
+              StorageManager.saveConfig(name, value);
+              // lyricsHelperSender 활성/비활성
+              if (name === "lyrics-helper-enabled") {
+                if (window.lyricsHelperSender) {
+                  window.lyricsHelperSender.enabled = value;
+                }
+              }
+            },
+          })
+    ];
+
+    return react.createElement(
+      "div",
         {
           className: `tab-content ${activeTab === "lyrics" ? "active" : ""}`,
           "data-tab-id": "lyrics",
         },
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.playback.title"),
-          subtitle: I18n.t("settingsAdvanced.playback.subtitle"),
-          sectionKey: "playback",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.playback.replaceButton.label"),
-              key: "playbar-button",
-              info: I18n.t("settingsAdvanced.playback.replaceButton.info") || "Replaces Spotify's default lyrics button with ivLyrics",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.playback.replaceFullscreenButton.label"),
-              key: "fullscreen-button",
-              info: I18n.t("settingsAdvanced.playback.replaceFullscreenButton.info") || "Replaces Spotify's default fullscreen button with ivLyrics fullscreen",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.playback.quickSyncControls.label"),
-              key: "quick-sync-controls-enabled",
-              info: I18n.t("settingsAdvanced.playback.quickSyncControls.info"),
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["quick-sync-controls-enabled"] ?? true,
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: getSettingsText("settings.syncCreatorSettings.title", "Sync Creator Settings"),
-          subtitle: getSettingsText("settings.syncCreatorSettings.subtitle", "Configure Sync Creator keyboard behavior and recording shortcuts."),
-          sectionKey: "sync-creator-settings",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: getSettingsText("settings.syncCreatorSettings.autoBoundaryChars.label", "Auto-handle spaces and punctuation"),
-              info: getSettingsText("settings.syncCreatorSettings.autoBoundaryChars.desc", "When using keyboard sync, automatically include nearby spaces and punctuation. Turn this off to time those characters manually."),
-              key: "sync-creator-auto-boundary-chars",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["sync-creator-auto-boundary-chars"] ?? true,
-            },
-            {
-              desc: getSettingsText("settings.syncCreatorSettings.fillCurve.label", "Karaoke fill correction curve"),
-              info: getSettingsText("settings.syncCreatorSettings.fillCurve.desc", "Drag the three middle points to adjust how word and character fill progresses during karaoke playback. The default diagonal line keeps the current timing."),
-              key: "karaoke-fill-correction-curve",
-              type: ConfigKaraokeFillCurveEditor,
-              defaultValue: CONFIG.visual["karaoke-fill-correction-curve"],
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.charForward", "Advance one character")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
-              key: "sync-creator-char-forward-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-char-forward-key"] ?? "right",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.charForward", "Advance one character")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
-              key: "sync-creator-char-forward-alt-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-char-forward-alt-key"] ?? "",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.charBack", "Revert one character")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
-              key: "sync-creator-char-back-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-char-back-key"] ?? "left",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.charBack", "Revert one character")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
-              key: "sync-creator-char-back-alt-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-char-back-alt-key"] ?? "",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.wordForward", "Advance one word")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
-              key: "sync-creator-word-forward-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-word-forward-key"] ?? ".",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.wordForward", "Advance one word")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
-              key: "sync-creator-word-forward-alt-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-word-forward-alt-key"] ?? "",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.wordBack", "Revert one word")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
-              key: "sync-creator-word-back-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-word-back-key"] ?? ",",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.wordBack", "Revert one word")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
-              key: "sync-creator-word-back-alt-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-word-back-alt-key"] ?? "",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.syllable", "Advance one syllable")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
-              key: "sync-creator-syllable-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-syllable-key"] ?? ";",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.syllable", "Advance one syllable")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
-              key: "sync-creator-syllable-alt-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-syllable-alt-key"] ?? "",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.drag", "Hold to drag")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
-              key: "sync-creator-drag-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-drag-key"] ?? "/",
-            },
-            {
-              desc: `${getSettingsText("syncCreator.shortcuts.drag", "Hold to drag")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
-              key: "sync-creator-drag-alt-key",
-              type: ConfigHotkey,
-              defaultValue: CONFIG.visual["sync-creator-drag-alt-key"] ?? "numpaddivide",
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.karaokeMode.title"),
-          subtitle: I18n.t("settingsAdvanced.karaokeMode.subtitle"),
-          sectionKey: "karaoke-mode",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.karaokeMode.enabled.label"),
-              info: I18n.t("settingsAdvanced.karaokeMode.enabled.desc"),
-              key: "karaoke-mode-enabled",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.karaokeMode.bounce.label"),
-              info: I18n.t("settingsAdvanced.karaokeMode.bounce.desc"),
-              key: "karaoke-bounce",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.karaokeMode.lineTransition.label"),
-              info: I18n.t("settingsAdvanced.karaokeMode.lineTransition.desc"),
-              key: "karaoke-line-transition",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.karaokeMode.spotifyFakeKaraoke.label"),
-              info: I18n.t("settingsAdvanced.karaokeMode.spotifyFakeKaraoke.desc"),
-              key: "spotify-fake-karaoke-enabled",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.karaokeMode.pseudoKaraokeRenderAdvance.label"),
-              info: I18n.t("settingsAdvanced.karaokeMode.pseudoKaraokeRenderAdvance.desc"),
-              key: "pseudo-karaoke-render-advance",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 500,
-              step: 10,
-              unit: "ms",
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.prefetch.title"),
-          subtitle: I18n.t("settingsAdvanced.prefetch.subtitle"),
-          sectionKey: "prefetch",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.prefetch.enabled.label"),
-              info: I18n.t("settingsAdvanced.prefetch.enabled.desc"),
-              key: "prefetch-enabled",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.prefetch.videoEnabled.label"),
-              info: I18n.t("settingsAdvanced.prefetch.videoEnabled.desc"),
-              key: "prefetch-video-enabled",
-              type: ConfigSlider,
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-          },
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.cacheManagement.title"),
-          subtitle: I18n.t("settingsAdvanced.cacheManagement.subtitle"),
-          sectionKey: "cache-management",
-        }),
-        // 로컬 캐시 관리 (IndexedDB) - 메모리 캐시와 통합됨
-        react.createElement(LocalCacheManager),
-        // 헬퍼 연동 섹션
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settings.lyricsHelper.sectionTitle") || "Helper Integration",
-          subtitle: I18n.t("settings.lyricsHelper.sectionSubtitle") || "Send lyrics to external helper applications",
-          sectionKey: "lyrics-helper",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settings.lyricsHelper.label"),
-              info: I18n.t("settings.lyricsHelper.desc"),
-              key: "lyrics-helper-enabled",
-              type: LyricsHelperToggle,
-              disabled: isFadActive,
-            },
-            {
-              desc: "",
-              key: "lyrics-helper-info",
-              type: ConfigInfo,
-              message: I18n.t("settings.lyricsHelper.info") || "Helper app allows external applications to display synced lyrics",
-              buttonText: I18n.t("settings.lyricsHelper.download") || "Download Helper",
-              onButtonClick: () => {
-                window.open("https://ivlis.kr/ivLyrics/extensions/#helper", "_blank");
-              },
-              when: () => !CONFIG.visual["lyrics-helper-enabled"],
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            // lyricsHelperSender 활성/비활성
-            if (name === "lyrics-helper-enabled") {
-              if (window.lyricsHelperSender) {
-                window.lyricsHelperSender.enabled = value;
-              }
-            }
-          },
-        })
-      ),
-      // 고급 탭
-      activeTab === "advanced" &&
-      react.createElement(
+      ...renderLyricsPlaybackSection(),
+      ...renderLyricsSyncControlsSection(),
+      ...renderLyricsLanguageSection(),
+      ...renderLyricsProviderPrioritySection(),
+      ...renderLyricsCacheSection(),
+      ...renderLyricsHelperSection(),
+    );
+  };
+
+  const renderLyricsProvidersTab = () =>
+react.createElement(
         "div",
         {
-          className: `tab-content ${activeTab === "advanced" ? "active" : ""}`,
-          "data-tab-id": "advanced",
+          className: `tab-content ${activeTab === "lyrics-providers" ? "active" : ""}`,
+          "data-tab-id": "lyrics-providers",
+        },
+        react.createElement(
+          "div",
+          { "data-setting-key": "lyrics-providers" },
+          react.createElement(LyricsProvidersTab)
+        )
+      );
+
+  const renderAiProvidersTab = () =>
+react.createElement(
+        "div",
+        {
+          className: `tab-content ${activeTab === "ai-providers" ? "active" : ""}`,
+          "data-tab-id": "ai-providers",
+        },
+        react.createElement(
+          "div",
+          { "data-setting-key": "ai-providers" },
+          react.createElement("p", { className: "setting-description" }, I18n.t("settingsUi.aiAutosave")),
+          react.createElement(AIProvidersTab)
+        )
+      );
+
+  const renderDebugTab = () =>
+react.createElement(
+        "div",
+        {
+          className: `tab-content ${activeTab === "debug" ? "active" : ""}`,
+          "data-tab-id": "debug",
         },
         react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.languageDetection.title"),
-          subtitle: I18n.t("settingsAdvanced.languageDetection.subtitle"),
-          sectionKey: "language-detection",
+          title: I18n.t("settingsAdvanced.debugTab.title"),
+          subtitle: I18n.t("settingsAdvanced.debugTab.subtitle"),
+          sectionKey: "debug-overview",
         }),
-        react.createElement(OptionList, {
+        react.createElement(DebugInfoPanel)
+      );
+
+  const renderSearchTab = () =>
+react.createElement(
+          "div",
+          {
+            className: `tab-content ${activeTab === "search" ? "active" : ""}`,
+            "data-tab-id": "search",
+          },
+        renderSearchResults()
+      );
+
+  const renderNowPlayingTab = () => {
+    const renderNowPlayingPanelSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.nowPlayingPanel.title") || "NowPlaying Panel Lyrics",
+            subtitle: I18n.t("settingsAdvanced.nowPlayingPanel.subtitle") || "Lyrics display settings for the Now Playing panel",
+            sectionKey: "panel-lyrics-general",
+          }),
+          // 미리보기 컴포넌트
+          react.createElement(NowPlayingPanelPreview),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.enabled.label") || "Enable Panel Lyrics",
+                key: "panel-lyrics-enabled",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.enabled.desc") || "Display current lyrics in the Now Playing panel",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.fontFamily.label") || "Font Family",
+                key: "panel-lyrics-font-family",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.fontFamily.desc") || "Font for panel lyrics",
+                type: ConfigFontSelector,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.originalFont.label") || "Original Text Font",
+                key: "panel-lyrics-original-font",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.originalFont.desc") || "Font for original lyrics (empty = use default, comma-separated for multiple fonts)",
+                type: ConfigFontSelector,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.phoneticFont.label") || "Phonetic Text Font",
+                key: "panel-lyrics-phonetic-font",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.phoneticFont.desc") || "Font for phonetic text (empty = use default, comma-separated for multiple fonts)",
+                type: ConfigFontSelector,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.translationFont.label") || "Translation Text Font",
+                key: "panel-lyrics-translation-font",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.translationFont.desc") || "Font for translation text (empty = use default, comma-separated for multiple fonts)",
+                type: ConfigFontSelector,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.fontScale.label") || "Overall Font Scale",
+                key: "panel-font-scale",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.fontScale.desc") || "Overall font scale for panel lyrics (50%-200%)",
+                type: ConfigSliderRange,
+                min: 50,
+                max: 200,
+                step: 5,
+                unit: "%",
+              },
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.originalSize.label") || "Original Text Size",
+                key: "panel-lyrics-original-size",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.originalSize.desc") || "Font size for original lyrics (px)",
+                type: ConfigSliderRange,
+                min: 10,
+                max: 30,
+                step: 1,
+                unit: "px",
+              },
+              ...createTextOutlineSettingItems("panel-lyrics-original", {
+                labelPrefix: `${I18n.t("settingsAdvanced.nowPlayingPanel.originalFont.label") || "Original Text"} · `,
+              }),
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.phoneticSize.label") || "Phonetic Text Size",
+                key: "panel-lyrics-phonetic-size",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.phoneticSize.desc") || "Font size for phonetic text (px)",
+                type: ConfigSliderRange,
+                min: 8,
+                max: 24,
+                step: 1,
+                unit: "px",
+              },
+              ...createTextOutlineSettingItems("panel-lyrics-phonetic", {
+                labelPrefix: `${I18n.t("settingsAdvanced.nowPlayingPanel.phoneticFont.label") || "Phonetic Text"} · `,
+              }),
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.translationSize.label") || "Translation Text Size",
+                key: "panel-lyrics-translation-size",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.translationSize.desc") || "Font size for translation text (px)",
+                type: ConfigSliderRange,
+                min: 8,
+                max: 24,
+                step: 1,
+                unit: "px",
+              },
+              ...createTextOutlineSettingItems("panel-lyrics-translation", {
+                labelPrefix: `${I18n.t("settingsAdvanced.nowPlayingPanel.translationFont.label") || "Translation Text"} · `,
+              }),
+            ],
+            onChange: handleNowPlayingPanelChange,
+          }),
+    ];
+    const renderNowPlayingBackgroundSection = () => [
+          // 배경 설정 섹션
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.nowPlayingPanel.background.title") || "Background",
+            subtitle: I18n.t("settingsAdvanced.nowPlayingPanel.background.subtitle") || "Customize the panel background",
+            sectionKey: "panel-background",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.type.label") || "Background Type",
+                key: "panel-bg-type",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.background.type.desc") || "Choose background style",
+                type: ConfigSelection,
+                options: {
+                  "album": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.album") || "Album Color",
+                  "gradient": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.gradient") || "Custom Gradient",
+                  "custom": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.custom") || "Solid Color",
+                  "transparent": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.transparent") || "Transparent",
+                },
+              },
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.color.label") || "Background Color",
+                key: "panel-bg-color",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.background.color.desc") || "Custom background color",
+                type: ConfigColorPicker,
+                when: () => CONFIG.visual["panel-bg-type"] === "custom",
+              },
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient1.label") || "Gradient Color 1",
+                key: "panel-bg-gradient-1",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient1.desc") || "First gradient color",
+                type: ConfigColorPicker,
+                when: () => CONFIG.visual["panel-bg-type"] === "gradient",
+              },
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient2.label") || "Gradient Color 2",
+                key: "panel-bg-gradient-2",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient2.desc") || "Second gradient color",
+                type: ConfigColorPicker,
+                when: () => CONFIG.visual["panel-bg-type"] === "gradient",
+              },
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.opacity.label") || "Background Opacity",
+                key: "panel-bg-opacity",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.background.opacity.desc") || "Background transparency (0-100%)",
+                type: ConfigSliderRange,
+                min: 0,
+                max: 100,
+                step: 5,
+                unit: "%",
+                when: () => CONFIG.visual["panel-bg-type"] !== "transparent",
+              },
+            ],
+            onChange: handleNowPlayingPanelChange,
+          }),
+    ];
+    const renderNowPlayingBorderSection = () => [
+          // Border 설정 섹션
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.nowPlayingPanel.border.title") || "Border",
+            subtitle: I18n.t("settingsAdvanced.nowPlayingPanel.border.subtitle") || "Customize the panel border",
+            sectionKey: "panel-border",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.border.enabled.label") || "Enable Border",
+                key: "panel-border-enabled",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.border.enabled.desc") || "Show border around the panel",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.border.color.label") || "Border Color",
+                key: "panel-border-color",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.border.color.desc") || "Border color",
+                type: ConfigColorPicker,
+                when: () => CONFIG.visual["panel-border-enabled"] === true,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.nowPlayingPanel.border.opacity.label") || "Border Opacity",
+                key: "panel-border-opacity",
+                info: I18n.t("settingsAdvanced.nowPlayingPanel.border.opacity.desc") || "Border transparency (0-100%)",
+                type: ConfigSliderRange,
+                min: 0,
+                max: 100,
+                step: 5,
+                unit: "%",
+                when: () => CONFIG.visual["panel-border-enabled"] === true,
+              },
+            ],
+            onChange: handleNowPlayingPanelChange,
+          })
+    ];
+
+    return react.createElement(
+      "div",
+        {
+          className: `tab-content ${activeTab === "nowplaying" ? "active" : ""}`,
+          "data-tab-id": "nowplaying",
+        },
+      ...renderNowPlayingPanelSection(),
+      ...renderNowPlayingBackgroundSection(),
+      ...renderNowPlayingBorderSection(),
+    );
+  };
+
+  const renderAppearanceInstrumentalBreakSection = () =>
+react.createElement(OptionList, {
           items: [
             {
-              desc: I18n.t("settingsAdvanced.languageDetection.japaneseThreshold.label"),
-              info: I18n.t("settingsAdvanced.languageDetection.japaneseThreshold.desc"),
-              key: "ja-detect-threshold",
-              type: ConfigSliderRange,
-              min: thresholdSizeLimit.min,
-              max: thresholdSizeLimit.max,
-              step: thresholdSizeLimit.step,
-              unit: "%",
+              desc: I18n.t("settingsAdvanced.instrumentalBreak.autoDetect.label") || "Auto-detect instrumental gaps",
+              key: "instrumental-break-auto-detect",
+              info: I18n.t("settingsAdvanced.instrumentalBreak.autoDetect.desc") || "After a karaoke lyric line finishes, show an instrumental marker for a long gap before the next line.",
+              type: ConfigSlider,
+              defaultValue: CONFIG.visual["instrumental-break-auto-detect"] ?? true,
             },
             {
-              desc: I18n.t("settingsAdvanced.languageDetection.chineseThreshold.label"),
-              info: I18n.t("settingsAdvanced.languageDetection.chineseThreshold.desc"),
-              key: "hans-detect-threshold",
+              desc: I18n.t("settingsAdvanced.instrumentalBreak.icon.label") || "Icon Design",
+              key: "instrumental-break-icon",
+              info: I18n.t("settingsAdvanced.instrumentalBreak.icon.desc") || "Choose the animation shown for instrumental gaps longer than 0.5 seconds",
+              type: ConfigInstrumentalBreakIconPicker,
+              options: {
+                equalizer: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.equalizer") || "01 Equalizer",
+                dotWave: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.dotWave") || "02 Dot Wave",
+                ripples: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.ripples") || "03 Ripples",
+                orbit: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.orbit") || "04 Orbit",
+                diamonds: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.diamonds") || "05 Diamonds",
+                scan: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.scan") || "06 Scan",
+                arcs: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.arcs") || "07 Arcs",
+                signal: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.signal") || "08 Signal",
+                pulseDot: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.pulseDot") || "09 Pulse Dot",
+                stack: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.stack") || "10 Stack",
+                spark: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.spark") || "11 Spark",
+                splitBars: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.splitBars") || "12 Split Bars",
+                metronome: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.metronome") || "13 Metronome",
+                vinyl: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.vinyl") || "14 Vinyl",
+                beat: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.beat") || "15 Beat",
+                reels: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.reels") || "16 Reels",
+                triangle: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.triangle") || "17 Triangle",
+                morph: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.morph") || "18 Morph",
+                strings: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.strings") || "19 Strings",
+                piano: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.piano") || "20 Piano",
+                bloom: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.bloom") || "21 Bloom",
+                speaker: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.speaker") || "22 Speaker",
+                crossfade: I18n.t("settingsAdvanced.instrumentalBreak.icon.options.crossfade") || "23 Crossfade",
+              },
+            },
+            {
+              desc: I18n.t("settingsAdvanced.instrumentalBreak.showLabel.label") || "Show Text Label",
+              key: "instrumental-break-show-label",
+              info: I18n.t("settingsAdvanced.instrumentalBreak.showLabel.desc") || "Show Intro, Break, or Outro next to the icon based on lyric position",
+              type: ConfigSlider,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontFamily.label") || "Text Label Font",
+              key: "instrumental-break-label-font-family",
+              info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontFamily.desc") || "Select the font for the Intro, Break, or Outro label",
+              type: ConfigFontSelector,
+              defaultValue: getInstrumentalBreakLabelStyleDefault("font-family", "original-font-family", "Pretendard Variable"),
+              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontSize.label") || "Text Label Size",
+              key: "instrumental-break-label-font-size",
+              info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontSize.desc") || "Font size for the text label",
               type: ConfigSliderRange,
-              min: thresholdSizeLimit.min,
-              max: thresholdSizeLimit.max,
-              step: thresholdSizeLimit.step,
+              min: 12,
+              max: 128,
+              step: 2,
+              unit: "px",
+              defaultValue: getInstrumentalBreakLabelStyleDefault("font-size", null, 20),
+              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontWeight.label") || "Text Label Weight",
+              key: "instrumental-break-label-font-weight",
+              info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.fontWeight.desc") || "Font weight for the text label",
+              type: ConfigFontWeightSlider,
+              defaultValue: getInstrumentalBreakLabelStyleDefault("font-weight", null, 200),
+              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.opacity.label") || "Text Label Opacity",
+              key: "instrumental-break-label-opacity",
+              info: I18n.t("settingsAdvanced.instrumentalBreak.labelStyle.opacity.desc") || "Opacity for the text label",
+              type: ConfigSliderRange,
+              min: 0,
+              max: 100,
+              step: 5,
+              unit: "%",
+              defaultValue: getInstrumentalBreakLabelStyleDefault("opacity", null, 65),
+              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
+            },
+            ...createTextOutlineSettingItems("instrumental-break-label", {
+              disabled: () => CONFIG.visual["instrumental-break-show-label"] !== true,
+            }),
+            {
+              desc: I18n.t("settingsAdvanced.instrumentalBreak.speed.label") || "Animation Speed",
+              key: "instrumental-break-animation-speed",
+              info: I18n.t("settingsAdvanced.instrumentalBreak.speed.desc") || "Adjust the animation speed for the instrumental marker",
+              type: ConfigSliderRange,
+              min: 50,
+              max: 200,
+              step: 5,
               unit: "%",
             },
           ],
           onChange: (name, value) => {
             CONFIG.visual[name] = value;
+            if (name === "instrumental-break-label-font-family") {
+              loadGoogleFontFamily(value);
+            }
             StorageManager.saveConfig(name, value);
             lyricContainerUpdate?.();
             window.dispatchEvent(
@@ -10705,21 +10444,352 @@ const ConfigModal = ({
               })
             );
           },
-        }),
+        });
+  const renderAppearanceLivePreviewSection = () =>
+react.createElement(
+          "div",
+          {
+            className: "settings-live-preview-sticky",
+          },
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.livePreview.title"),
+            subtitle: I18n.t("settingsAdvanced.livePreview.subtitle"),
+            sectionKey: "live-preview",
+          }),
+          react.createElement(
+            "div",
+            {
+              className: "font-preview-container",
+            },
+            react.createElement(
+              "div",
+              {
+                className: "font-preview settings-live-preview-lyrics lyrics-lyricsContainer-LyricsContainer",
+                id: "settings-live-lyrics-preview",
+                style: getSettingsLyricsPreviewStyle(),
+                "data-furigana-enabled": CONFIG.visual["furigana-enabled"] === true
+                  ? "true"
+                  : "false",
+              },
+              react.createElement(
+                "div",
+                {
+                  className: `settings-live-preview-stage lyrics-lyricsContainer-SyncedLyricsPage is-karaoke${CONFIG.visual["karaoke-line-transition"] ? " karaoke-line-transition-enabled" : ""}`,
+                },
+                react.createElement(
+                  "div",
+                  { className: "settings-live-preview-line lyrics-lyricsContainer-SyncedLyrics" },
+                  react.createElement(
+                    "div",
+                    {
+                      className: "lyrics-lyricsContainer-LyricsLine lyrics-lyricsContainer-LyricsLine-active",
+                      style: {
+                        "--position-index": 0,
+                        "--offset": "0px",
+                        "--animation-index": 0,
+                      },
+                    },
+                    react.createElement(
+                      "p",
+                      null,
+                      react.createElement(KaraokeLine, {
+                        line: SETTINGS_LYRICS_PREVIEW_LINE,
+                        position: SETTINGS_LYRICS_PREVIEW_LINE.endTime,
+                        isActive: true,
+                        furiganaMapOverride: SETTINGS_LYRICS_PREVIEW_FURIGANA,
+                      })
+                    ),
+                    react.createElement(
+                      "p",
+                      { className: "lyrics-lyricsContainer-LyricsLine-phonetic" },
+                      I18n.t("settingsAdvanced.livePreview.sampleTextPhonetic")
+                    ),
+                    react.createElement(
+                      "p",
+                      { className: "lyrics-lyricsContainer-LyricsLine-translation" },
+                      I18n.t("settingsAdvanced.livePreview.sampleText")
+                    )
+                  )
+                )
+              )
+            )
+          )
+        );
+  const renderAppearanceTab = () => {
+    const renderAppearanceVisualEffectsSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("sections.visualEffects"),
+            subtitle: I18n.t("sections.visualEffectsSubtitle"),
+            sectionKey: "background-experience",
+          }),
+          isFadActive &&
+          react.createElement(
+            "div",
+            {
+              className: "setting-row",
+              style: {
+                backgroundColor: "rgba(var(--spice-rgb-warning), 0.1)",
+              },
+            },
+            react.createElement(
+              "div",
+              { className: "setting-row-content" },
+              react.createElement(
+                "div",
+                { className: "setting-row-left" },
+                react.createElement(
+                  "div",
+                  {
+                    className: "setting-name",
+                    style: { color: "var(--spice-text)", fontWeight: "600" },
+                  },
+                  I18n.t("sections.fadWarningTitle")
+                ),
+                react.createElement(
+                  "div",
+                  {
+                    className: "setting-description",
+                    style: { color: "var(--spice-subtext)" },
+                  },
+                  I18n.t("sections.fadWarningDesc"),
+                  react.createElement("br"),
+                  I18n.t("sections.fadWarningTip")
+                )
+              )
+            )
+          ),
+          react.createElement(BackgroundExperienceSection, { isFadActive }),
+    ];
+    const renderAppearanceSyncModeSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.syncMode.title"),
+            subtitle: I18n.t("settingsAdvanced.syncMode.subtitle"),
+            sectionKey: "sync-mode",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.syncMode.linesBefore.label"),
+                key: "lines-before",
+                info: I18n.t("settingsAdvanced.syncMode.linesBefore.desc"),
+                type: ConfigSelection,
+                options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+              },
+              {
+                desc: I18n.t("settingsAdvanced.syncMode.linesAfter.label"),
+                key: "lines-after",
+                info: I18n.t("settingsAdvanced.syncMode.linesAfter.desc"),
+                type: ConfigSelection,
+                options: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+              },
+              {
+                desc: I18n.t("settingsAdvanced.syncMode.fadeoutBlur.label"),
+                key: "fade-blur",
+                info: I18n.t("settingsAdvanced.syncMode.fadeoutBlur.desc"),
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.syncMode.highlightMode.label"),
+                key: "highlight-mode",
+                info: I18n.t("settingsAdvanced.syncMode.highlightMode.desc"),
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.syncMode.highlightIntensity.label"),
+                key: "highlight-intensity",
+                info: I18n.t("settingsAdvanced.syncMode.highlightIntensity.desc"),
+                type: ConfigSliderRange,
+                min: 30,
+                max: 90,
+                step: 5,
+                unit: "%",
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+    ];
+    const renderAppearanceMultiVocalSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.multiVocalColors.title") || "Multi-vocal Colors",
+            subtitle: I18n.t("settingsAdvanced.multiVocalColors.subtitle") || "Customize male, female, and duet speaker colors.",
+            sectionKey: "multi-vocal-colors",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.multiVocalColors.useCreatorColors.label") || "Use sync creator custom colors",
+                key: "sync-data-custom-speaker-colors-enabled",
+                info: I18n.t("settingsAdvanced.multiVocalColors.useCreatorColors.desc") || "Use custom speaker colors embedded by sync creators. When disabled, CUSTOM speakers use the fallback selected by the sync creator.",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["sync-data-custom-speaker-colors-enabled"] ?? true,
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+          react.createElement(ConfigMultiVocalColorSettings),
+    ];
+    const renderAppearanceInstrumentalSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.instrumentalBreak.title") || "Instrumental Marker",
+            subtitle: I18n.t("settingsAdvanced.instrumentalBreak.subtitle") || "Replace long blank or note-only lyric gaps with an icon",
+            sectionKey: "instrumental-break",
+          }),
+          renderAppearanceInstrumentalBreakSection(),
+          react.createElement("div", {
+            className: "settings-live-preview-spacer",
+            "aria-hidden": "true",
+          }),
+          renderAppearanceLivePreviewSection(),
+    ];
+    const renderAppearanceMotionSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("sections.motion"),
+            subtitle: I18n.t("settings.reduceMotion.desc"),
+            sectionKey: "reduce-motion",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settings.reduceMotion.label"),
+                info: I18n.t("settings.reduceMotion.desc"),
+                key: "reduce-motion",
+                defaultValue: CONFIG.visual["reduce-motion"] ?? false,
+                type: ConfigSlider,
+              },
+            ],
+            onChange: (name, value) => {
+              CONFIG.visual[name] = value;
+              StorageManager.setItem(`${APP_NAME}:visual:${name}`, value);
+              applySettingsMotionClasses();
+              lyricContainerUpdate?.();
+              window.dispatchEvent(
+                new CustomEvent("ivLyrics", {
+                  detail: { type: "config", name, value },
+                })
+              );
+            },
+          }),
+    ];
+    const renderAppearanceFuriganaSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.furiganaStyle.title"),
+            subtitle: I18n.t("settingsAdvanced.furiganaStyle.subtitle"),
+            sectionKey: "furigana-style",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.languageDetection.furigana.label"),
+                info: I18n.t("settingsAdvanced.languageDetection.furigana.desc"),
+                key: "furigana-enabled",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.furiganaStyle.fontSize.label"),
+                info: I18n.t("settingsAdvanced.furiganaStyle.fontSize.desc"),
+                key: "furigana-font-size",
+                type: ConfigSliderRange,
+                min: 8,
+                max: 48,
+                step: 1,
+                unit: "px",
+              },
+              {
+                desc: I18n.t("settingsAdvanced.furiganaStyle.fontWeight.label"),
+                info: I18n.t("settingsAdvanced.furiganaStyle.fontWeight.desc"),
+                key: "furigana-font-weight",
+                type: ConfigFontWeightSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.furiganaStyle.opacity.label"),
+                info: I18n.t("settingsAdvanced.furiganaStyle.opacity.desc"),
+                key: "furigana-opacity",
+                type: ConfigSliderRange,
+                min: 0,
+                max: 100,
+                step: 5,
+                unit: "%",
+              },
+              {
+                desc: I18n.t("settingsAdvanced.furiganaStyle.spacing.label"),
+                info: I18n.t("settingsAdvanced.furiganaStyle.spacing.desc"),
+                key: "furigana-spacing",
+                type: ConfigSliderRange,
+                min: -5,
+                max: 20,
+                step: 1,
+                unit: "px",
+              },
+              ...createTextOutlineSettingItems("furigana"),
+            ],
+            onChange: handleAppearancePreviewChange,
+          }),
+    ];
+    const renderAppearanceTextShadowSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.textShadow.title"),
+            subtitle: I18n.t("settingsAdvanced.textShadow.subtitle"),
+            sectionKey: "text-shadow",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.textShadow.enabled.label"),
+                info: I18n.t("settingsAdvanced.textShadow.enabled.desc"),
+                key: "text-shadow-enabled",
+                type: ConfigSlider,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.textShadow.color.label"),
+                info: I18n.t("settingsAdvanced.textShadow.color.desc"),
+                key: "text-shadow-color",
+                type: ConfigColorPicker,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.textShadow.opacity.label"),
+                info: I18n.t("settingsAdvanced.textShadow.opacity.desc"),
+                key: "text-shadow-opacity",
+                type: ConfigSliderRange,
+                min: 0,
+                max: 100,
+                step: 5,
+                unit: "%",
+              },
+              {
+                desc: I18n.t("settingsAdvanced.textShadow.blur.label"),
+                info: I18n.t("settingsAdvanced.textShadow.blur.desc"),
+                key: "text-shadow-blur",
+                type: ConfigSliderRange,
+                min: 0,
+                max: 10,
+                step: 1,
+                unit: "px",
+              },
+            ],
+            onChange: handleAppearancePreviewChange,
+          })
+    ];
 
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.cloudSync.title"),
-          subtitle: I18n.t("settingsAdvanced.cloudSync.monthlyRequired"),
-          sectionKey: "cloud-sync",
-        }),
-        react.createElement(ConfigCloudSync),
+    return react.createElement(
+      "div",
+        {
+          className: `tab-content ${activeTab === "appearance" ? "active" : ""
+            }`,
+          "data-tab-id": "appearance",
+        },
+      ...renderAppearanceVisualEffectsSection(),
+      ...renderAppearanceSyncModeSection(),
+      ...renderAppearanceMultiVocalSection(),
+      ...renderAppearanceInstrumentalSection(),
+      ...renderAppearanceMotionSection(),
+        ...renderLyricsTypographySections({ onChange: saveLyricsTypographySetting }),
+      ...renderAppearanceFuriganaSection(),
+      ...renderAppearanceTextShadowSection(),
+    );
+  };
 
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.exportImport.title"),
-          subtitle: I18n.t("settingsAdvanced.exportImport.subtitle"),
-          sectionKey: "export-import",
-        }),
-        react.createElement(OptionList, {
+  const renderAdvancedExportImportSection = () =>
+react.createElement(OptionList, {
           items: [
             {
               desc: I18n.t("settingsAdvanced.exportImport.export.label"),
@@ -10944,21 +11014,9 @@ const ConfigModal = ({
             },
           ],
           onChange: () => { },
-        }),
-
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.settingsPresets.title"),
-          subtitle: I18n.t("settingsAdvanced.settingsPresets.subtitle"),
-          sectionKey: "settings-presets",
-        }),
-        react.createElement(ConfigSettingsPresets),
-
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.dbExportImport.title"),
-          subtitle: I18n.t("settingsAdvanced.dbExportImport.subtitle"),
-          sectionKey: "db-export-import",
-        }),
-        react.createElement(OptionList, {
+        });
+  const renderAdvancedDbExportImportSection = () =>
+react.createElement(OptionList, {
           items: [
             {
               desc: I18n.t("settingsAdvanced.dbExportImport.export.label"),
@@ -11180,8 +11238,78 @@ const ConfigModal = ({
             },
           ],
           onChange: () => { },
+        });
+  const renderAdvancedTab = () => {
+    const renderAdvancedLanguageDetectionSection = () => [
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.languageDetection.title"),
+          subtitle: I18n.t("settingsAdvanced.languageDetection.subtitle"),
+          sectionKey: "language-detection",
+        }),
+        react.createElement(OptionList, {
+          items: [
+            {
+              desc: I18n.t("settingsAdvanced.languageDetection.japaneseThreshold.label"),
+              info: I18n.t("settingsAdvanced.languageDetection.japaneseThreshold.desc"),
+              key: "ja-detect-threshold",
+              type: ConfigSliderRange,
+              min: thresholdSizeLimit.min,
+              max: thresholdSizeLimit.max,
+              step: thresholdSizeLimit.step,
+              unit: "%",
+            },
+            {
+              desc: I18n.t("settingsAdvanced.languageDetection.chineseThreshold.label"),
+              info: I18n.t("settingsAdvanced.languageDetection.chineseThreshold.desc"),
+              key: "hans-detect-threshold",
+              type: ConfigSliderRange,
+              min: thresholdSizeLimit.min,
+              max: thresholdSizeLimit.max,
+              step: thresholdSizeLimit.step,
+              unit: "%",
+            },
+          ],
+          onChange: handleVisualConfigChange,
         }),
 
+    ];
+    const renderAdvancedCloudSyncSection = () => [
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.cloudSync.title"),
+          subtitle: I18n.t("settingsAdvanced.cloudSync.monthlyRequired"),
+          sectionKey: "cloud-sync",
+        }),
+        react.createElement(ConfigCloudSync),
+
+    ];
+    const renderAdvancedExportImportGroup = () => [
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.exportImport.title"),
+          subtitle: I18n.t("settingsAdvanced.exportImport.subtitle"),
+          sectionKey: "export-import",
+        }),
+        renderAdvancedExportImportSection(),
+
+    ];
+    const renderAdvancedSettingsPresetsSection = () => [
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.settingsPresets.title"),
+          subtitle: I18n.t("settingsAdvanced.settingsPresets.subtitle"),
+          sectionKey: "settings-presets",
+        }),
+        react.createElement(ConfigSettingsPresets),
+
+    ];
+    const renderAdvancedDbExportImportGroup = () => [
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.dbExportImport.title"),
+          subtitle: I18n.t("settingsAdvanced.dbExportImport.subtitle"),
+          sectionKey: "db-export-import",
+        }),
+        renderAdvancedDbExportImportSection(),
+
+    ];
+    const renderAdvancedResetSection = () => [
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.resetSettings.title"),
           subtitle: I18n.t("settingsAdvanced.resetSettings.subtitle"),
@@ -11305,555 +11433,25 @@ const ConfigModal = ({
           ],
           onChange: () => { },
         })
-      ),
-      // 가사 제공자 탭
-      activeTab === "lyrics-providers" &&
-      react.createElement(
-        "div",
+    ];
+
+    return react.createElement(
+      "div",
         {
-          className: `tab-content ${activeTab === "lyrics-providers" ? "active" : ""}`,
-          "data-tab-id": "lyrics-providers",
+          className: `tab-content ${activeTab === "advanced" ? "active" : ""}`,
+          "data-tab-id": "advanced",
         },
-        react.createElement(
-          "div",
-          { "data-setting-key": "lyrics-providers" },
-          react.createElement(LyricsProvidersTab)
-        )
-      ),
-      // AI 제공자 탭
-      activeTab === "ai-providers" &&
-      react.createElement(
-        "div",
-        {
-          className: `tab-content ${activeTab === "ai-providers" ? "active" : ""}`,
-          "data-tab-id": "ai-providers",
-        },
-        react.createElement(
-          "div",
-          { "data-setting-key": "ai-providers" },
-          react.createElement("p", { className: "setting-description" }, I18n.t("settingsUi.aiAutosave")),
-          react.createElement(AIProvidersTab)
-        )
-      ),
-      // 전체화면 탭
-      activeTab === "fullscreen" &&
-      react.createElement(
-        "div",
-        {
-          className: `tab-content ${activeTab === "fullscreen" ? "active" : ""}`,
-          "data-tab-id": "fullscreen",
-        },
-        // ===== 기본 설정 섹션 =====
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.fullscreenMode.title"),
-          subtitle: I18n.t("settingsAdvanced.fullscreenMode.subtitle"),
-          sectionKey: "fullscreen-mode",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.playback.fullscreenShortcut.label"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.shortcut.info"),
-              key: "fullscreen-key",
-              type: ConfigHotkey,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.browserFullscreen.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.browserFullscreen.info"),
-              key: "fullscreen-browser-fullscreen",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-browser-fullscreen"] ?? false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.pageUiOnly.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.pageUiOnly.info"),
-              key: "fullscreen-page-ui-only",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-page-ui-only"] ?? false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.hideOverlay.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.hideOverlay.info"),
-              key: "fullscreen-hide-overlay",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-hide-overlay"] ?? true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.tvMode.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.tvMode.info"),
-              key: "fullscreen-tv-mode",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-tv-mode"] ?? false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.toggleTvModeKey.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.toggleTvModeKey.info"),
-              key: "toggle-tv-mode-key",
-              type: ConfigHotkey,
-              defaultValue: "t",
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        }),
+      ...renderAdvancedLanguageDetectionSection(),
+      ...renderAdvancedCloudSyncSection(),
+      ...renderAdvancedExportImportGroup(),
+      ...renderAdvancedSettingsPresetsSection(),
+      ...renderAdvancedDbExportImportGroup(),
+      ...renderAdvancedResetSection(),
+    );
+  };
 
-        // ===== LP 모드 섹션 =====
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("vinyl.mode"),
-          subtitle: I18n.t("vinyl.settings.subtitle"),
-          sectionKey: "vinyl-mode",
-        }),
-        react.createElement(FullscreenPresentationPicker, {
-          defaultValue:
-            CONFIG.visual["fullscreen-focus-presentation"] || "vinyl",
-          onChange: saveVinylSetting,
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("vinyl.settings.albumSizeLabel"),
-              info: I18n.t("vinyl.settings.albumSizeDesc"),
-              key: "fullscreen-vinyl-album-size",
-              type: ConfigSliderRange,
-              min: 70,
-              max: 140,
-              step: 5,
-              unit: "%",
-              defaultValue: CONFIG.visual["fullscreen-vinyl-album-size"] ?? 100,
-            },
-            {
-              desc: I18n.t("vinyl.settings.recordSizeLabel"),
-              info: I18n.t("vinyl.settings.recordSizeDesc"),
-              key: "fullscreen-vinyl-record-size",
-              type: ConfigSliderRange,
-              min: 70,
-              max: 140,
-              step: 5,
-              unit: "%",
-              defaultValue: CONFIG.visual["fullscreen-vinyl-record-size"] ?? 100,
-            },
-            {
-              desc: I18n.t("vinyl.settings.backgroundBlurLabel"),
-              info: I18n.t("vinyl.settings.backgroundBlurDesc"),
-              key: "fullscreen-vinyl-background-blur",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 100,
-              step: 5,
-              unit: "px",
-              defaultValue: CONFIG.visual["fullscreen-vinyl-background-blur"] ?? 0,
-            },
-            {
-              desc: I18n.t("vinyl.settings.animationsLabel"),
-              info: I18n.t("vinyl.settings.animationsDesc"),
-              key: "fullscreen-vinyl-animations",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-vinyl-animations"] !== false,
-            },
-            {
-              desc: I18n.t("vinyl.settings.centerRotationLabel"),
-              info: I18n.t("vinyl.settings.centerRotationDesc"),
-              key: "fullscreen-vinyl-center-rotation",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-vinyl-center-rotation"] !== false,
-            },
-            {
-              desc: I18n.t("vinyl.settings.lyricsLabel"),
-              info: I18n.t("vinyl.settings.lyricsDesc"),
-              key: "fullscreen-vinyl-lyrics-enabled",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-vinyl-lyrics-enabled"] !== false,
-            },
-          ],
-          onChange: saveVinylSetting,
-        }),
-
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("vinyl.settings.tonearmTitle"),
-          subtitle: I18n.t("vinyl.settings.tonearmSubtitle"),
-          sectionKey: "vinyl-tonearm",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("vinyl.settings.tonearmStyleLabel"),
-              info: I18n.t("vinyl.settings.tonearmStyleDesc"),
-              key: "fullscreen-vinyl-tonearm-style",
-              type: ConfigSelection,
-              options: {
-                s: I18n.t("vinyl.settings.tonearmStyleS"),
-                straight: I18n.t("vinyl.settings.tonearmStyleStraight"),
-                j: I18n.t("vinyl.settings.tonearmStyleJ"),
-                linear: I18n.t("vinyl.settings.tonearmStyleLinear"),
-              },
-              defaultValue: CONFIG.visual["fullscreen-vinyl-tonearm-style"] || "s",
-            },
-            {
-              desc: I18n.t("vinyl.settings.tonearmFinishLabel"),
-              info: I18n.t("vinyl.settings.tonearmFinishDesc"),
-              key: "fullscreen-vinyl-tonearm-finish",
-              type: ConfigSelection,
-              options: {
-                white: I18n.t("vinyl.settings.tonearmFinishWhite"),
-                silver: I18n.t("vinyl.settings.tonearmFinishSilver"),
-                black: I18n.t("vinyl.settings.tonearmFinishBlack"),
-              },
-              defaultValue: CONFIG.visual["fullscreen-vinyl-tonearm-finish"] || "white",
-            },
-            {
-              desc: I18n.t("vinyl.settings.tonearmSizeLabel"),
-              info: I18n.t("vinyl.settings.tonearmSizeDesc"),
-              key: "fullscreen-vinyl-tonearm-size",
-              type: ConfigSliderRange,
-              min: 80,
-              max: 120,
-              step: 5,
-              unit: "%",
-              defaultValue: CONFIG.visual["fullscreen-vinyl-tonearm-size"] ?? 100,
-            },
-          ],
-          onChange: saveVinylSetting,
-        }),
-
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("sections.typography"),
-          subtitle: I18n.t("vinyl.settings.typographySubtitle"),
-          sectionKey: "vinyl-typography",
-        }),
-        ...renderLyricsTypographySections({ vinyl: true, onChange: saveVinylSetting }),
-
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("vinyl.settings.videoStageTypographyTitle"),
-          subtitle: I18n.t("vinyl.settings.videoStageTypographySubtitle"),
-          sectionKey: "video-stage-typography",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.originalStyle.fontFamily"),
-              info: I18n.t("settingsAdvanced.originalStyle.fontFamilyDesc"),
-              key: "fullscreen-video-stage-original-font-family",
-              type: ConfigFontSelector,
-              defaultValue:
-                CONFIG.visual["fullscreen-video-stage-original-font-family"] ||
-                CONFIG.visual["fullscreen-vinyl-original-font-family"] ||
-                "Pretendard Variable",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.pronunciationStyle.title"),
-              info: I18n.t("settingsAdvanced.pronunciationStyle.fontFamilyDesc"),
-              key: "fullscreen-video-stage-phonetic-font-family",
-              type: ConfigFontSelector,
-              defaultValue:
-                CONFIG.visual["fullscreen-video-stage-phonetic-font-family"] ||
-                CONFIG.visual["fullscreen-vinyl-phonetic-font-family"] ||
-                "Pretendard Variable",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.translationStyle.title"),
-              info: I18n.t("settingsAdvanced.translationStyle.fontFamilyDesc"),
-              key: "fullscreen-video-stage-translation-font-family",
-              type: ConfigFontSelector,
-              defaultValue:
-                CONFIG.visual["fullscreen-video-stage-translation-font-family"] ||
-                CONFIG.visual["fullscreen-vinyl-translation-font-family"] ||
-                "Pretendard Variable",
-            },
-            {
-              desc: I18n.t("settings.culturalAnnotations.fontFamily.label"),
-              info: I18n.t("settings.culturalAnnotations.fontFamily.desc"),
-              key: "fullscreen-video-stage-cultural-font-family",
-              type: ConfigFontSelector,
-              defaultValue:
-                CONFIG.visual["fullscreen-video-stage-cultural-font-family"] ||
-                CONFIG.visual["cultural-annotations-vinyl-font-family"] ||
-                "Pretendard Variable",
-            },
-            {
-              desc: I18n.t("vinyl.settings.videoStageBackgroundColorLabel"),
-              info: I18n.t("vinyl.settings.videoStageBackgroundColorDesc"),
-              key: "fullscreen-video-stage-lyric-background-color",
-              type: ConfigColorPicker,
-              defaultValue:
-                CONFIG.visual["fullscreen-video-stage-lyric-background-color"] ||
-                "#000000",
-            },
-            {
-              desc: I18n.t("vinyl.settings.videoStageBackgroundOpacityLabel"),
-              info: I18n.t("vinyl.settings.videoStageBackgroundOpacityDesc"),
-              key: "fullscreen-video-stage-lyric-background-opacity",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 100,
-              step: 1,
-              unit: "%",
-              defaultValue:
-                CONFIG.visual["fullscreen-video-stage-lyric-background-opacity"] ??
-                46,
-            },
-          ],
-          onChange: saveVinylSetting,
-        }),
-
-        // ===== 일반 모드 레이아웃 섹션 =====
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.normalMode.title"),
-          subtitle: I18n.t("settingsAdvanced.normalMode.subtitle"),
-          sectionKey: "normal-mode",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.twoColumnLayout.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.splitView.info"),
-              key: "fullscreen-two-column",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-two-column"] ?? true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.invertPosition.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.invertPosition.info"),
-              key: "fullscreen-layout-reverse",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-layout-reverse"] ?? false,
-              when: () => CONFIG.visual["fullscreen-two-column"] !== false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.showAlbumArt.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.showAlbumArt.info"),
-              key: "fullscreen-show-album",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-show-album"] ?? true,
-              when: () => CONFIG.visual["fullscreen-two-column"] !== false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.showTrackInfo.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.showTrackInfo.info"),
-              key: "fullscreen-show-info",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-show-info"] ?? true,
-              when: () => CONFIG.visual["fullscreen-two-column"] !== false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.normalMode.showAlbumName.desc"),
-              info: I18n.t("settingsAdvanced.normalMode.showAlbumName.info"),
-              key: "fullscreen-show-album-name",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-show-album-name"] ?? false,
-              when: () => CONFIG.visual["fullscreen-two-column"] !== false && CONFIG.visual["fullscreen-show-info"] !== false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.centerWhenNoLyrics.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.centerWhenNoLyrics.info"),
-              key: "fullscreen-center-when-no-lyrics",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-center-when-no-lyrics"] ?? true,
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        }),
-
-        // ===== TV 모드 섹션 =====
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.tvMode.title"),
-          subtitle: I18n.t("settingsAdvanced.tvMode.subtitle"),
-          sectionKey: "tv-mode",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.tvModeAlbumSize.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.tvModeAlbumSize.info"),
-              key: "fullscreen-tv-album-size",
-              type: ConfigSliderRange,
-              min: 80,
-              max: 200,
-              step: 10,
-              unit: "px",
-              defaultValue: CONFIG.visual["fullscreen-tv-album-size"] || 140,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.tvMode.showAlbumName.desc"),
-              info: I18n.t("settingsAdvanced.tvMode.showAlbumName.info"),
-              key: "fullscreen-tv-show-album-name",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-tv-show-album-name"] ?? true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.tvMode.showControls.desc"),
-              info: I18n.t("settingsAdvanced.tvMode.showControls.info"),
-              key: "fullscreen-tv-show-controls",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-tv-show-controls"] ?? false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.tvMode.showProgress.desc"),
-              info: I18n.t("settingsAdvanced.tvMode.showProgress.info"),
-              key: "fullscreen-tv-show-progress",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-tv-show-progress"] ?? false,
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        }),
-
-        // ===== 제목/아티스트 설정 섹션 =====
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.metadataDisplay.title"),
-          subtitle: I18n.t("settingsAdvanced.metadataDisplay.subtitle"),
-          sectionKey: "metadata-display",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.trimTitle.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.trimTitle.info"),
-              key: "fullscreen-trim-title",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-trim-title"] ?? false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.translateMetadata.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.translateMetadata.info"),
-              key: "translate-metadata",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["translate-metadata"] ?? false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.info"),
-              key: "translate-metadata-mode",
-              type: ConfigSelection,
-              options: {
-                "translated": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.translated"),
-                "romanized": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.romanized"),
-                "original-translated": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.originalTranslated"),
-                "original-romanized": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.originalRomanized"),
-                "all": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.all")
-              },
-              defaultValue: CONFIG.visual["translate-metadata-mode"] || "translated",
-              when: () => CONFIG.visual["translate-metadata"] === true,
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.fullscreenStyle.title"),
-          subtitle: I18n.t("settingsAdvanced.fullscreenStyle.subtitle"),
-          sectionKey: "fullscreen-style",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenStyle.albumSize.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenStyle.albumSize.info"),
-              key: "fullscreen-album-size",
-              type: ConfigSliderRange,
-              min: 100,
-              max: 500,
-              step: 10,
-              unit: "px",
-              defaultValue: CONFIG.visual["fullscreen-album-size"] || 400,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenStyle.albumRadius.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenStyle.albumRadius.info"),
-              key: "fullscreen-album-radius",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 50,
-              step: 1,
-              unit: "px",
-              defaultValue: CONFIG.visual["fullscreen-album-radius"] || 12,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenMode.infoGap.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenMode.infoGap.info"),
-              key: "fullscreen-info-gap",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 100,
-              step: 1,
-              unit: "px",
-              defaultValue: (CONFIG.visual["fullscreen-info-gap"] !== undefined) ? CONFIG.visual["fullscreen-info-gap"] : 24,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenStyle.titleFontSize.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenStyle.titleFontSize.info"),
-              key: "fullscreen-title-size",
-              type: ConfigSliderRange,
-              min: 24,
-              max: 72,
-              step: 2,
-              unit: "px",
-              defaultValue: CONFIG.visual["fullscreen-title-size"] || 48,
-            },
-            ...createTextOutlineSettingItems("fullscreen-title"),
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenStyle.artistFontSize.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenStyle.artistFontSize.info"),
-              key: "fullscreen-artist-size",
-              type: ConfigSliderRange,
-              min: 14,
-              max: 36,
-              step: 1,
-              unit: "px",
-              defaultValue: CONFIG.visual["fullscreen-artist-size"] || 24,
-            },
-            ...createTextOutlineSettingItems("fullscreen-artist"),
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.fullscreenUI.title"),
-          subtitle: I18n.t("settingsAdvanced.fullscreenUI.subtitle"),
-          sectionKey: "fullscreen-ui",
-        }),
-        react.createElement(OptionList, {
+  const renderFullscreenUiSection = () =>
+react.createElement(OptionList, {
           items: [
             {
               desc: I18n.t("settingsAdvanced.fullscreenUI.showClock.desc"),
@@ -11949,574 +11547,583 @@ const ConfigModal = ({
               defaultValue: CONFIG.visual["fullscreen-show-queue"] ?? true,
             },
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.controllerStyle.title"),
-          subtitle: I18n.t("settingsAdvanced.controllerStyle.subtitle"),
-          sectionKey: "controller-style",
-        }),
-        react.createElement(OptionList, {
+          onChange: handleVisualConfigChange,
+        });
+  const renderFullscreenStyleSection = () =>
+react.createElement(OptionList, {
           items: [
             {
-              desc: I18n.t("settingsAdvanced.controllerStyle.buttonSize.desc"),
-              info: I18n.t("settingsAdvanced.controllerStyle.buttonSize.info"),
-              key: "fullscreen-control-button-size",
+              desc: I18n.t("settingsAdvanced.fullscreenStyle.albumSize.desc"),
+              info: I18n.t("settingsAdvanced.fullscreenStyle.albumSize.info"),
+              key: "fullscreen-album-size",
               type: ConfigSliderRange,
-              min: 28,
-              max: 48,
+              min: 100,
+              max: 500,
+              step: 10,
+              unit: "px",
+              defaultValue: CONFIG.visual["fullscreen-album-size"] || 400,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.fullscreenStyle.albumRadius.desc"),
+              info: I18n.t("settingsAdvanced.fullscreenStyle.albumRadius.info"),
+              key: "fullscreen-album-radius",
+              type: ConfigSliderRange,
+              min: 0,
+              max: 50,
+              step: 1,
+              unit: "px",
+              defaultValue: CONFIG.visual["fullscreen-album-radius"] || 12,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.fullscreenMode.infoGap.desc"),
+              info: I18n.t("settingsAdvanced.fullscreenMode.infoGap.info"),
+              key: "fullscreen-info-gap",
+              type: ConfigSliderRange,
+              min: 0,
+              max: 100,
+              step: 1,
+              unit: "px",
+              defaultValue: (CONFIG.visual["fullscreen-info-gap"] !== undefined) ? CONFIG.visual["fullscreen-info-gap"] : 24,
+            },
+            {
+              desc: I18n.t("settingsAdvanced.fullscreenStyle.titleFontSize.desc"),
+              info: I18n.t("settingsAdvanced.fullscreenStyle.titleFontSize.info"),
+              key: "fullscreen-title-size",
+              type: ConfigSliderRange,
+              min: 24,
+              max: 72,
               step: 2,
               unit: "px",
-              defaultValue: CONFIG.visual["fullscreen-control-button-size"] || 36,
+              defaultValue: CONFIG.visual["fullscreen-title-size"] || 48,
             },
+            ...createTextOutlineSettingItems("fullscreen-title"),
             {
-              desc: I18n.t("settingsAdvanced.controllerStyle.background.desc"),
-              info: I18n.t("settingsAdvanced.controllerStyle.background.info"),
-              key: "fullscreen-controls-background",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-controls-background"] ?? false,
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.autoHide.title"),
-          subtitle: I18n.t("settingsAdvanced.autoHide.subtitle"),
-          sectionKey: "auto-hide",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.autoHide.enabled.desc"),
-              info: I18n.t("settingsAdvanced.autoHide.enabled.info"),
-              key: "fullscreen-auto-hide-ui",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-auto-hide-ui"] ?? true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.autoHide.delay.desc"),
-              info: I18n.t("settingsAdvanced.autoHide.delay.info"),
-              key: "fullscreen-auto-hide-delay",
+              desc: I18n.t("settingsAdvanced.fullscreenStyle.artistFontSize.desc"),
+              info: I18n.t("settingsAdvanced.fullscreenStyle.artistFontSize.info"),
+              key: "fullscreen-artist-size",
               type: ConfigSliderRange,
-              min: 1,
-              max: 10,
-              step: 0.5,
-              unit: I18n.t("settingsAdvanced.fullscreenUI.nextTrackTime.unit"),
-              defaultValue: CONFIG.visual["fullscreen-auto-hide-delay"] || 3,
-              when: () => CONFIG.visual["fullscreen-auto-hide-ui"] !== false,
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        }),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.tmiStyle.title"),
-          subtitle: I18n.t("settingsAdvanced.tmiStyle.subtitle"),
-          sectionKey: "tmi-style",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.tmiStyle.fontSize.desc"),
-              info: I18n.t("settingsAdvanced.tmiStyle.fontSize.info"),
-              key: "fullscreen-tmi-font-size",
-              type: ConfigSliderRange,
-              min: 80,
-              max: 150,
-              step: 5,
-              unit: "%",
-              defaultValue: CONFIG.visual["fullscreen-tmi-font-size"] || 100,
-            },
-            ...createTextOutlineSettingItems("fullscreen-tmi"),
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            lyricContainerUpdate?.();
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-          },
-        })
-      ),
-      // NowPlaying 패널 가사 탭
-      activeTab === "nowplaying" &&
-      react.createElement(
-        "div",
-        {
-          className: `tab-content ${activeTab === "nowplaying" ? "active" : ""}`,
-          "data-tab-id": "nowplaying",
-        },
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.nowPlayingPanel.title") || "NowPlaying Panel Lyrics",
-          subtitle: I18n.t("settingsAdvanced.nowPlayingPanel.subtitle") || "Lyrics display settings for the Now Playing panel",
-          sectionKey: "panel-lyrics-general",
-        }),
-        // 미리보기 컴포넌트
-        react.createElement(NowPlayingPanelPreview),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.enabled.label") || "Enable Panel Lyrics",
-              key: "panel-lyrics-enabled",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.enabled.desc") || "Display current lyrics in the Now Playing panel",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.fontFamily.label") || "Font Family",
-              key: "panel-lyrics-font-family",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.fontFamily.desc") || "Font for panel lyrics",
-              type: ConfigFontSelector,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.originalFont.label") || "Original Text Font",
-              key: "panel-lyrics-original-font",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.originalFont.desc") || "Font for original lyrics (empty = use default, comma-separated for multiple fonts)",
-              type: ConfigFontSelector,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.phoneticFont.label") || "Phonetic Text Font",
-              key: "panel-lyrics-phonetic-font",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.phoneticFont.desc") || "Font for phonetic text (empty = use default, comma-separated for multiple fonts)",
-              type: ConfigFontSelector,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.translationFont.label") || "Translation Text Font",
-              key: "panel-lyrics-translation-font",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.translationFont.desc") || "Font for translation text (empty = use default, comma-separated for multiple fonts)",
-              type: ConfigFontSelector,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.fontScale.label") || "Overall Font Scale",
-              key: "panel-font-scale",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.fontScale.desc") || "Overall font scale for panel lyrics (50%-200%)",
-              type: ConfigSliderRange,
-              min: 50,
-              max: 200,
-              step: 5,
-              unit: "%",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.originalSize.label") || "Original Text Size",
-              key: "panel-lyrics-original-size",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.originalSize.desc") || "Font size for original lyrics (px)",
-              type: ConfigSliderRange,
-              min: 10,
-              max: 30,
+              min: 14,
+              max: 36,
               step: 1,
               unit: "px",
+              defaultValue: CONFIG.visual["fullscreen-artist-size"] || 24,
             },
-            ...createTextOutlineSettingItems("panel-lyrics-original", {
-              labelPrefix: `${I18n.t("settingsAdvanced.nowPlayingPanel.originalFont.label") || "Original Text"} · `,
-            }),
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.phoneticSize.label") || "Phonetic Text Size",
-              key: "panel-lyrics-phonetic-size",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.phoneticSize.desc") || "Font size for phonetic text (px)",
-              type: ConfigSliderRange,
-              min: 8,
-              max: 24,
-              step: 1,
-              unit: "px",
-            },
-            ...createTextOutlineSettingItems("panel-lyrics-phonetic", {
-              labelPrefix: `${I18n.t("settingsAdvanced.nowPlayingPanel.phoneticFont.label") || "Phonetic Text"} · `,
-            }),
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.translationSize.label") || "Translation Text Size",
-              key: "panel-lyrics-translation-size",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.translationSize.desc") || "Font size for translation text (px)",
-              type: ConfigSliderRange,
-              min: 8,
-              max: 24,
-              step: 1,
-              unit: "px",
-            },
-            ...createTextOutlineSettingItems("panel-lyrics-translation", {
-              labelPrefix: `${I18n.t("settingsAdvanced.nowPlayingPanel.translationFont.label") || "Translation Text"} · `,
-            }),
+            ...createTextOutlineSettingItems("fullscreen-artist"),
           ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            // 패널 가사 업데이트 이벤트 발생
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-            // 미리보기 업데이트를 위한 이벤트
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics:panel-preview-update", {
-                detail: { name, value },
-              })
-            );
-          },
-        }),
-        // 배경 설정 섹션
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.nowPlayingPanel.background.title") || "Background",
-          subtitle: I18n.t("settingsAdvanced.nowPlayingPanel.background.subtitle") || "Customize the panel background",
-          sectionKey: "panel-background",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.type.label") || "Background Type",
-              key: "panel-bg-type",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.type.desc") || "Choose background style",
-              type: ConfigSelection,
-              options: {
-                "album": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.album") || "Album Color",
-                "gradient": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.gradient") || "Custom Gradient",
-                "custom": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.custom") || "Solid Color",
-                "transparent": I18n.t("settingsAdvanced.nowPlayingPanel.background.type.transparent") || "Transparent",
-              },
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.color.label") || "Background Color",
-              key: "panel-bg-color",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.color.desc") || "Custom background color",
-              type: ConfigColorPicker,
-              when: () => CONFIG.visual["panel-bg-type"] === "custom",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient1.label") || "Gradient Color 1",
-              key: "panel-bg-gradient-1",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient1.desc") || "First gradient color",
-              type: ConfigColorPicker,
-              when: () => CONFIG.visual["panel-bg-type"] === "gradient",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient2.label") || "Gradient Color 2",
-              key: "panel-bg-gradient-2",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.gradient2.desc") || "Second gradient color",
-              type: ConfigColorPicker,
-              when: () => CONFIG.visual["panel-bg-type"] === "gradient",
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.background.opacity.label") || "Background Opacity",
-              key: "panel-bg-opacity",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.background.opacity.desc") || "Background transparency (0-100%)",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 100,
-              step: 5,
-              unit: "%",
-              when: () => CONFIG.visual["panel-bg-type"] !== "transparent",
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics:panel-preview-update", {
-                detail: { name, value },
-              })
-            );
-          },
-        }),
-        // Border 설정 섹션
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.nowPlayingPanel.border.title") || "Border",
-          subtitle: I18n.t("settingsAdvanced.nowPlayingPanel.border.subtitle") || "Customize the panel border",
-          sectionKey: "panel-border",
-        }),
-        react.createElement(OptionList, {
-          items: [
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.border.enabled.label") || "Enable Border",
-              key: "panel-border-enabled",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.border.enabled.desc") || "Show border around the panel",
-              type: ConfigSlider,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.border.color.label") || "Border Color",
-              key: "panel-border-color",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.border.color.desc") || "Border color",
-              type: ConfigColorPicker,
-              when: () => CONFIG.visual["panel-border-enabled"] === true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.nowPlayingPanel.border.opacity.label") || "Border Opacity",
-              key: "panel-border-opacity",
-              info: I18n.t("settingsAdvanced.nowPlayingPanel.border.opacity.desc") || "Border transparency (0-100%)",
-              type: ConfigSliderRange,
-              min: 0,
-              max: 100,
-              step: 5,
-              unit: "%",
-              when: () => CONFIG.visual["panel-border-enabled"] === true,
-            },
-          ],
-          onChange: (name, value) => {
-            CONFIG.visual[name] = value;
-            StorageManager.saveConfig(name, value);
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics", {
-                detail: { type: "config", name, value },
-              })
-            );
-            window.dispatchEvent(
-              new CustomEvent("ivLyrics:panel-preview-update", {
-                detail: { name, value },
-              })
-            );
-          },
-        })
-      ),
-      // 디버그 탭
-      activeTab === "debug" &&
-      react.createElement(
-        "div",
-        {
-          className: `tab-content ${activeTab === "debug" ? "active" : ""}`,
-          "data-tab-id": "debug",
-        },
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.debugTab.title"),
-          subtitle: I18n.t("settingsAdvanced.debugTab.subtitle"),
-          sectionKey: "debug-overview",
-        }),
-        react.createElement(DebugInfoPanel)
-      ),
-      // 정보 탭
-      activeTab === "about" &&
-      react.createElement(
-        "div",
-        {
-          className: `tab-content ${activeTab === "about" ? "active" : ""}`,
-          "data-tab-id": "about",
-        },
-        // Discord 계정 연동 섹션 (최상단)
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.aboutTab.account.title"),
-          subtitle: I18n.t("settingsAdvanced.aboutTab.account.subtitle"),
-          sectionKey: "about-account",
-        }),
-        react.createElement(AccountSection),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.aboutTab.appInfo.title"),
-          subtitle: I18n.t("settingsAdvanced.aboutTab.subtitle"),
-          sectionKey: "about-app-info",
-        }),
-        react.createElement(
-          "div",
-          {
-            className: "info-card about-info-card",
-            style: {
-              padding: "20px",
-              background: "rgba(255, 255, 255, 0.03)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: "0 0 12px 12px",
-              backdropFilter: "blur(30px) saturate(150%)",
-              WebkitBackdropFilter: "blur(30px) saturate(150%)",
-              marginBottom: "24px",
-            },
-          },
-          react.createElement(
-            "h3",
-            {
-              className: "about-info-title",
-              style: {
-                margin: "0 0 12px",
-                fontSize: "18px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              },
-            },
-            "ivLyrics"
-          ),
-          react.createElement(
-            "p",
-            {
-              className: "about-info-description",
-              style: {
-                margin: "0 0 16px",
-                lineHeight: "1.6",
-              },
-            },
-            I18n.t("settingsAdvanced.aboutTab.appDescription")
-          ),
-          react.createElement(
-            "p",
-            {
-              className: "about-info-meta",
-              style: {
-                margin: "0 0 8px",
-                fontSize: "14px",
-              },
-            },
-            `${I18n.t("settingsAdvanced.aboutTab.versionPrefix")}: ${Utils.currentVersion}`
-          ),
-          react.createElement("div", {
-            className: "about-info-divider",
-            style: {
-              height: "1px",
-              margin: "16px 0",
-            },
+          onChange: handleVisualConfigChange,
+        });
+  const renderFullscreenTab = () => {
+    // ===== 기본 설정 섹션 =====
+    const renderFullscreenBasicSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.fullscreenMode.title"),
+            subtitle: I18n.t("settingsAdvanced.fullscreenMode.subtitle"),
+            sectionKey: "fullscreen-mode",
           }),
-          react.createElement(
-            "p",
-            {
-              className: "about-info-line",
-              style: {
-                margin: "0 0 12px",
-                lineHeight: "1.6",
-              },
-            },
-            react.createElement("strong", null, I18n.t("settingsAdvanced.aboutTab.developer")),
-            " ivLis Studio"
-          ),
-          react.createElement(
-            "p",
-            {
-              className: "about-info-line",
-              style: {
-                margin: "0 0 12px",
-                lineHeight: "1.6",
-              },
-            },
-            react.createElement("strong", null, I18n.t("settingsAdvanced.aboutTab.originalProject")),
-            "lyrics-plus by khanhas"
-          ),
-          react.createElement(
-            "p",
-            {
-              className: "about-info-note",
-              style: {
-                margin: "0",
-                fontSize: "14px",
-                lineHeight: "1.6",
-              },
-            },
-            I18n.t("settingsAdvanced.aboutTab.thanks")
-          )
-        ),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.aboutTab.clientInfo.title"),
-          subtitle: I18n.t("settingsAdvanced.aboutTab.clientInfo.subtitle"),
-          sectionKey: "about-client-info",
-        }),
-        react.createElement(
-          "div",
-          {
-            className: "info-card about-info-card about-client-card",
-            style: {
-              padding: "20px",
-              background: "rgba(255, 255, 255, 0.03)",
-              border: "1px solid rgba(255, 255, 255, 0.08)",
-              borderRadius: "0 0 12px 12px",
-              backdropFilter: "blur(30px) saturate(150%)",
-              WebkitBackdropFilter: "blur(30px) saturate(150%)",
-              marginBottom: "24px",
-            },
-          },
-          react.createElement(
-            "p",
-            {
-              className: "about-info-description about-info-description-compact",
-              style: {
-                margin: "0 0 8px",
-                fontSize: "13px",
-                lineHeight: "1.6",
-              },
-            },
-            I18n.t("settingsAdvanced.aboutTab.clientInfo.description"),
-          ),
-          react.createElement(
-            "div",
-            {
-              className: "about-client-id-row",
-              style: {
-                marginTop: "12px",
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-              },
-            },
-            react.createElement(
-              "div",
+          react.createElement(OptionList, {
+            items: [
               {
-                className: "about-client-id-box",
-                style: {
-                  flex: 1,
-                  borderRadius: "8px",
-                  padding: "10px 14px",
-                  fontFamily: 'Consolas, Monaco, "Courier New", monospace',
-                  fontSize: "13px",
-                  userSelect: "all",
-                  wordBreak: "break-all",
-                  lineHeight: "1.5",
-                },
+                desc: I18n.t("settingsAdvanced.playback.fullscreenShortcut.label"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.shortcut.info"),
+                key: "fullscreen-key",
+                type: ConfigHotkey,
               },
-              Spicetify.LocalStorage.get("ivLyrics:user-hash")
-            ),
-            react.createElement(
-              "button",
               {
-                className: "btn about-client-copy-btn",
-                onClick: () => {
-                  const clientId = Spicetify.LocalStorage.get("ivLyrics:user-hash");
-                  navigator.clipboard.writeText(clientId).then(() => {
-                    Toast.success(I18n.t("settingsAdvanced.aboutTab.clientInfo.copied"));
-                  }).catch(() => {
-                    Toast.error(I18n.t("settingsAdvanced.aboutTab.clientInfo.copyFailed"));
-                  });
-                },
-                style: {
-                  padding: "10px 16px",
-                  borderRadius: "8px",
-                  fontSize: "13px",
-                  fontWeight: "600",
-                  letterSpacing: "-0.01em",
-                  whiteSpace: "nowrap",
-                },
+                desc: I18n.t("settingsAdvanced.fullscreenMode.browserFullscreen.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.browserFullscreen.info"),
+                key: "fullscreen-browser-fullscreen",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-browser-fullscreen"] ?? false,
               },
-              I18n.t("settingsAdvanced.aboutTab.clientInfo.copy")
-            )
-          )
-        ),
-        react.createElement(SettingsSectionTitle, {
-          title: I18n.t("settingsAdvanced.aboutTab.update.title"),
-          subtitle: I18n.t("settingsAdvanced.aboutTab.update.subtitle"),
-          sectionKey: "about-update",
-        }),
-        react.createElement(OptionList, {
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.pageUiOnly.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.pageUiOnly.info"),
+                key: "fullscreen-page-ui-only",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-page-ui-only"] ?? false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.hideOverlay.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.hideOverlay.info"),
+                key: "fullscreen-hide-overlay",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-hide-overlay"] ?? true,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.tvMode.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.tvMode.info"),
+                key: "fullscreen-tv-mode",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-tv-mode"] ?? false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.toggleTvModeKey.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.toggleTvModeKey.info"),
+                key: "toggle-tv-mode-key",
+                type: ConfigHotkey,
+                defaultValue: "t",
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+
+    ];
+    // ===== LP 모드 섹션 =====
+    const renderFullscreenVinylSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("vinyl.mode"),
+            subtitle: I18n.t("vinyl.settings.subtitle"),
+            sectionKey: "vinyl-mode",
+          }),
+          react.createElement(FullscreenPresentationPicker, {
+            defaultValue:
+              CONFIG.visual["fullscreen-focus-presentation"] || "vinyl",
+            onChange: saveVinylSetting,
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("vinyl.settings.albumSizeLabel"),
+                info: I18n.t("vinyl.settings.albumSizeDesc"),
+                key: "fullscreen-vinyl-album-size",
+                type: ConfigSliderRange,
+                min: 70,
+                max: 140,
+                step: 5,
+                unit: "%",
+                defaultValue: CONFIG.visual["fullscreen-vinyl-album-size"] ?? 100,
+              },
+              {
+                desc: I18n.t("vinyl.settings.recordSizeLabel"),
+                info: I18n.t("vinyl.settings.recordSizeDesc"),
+                key: "fullscreen-vinyl-record-size",
+                type: ConfigSliderRange,
+                min: 70,
+                max: 140,
+                step: 5,
+                unit: "%",
+                defaultValue: CONFIG.visual["fullscreen-vinyl-record-size"] ?? 100,
+              },
+              {
+                desc: I18n.t("vinyl.settings.backgroundBlurLabel"),
+                info: I18n.t("vinyl.settings.backgroundBlurDesc"),
+                key: "fullscreen-vinyl-background-blur",
+                type: ConfigSliderRange,
+                min: 0,
+                max: 100,
+                step: 5,
+                unit: "px",
+                defaultValue: CONFIG.visual["fullscreen-vinyl-background-blur"] ?? 0,
+              },
+              {
+                desc: I18n.t("vinyl.settings.animationsLabel"),
+                info: I18n.t("vinyl.settings.animationsDesc"),
+                key: "fullscreen-vinyl-animations",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-vinyl-animations"] !== false,
+              },
+              {
+                desc: I18n.t("vinyl.settings.centerRotationLabel"),
+                info: I18n.t("vinyl.settings.centerRotationDesc"),
+                key: "fullscreen-vinyl-center-rotation",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-vinyl-center-rotation"] !== false,
+              },
+              {
+                desc: I18n.t("vinyl.settings.lyricsLabel"),
+                info: I18n.t("vinyl.settings.lyricsDesc"),
+                key: "fullscreen-vinyl-lyrics-enabled",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-vinyl-lyrics-enabled"] !== false,
+              },
+            ],
+            onChange: saveVinylSetting,
+          }),
+
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("vinyl.settings.tonearmTitle"),
+            subtitle: I18n.t("vinyl.settings.tonearmSubtitle"),
+            sectionKey: "vinyl-tonearm",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("vinyl.settings.tonearmStyleLabel"),
+                info: I18n.t("vinyl.settings.tonearmStyleDesc"),
+                key: "fullscreen-vinyl-tonearm-style",
+                type: ConfigSelection,
+                options: {
+                  s: I18n.t("vinyl.settings.tonearmStyleS"),
+                  straight: I18n.t("vinyl.settings.tonearmStyleStraight"),
+                  j: I18n.t("vinyl.settings.tonearmStyleJ"),
+                  linear: I18n.t("vinyl.settings.tonearmStyleLinear"),
+                },
+                defaultValue: CONFIG.visual["fullscreen-vinyl-tonearm-style"] || "s",
+              },
+              {
+                desc: I18n.t("vinyl.settings.tonearmFinishLabel"),
+                info: I18n.t("vinyl.settings.tonearmFinishDesc"),
+                key: "fullscreen-vinyl-tonearm-finish",
+                type: ConfigSelection,
+                options: {
+                  white: I18n.t("vinyl.settings.tonearmFinishWhite"),
+                  silver: I18n.t("vinyl.settings.tonearmFinishSilver"),
+                  black: I18n.t("vinyl.settings.tonearmFinishBlack"),
+                },
+                defaultValue: CONFIG.visual["fullscreen-vinyl-tonearm-finish"] || "white",
+              },
+              {
+                desc: I18n.t("vinyl.settings.tonearmSizeLabel"),
+                info: I18n.t("vinyl.settings.tonearmSizeDesc"),
+                key: "fullscreen-vinyl-tonearm-size",
+                type: ConfigSliderRange,
+                min: 80,
+                max: 120,
+                step: 5,
+                unit: "%",
+                defaultValue: CONFIG.visual["fullscreen-vinyl-tonearm-size"] ?? 100,
+              },
+            ],
+            onChange: saveVinylSetting,
+          }),
+
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("sections.typography"),
+            subtitle: I18n.t("vinyl.settings.typographySubtitle"),
+            sectionKey: "vinyl-typography",
+          }),
+          ...renderLyricsTypographySections({ vinyl: true, onChange: saveVinylSetting }),
+
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("vinyl.settings.videoStageTypographyTitle"),
+            subtitle: I18n.t("vinyl.settings.videoStageTypographySubtitle"),
+            sectionKey: "video-stage-typography",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.originalStyle.fontFamily"),
+                info: I18n.t("settingsAdvanced.originalStyle.fontFamilyDesc"),
+                key: "fullscreen-video-stage-original-font-family",
+                type: ConfigFontSelector,
+                defaultValue:
+                  CONFIG.visual["fullscreen-video-stage-original-font-family"] ||
+                  CONFIG.visual["fullscreen-vinyl-original-font-family"] ||
+                  "Pretendard Variable",
+              },
+              {
+                desc: I18n.t("settingsAdvanced.pronunciationStyle.title"),
+                info: I18n.t("settingsAdvanced.pronunciationStyle.fontFamilyDesc"),
+                key: "fullscreen-video-stage-phonetic-font-family",
+                type: ConfigFontSelector,
+                defaultValue:
+                  CONFIG.visual["fullscreen-video-stage-phonetic-font-family"] ||
+                  CONFIG.visual["fullscreen-vinyl-phonetic-font-family"] ||
+                  "Pretendard Variable",
+              },
+              {
+                desc: I18n.t("settingsAdvanced.translationStyle.title"),
+                info: I18n.t("settingsAdvanced.translationStyle.fontFamilyDesc"),
+                key: "fullscreen-video-stage-translation-font-family",
+                type: ConfigFontSelector,
+                defaultValue:
+                  CONFIG.visual["fullscreen-video-stage-translation-font-family"] ||
+                  CONFIG.visual["fullscreen-vinyl-translation-font-family"] ||
+                  "Pretendard Variable",
+              },
+              {
+                desc: I18n.t("settings.culturalAnnotations.fontFamily.label"),
+                info: I18n.t("settings.culturalAnnotations.fontFamily.desc"),
+                key: "fullscreen-video-stage-cultural-font-family",
+                type: ConfigFontSelector,
+                defaultValue:
+                  CONFIG.visual["fullscreen-video-stage-cultural-font-family"] ||
+                  CONFIG.visual["cultural-annotations-vinyl-font-family"] ||
+                  "Pretendard Variable",
+              },
+              {
+                desc: I18n.t("vinyl.settings.videoStageBackgroundColorLabel"),
+                info: I18n.t("vinyl.settings.videoStageBackgroundColorDesc"),
+                key: "fullscreen-video-stage-lyric-background-color",
+                type: ConfigColorPicker,
+                defaultValue:
+                  CONFIG.visual["fullscreen-video-stage-lyric-background-color"] ||
+                  "#000000",
+              },
+              {
+                desc: I18n.t("vinyl.settings.videoStageBackgroundOpacityLabel"),
+                info: I18n.t("vinyl.settings.videoStageBackgroundOpacityDesc"),
+                key: "fullscreen-video-stage-lyric-background-opacity",
+                type: ConfigSliderRange,
+                min: 0,
+                max: 100,
+                step: 1,
+                unit: "%",
+                defaultValue:
+                  CONFIG.visual["fullscreen-video-stage-lyric-background-opacity"] ??
+                  46,
+              },
+            ],
+            onChange: saveVinylSetting,
+          }),
+
+    ];
+    // ===== 일반 모드 레이아웃 섹션 =====
+    const renderFullscreenNormalLayoutSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.normalMode.title"),
+            subtitle: I18n.t("settingsAdvanced.normalMode.subtitle"),
+            sectionKey: "normal-mode",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.twoColumnLayout.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.splitView.info"),
+                key: "fullscreen-two-column",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-two-column"] ?? true,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.invertPosition.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.invertPosition.info"),
+                key: "fullscreen-layout-reverse",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-layout-reverse"] ?? false,
+                when: () => CONFIG.visual["fullscreen-two-column"] !== false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.showAlbumArt.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.showAlbumArt.info"),
+                key: "fullscreen-show-album",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-show-album"] ?? true,
+                when: () => CONFIG.visual["fullscreen-two-column"] !== false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.showTrackInfo.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.showTrackInfo.info"),
+                key: "fullscreen-show-info",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-show-info"] ?? true,
+                when: () => CONFIG.visual["fullscreen-two-column"] !== false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.normalMode.showAlbumName.desc"),
+                info: I18n.t("settingsAdvanced.normalMode.showAlbumName.info"),
+                key: "fullscreen-show-album-name",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-show-album-name"] ?? false,
+                when: () => CONFIG.visual["fullscreen-two-column"] !== false && CONFIG.visual["fullscreen-show-info"] !== false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.centerWhenNoLyrics.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.centerWhenNoLyrics.info"),
+                key: "fullscreen-center-when-no-lyrics",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-center-when-no-lyrics"] ?? true,
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+
+    ];
+    // ===== TV 모드 섹션 =====
+    const renderFullscreenTvModeSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.tvMode.title"),
+            subtitle: I18n.t("settingsAdvanced.tvMode.subtitle"),
+            sectionKey: "tv-mode",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.tvModeAlbumSize.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.tvModeAlbumSize.info"),
+                key: "fullscreen-tv-album-size",
+                type: ConfigSliderRange,
+                min: 80,
+                max: 200,
+                step: 10,
+                unit: "px",
+                defaultValue: CONFIG.visual["fullscreen-tv-album-size"] || 140,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.tvMode.showAlbumName.desc"),
+                info: I18n.t("settingsAdvanced.tvMode.showAlbumName.info"),
+                key: "fullscreen-tv-show-album-name",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-tv-show-album-name"] ?? true,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.tvMode.showControls.desc"),
+                info: I18n.t("settingsAdvanced.tvMode.showControls.info"),
+                key: "fullscreen-tv-show-controls",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-tv-show-controls"] ?? false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.tvMode.showProgress.desc"),
+                info: I18n.t("settingsAdvanced.tvMode.showProgress.info"),
+                key: "fullscreen-tv-show-progress",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-tv-show-progress"] ?? false,
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+
+    ];
+    // ===== 제목/아티스트 설정 섹션 =====
+    const renderFullscreenTitleArtistSection = () => [
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.metadataDisplay.title"),
+            subtitle: I18n.t("settingsAdvanced.metadataDisplay.subtitle"),
+            sectionKey: "metadata-display",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.trimTitle.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.trimTitle.info"),
+                key: "fullscreen-trim-title",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-trim-title"] ?? false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.translateMetadata.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.translateMetadata.info"),
+                key: "translate-metadata",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["translate-metadata"] ?? false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.info"),
+                key: "translate-metadata-mode",
+                type: ConfigSelection,
+                options: {
+                  "translated": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.translated"),
+                  "romanized": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.romanized"),
+                  "original-translated": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.originalTranslated"),
+                  "original-romanized": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.originalRomanized"),
+                  "all": I18n.t("settingsAdvanced.fullscreenMode.translateMetadataMode.options.all")
+                },
+                defaultValue: CONFIG.visual["translate-metadata-mode"] || "translated",
+                when: () => CONFIG.visual["translate-metadata"] === true,
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.fullscreenStyle.title"),
+            subtitle: I18n.t("settingsAdvanced.fullscreenStyle.subtitle"),
+            sectionKey: "fullscreen-style",
+          }),
+          renderFullscreenStyleSection(),
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.fullscreenUI.title"),
+            subtitle: I18n.t("settingsAdvanced.fullscreenUI.subtitle"),
+            sectionKey: "fullscreen-ui",
+          }),
+          renderFullscreenUiSection(),
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.controllerStyle.title"),
+            subtitle: I18n.t("settingsAdvanced.controllerStyle.subtitle"),
+            sectionKey: "controller-style",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.controllerStyle.buttonSize.desc"),
+                info: I18n.t("settingsAdvanced.controllerStyle.buttonSize.info"),
+                key: "fullscreen-control-button-size",
+                type: ConfigSliderRange,
+                min: 28,
+                max: 48,
+                step: 2,
+                unit: "px",
+                defaultValue: CONFIG.visual["fullscreen-control-button-size"] || 36,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.controllerStyle.background.desc"),
+                info: I18n.t("settingsAdvanced.controllerStyle.background.info"),
+                key: "fullscreen-controls-background",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-controls-background"] ?? false,
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.autoHide.title"),
+            subtitle: I18n.t("settingsAdvanced.autoHide.subtitle"),
+            sectionKey: "auto-hide",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.autoHide.enabled.desc"),
+                info: I18n.t("settingsAdvanced.autoHide.enabled.info"),
+                key: "fullscreen-auto-hide-ui",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-auto-hide-ui"] ?? true,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.autoHide.delay.desc"),
+                info: I18n.t("settingsAdvanced.autoHide.delay.info"),
+                key: "fullscreen-auto-hide-delay",
+                type: ConfigSliderRange,
+                min: 1,
+                max: 10,
+                step: 0.5,
+                unit: I18n.t("settingsAdvanced.fullscreenUI.nextTrackTime.unit"),
+                defaultValue: CONFIG.visual["fullscreen-auto-hide-delay"] || 3,
+                when: () => CONFIG.visual["fullscreen-auto-hide-ui"] !== false,
+              },
+            ],
+            onChange: handleVisualConfigChange,
+          }),
+          react.createElement(SettingsSectionTitle, {
+            title: I18n.t("settingsAdvanced.tmiStyle.title"),
+            subtitle: I18n.t("settingsAdvanced.tmiStyle.subtitle"),
+            sectionKey: "tmi-style",
+          }),
+          react.createElement(OptionList, {
+            items: [
+              {
+                desc: I18n.t("settingsAdvanced.tmiStyle.fontSize.desc"),
+                info: I18n.t("settingsAdvanced.tmiStyle.fontSize.info"),
+                key: "fullscreen-tmi-font-size",
+                type: ConfigSliderRange,
+                min: 80,
+                max: 150,
+                step: 5,
+                unit: "%",
+                defaultValue: CONFIG.visual["fullscreen-tmi-font-size"] || 100,
+              },
+              ...createTextOutlineSettingItems("fullscreen-tmi"),
+            ],
+            onChange: handleVisualConfigChange,
+          })
+    ];
+
+    return react.createElement(
+      "div",
+        {
+          className: `tab-content ${activeTab === "fullscreen" ? "active" : ""}`,
+          "data-tab-id": "fullscreen",
+        },
+      ...renderFullscreenBasicSection(),
+      ...renderFullscreenVinylSection(),
+      ...renderFullscreenNormalLayoutSection(),
+      ...renderFullscreenTvModeSection(),
+      ...renderFullscreenTitleArtistSection(),
+    );
+  };
+
+  const renderAboutUpdateSection = () =>
+react.createElement(OptionList, {
           items: [
             {
               desc: I18n.t("settingsAdvanced.aboutTab.update.checkUpdate.desc"),
@@ -12540,11 +12147,7 @@ const ConfigModal = ({
                   const updateInfo = await Utils.checkForUpdates();
 
                   if (resultContainer) {
-                    let message,
-                      showUpdateSection = false;
-
                     if (updateInfo.error) {
-                      message = I18n.t("settingsAdvanced.update.checkFailedWithError").replace("{error}", updateInfo.error);
                       resultContainer.innerHTML = `
 												<div style="
 													padding: 16px 20px;
@@ -12577,8 +12180,6 @@ const ConfigModal = ({
 												</div>
 											`;
                     } else if (updateInfo.hasUpdate) {
-                      showUpdateSection = true;
-                      showCopyButton = true;
                       const safeUpdateAvailable = escapeSettingsReleaseHtml(
                         I18n.t("notifications.updateAvailable")
                       );
@@ -12802,7 +12403,214 @@ const ConfigModal = ({
             },
           ],
           onChange: () => { },
+        });
+  const renderAboutClientInfoSection = () =>
+react.createElement(
+          "div",
+          {
+            className: "info-card about-info-card about-client-card",
+            style: {
+              padding: "20px",
+              background: "rgba(255, 255, 255, 0.03)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: "0 0 12px 12px",
+              backdropFilter: "blur(30px) saturate(150%)",
+              WebkitBackdropFilter: "blur(30px) saturate(150%)",
+              marginBottom: "24px",
+            },
+          },
+          react.createElement(
+            "p",
+            {
+              className: "about-info-description about-info-description-compact",
+              style: {
+                margin: "0 0 8px",
+                fontSize: "13px",
+                lineHeight: "1.6",
+              },
+            },
+            I18n.t("settingsAdvanced.aboutTab.clientInfo.description"),
+          ),
+          react.createElement(
+            "div",
+            {
+              className: "about-client-id-row",
+              style: {
+                marginTop: "12px",
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+              },
+            },
+            react.createElement(
+              "div",
+              {
+                className: "about-client-id-box",
+                style: {
+                  flex: 1,
+                  borderRadius: "8px",
+                  padding: "10px 14px",
+                  fontFamily: 'Consolas, Monaco, "Courier New", monospace',
+                  fontSize: "13px",
+                  userSelect: "all",
+                  wordBreak: "break-all",
+                  lineHeight: "1.5",
+                },
+              },
+              Spicetify.LocalStorage.get("ivLyrics:user-hash")
+            ),
+            react.createElement(
+              "button",
+              {
+                className: "btn about-client-copy-btn",
+                onClick: () => {
+                  const clientId = Spicetify.LocalStorage.get("ivLyrics:user-hash");
+                  navigator.clipboard.writeText(clientId).then(() => {
+                    Toast.success(I18n.t("settingsAdvanced.aboutTab.clientInfo.copied"));
+                  }).catch(() => {
+                    Toast.error(I18n.t("settingsAdvanced.aboutTab.clientInfo.copyFailed"));
+                  });
+                },
+                style: {
+                  padding: "10px 16px",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  letterSpacing: "-0.01em",
+                  whiteSpace: "nowrap",
+                },
+              },
+              I18n.t("settingsAdvanced.aboutTab.clientInfo.copy")
+            )
+          )
+        );
+  const renderAboutAppInfoSection = () =>
+react.createElement(
+          "div",
+          {
+            className: "info-card about-info-card",
+            style: {
+              padding: "20px",
+              background: "rgba(255, 255, 255, 0.03)",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+              borderRadius: "0 0 12px 12px",
+              backdropFilter: "blur(30px) saturate(150%)",
+              WebkitBackdropFilter: "blur(30px) saturate(150%)",
+              marginBottom: "24px",
+            },
+          },
+          react.createElement(
+            "h3",
+            {
+              className: "about-info-title",
+              style: {
+                margin: "0 0 12px",
+                fontSize: "18px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              },
+            },
+            "ivLyrics"
+          ),
+          react.createElement(
+            "p",
+            {
+              className: "about-info-description",
+              style: {
+                margin: "0 0 16px",
+                lineHeight: "1.6",
+              },
+            },
+            I18n.t("settingsAdvanced.aboutTab.appDescription")
+          ),
+          react.createElement(
+            "p",
+            {
+              className: "about-info-meta",
+              style: {
+                margin: "0 0 8px",
+                fontSize: "14px",
+              },
+            },
+            `${I18n.t("settingsAdvanced.aboutTab.versionPrefix")}: ${Utils.currentVersion}`
+          ),
+          react.createElement("div", {
+            className: "about-info-divider",
+            style: {
+              height: "1px",
+              margin: "16px 0",
+            },
+          }),
+          react.createElement(
+            "p",
+            {
+              className: "about-info-line",
+              style: {
+                margin: "0 0 12px",
+                lineHeight: "1.6",
+              },
+            },
+            react.createElement("strong", null, I18n.t("settingsAdvanced.aboutTab.developer")),
+            " ivLis Studio"
+          ),
+          react.createElement(
+            "p",
+            {
+              className: "about-info-line",
+              style: {
+                margin: "0 0 12px",
+                lineHeight: "1.6",
+              },
+            },
+            react.createElement("strong", null, I18n.t("settingsAdvanced.aboutTab.originalProject")),
+            "lyrics-plus by khanhas"
+          ),
+          react.createElement(
+            "p",
+            {
+              className: "about-info-note",
+              style: {
+                margin: "0",
+                fontSize: "14px",
+                lineHeight: "1.6",
+              },
+            },
+            I18n.t("settingsAdvanced.aboutTab.thanks")
+          )
+        );
+  const renderAboutTab = () =>
+react.createElement(
+        "div",
+        {
+          className: `tab-content ${activeTab === "about" ? "active" : ""}`,
+          "data-tab-id": "about",
+        },
+        // Discord 계정 연동 섹션 (최상단)
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.aboutTab.account.title"),
+          subtitle: I18n.t("settingsAdvanced.aboutTab.account.subtitle"),
+          sectionKey: "about-account",
         }),
+        react.createElement(AccountSection),
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.aboutTab.appInfo.title"),
+          subtitle: I18n.t("settingsAdvanced.aboutTab.subtitle"),
+          sectionKey: "about-app-info",
+        }),
+        renderAboutAppInfoSection(),
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.aboutTab.clientInfo.title"),
+          subtitle: I18n.t("settingsAdvanced.aboutTab.clientInfo.subtitle"),
+          sectionKey: "about-client-info",
+        }),
+        renderAboutClientInfoSection(),
+        react.createElement(SettingsSectionTitle, {
+          title: I18n.t("settingsAdvanced.aboutTab.update.title"),
+          subtitle: I18n.t("settingsAdvanced.aboutTab.update.subtitle"),
+          sectionKey: "about-update",
+        }),
+        renderAboutUpdateSection(),
 
         react.createElement(SettingsSectionTitle, {
           title: I18n.t("settingsAdvanced.aboutTab.patchNotes.title"),
@@ -12830,7 +12638,120 @@ const ConfigModal = ({
 	          },
           I18n.t("settingsAdvanced.aboutTab.patchNotes.loading")
         )
-      )
+      );
+
+  return react.createElement(
+    "div",
+    {
+      id: `${APP_NAME}-config-container`,
+      className: shouldReduceMotion ? "motion-reduced" : "",
+      "data-ui-theme": uiTheme,
+      "data-ui-theme-preference": uiThemePreference,
+    },
+    react.createElement("style", {
+      dangerouslySetInnerHTML: {
+        __html: SETTINGS_MODAL_CSS,
+      },
+    }),
+    renderHeaderSection(),
+    react.createElement(
+      SettingsSidebarShell,
+      { sidebarRef: settingsSidebarRef },
+      react.createElement(
+        "div",
+        { className: "settings-search-container" },
+        react.createElement(
+          "div",
+          { className: `settings-search-wrapper${searchQuery ? " has-query" : ""}` },
+          react.createElement(
+            "svg",
+            {
+              className: "settings-search-icon",
+              viewBox: "0 0 20 20",
+              fill: "currentColor",
+              "aria-hidden": "true",
+            },
+            react.createElement("path", {
+              fillRule: "evenodd",
+              d: "M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z",
+              clipRule: "evenodd",
+            })
+          ),
+          react.createElement("input", {
+            type: "search",
+            className: "settings-search-input",
+            placeholder: I18n.t("search.placeholder"),
+            "aria-label": I18n.t("search.placeholder"),
+            value: searchQuery,
+            onChange: handleSearchChange,
+            onKeyDown: (event) => {
+              if (event.key === "Escape" && searchQuery) {
+                event.preventDefault();
+                event.stopPropagation();
+                handleClearSearch();
+              }
+            },
+          }),
+          searchQuery && react.createElement(
+            "button",
+            {
+              className: "settings-search-clear",
+              type: "button",
+              onClick: handleClearSearch,
+              title: I18n.t("search.clear"),
+              "aria-label": I18n.t("search.clear"),
+            },
+            "×"
+          )
+        )
+      ),
+      renderSidebarNavigation()
+    ),
+    react.createElement(
+      SettingsMainPanelShell,
+      {
+        contentRef: settingsContentRef,
+        badge: activeNavigationGroup?.badge || activeTabMeta?.badge,
+        label: activeNavigationGroup?.label || activeTabMeta?.label,
+        description:
+          activeNavigationGroup?.description || activeTabMeta?.description,
+      },
+      // 검색 결과 탭
+      activeTab === "search" &&
+        renderSearchTab(),
+      // 일반 탭 (동작 관련 설정)
+      activeTab === "general" &&
+        renderGeneralTab(),
+      // 외관 탭 (시각 효과 + 타이포그래피)
+      activeTab === "appearance" &&
+      renderAppearanceTab(),
+      // 성능 탭
+      activeTab === "performance" &&
+      renderPerformanceTab(),
+      // 가사 탭 (가사 동기화 및 동작)
+      activeTab === "lyrics" &&
+      renderLyricsTab(),
+      // 고급 탭
+      activeTab === "advanced" &&
+      renderAdvancedTab(),
+      // 가사 제공자 탭
+      activeTab === "lyrics-providers" &&
+      renderLyricsProvidersTab(),
+      // AI 제공자 탭
+      activeTab === "ai-providers" &&
+      renderAiProvidersTab(),
+      // 전체화면 탭
+      activeTab === "fullscreen" &&
+      renderFullscreenTab(),
+      // NowPlaying 패널 가사 탭
+      activeTab === "nowplaying" &&
+      renderNowPlayingTab(),
+      // 디버그 탭
+      activeTab === "debug" &&
+      renderDebugTab(),
+      // 정보 탭
+      activeTab === "about" &&
+      renderAboutTab()
     )
   );
 };

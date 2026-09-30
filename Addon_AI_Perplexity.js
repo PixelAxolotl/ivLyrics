@@ -1,7 +1,7 @@
 /**
  * Perplexity AI Addon for ivLyrics
  * Perplexity AI를 사용한 번역, 발음, Research 생성
- * 
+ *
  * @author default
  * @version 1.0.1
  */
@@ -99,11 +99,6 @@
     // ============================================
     // Helper Functions
     // ============================================
-
-    function getLocalizedText(textObj, lang) {
-        if (typeof textObj === 'string') return textObj;
-        return textObj[lang] || textObj['en'] || Object.values(textObj)[0] || '';
-    }
 
     function getSetting(key, defaultValue = null) {
         return window.AIAddonManager?.getAddonSetting(ADDON_INFO.id, key, defaultValue) ?? defaultValue;
@@ -218,6 +213,27 @@
         return typeof content === 'string' ? content : '';
     }
 
+    // Shared 401 / non-OK handling for the request loop. On 401 it throws the
+    // permission message; otherwise it reports the HTTP status. Either branch
+    // reads the JSON body at most once, matching the inline versions.
+    async function throwPerplexityApiResponseError(response) {
+        if (response.status === 401) {
+            let errorMessage = 'Invalid API key or permission denied.';
+            try {
+                const errorData = await response.json();
+                if (errorData.error?.message) errorMessage = errorData.error.message;
+            } catch (parseError) { }
+            throw new Error(`[Perplexity] ${errorMessage}`);
+        }
+
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+            const errorData = await response.json();
+            if (errorData.error?.message) errorMessage = errorData.error.message;
+        } catch (parseError) { }
+        throw new Error(`[Perplexity] ${errorMessage}`);
+    }
+
     async function callPerplexityAPIRaw(prompt, maxRetries = window.AIAddonManager?.getProviderRequestAttempts?.() ?? 3, transformResult = null) {
         const apiKeys = getApiKeys();
         if (apiKeys.length === 0) {
@@ -239,7 +255,7 @@
                             'Authorization': `Bearer ${apiKey}`
                         },
                         body: JSON.stringify({
-                            model: model,
+                            model,
                             messages: buildPromptMessages(prompt),
                             ...getAdvancedRequestParams()
                         })
@@ -250,26 +266,8 @@
                         break; // Try next key
                     }
 
-                    if (response.status === 401) {
-                        let errorMessage = 'Invalid API key or permission denied.';
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error?.message) {
-                                errorMessage = errorData.error.message;
-                            }
-                        } catch (parseError) { }
-                        throw new Error(`[Perplexity] ${errorMessage}`);
-                    }
-
-                    if (!response.ok) {
-                        let errorMessage = `HTTP ${response.status}`;
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error?.message) {
-                                errorMessage = errorData.error.message;
-                            }
-                        } catch (parseError) { }
-                        throw new Error(`[Perplexity] ${errorMessage}`);
+                    if (response.status === 401 || !response.ok) {
+                        await throwPerplexityApiResponseError(response);
                     }
 
                     const data = await response.json();
@@ -384,6 +382,7 @@
                         try { const d = await response.json(); if (d.error?.message) msg = d.error.message; } catch (e) { }
                         throw new Error(`[Perplexity] ${msg}`);
                     }
+                    const consumePerplexityStream = async () => {
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let sseBuffer = '', accumulated = '';
@@ -452,6 +451,9 @@
                     }
 
                     return transformed;
+                    };
+
+                    return await consumePerplexityStream();
                 } catch (e) {
                     lastError = e;
                     const isPermanentError = /invalid api key|permission denied/i.test(e.message);
@@ -525,7 +527,7 @@
             if (!trimmed.includes('{')) return false;
             return !trimmed.endsWith('}') || trimmed.lastIndexOf('}') < trimmed.lastIndexOf('{');
         };
-        let cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+        const cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
 
         try {
             return JSON.parse(cleaned);
@@ -621,8 +623,7 @@
 
                 const hasApiKey = getApiKeys().length > 0;
 
-                return React.createElement('div', { className: 'ai-addon-settings perplexity-settings' },
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                const renderApiKeyRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, 'API Key(s)'),
                         React.createElement('div', { className: 'ai-addon-input-group' },
                             React.createElement('input', {
@@ -637,8 +638,8 @@
                             }, 'Get API Key')
                         ),
                         React.createElement('small', null, 'Enter a single key or JSON array for rotation')
-                    ),
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderModelRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, 'Model'),
                         React.createElement('div', { className: 'ai-addon-input-group' },
                             React.createElement('select', {
@@ -660,14 +661,19 @@
                             }, modelsLoading ? '...' : '↻')
                         ),
                         React.createElement('small', null, 'Sonar models include real-time web search')
-                    ),
-                    React.createElement(AdvancedParamsSection),
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderTestRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('button', { onClick: handleTest, className: 'ai-addon-btn-primary' }, 'Test Connection'),
                         testStatus && React.createElement('span', {
                             className: `ai-addon-test-status ${testStatus.startsWith('✓') ? 'success' : testStatus.startsWith('✗') ? 'error' : ''}`
                         }, testStatus)
-                    )
+                    );
+
+                return React.createElement('div', { className: 'ai-addon-settings perplexity-settings' },
+                    renderApiKeyRow(),
+                    renderModelRow(),
+                    React.createElement(AdvancedParamsSection),
+                    renderTestRow()
                 );
             };
 
@@ -725,11 +731,7 @@
                 ? await callPerplexityAPIStream(prompt, onLine, onStreamReset, undefined, parseLines)
                 : await callPerplexityAPIRaw(prompt, undefined, parseLines);
 
-            if (wantSmartPhonetic) {
-                return { phonetic: lines };
-            } else {
-                return { translation: lines };
-            }
+            return wantSmartPhonetic ? { phonetic: lines } : { translation: lines };
         },
 
         async generateCharacterPronunciation({ lines, characterPronunciationPrompt }) {

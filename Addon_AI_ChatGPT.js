@@ -1,7 +1,7 @@
 /**
  * ChatGPT AI Addon for ivLyrics
  * OpenAI ChatGPT를 사용한 번역, 발음, Research 생성
- * 
+ *
  * @author default
  * @version 1.0.1
  */
@@ -179,11 +179,6 @@
     // Helper Functions
     // ============================================
 
-    function getLocalizedText(textObj, lang) {
-        if (typeof textObj === 'string') return textObj;
-        return textObj[lang] || textObj['en'] || Object.values(textObj)[0] || '';
-    }
-
     function getSetting(key, defaultValue = null) {
         return window.AIAddonManager?.getAddonSetting(ADDON_INFO.id, key, defaultValue) ?? defaultValue;
     }
@@ -216,6 +211,20 @@
     function getSelectedModel(connection = null) {
         if (connection) return String(connection.model || '').trim();
         return getSetting('model', null);
+    }
+
+    function resolveApiCredentials(connection) {
+        const apiKeys = getApiKeys(connection);
+        if (apiKeys.length === 0) {
+            throw new Error('[ChatGPT] API key is required. Please configure your API key in settings.');
+        }
+
+        const baseUrl = getBaseUrl(connection);
+        const model = getSelectedModel(connection);
+        if (!model) {
+            throw new Error('[ChatGPT] Model is not selected. Please select a model in settings.');
+        }
+        return { apiKeys, baseUrl, model };
     }
 
 
@@ -339,7 +348,7 @@
     function buildChatGPTRequestBody(model, prompt, { stream = false } = {}) {
         const { systemPrompt, userPrompt } = normalizePromptRequest(prompt);
         const requestBody = {
-            model: model,
+            model,
             messages: [
                 ...(systemPrompt ? [{ role: 'system', content: systemPrompt }] : []),
                 { role: 'user', content: userPrompt }
@@ -477,6 +486,27 @@
         return { text, finishReason };
     }
 
+    // Shared 401 / non-OK handling for the chat/completions request loops.
+    // On 401 it throws the permission message; otherwise it reports the HTTP status.
+    // Either branch reads the JSON body at most once, matching the inline versions.
+    async function throwChatGPTApiResponseError(response) {
+        if (response.status === 401) {
+            let errorMessage = 'Invalid API key or permission denied.';
+            try {
+                const errorData = await response.json();
+                if (errorData.error?.message) errorMessage = errorData.error.message;
+            } catch (parseError) { }
+            throw new Error(`[ChatGPT] ${errorMessage}`);
+        }
+
+        let errorMessage = `HTTP ${response.status}`;
+        try {
+            const errorData = await response.json();
+            if (errorData.error?.message) errorMessage = errorData.error.message;
+        } catch (parseError) { }
+        throw new Error(`[ChatGPT] ${errorMessage}`);
+    }
+
     async function callChatGPTAPIRaw(
         prompt,
         maxRetries = window.AIAddonManager?.getProviderRequestAttempts?.() ?? 3,
@@ -485,16 +515,7 @@
         connection = null
     ) {
         if (!connection) return withProviderConnections(provider => callChatGPTAPIRaw(prompt, maxRetries, transformResult, requestTimeoutMs, provider));
-        const apiKeys = getApiKeys(connection);
-        if (apiKeys.length === 0) {
-            throw new Error('[ChatGPT] API key is required. Please configure your API key in settings.');
-        }
-
-        const baseUrl = getBaseUrl(connection);
-        const model = getSelectedModel(connection);
-        if (!model) {
-            throw new Error('[ChatGPT] Model is not selected. Please select a model in settings.');
-        }
+        const { apiKeys, baseUrl, model } = resolveApiCredentials(connection);
         let lastError = null;
 
         for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
@@ -518,26 +539,8 @@
                         break; // Try next key
                     }
 
-                    if (response.status === 401) {
-                        let errorMessage = 'Invalid API key or permission denied.';
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error?.message) {
-                                errorMessage = errorData.error.message;
-                            }
-                        } catch (parseError) { }
-                        throw new Error(`[ChatGPT] ${errorMessage}`);
-                    }
-
-                    if (!response.ok) {
-                        let errorMessage = `HTTP ${response.status}`;
-                        try {
-                            const errorData = await response.json();
-                            if (errorData.error?.message) {
-                                errorMessage = errorData.error.message;
-                            }
-                        } catch (parseError) { }
-                        throw new Error(`[ChatGPT] ${errorMessage}`);
+                    if (response.status === 401 || !response.ok) {
+                        await throwChatGPTApiResponseError(response);
                     }
 
                     const data = await response.json();
@@ -599,6 +602,13 @@
         }
     }
 
+    function drainSseLines(buffer, flush, processSseLine) {
+        const lines = buffer.split(/\r?\n/);
+        const remaining = flush ? '' : (lines.pop() || '');
+        for (const line of lines) processSseLine(line);
+        return remaining;
+    }
+
     function createResponsesAPIError(data, fallback = 'Responses API request failed') {
         const response = data?.response || data;
         const error = response?.error || data?.error;
@@ -629,16 +639,7 @@
         connection = null
     ) {
         if (!connection) return withProviderConnections(provider => callResponsesAPIStream(prompt, onLine, onStreamReset, maxRetries, transformResult, requestTimeoutMs, onRawChunk, provider));
-        const apiKeys = getApiKeys(connection);
-        if (apiKeys.length === 0) {
-            throw new Error('[ChatGPT] API key is required. Please configure your API key in settings.');
-        }
-
-        const baseUrl = getBaseUrl(connection);
-        const model = getSelectedModel(connection);
-        if (!model) {
-            throw new Error('[ChatGPT] Model is not selected. Please select a model in settings.');
-        }
+        const { apiKeys, baseUrl, model } = resolveApiCredentials(connection);
         let lastError = null;
 
         for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
@@ -700,6 +701,7 @@
                         return transformed;
                     }
 
+                    const consumeResponsesStream = async () => {
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let sseBuffer = '';
@@ -742,10 +744,7 @@
                     };
 
                     const drainSseBuffer = (flush = false) => {
-                        const lines = sseBuffer.split(/\r?\n/);
-                        if (flush) sseBuffer = '';
-                        else sseBuffer = lines.pop() || '';
-                        for (const line of lines) processSseLine(line);
+                        sseBuffer = drainSseLines(sseBuffer, flush, processSseLine);
                     };
 
                     while (true) {
@@ -781,6 +780,9 @@
                         transformed.forEach((line, index) => onLine(index, line));
                     }
                     return transformed;
+                    };
+
+                    return await consumeResponsesStream();
                 } catch (error) {
                     lastError = error;
                     window.__ivLyricsDebugLog?.(`[ChatGPT Addon] Responses API attempt ${attempt + 1} failed:`, error.message);
@@ -805,16 +807,7 @@
         connection = null
     ) {
         if (!connection) return withProviderConnections(provider => callChatGPTAPIStream(prompt, onLine, onStreamReset, maxRetries, transformResult, requestTimeoutMs, onRawChunk, provider));
-        const apiKeys = getApiKeys(connection);
-        if (apiKeys.length === 0) {
-            throw new Error('[ChatGPT] API key is required. Please configure your API key in settings.');
-        }
-
-        const baseUrl = getBaseUrl(connection);
-        const model = getSelectedModel(connection);
-        if (!model) {
-            throw new Error('[ChatGPT] Model is not selected. Please select a model in settings.');
-        }
+        const { apiKeys, baseUrl, model } = resolveApiCredentials(connection);
         let lastError = null;
 
         for (let keyIndex = 0; keyIndex < apiKeys.length; keyIndex++) {
@@ -861,16 +854,8 @@
                         break;
                     }
 
-                    if (response.status === 401) {
-                        let errorMessage = 'Invalid API key or permission denied.';
-                        try { const d = await response.json(); if (d.error?.message) errorMessage = d.error.message; } catch (e) { }
-                        throw new Error(`[ChatGPT] ${errorMessage}`);
-                    }
-
-                    if (!response.ok) {
-                        let errorMessage = `HTTP ${response.status}`;
-                        try { const d = await response.json(); if (d.error?.message) errorMessage = d.error.message; } catch (e) { }
-                        throw new Error(`[ChatGPT] ${errorMessage}`);
+                    if (response.status === 401 || !response.ok) {
+                        await throwChatGPTApiResponseError(response);
                     }
 
                     // Some compatible APIs accept `stream: true` but still
@@ -895,6 +880,7 @@
                         return transformed;
                     }
 
+                    const consumeChatGPTStream = async () => {
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let sseBuffer = '';
@@ -920,13 +906,7 @@
                     };
 
                     const drainSseBuffer = (flush = false) => {
-                        const parts = sseBuffer.split(/\r?\n/);
-                        if (flush) {
-                            sseBuffer = '';
-                        } else {
-                            sseBuffer = parts.pop() || '';
-                        }
-                        for (const line of parts) processSseLine(line);
+                        sseBuffer = drainSseLines(sseBuffer, flush, processSseLine);
                     };
 
                     while (true) {
@@ -976,6 +956,9 @@
                     }
 
                     return transformed;
+                    };
+
+                    return await consumeChatGPTStream();
 
                 } catch (e) {
                     lastError = e;
@@ -1060,7 +1043,7 @@
             if (!trimmed.includes('{')) return false;
             return !trimmed.endsWith('}') || trimmed.lastIndexOf('}') < trimmed.lastIndexOf('{');
         };
-        let cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+        const cleaned = text.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
 
         try {
             return JSON.parse(cleaned);
@@ -1183,30 +1166,23 @@
                     }
                 }, []);
 
-
-
-                // ... (existing code for models)
-
-                // ... (existing code for test)
-
                 const isModelInList = availableModels.find(m => m.id === model);
                 const hasApiKey = getApiKeys().length > 0;
 
-                return React.createElement('div', { className: 'ai-addon-settings chatgpt-settings' },
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                const renderApiKeyRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, aiText('apiKey', 'API Key(s)')),
                         React.createElement('div', { className: 'ai-addon-input-group' },
                             React.createElement('input', { type: 'text', value: apiKeys, onChange: handleApiKeyChange, placeholder: 'sk-... (multiple: ["key1", "key2"])' }),
                             React.createElement('button', { onClick: () => window.open(ADDON_INFO.apiKeyUrl, '_blank'), className: 'ai-addon-btn-secondary' }, aiText('getApiKey', 'Get API Key'))
                         ),
                         React.createElement('small', null, aiText('apiKeyDesc', 'Enter an API key or JSON array.'))
-                    ),
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderBaseUrlRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, aiText('baseUrl', 'Base URL')),
                         React.createElement('input', { type: 'text', value: baseUrl, onChange: handleBaseUrlChange, placeholder: DEFAULT_OPENAI_BASE_URL }),
                         React.createElement('small', null, 'Change this to use OpenAI-compatible APIs')
-                    ),
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderModelRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, aiText('model', 'Model')),
                         React.createElement('div', { className: 'ai-addon-input-group' },
                             React.createElement('select', {
@@ -1235,22 +1211,29 @@
                             }, modelsLoading ? '...' : '↻')
                         ),
                         availableModels.length > 0 && React.createElement('small', null, `${aiText('model', 'Model')}: ${availableModels.length}`)
-                    ),
-                    (!isModelInList || customModel) &&
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderCustomModelRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, aiText('modelId', 'Custom Model ID')),
                         React.createElement('input', { type: 'text', value: customModel, onChange: handleCustomModelChange, placeholder: 'e.g., gpt-4-turbo' })
-                    ),
-                    React.createElement(FallbackProvidersSection),
-                    // Advanced API Parameters
-                    React.createElement(AdvancedParamsSection)
-                    ,
-                    React.createElement('div', { className: 'ai-addon-setting' },
+                    );
+                const renderTestRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('button', { onClick: handleTest, className: 'ai-addon-btn-primary' }, aiText('testConnection', 'Test Connection')),
                         testStatus && React.createElement('span', {
                             className: `ai-addon-test-status ${testStatus.startsWith('✓') ? 'success' : testStatus.startsWith('✗') ? 'error' : ''}`
                         }, testStatus)
-                    )
+                    );
+
+                return React.createElement('div', { className: 'ai-addon-settings chatgpt-settings' },
+                    renderApiKeyRow(),
+                    renderBaseUrlRow(),
+                    renderModelRow(),
+                    (!isModelInList || customModel) &&
+                    renderCustomModelRow(),
+                    React.createElement(FallbackProvidersSection),
+                    // Advanced API Parameters
+                    React.createElement(AdvancedParamsSection)
+                    ,
+                    renderTestRow()
                 );
             };
 
@@ -1397,11 +1380,7 @@
                 : await callChatGPTAPIRaw(prompt, undefined, parseLines);
 
             // Return in the format expected by LyricsService
-            if (wantSmartPhonetic) {
-                return { phonetic: lines };
-            } else {
-                return { translation: lines };
-            }
+            return wantSmartPhonetic ? { phonetic: lines } : { translation: lines };
         },
 
         async generateCharacterPronunciation({ lines, characterPronunciationPrompt }) {

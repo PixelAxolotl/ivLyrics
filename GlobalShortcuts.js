@@ -175,16 +175,19 @@
         }
 
         // 컨테이너 클래스 업데이트 (fullscreen-container 내부의 컨테이너 찾기)
-        const fullscreenContainer = document.getElementById('lyrics-fullscreen-container');
-        const container = fullscreenContainer?.querySelector('.lyrics-lyricsContainer-LyricsContainer')
-            || document.querySelector('.lyrics-lyricsContainer-LyricsContainer.fullscreen-active');
-        if (container) {
-            if (newValue) {
-                container.classList.add('tv-mode-active');
-            } else {
-                container.classList.remove('tv-mode-active');
+        const updateTvModeContainerClass = () => {
+            const fullscreenContainer = document.getElementById('lyrics-fullscreen-container');
+            const container = fullscreenContainer?.querySelector('.lyrics-lyricsContainer-LyricsContainer')
+                || document.querySelector('.lyrics-lyricsContainer-LyricsContainer.fullscreen-active');
+            if (container) {
+                if (newValue) {
+                    container.classList.add('tv-mode-active');
+                } else {
+                    container.classList.remove('tv-mode-active');
+                }
             }
-        }
+        };
+        updateTvModeContainerClass();
     };
 
     // 전체화면 종료 시 이전 페이지로 돌아가기
@@ -228,20 +231,24 @@
         )
     );
 
+    // 공용 단축키 차단 조건: 이미 처리됐거나, 수정 키/조합 입력, 입력 필드 포커스, 열린 대화상자
+    const hasBlockingShortcutModifiers = (event) =>
+        event.defaultPrevented
+        || event.repeat
+        || event.isComposing
+        || event.metaKey
+        || event.ctrlKey
+        || event.altKey
+        || event.shiftKey
+        || isInputFocused(event.target)
+        || hasOpenIvLyricsDialog();
+
     const handleSettingsShortcut = (event) => {
         const isSettingsKey = event.code === 'KeyS'
             || String(event.key || '').toLowerCase() === 's';
         if (
             !isSettingsKey
-            || event.defaultPrevented
-            || event.repeat
-            || event.isComposing
-            || event.metaKey
-            || event.ctrlKey
-            || event.altKey
-            || event.shiftKey
-            || isInputFocused(event.target)
-            || hasOpenIvLyricsDialog()
+            || hasBlockingShortcutModifiers(event)
             || (!isOnLyricsPage() && !isInFullscreenMode())
             || typeof window.ivLyricsOpenConfig !== 'function'
         ) {
@@ -258,15 +265,7 @@
             || FULLSCREEN_PRESENTATION_SHORTCUTS[String(event.key || '')];
         if (
             !nextPresentation
-            || event.defaultPrevented
-            || event.repeat
-            || event.isComposing
-            || event.metaKey
-            || event.ctrlKey
-            || event.altKey
-            || event.shiftKey
-            || isInputFocused(event.target)
-            || hasOpenIvLyricsDialog()
+            || hasBlockingShortcutModifiers(event)
             || !isInFullscreenMode()
         ) {
             return;
@@ -439,6 +438,13 @@
         moduleState.fullscreenClosedHandler = () => {
             goBackToPreviousPage();
         };
+        registerGlobalEventListeners();
+
+        console.debug("[ivLyrics] Global shortcuts initialized");
+    };
+
+    // init()에서 등록하는 전역 이벤트 리스너 묶음 (등록 순서는 기존과 동일)
+    const registerGlobalEventListeners = () => {
         window.addEventListener("ivLyrics:fullscreen-closed", moduleState.fullscreenClosedHandler);
 
         // 설정 변경 감지
@@ -474,8 +480,6 @@
             }
         };
         document.addEventListener("visibilitychange", moduleState.visibilityHandler);
-
-        console.debug("[ivLyrics] Global shortcuts initialized");
     };
 
     // Spicetify가 준비되면 초기화

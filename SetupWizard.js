@@ -194,6 +194,67 @@ const WizardToggleVisual = ({ enabled, accentColor = WIZARD_COLORS.accent }) =>
     })
   );
 
+// Interactive enable/disable toggle button shared by the overlay/now-playing/pseudo-karaoke tip steps
+const renderWizardInteractiveToggle = (enabled, onToggle, labelKey) =>
+  react.createElement(
+    "button",
+    {
+      onClick: onToggle,
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+        padding: "14px 24px",
+        background: enabled
+          ? WIZARD_COLORS.surfaceSelected
+          : WIZARD_COLORS.surfaceRaised,
+        borderRadius: 0,
+        border: enabled
+          ? `1px solid ${WIZARD_COLORS.borderStrong}`
+          : `1px solid ${WIZARD_COLORS.border}`,
+        cursor: "pointer",
+        transition: "all 0.2s ease",
+      },
+    },
+    react.createElement(
+      "span",
+      {
+        style: {
+          fontSize: "14px",
+          fontWeight: "500",
+          color: enabled ? WIZARD_COLORS.accent : WIZARD_COLORS.muted,
+        },
+      },
+      I18n.t(labelKey)
+    ),
+    react.createElement(WizardToggleVisual, {
+      enabled: enabled,
+    })
+  );
+
+// Muted description paragraph shared by tip steps
+const renderWizardTipDescription = (descKey) =>
+  react.createElement(
+    "div",
+    {
+      style: {
+        ...wizardMessageStyle,
+      },
+    },
+    react.createElement(
+      "p",
+      {
+        style: {
+          fontSize: "12px",
+          color: WIZARD_COLORS.muted,
+          lineHeight: "1.6",
+          margin: 0,
+        },
+      },
+      I18n.t(descKey)
+    )
+  );
+
 const WizardNavigation = ({ onBack, onNext, nextLabel, extraActions, hideBack = false, nextDisabled = false }) =>
   react.createElement(
     "div",
@@ -533,6 +594,17 @@ const ThemeStep = ({ settings, onSettingChange, onNext, onBack }) => {
     { value: "video", label: I18n.t("setupWizard.theme.backgrounds.video"), icon: WizardIcons.video },
   ];
 
+  const renderOptionButtons = (options, settingKey) =>
+    options.map((opt) =>
+      react.createElement(OptionButton, {
+        key: opt.value,
+        icon: opt.icon,
+        label: opt.label,
+        selected: settings[settingKey] === opt.value,
+        onClick: () => onSettingChange(settingKey, opt.value),
+      })
+    );
+
   return react.createElement(
     "div",
     {
@@ -568,15 +640,7 @@ const ThemeStep = ({ settings, onSettingChange, onNext, onBack }) => {
             gap: "10px",
           },
         },
-        alignmentOptions.map((opt) =>
-          react.createElement(OptionButton, {
-            key: opt.value,
-            icon: opt.icon,
-            label: opt.label,
-            selected: settings.alignment === opt.value,
-            onClick: () => onSettingChange("alignment", opt.value),
-          })
-        )
+        renderOptionButtons(alignmentOptions, "alignment")
       )
     ),
     // Background section
@@ -600,15 +664,7 @@ const ThemeStep = ({ settings, onSettingChange, onNext, onBack }) => {
             marginBottom: "10px",
           },
         },
-        backgroundOptions.slice(0, 2).map((opt) =>
-          react.createElement(OptionButton, {
-            key: opt.value,
-            icon: opt.icon,
-            label: opt.label,
-            selected: settings.background === opt.value,
-            onClick: () => onSettingChange("background", opt.value),
-          })
-        )
+        renderOptionButtons(backgroundOptions.slice(0, 2), "background")
       ),
       // Second row - 3 items
       react.createElement(
@@ -619,15 +675,7 @@ const ThemeStep = ({ settings, onSettingChange, onNext, onBack }) => {
             gap: "10px",
           },
         },
-        backgroundOptions.slice(2).map((opt) =>
-          react.createElement(OptionButton, {
-            key: opt.value,
-            icon: opt.icon,
-            label: opt.label,
-            selected: settings.background === opt.value,
-            onClick: () => onSettingChange("background", opt.value),
-          })
-        )
+        renderOptionButtons(backgroundOptions.slice(2), "background")
       )
     ),
     // Spacer
@@ -653,36 +701,37 @@ const TranslationTipStep = ({ onNext, onBack }) => {
     return () => clearInterval(interval);
   }, []);
 
-  return react.createElement(
-    "div",
-    {
-      className: "wizard-step translation-tip-step",
-      style: wizardStepStyle,
-    },
-    react.createElement(
-      "h2",
-      { style: wizardTitleStyle },
-      I18n.t("setupWizard.translationTip.title")
-    ),
-    react.createElement(
-      "p",
-      { style: wizardSubtitleStyle },
-      I18n.t("setupWizard.translationTip.subtitle")
-    ),
-    // Animation container
+  const renderTranslationTipToggle = (labelKey) =>
     react.createElement(
       "div",
       {
         style: {
-          flex: 1,
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
-          justifyContent: "center",
-          gap: "20px",
+          gap: "10px",
+          padding: "10px 16px",
+          ...wizardPanelStyle,
         },
       },
-      // Language cards row
+      react.createElement(
+        "span",
+        {
+          style: {
+            fontSize: "12px",
+            color: "rgba(255, 255, 255, 0.7)",
+            minWidth: "40px",
+          },
+        },
+        I18n.t(labelKey)
+      ),
+      // Toggle switch
+      react.createElement(WizardToggleVisual, {
+        enabled: true,
+        accentColor: languages[activeIndex].color,
+      })
+    );
+
+  const renderTranslationTipLanguageCards = () =>
       react.createElement(
         "div",
         {
@@ -738,7 +787,39 @@ const TranslationTipStep = ({ onNext, onBack }) => {
             )
           )
         )
-      ),
+      );
+
+  return react.createElement(
+    "div",
+    {
+      className: "wizard-step translation-tip-step",
+      style: wizardStepStyle,
+    },
+    react.createElement(
+      "h2",
+      { style: wizardTitleStyle },
+      I18n.t("setupWizard.translationTip.title")
+    ),
+    react.createElement(
+      "p",
+      { style: wizardSubtitleStyle },
+      I18n.t("setupWizard.translationTip.subtitle")
+    ),
+    // Animation container
+    react.createElement(
+      "div",
+      {
+        style: {
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "20px",
+        },
+      },
+      // Language cards row
+      renderTranslationTipLanguageCards(),
       // Arrow and toggle animation
       react.createElement(
         "div",
@@ -780,86 +861,13 @@ const TranslationTipStep = ({ onNext, onBack }) => {
             },
           },
           // Pronunciation toggle
-          react.createElement(
-            "div",
-            {
-              style: {
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "10px 16px",
-                ...wizardPanelStyle,
-              },
-            },
-            react.createElement(
-              "span",
-              {
-                style: {
-                  fontSize: "12px",
-                  color: "rgba(255, 255, 255, 0.7)",
-                  minWidth: "40px",
-                },
-              },
-              I18n.t("setupWizard.translationTip.pronunciation")
-            ),
-            // Toggle switch
-            react.createElement(WizardToggleVisual, {
-              enabled: true,
-              accentColor: languages[activeIndex].color,
-            })
-          ),
+          renderTranslationTipToggle("setupWizard.translationTip.pronunciation"),
           // Translation toggle
-          react.createElement(
-            "div",
-            {
-              style: {
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                padding: "10px 16px",
-                ...wizardPanelStyle,
-              },
-            },
-            react.createElement(
-              "span",
-              {
-                style: {
-                  fontSize: "12px",
-                  color: "rgba(255, 255, 255, 0.7)",
-                  minWidth: "40px",
-                },
-              },
-              I18n.t("setupWizard.translationTip.translation")
-            ),
-            // Toggle switch
-            react.createElement(WizardToggleVisual, {
-              enabled: true,
-              accentColor: languages[activeIndex].color,
-            })
-          )
+          renderTranslationTipToggle("setupWizard.translationTip.translation")
         )
       ),
       // Description text
-      react.createElement(
-        "div",
-        {
-          style: {
-            ...wizardMessageStyle,
-          },
-        },
-        react.createElement(
-          "p",
-          {
-            style: {
-              fontSize: "12px",
-              color: WIZARD_COLORS.muted,
-              lineHeight: "1.6",
-              margin: 0,
-            },
-          },
-          I18n.t("setupWizard.translationTip.description")
-        )
-      )
+      renderWizardTipDescription("setupWizard.translationTip.description")
     ),
     react.createElement(WizardNavigation, { onBack, onNext })
   );
@@ -877,36 +885,96 @@ const OverlayTipStep = ({ overlayEnabled, onOverlayChange, onNext, onBack }) => 
     return () => clearInterval(interval);
   }, []);
 
-  return react.createElement(
-    "div",
-    {
-      className: "wizard-step overlay-tip-step",
-      style: wizardStepStyle,
-    },
-    react.createElement(
-      "h2",
-      { style: wizardTitleStyle },
-      I18n.t("setupWizard.overlayTip.title")
-    ),
-    react.createElement(
-      "p",
-      { style: wizardSubtitleStyle },
-      I18n.t("setupWizard.overlayTip.subtitle")
-    ),
-    // Animation container
-    react.createElement(
+  const renderOverlayTipDescription = () => react.createElement(
       "div",
       {
         style: {
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "20px",
+          ...wizardMessageStyle,
         },
       },
-      // Desktop mockup with floating overlay
+      react.createElement(
+        "p",
+        {
+          style: {
+            fontSize: "12px",
+            color: WIZARD_COLORS.muted,
+            lineHeight: "1.6",
+            margin: "0 0 12px 0",
+          },
+        },
+        I18n.t("setupWizard.overlayTip.description")
+      ),
+      // Requires app notice
+      react.createElement(
+        "div",
+        {
+          style: {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "6px",
+            padding: "10px 14px",
+            background: WIZARD_COLORS.warningSurface,
+            border: `1px solid ${WIZARD_COLORS.warningBorder}`,
+            borderRadius: 0,
+            marginBottom: "12px",
+          },
+        },
+        react.createElement(
+          "svg",
+          {
+            width: 16,
+            height: 16,
+            viewBox: "0 0 24 24",
+            fill: "#ffc107",
+          },
+          react.createElement("path", {
+            d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z",
+          })
+        ),
+        react.createElement(
+          "span",
+          {
+            style: {
+              fontSize: "11px",
+              color: WIZARD_COLORS.warningText,
+              fontWeight: "500",
+            },
+          },
+          I18n.t("setupWizard.overlayTip.requiresApp")
+        )
+      ),
+      // Download button
+      react.createElement(
+        WizardButton,
+        {
+          onClick: () => {
+            const url = (typeof window !== "undefined" && window.OverlaySender?.getDownloadUrl?.()) ||
+              "https://ivlis.kr/ivLyrics/extensions/#overlay";
+            window.open(url, "_blank");
+          },
+          variant: "secondary",
+          style: {
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            color: WIZARD_COLORS.text,
+            background: WIZARD_COLORS.infoSurface,
+            borderColor: WIZARD_COLORS.infoBorder,
+          },
+        },
+        react.createElement("svg", {
+          width: 14,
+          height: 14,
+          viewBox: "0 0 24 24",
+          fill: "currentColor",
+          dangerouslySetInnerHTML: { __html: WizardIcons.externalLink },
+        }),
+        I18n.t("setupWizard.overlayTip.downloadApp")
+      )
+    );
+
+  const renderOverlayTipMockup = () =>
       react.createElement(
         "div",
         {
@@ -1008,132 +1076,47 @@ const OverlayTipStep = ({ overlayEnabled, onOverlayChange, onNext, onBack }) => 
             borderRadius: 0,
           },
         })
-      ),
-      // Interactive Toggle
-      react.createElement(
-        "button",
-        {
-          onClick: () => onOverlayChange(!overlayEnabled),
-          style: {
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            padding: "14px 24px",
-            background: overlayEnabled
-              ? WIZARD_COLORS.surfaceSelected
-              : WIZARD_COLORS.surfaceRaised,
-            borderRadius: 0,
-            border: overlayEnabled
-              ? `1px solid ${WIZARD_COLORS.borderStrong}`
-              : `1px solid ${WIZARD_COLORS.border}`,
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-          },
+      );
+
+  return react.createElement(
+    "div",
+    {
+      className: "wizard-step overlay-tip-step",
+      style: wizardStepStyle,
+    },
+    react.createElement(
+      "h2",
+      { style: wizardTitleStyle },
+      I18n.t("setupWizard.overlayTip.title")
+    ),
+    react.createElement(
+      "p",
+      { style: wizardSubtitleStyle },
+      I18n.t("setupWizard.overlayTip.subtitle")
+    ),
+    // Animation container
+    react.createElement(
+      "div",
+      {
+        style: {
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "20px",
         },
-        react.createElement(
-          "span",
-          {
-            style: {
-              fontSize: "14px",
-              fontWeight: "500",
-              color: overlayEnabled ? WIZARD_COLORS.accent : WIZARD_COLORS.muted,
-            },
-          },
-          I18n.t("setupWizard.overlayTip.enabled")
-        ),
-        react.createElement(WizardToggleVisual, {
-          enabled: overlayEnabled,
-        })
+      },
+      // Desktop mockup with floating overlay
+      renderOverlayTipMockup(),
+      // Interactive Toggle
+      renderWizardInteractiveToggle(
+        overlayEnabled,
+        () => onOverlayChange(!overlayEnabled),
+        "setupWizard.overlayTip.enabled"
       ),
       // Description and install notice
-      react.createElement(
-        "div",
-        {
-          style: {
-            ...wizardMessageStyle,
-          },
-        },
-        react.createElement(
-          "p",
-          {
-            style: {
-              fontSize: "12px",
-              color: WIZARD_COLORS.muted,
-              lineHeight: "1.6",
-              margin: "0 0 12px 0",
-            },
-          },
-          I18n.t("setupWizard.overlayTip.description")
-        ),
-        // Requires app notice
-        react.createElement(
-          "div",
-          {
-            style: {
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "6px",
-              padding: "10px 14px",
-              background: WIZARD_COLORS.warningSurface,
-              border: `1px solid ${WIZARD_COLORS.warningBorder}`,
-              borderRadius: 0,
-              marginBottom: "12px",
-            },
-          },
-          react.createElement(
-            "svg",
-            {
-              width: 16,
-              height: 16,
-              viewBox: "0 0 24 24",
-              fill: "#ffc107",
-            },
-            react.createElement("path", {
-              d: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z",
-            })
-          ),
-          react.createElement(
-            "span",
-            {
-              style: {
-                fontSize: "11px",
-                color: WIZARD_COLORS.warningText,
-                fontWeight: "500",
-              },
-            },
-            I18n.t("setupWizard.overlayTip.requiresApp")
-          )
-        ),
-        // Download button
-        react.createElement(
-          WizardButton,
-          {
-            onClick: () => {
-              const url = (typeof window !== "undefined" && window.OverlaySender?.getDownloadUrl?.()) ||
-                "https://ivlis.kr/ivLyrics/extensions/#overlay";
-              window.open(url, "_blank");
-            },
-            variant: "secondary",
-            style: {
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              color: WIZARD_COLORS.text,
-              background: WIZARD_COLORS.infoSurface,
-              borderColor: WIZARD_COLORS.infoBorder,
-            },
-          },
-          react.createElement("svg", {
-            width: 14,
-            height: 14,
-            viewBox: "0 0 24 24",
-            fill: "currentColor",
-            dangerouslySetInnerHTML: { __html: WizardIcons.externalLink },
-          }),
-          I18n.t("setupWizard.overlayTip.downloadApp")
-        )
-      )
+      renderOverlayTipDescription()
     ),
     react.createElement(WizardNavigation, { onBack, onNext })
   );
@@ -1152,36 +1135,7 @@ const NowPlayingTipStep = ({ nowPlayingEnabled, onNowPlayingChange, onNext, onBa
     return () => clearInterval(interval);
   }, []);
 
-  return react.createElement(
-    "div",
-    {
-      className: "wizard-step nowplaying-tip-step",
-      style: wizardStepStyle,
-    },
-    react.createElement(
-      "h2",
-      { style: wizardTitleStyle },
-      I18n.t("setupWizard.nowPlayingTip.title")
-    ),
-    react.createElement(
-      "p",
-      { style: wizardSubtitleStyle },
-      I18n.t("setupWizard.nowPlayingTip.subtitle")
-    ),
-    // Animation container
-    react.createElement(
-      "div",
-      {
-        style: {
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "20px",
-        },
-      },
-      // Spotify-like panel mockup
+  const renderNowPlayingTipMockup = () =>
       react.createElement(
         "div",
         {
@@ -1284,64 +1238,47 @@ const NowPlayingTipStep = ({ nowPlayingEnabled, onNowPlayingChange, onNext, onBa
             )
           )
         )
-      ),
-      // Interactive Toggle
-      react.createElement(
-        "button",
-        {
-          onClick: () => onNowPlayingChange(!nowPlayingEnabled),
-          style: {
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            padding: "14px 24px",
-            background: nowPlayingEnabled
-              ? WIZARD_COLORS.surfaceSelected
-              : WIZARD_COLORS.surfaceRaised,
-            borderRadius: 0,
-            border: nowPlayingEnabled
-              ? `1px solid ${WIZARD_COLORS.borderStrong}`
-              : `1px solid ${WIZARD_COLORS.border}`,
-            cursor: "pointer",
-            transition: "all 0.2s ease",
-          },
+      );
+
+  return react.createElement(
+    "div",
+    {
+      className: "wizard-step nowplaying-tip-step",
+      style: wizardStepStyle,
+    },
+    react.createElement(
+      "h2",
+      { style: wizardTitleStyle },
+      I18n.t("setupWizard.nowPlayingTip.title")
+    ),
+    react.createElement(
+      "p",
+      { style: wizardSubtitleStyle },
+      I18n.t("setupWizard.nowPlayingTip.subtitle")
+    ),
+    // Animation container
+    react.createElement(
+      "div",
+      {
+        style: {
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "20px",
         },
-        react.createElement(
-          "span",
-          {
-            style: {
-              fontSize: "14px",
-              fontWeight: "500",
-              color: nowPlayingEnabled ? WIZARD_COLORS.accent : WIZARD_COLORS.muted,
-            },
-          },
-          I18n.t("setupWizard.nowPlayingTip.enabled")
-        ),
-        react.createElement(WizardToggleVisual, {
-          enabled: nowPlayingEnabled,
-        })
+      },
+      // Spotify-like panel mockup
+      renderNowPlayingTipMockup(),
+      // Interactive Toggle
+      renderWizardInteractiveToggle(
+        nowPlayingEnabled,
+        () => onNowPlayingChange(!nowPlayingEnabled),
+        "setupWizard.nowPlayingTip.enabled"
       ),
       // Description text
-      react.createElement(
-        "div",
-        {
-          style: {
-            ...wizardMessageStyle,
-          },
-        },
-        react.createElement(
-          "p",
-          {
-            style: {
-              fontSize: "12px",
-              color: WIZARD_COLORS.muted,
-              lineHeight: "1.6",
-              margin: 0,
-            },
-          },
-          I18n.t("setupWizard.nowPlayingTip.description")
-        )
-      )
+      renderWizardTipDescription("setupWizard.nowPlayingTip.description")
     ),
     react.createElement(WizardNavigation, { onBack, onNext })
   );
@@ -1589,104 +1526,7 @@ const VideoTestStep = ({ onNext, onBack, onNeedHelper, onSkip }) => {
     };
   }, []);
 
-  return react.createElement(
-    "div",
-    {
-      className: "wizard-step video-test-step",
-      style: wizardStepStyle,
-    },
-    react.createElement(
-      "h2",
-      { style: wizardTitleStyle },
-      I18n.t("setupWizard.videoTest.title")
-    ),
-    react.createElement(
-      "p",
-      { style: { ...wizardSubtitleStyle, marginBottom: "20px" } },
-      I18n.t("setupWizard.videoTest.subtitle")
-    ),
-    // YouTube Player container
-    react.createElement(
-      "div",
-      {
-        ref: playerContainerRef,
-        style: {
-          width: "100%",
-          maxWidth: "400px",
-          margin: "0 auto 20px",
-          aspectRatio: "16/9",
-          borderRadius: 0,
-          overflow: "hidden",
-          background: "rgba(0, 0, 0, 0.3)",
-          border: `1px solid ${WIZARD_COLORS.border}`,
-        },
-      }
-    ),
-    // Question section
-    react.createElement(
-      "div",
-      {
-        style: {
-          textAlign: "center",
-          marginBottom: "16px",
-        },
-      },
-      react.createElement(
-        "p",
-        {
-          style: {
-            fontSize: "14px",
-            fontWeight: "500",
-            color: WIZARD_COLORS.text,
-            marginBottom: "12px",
-          },
-        },
-        I18n.t("setupWizard.videoTest.question")
-      ),
-      // Yes/No buttons
-      loginRequired === null &&
-      react.createElement(
-        "div",
-        {
-          style: {
-            display: "flex",
-            justifyContent: "center",
-            gap: "12px",
-          },
-        },
-        react.createElement(
-          WizardButton,
-          {
-            onClick: handleYes,
-            style: {
-              padding: "10px 32px",
-              fontSize: "14px",
-              color: WIZARD_COLORS.dangerText,
-              background: WIZARD_COLORS.dangerSurface,
-              borderColor: WIZARD_COLORS.dangerBorder,
-            },
-          },
-          I18n.t("setupWizard.videoTest.yes")
-        ),
-        react.createElement(
-          WizardButton,
-          {
-            onClick: handleNo,
-            style: {
-              padding: "10px 32px",
-              fontSize: "14px",
-              color: WIZARD_COLORS.accent,
-              background: WIZARD_COLORS.surfaceSelected,
-              borderColor: WIZARD_COLORS.borderStrong,
-            },
-          },
-          I18n.t("setupWizard.videoTest.no")
-        )
-      )
-    ),
-    // Helper required message (shown when loginRequired is true)
-    loginRequired === true &&
-    react.createElement(
+  const renderVideoTestHelperMessage = () => react.createElement(
       "div",
       {
         style: {
@@ -1748,7 +1588,111 @@ const VideoTestStep = ({ onNext, onBack, onNeedHelper, onSkip }) => {
         }),
         I18n.t("setupWizard.videoTest.installHelper")
       )
+    );
+
+  const renderVideoTestPlayerContainer = () =>
+    react.createElement(
+      "div",
+      {
+        ref: playerContainerRef,
+        style: {
+          width: "100%",
+          maxWidth: "400px",
+          margin: "0 auto 20px",
+          aspectRatio: "16/9",
+          borderRadius: 0,
+          overflow: "hidden",
+          background: "rgba(0, 0, 0, 0.3)",
+          border: `1px solid ${WIZARD_COLORS.border}`,
+        },
+      }
+    );
+
+  const renderVideoTestQuestion = () =>
+    react.createElement(
+      "div",
+      {
+        style: {
+          textAlign: "center",
+          marginBottom: "16px",
+        },
+      },
+      react.createElement(
+        "p",
+        {
+          style: {
+            fontSize: "14px",
+            fontWeight: "500",
+            color: WIZARD_COLORS.text,
+            marginBottom: "12px",
+          },
+        },
+        I18n.t("setupWizard.videoTest.question")
+      ),
+      // Yes/No buttons
+      loginRequired === null &&
+      react.createElement(
+        "div",
+        {
+          style: {
+            display: "flex",
+            justifyContent: "center",
+            gap: "12px",
+          },
+        },
+        react.createElement(
+          WizardButton,
+          {
+            onClick: handleYes,
+            style: {
+              padding: "10px 32px",
+              fontSize: "14px",
+              color: WIZARD_COLORS.dangerText,
+              background: WIZARD_COLORS.dangerSurface,
+              borderColor: WIZARD_COLORS.dangerBorder,
+            },
+          },
+          I18n.t("setupWizard.videoTest.yes")
+        ),
+        react.createElement(
+          WizardButton,
+          {
+            onClick: handleNo,
+            style: {
+              padding: "10px 32px",
+              fontSize: "14px",
+              color: WIZARD_COLORS.accent,
+              background: WIZARD_COLORS.surfaceSelected,
+              borderColor: WIZARD_COLORS.borderStrong,
+            },
+          },
+          I18n.t("setupWizard.videoTest.no")
+        )
+      )
+    );
+
+  return react.createElement(
+    "div",
+    {
+      className: "wizard-step video-test-step",
+      style: wizardStepStyle,
+    },
+    react.createElement(
+      "h2",
+      { style: wizardTitleStyle },
+      I18n.t("setupWizard.videoTest.title")
     ),
+    react.createElement(
+      "p",
+      { style: { ...wizardSubtitleStyle, marginBottom: "20px" } },
+      I18n.t("setupWizard.videoTest.subtitle")
+    ),
+    // YouTube Player container
+    renderVideoTestPlayerContainer(),
+    // Question section
+    renderVideoTestQuestion(),
+    // Helper required message (shown when loginRequired is true)
+    loginRequired === true && renderVideoTestHelperMessage(),
     // Spacer
     react.createElement("div", { style: { flex: 1 } }),
     react.createElement(WizardNavigation, {
@@ -1796,7 +1740,7 @@ const VideoHelperTestStep = ({ onNext, onBack, onSkip, helperEnabled, onHelperCh
     }
 
     // Request the video
-    const abort = VideoHelperService.requestVideo(testVideoId, {
+    VideoHelperService.requestVideo(testVideoId, {
       onProgress: (data) => {
         setTestStatus("downloading");
         setDownloadPercent(data.percent || 0);
@@ -1812,81 +1756,7 @@ const VideoHelperTestStep = ({ onNext, onBack, onSkip, helperEnabled, onHelperCh
     });
   };
 
-  return react.createElement(
-    "div",
-    {
-      className: "wizard-step video-helper-test-step",
-      style: wizardStepStyle,
-    },
-    react.createElement(
-      "h2",
-      { style: wizardTitleStyle },
-      I18n.t("setupWizard.videoHelperTest.title")
-    ),
-    react.createElement(
-      "p",
-      { style: wizardSubtitleStyle },
-      I18n.t("setupWizard.videoHelperTest.subtitle")
-    ),
-    // Enable helper toggle
-    react.createElement(
-      "div",
-      {
-        onClick: handleEnableHelper,
-        style: {
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "16px 20px",
-          ...wizardPanelStyle,
-          marginBottom: "16px",
-          cursor: "pointer",
-        },
-      },
-      react.createElement(
-        "span",
-        {
-          style: {
-            fontSize: "14px",
-            fontWeight: "500",
-            color: WIZARD_COLORS.text,
-          },
-        },
-        I18n.t("setupWizard.videoHelperTest.enableHelper")
-      ),
-      react.createElement(WizardToggleVisual, {
-        enabled: helperEnabled,
-      })
-    ),
-    // Test button
-    helperEnabled &&
-    react.createElement(
-      "div",
-      {
-        style: {
-          textAlign: "center",
-          marginBottom: "20px",
-        },
-      },
-      react.createElement(
-        WizardButton,
-        {
-          onClick: handleTestVideo,
-          disabled: testStatus === "testing" || testStatus === "downloading",
-          variant: "primary",
-          style: {
-            padding: "14px 32px",
-            fontSize: "14px",
-          },
-        },
-        testStatus === "testing" || testStatus === "downloading"
-          ? I18n.t("setupWizard.videoHelperTest.testing")
-          : I18n.t("setupWizard.videoHelperTest.testVideo")
-      )
-    ),
-    // Download progress
-    testStatus === "downloading" &&
-    react.createElement(
+  const renderVideoHelperDownloadProgress = () => react.createElement(
       "div",
       {
         style: {
@@ -1927,10 +1797,9 @@ const VideoHelperTestStep = ({ onNext, onBack, onSkip, helperEnabled, onHelperCh
         },
         I18n.t("setupWizard.videoHelperTest.downloading").replace("{percent}", Math.round(downloadPercent))
       )
-    ),
-    // Success message
-    testStatus === "success" &&
-    react.createElement(
+    );
+
+  const renderVideoHelperSuccess = () => react.createElement(
       "div",
       {
         style: {
@@ -1977,10 +1846,9 @@ const VideoHelperTestStep = ({ onNext, onBack, onSkip, helperEnabled, onHelperCh
           muted: true,
         })
       )
-    ),
-    // Failed message
-    testStatus === "failed" &&
-    react.createElement(
+    );
+
+  const renderVideoHelperFailed = () => react.createElement(
       "div",
       {
         style: {
@@ -2003,7 +1871,92 @@ const VideoHelperTestStep = ({ onNext, onBack, onSkip, helperEnabled, onHelperCh
         },
         "✕ " + I18n.t("setupWizard.videoHelperTest.failed")
       )
+    );
+
+  const renderVideoHelperEnableToggle = () =>
+    react.createElement(
+      "div",
+      {
+        onClick: handleEnableHelper,
+        style: {
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "16px 20px",
+          ...wizardPanelStyle,
+          marginBottom: "16px",
+          cursor: "pointer",
+        },
+      },
+      react.createElement(
+        "span",
+        {
+          style: {
+            fontSize: "14px",
+            fontWeight: "500",
+            color: WIZARD_COLORS.text,
+          },
+        },
+        I18n.t("setupWizard.videoHelperTest.enableHelper")
+      ),
+      react.createElement(WizardToggleVisual, {
+        enabled: helperEnabled,
+      })
+    );
+
+  const renderVideoHelperTestButton = () =>
+    react.createElement(
+      "div",
+      {
+        style: {
+          textAlign: "center",
+          marginBottom: "20px",
+        },
+      },
+      react.createElement(
+        WizardButton,
+        {
+          onClick: handleTestVideo,
+          disabled: testStatus === "testing" || testStatus === "downloading",
+          variant: "primary",
+          style: {
+            padding: "14px 32px",
+            fontSize: "14px",
+          },
+        },
+        testStatus === "testing" || testStatus === "downloading"
+          ? I18n.t("setupWizard.videoHelperTest.testing")
+          : I18n.t("setupWizard.videoHelperTest.testVideo")
+      )
+    );
+
+  return react.createElement(
+    "div",
+    {
+      className: "wizard-step video-helper-test-step",
+      style: wizardStepStyle,
+    },
+    react.createElement(
+      "h2",
+      { style: wizardTitleStyle },
+      I18n.t("setupWizard.videoHelperTest.title")
     ),
+    react.createElement(
+      "p",
+      { style: wizardSubtitleStyle },
+      I18n.t("setupWizard.videoHelperTest.subtitle")
+    ),
+    // Enable helper toggle
+    renderVideoHelperEnableToggle(),
+    // Test button
+    helperEnabled &&
+    renderVideoHelperTestButton(),
+    // Download progress
+    testStatus === "downloading" && renderVideoHelperDownloadProgress(),
+    // Success message
+    testStatus === "success" && renderVideoHelperSuccess(),
+    // Failed message
+    testStatus === "failed" && renderVideoHelperFailed(),
     // Spacer
     react.createElement("div", { style: { flex: 1 } }),
     react.createElement(WizardNavigation, {
@@ -2203,14 +2156,10 @@ const SetupWizard = ({ onComplete }) => {
     }
   };
 
-  const saveSettings = () => {
-
-
-    // Save theme settings
-    if (typeof StorageManager !== "undefined" && typeof CONFIG !== "undefined") {
+  const saveThemeAndFeatureConfig = () => {
       // Alignment
       StorageManager.saveConfig("alignment", themeSettings.alignment);
-      CONFIG.visual["alignment"] = themeSettings.alignment;
+      CONFIG.visual.alignment = themeSettings.alignment;
 
       // Background - reset all first
       const bgKeys = ["colorful", "gradient-background", "blur-gradient-background", "solid-background", "video-background"];
@@ -2220,21 +2169,17 @@ const SetupWizard = ({ onComplete }) => {
       });
 
       // Set selected background
-      if (themeSettings.background === "colorful") {
-        StorageManager.saveConfig("colorful", true);
-        CONFIG.visual["colorful"] = true;
-      } else if (themeSettings.background === "gradient") {
-        StorageManager.saveConfig("gradient-background", true);
-        CONFIG.visual["gradient-background"] = true;
-      } else if (themeSettings.background === "blurGradient") {
-        StorageManager.saveConfig("blur-gradient-background", true);
-        CONFIG.visual["blur-gradient-background"] = true;
-      } else if (themeSettings.background === "solid") {
-        StorageManager.saveConfig("solid-background", true);
-        CONFIG.visual["solid-background"] = true;
-      } else if (themeSettings.background === "video") {
-        StorageManager.saveConfig("video-background", true);
-        CONFIG.visual["video-background"] = true;
+      const wizardBackgroundConfigKeys = {
+        colorful: "colorful",
+        gradient: "gradient-background",
+        blurGradient: "blur-gradient-background",
+        solid: "solid-background",
+        video: "video-background",
+      };
+      const selectedBackgroundKey = wizardBackgroundConfigKeys[themeSettings.background];
+      if (selectedBackgroundKey) {
+        StorageManager.saveConfig(selectedBackgroundKey, true);
+        CONFIG.visual[selectedBackgroundKey] = true;
       }
 
       // Save video helper setting (only if video background selected and helper step was shown)
@@ -2254,6 +2199,14 @@ const SetupWizard = ({ onComplete }) => {
       // Save pseudo karaoke setting
       StorageManager.saveConfig("spotify-fake-karaoke-enabled", pseudoKaraokeEnabled);
       CONFIG.visual["spotify-fake-karaoke-enabled"] = pseudoKaraokeEnabled;
+  };
+
+  const saveSettings = () => {
+
+
+    // Save theme settings
+    if (typeof StorageManager !== "undefined" && typeof CONFIG !== "undefined") {
+      saveThemeAndFeatureConfig();
     }
 
     // Keep the overlay runtime flag in the same persistent settings store.

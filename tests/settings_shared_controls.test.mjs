@@ -216,14 +216,16 @@ for (const component of ['LyricsProvidersTab', 'AIProvidersTab']) {
   });
 }
 
-test('result panels preserve all ten existing container ids, sibling insertion and row marker timing', () => {
+test('result panels preserve all twelve existing container ids, sibling insertion and row marker timing', () => {
   const blocks = baseline ? [...baseline.matchAll(/const settingRow = button\.closest\("\.setting-row"\);\n\s*let resultContainer = settingRow\?\.nextElementSibling;\n\n\s*if \(\n\s*!resultContainer \|\|\n\s*!resultContainer.id \|\|\n\s*resultContainer.id !== "([a-z-]+)"\n\s*\) \{\n[\s\S]*?\n\s*\}/g)] : null;
   const calls = [...current.matchAll(/const resultContainer = getSettingsResultContainer\(button, "([a-z-]+)"(?:, "([a-z-]+)")?\);/g)];
   const ids = ['export-result-container', 'export-result-container', 'export-result-container', 'export-result-container',
-    'db-export-result-container', 'db-export-result-container', 'db-import-result-container', 'db-import-result-container',
+    'db-export-result-container', 'db-export-result-container',
+    'my-syncs-export-result-container', 'my-syncs-export-result-container',
+    'db-import-result-container', 'db-import-result-container',
     'reset-result-container', 'update-result-container'];
   assert.deepEqual(calls.map(call => call[1]), ids);
-  assert.deepEqual(calls.map(call => call[2]), [...Array(9).fill(undefined), 'has-update-result']);
+  assert.deepEqual(calls.map(call => call[2]), [...Array(11).fill(undefined), 'has-update-result']);
   if (blocks) assert.deepEqual(blocks.map(block => block[1]), ids);
   const helper = section(current, 'const getSettingsResultContainer =', 'const ConfigModal =');
   for (let i = 0; i < calls.length; i++) {

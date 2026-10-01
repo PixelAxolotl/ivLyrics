@@ -1612,6 +1612,12 @@ window.TrackBackgroundDB = TrackBackgroundDB;
         console.error("[ivLyrics] Keeping invalid legacy track offsets:", error);
         return;
       }
+      // Check if IndexedDB already has offsets — never overwrite newer data
+      const existingOffsets = await TrackSyncDB.getAllOffsets();
+      if (Object.keys(existingOffsets).length > 0) {
+        ivLyricsDebug("[ivLyrics] IndexedDB already has offsets; skipping migration");
+        return;
+      }
       const imported = await TrackSyncDB.importOffsets(offsetsObj);
       if (imported) {
         localStorage.removeItem("ivLyrics:track-sync-offsets");

@@ -433,6 +433,7 @@
 		try {
 			const configured =
 				window.CONFIG?.visual?.["translate:target-language"] ||
+				window.ivLyricsStoragePersistence?.getItem?.("ivLyrics:visual:translate:target-language") ||
 				(typeof localStorage !== "undefined"
 					? localStorage.getItem("ivLyrics:visual:translate:target-language")
 					: null);
@@ -483,6 +484,7 @@
 		try {
 			const configured =
 				window.CONFIG?.visual?.["translate:pronunciation-notation"] ||
+				window.ivLyricsStoragePersistence?.getItem?.("ivLyrics:visual:translate:pronunciation-notation") ||
 				(typeof localStorage !== "undefined"
 					? localStorage.getItem("ivLyrics:visual:translate:pronunciation-notation")
 					: null);

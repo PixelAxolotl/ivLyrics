@@ -470,7 +470,8 @@ window.LANG_EN = {
         "tmi": "TMI",
         "lyricsStudy": "Learning",
         "characterPronunciation": "Character pronunciation",
-        "culturalAnnotations": "Cultural context"
+        "culturalAnnotations": "Cultural context",
+        "wordSupplements": "Word details"
       },
       "noEnabledProviders": "No AI providers enabled. Please enable at least one provider in settings.",
       "allProvidersFailed": "All AI providers failed to process the request.",
@@ -636,6 +637,7 @@ window.LANG_EN = {
     "regeneratePronunciationOnly": "Pronunciation Only",
     "regenerateTranslationOnly": "Translation Only",
     "regenerateBoth": "Pronunciation and Translation",
+    "regenerateWordDetails": "Word details",
     "regenerateAction": "Regenerate",
     "fullscreen": "Fullscreen",
     "exitFullscreen": "Exit Fullscreen"
@@ -850,6 +852,9 @@ window.LANG_EN = {
     "regeneratingTranslation": "Regenerating translation...",
     "translationRegenerated": "Translation regenerated",
     "culturalAnnotationsRegenerated": "Cultural context explanations regenerated.",
+    "regeneratingWordDetails": "Regenerating word details...",
+    "wordDetailsRegenerated": "Word details regenerated.",
+    "wordDetailsRegenerateFailed": "Failed to regenerate word details.",
     "translationRegenerateFailed": "Failed to regenerate translation",
     "culturalAnnotationsRegenerateFailed": "Failed to regenerate cultural context explanations.",
     "lyricsProviderSaved": "Lyrics provider setting saved for this track.",
@@ -1378,6 +1383,10 @@ window.LANG_EN = {
       "videoEnabled": {
         "label": "Preload Video Background",
         "desc": "Fetch video background info for the next song in advance"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {
@@ -1462,7 +1471,8 @@ window.LANG_EN = {
       "import": {
         "label": "Import Settings",
         "button": "Import",
-        "processing": "Importing..."
+        "processing": "Importing...",
+        "confirm": "This will import {count} settings and replace your current settings. Continue?"
       }
     },
     "cloudSync": {
@@ -1948,7 +1958,9 @@ window.LANG_EN = {
   "generationStatus": {
     "complete": "Done!",
     "culturalAnnotations": "Cultural context explanations",
-    "culturalAnnotationsLoading": "Analyzing cultural context..."
+    "culturalAnnotationsLoading": "Analyzing cultural context...",
+    "wordSupplements": "Word details",
+    "wordSupplementsLoading": "Loading word readings & glosses..."
   },
   "videoBackground": {
     "loading": "Loading video info...",

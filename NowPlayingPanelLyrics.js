@@ -3610,7 +3610,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         return react.createElement("div", { className: lineClass, style: lineStyle },
             react.createElement("p", {
                 className: "ivlyrics-panel-line-text",
-                dangerouslySetInnerHTML: displayText ? { __html: displayText } : undefined
+                ...Utils.createHTMLProps(displayText)
             }, displayText ? undefined : " "),
             phonetic && react.createElement("div", {
                 className: "ivlyrics-panel-line-phonetic"
@@ -4997,6 +4997,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     && activeTrailingInterludeKey === visualTrailingInterludeKey;
                 const relativeIndex = displayIndex - visualDisplayIndex;
                 const isSinging = !isVirtualTrailingInterlude && singingLineIndices.includes(i);
+                const activeIsInterlude = isVirtualTrailingInterludeActive
+                    || !!displayableLyrics.find((candidate) => candidate.index === currentIndex)?.interludeInfo?.isInterlude;
 
                 return {
                     index: entry.index,
@@ -5021,7 +5023,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                     isPast: !isSinging && !isVirtualTrailingInterlude && (i < currentIndex || (i === currentIndex && !!activeTrailingInterludeKey)),
                     isFuture: i > currentIndex,
                     isPlaceholder: false,
-                    isLayoutHidden: !isSinging && Math.abs(relativeIndex) > halfLines
+                    isLayoutHidden: !isSinging && (Math.abs(relativeIndex) > halfLines
+                        || (activeIsInterlude && relativeIndex < 0 && !isVirtualTrailingInterlude))
                 };
             });
         }, [lyrics, currentIndex, visualIndex, visibleLineCount, activeTrailingInterludeKey, visualTrailingInterludeKey, autoInstrumentalBreakEnabled, singingLineIndices, panelPlaybackTimeline]);

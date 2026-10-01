@@ -1,0 +1,383 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import test from 'node:test';
+import vm from 'node:vm';
+
+const shareSource = readFileSync(new URL('../LyricsShareImage.js', import.meta.url), 'utf8');
+const menuSource = readFileSync(new URL('../OptionsMenu.js', import.meta.url), 'utf8');
+
+const section = (source, start, end) => {
+  const from = source.indexOf(start);
+  const to = source.indexOf(end, from);
+  assert.ok(from >= 0 && to > from, `section ${start} -> ${end} not found`);
+  return source.slice(from, to);
+};
+
+const { DEFAULT_SETTINGS, PRESETS } = vm.runInNewContext(`(() => {
+  ${section(shareSource, '  const DEFAULT_SETTINGS =', '  // TEMPLATES')}
+  return { DEFAULT_SETTINGS, PRESETS };
+})()`);
+
+test('share image defaults to line-level detail', () => {
+  assert.equal(DEFAULT_SETTINGS.lyricsDetail, 'line');
+});
+
+test('every share image preset resolves a lyrics detail mode', () => {
+  for (const [key, preset] of Object.entries(PRESETS)) {
+    const resolved = preset.settings.lyricsDetail ?? DEFAULT_SETTINGS.lyricsDetail;
+    assert.equal(resolved, key === 'word' ? 'word' : 'line', `preset ${key} resolves wrong detail mode`);
+  }
+});
+
+test('word preset exists for word-level export', () => {
+  assert.ok(PRESETS.word, 'missing word preset');
+  assert.equal(PRESETS.word.settings.lyricsDetail, 'word');
+});
+
+test('share image defaults cover export scale and per-type styling', () => {
+  assert.equal(DEFAULT_SETTINGS.exportScale, 1);
+  assert.equal(DEFAULT_SETTINGS.fontSource, 'default');
+  assert.equal(DEFAULT_SETTINGS.customFontFamily, '');
+  assert.equal(DEFAULT_SETTINGS.origColor, '#ffffff');
+  assert.equal(DEFAULT_SETTINGS.origWeight, '600');
+  assert.equal(DEFAULT_SETTINGS.pronColor, '#ffffff');
+  assert.equal(DEFAULT_SETTINGS.pronSize, 20);
+  assert.equal(DEFAULT_SETTINGS.wordReadingSize, 21);
+  assert.equal(DEFAULT_SETTINGS.wordReadingColor, '#ffffff');
+  assert.equal(DEFAULT_SETTINGS.wordReadingWeight, '400');
+  assert.equal(DEFAULT_SETTINGS.transColor, '#1DB954');
+  assert.equal(DEFAULT_SETTINGS.transSize, 22);
+  assert.equal(DEFAULT_SETTINGS.wordGlossSize, 21);
+  assert.equal(DEFAULT_SETTINGS.wordGlossColor, '#1DB954');
+  assert.equal(DEFAULT_SETTINGS.wordGlossWeight, '500');
+  assert.equal(DEFAULT_SETTINGS.pronWeight, '400');
+  assert.equal(DEFAULT_SETTINGS.transWeight, '500');
+  assert.equal(DEFAULT_SETTINGS.trackTitleSize, 26);
+  assert.equal(DEFAULT_SETTINGS.trackTitleColor, '#ffffff');
+  assert.equal(DEFAULT_SETTINGS.trackTitleWeight, '700');
+  assert.equal(DEFAULT_SETTINGS.trackArtistSize, 18);
+  assert.equal(DEFAULT_SETTINGS.trackArtistColor, '#ffffff');
+  assert.equal(DEFAULT_SETTINGS.trackArtistWeight, '500');
+});
+
+test('aspect ratio is enforced exactly with many lines', async () => {
+  const { api, canvas } = loadRenderer();
+  const lyrics = Array.from({ length: 10 }, (_, i) => ({
+    originalText: `Line number ${i} with quite a lot of words in it overflowing the ratio`,
+    transText: `Translation number ${i} also fairly long here`,
+  }));
+  await api.generateImage({
+    lyrics, trackName: 'Song', artistName: 'Artist', albumCover: '', template: 'minimal',
+    customSettings: { backgroundType: 'solid', aspectRatio: 9 / 16, fontSize: 48 },
+    width: 500, output: 'dataUrl',
+  });
+  assert.equal(canvas.width, 500);
+  assert.equal(canvas.height, Math.round(500 / (9 / 16)));
+});
+
+test('track title and artist styling reaches the canvas', async () => {
+  const { api, calls } = loadRenderer();
+  await api.generateImage({
+    lyrics: [{ originalText: 'Hello' }],
+    trackName: 'Song', artistName: 'Artist', albumCover: '', template: 'minimal',
+    customSettings: {
+      backgroundType: 'solid', showCover: false,
+      trackTitleColor: '#ff0000', trackArtistColor: '#0000ff', trackTitleSize: 40,
+    },
+    width: 1080, output: 'dataUrl',
+  });
+  assert.ok(calls.fillStyle.includes('#ff0000'), 'track title colour missing');
+  assert.ok(calls.fillStyle.some((style) => style.includes('0, 0, 255')), 'track artist colour missing');
+  assert.ok(calls.fillText.includes('Song'));
+  assert.ok(calls.fillText.includes('Artist'));
+});
+
+test('centered cover never overlaps title, artist or lyrics', async () => {
+  const { api, calls } = loadRenderer({ cover: true });
+  await api.generateImage({
+    lyrics: [{ originalText: 'First lyric line here' }],
+    trackName: 'Big Song Title', artistName: 'Some Artist', albumCover: 'https://example.com/cover.jpg', template: 'cover',
+    customSettings: {
+      backgroundType: 'solid', showCover: true, coverPosition: 'center', coverSize: 144,
+      trackTitleSize: 48, trackArtistSize: 18,
+    },
+    width: 1080, output: 'dataUrl',
+  });
+  const atY = (text) => calls.text.find((entry) => entry.text === text)?.y;
+  const titleY = atY('Big Song Title');
+  const artistY = atY('Some Artist');
+  const lyricY = atY('First lyric line here');
+  assert.ok(titleY !== undefined && artistY !== undefined && lyricY !== undefined, 'header and lyrics must render');
+  assert.ok(artistY >= titleY + 48, `artist must clear the title (${artistY} >= ${titleY} + 48)`);
+  assert.ok(lyricY >= artistY + 18, `lyrics must clear the artist (${lyricY} >= ${artistY} + 18)`);
+});
+
+test('share image renderer handles per-word columns', () => {
+  assert.match(shareSource, /lyricsDetail/);
+  assert.match(shareSource, /words/);
+});
+
+test('share image controls expose a line/word export-type choice', () => {
+  assert.match(menuSource, /lyricsDetail/);
+});
+
+test('share modal shell is wide', () => {
+  assert.match(menuSource, /max-width: 1600px/);
+});
+
+function loadRenderer({ cover = false } = {}) {
+  const calls = { fillText: [], text: [], fillStyle: [], font: [], textAlign: [], transform: null };
+  const canvas = {
+    width: 0,
+    height: 0,
+    getContext: () => ctx,
+    toDataURL: () => 'data:image/png;base64,stub',
+    toBlob: (callback) => callback({ size: 1 }),
+  };
+  const ctx = {
+    canvas,
+    _fillStyle: '#000',
+    set fillStyle(value) { this._fillStyle = value; calls.fillStyle.push(String(value)); },
+    get fillStyle() { return this._fillStyle; },
+    _font: '',
+    set font(value) { this._font = value; calls.font.push(String(value)); },
+    get font() { return this._font; },
+    _textAlign: 'left',
+    set textAlign(value) { this._textAlign = value; calls.textAlign.push(String(value)); },
+    get textAlign() { return this._textAlign; },
+    setTransform: (...args) => { calls.transform = args; },
+    fillText: (text, x, y) => { calls.fillText.push(String(text)); calls.text.push({ text: String(text), x, y }); },
+    measureText: (text) => ({ width: String(text).length * 10 }),
+    fillRect: () => {},
+    drawImage: () => {},
+    save: () => {},
+    restore: () => {},
+    clip: () => {},
+    beginPath: () => {},
+    moveTo: () => {},
+    lineTo: () => {},
+    quadraticCurveTo: () => {},
+    closePath: () => {},
+    getImageData: () => ({ data: new Array(50 * 50 * 4).fill(128) }),
+  };
+  const sandbox = {
+    window: {},
+    document: { createElement: () => canvas },
+    navigator: {},
+    console,
+  };
+  if (cover) {
+    sandbox.Image = class {
+      constructor() { this.width = 300; this.height = 300; }
+      set src(_value) { if (typeof this.onload === 'function') this.onload(); }
+    };
+  }
+  vm.createContext(sandbox);
+  vm.runInContext(`${shareSource}\nwindow.__api = LyricsShareImage;`, sandbox);
+  return { api: sandbox.window.__api, calls, canvas, sandbox };
+}
+
+test('word mode draws per-word columns with reading and gloss', async () => {
+  const { api, calls } = loadRenderer();
+  await api.generateImage({
+    lyrics: [{
+      originalText: '日本語',
+      transText: 'Japanese',
+      words: [
+        { w: '日本', reading: 'にほん', gloss: 'Japan' },
+        { w: '語', reading: 'ご', gloss: 'language' },
+      ],
+    }],
+    trackName: 'Song',
+    artistName: 'Artist',
+    albumCover: '',
+    template: 'minimal',
+    customSettings: { lyricsDetail: 'word', backgroundType: 'solid' },
+    width: 1080,
+    output: 'dataUrl',
+  });
+  for (const expected of ['日本', '語', 'にほん', 'ご', 'Japan', 'language', 'Japanese']) {
+    assert.ok(calls.fillText.includes(expected), `expected canvas text ${expected}`);
+  }
+});
+
+test('word mode without word data falls back to line rendering', async () => {
+  const { api, calls } = loadRenderer();
+  await api.generateImage({
+    lyrics: [{ originalText: 'Hello world', pronText: 'HELLO', transText: 'Hola' }],
+    trackName: 'Song',
+    artistName: 'Artist',
+    albumCover: '',
+    template: 'minimal',
+    customSettings: { lyricsDetail: 'word', backgroundType: 'solid' },
+    width: 1080,
+    output: 'dataUrl',
+  });
+  assert.ok(calls.fillText.includes('Hello world'));
+  assert.ok(calls.fillText.includes('HELLO'));
+});
+
+test('export scale renders a true higher-resolution canvas', async () => {
+  const first = loadRenderer();
+  await first.api.generateImage({
+    lyrics: [{ originalText: 'Scale me', words: [{ w: 'Scale' }, { w: 'me' }] }],
+    trackName: 'Song', artistName: 'Artist', albumCover: '', template: 'minimal',
+    customSettings: { lyricsDetail: 'word', backgroundType: 'solid', exportScale: 1 },
+    width: 1080, output: 'dataUrl',
+  });
+  const second = loadRenderer();
+  const result = await second.api.generateImage({
+    lyrics: [{ originalText: 'Scale me', words: [{ w: 'Scale' }, { w: 'me' }] }],
+    trackName: 'Song', artistName: 'Artist', albumCover: '', template: 'minimal',
+    customSettings: { lyricsDetail: 'word', backgroundType: 'solid', exportScale: 2 },
+    width: 1080, output: 'dataUrl',
+  });
+  assert.equal(result.canvas.width, 2160);
+  assert.deepEqual(second.calls.transform, [2, 0, 0, 2, 0, 0]);
+  assert.ok(result.canvas.height > first.canvas.height * 1.5);
+  for (const expected of ['Scale', 'me']) {
+    assert.ok(second.calls.fillText.includes(expected), `expected canvas text ${expected}`);
+  }
+});
+
+test('per-type colours reach the canvas', async () => {
+  const { api, calls } = loadRenderer();
+  await api.generateImage({
+    lyrics: [{ originalText: 'Coloured', pronText: 'reading', transText: 'gloss' }],
+    trackName: 'Song', artistName: 'Artist', albumCover: '', template: 'minimal',
+    customSettings: {
+      backgroundType: 'solid', origColor: '#ff0000', pronColor: '#00ff00', transColor: '#0000ff',
+    },
+    width: 1080, output: 'dataUrl',
+  });
+  assert.ok(calls.fillStyle.includes('#ff0000'), 'original colour missing');
+  assert.ok(calls.fillStyle.some((style) => style.includes('0, 255, 0')), 'pronunciation colour missing');
+  assert.ok(calls.fillStyle.includes('#0000ff'), 'translation colour missing');
+});
+
+async function renderWordHeight(customSettings) {
+  const { api, canvas } = loadRenderer();
+  await api.generateImage({
+    lyrics: [{
+      originalText: 'Ab Cd',
+      transText: 'line translation',
+      words: [
+        { w: 'Ab', reading: 'ab-yomi', gloss: 'ab-gloss' },
+        { w: 'Cd', reading: 'cd-yomi', gloss: 'cd-gloss' },
+      ],
+    }],
+    trackName: 'Song', artistName: 'Artist', albumCover: '', template: 'minimal',
+    customSettings: { lyricsDetail: 'word', backgroundType: 'solid', ...customSettings },
+    width: 1080, output: 'dataUrl',
+  });
+  return canvas.height;
+}
+
+test('pronunciation size slider moves word-level readings', async () => {
+  const base = await renderWordHeight({});
+  const bigger = await renderWordHeight({ wordReadingSize: 32 });
+  assert.ok(bigger > base, `expected taller canvas (${bigger} > ${base})`);
+});
+
+test('word gloss slider moves word-level character translations', async () => {
+  const base = await renderWordHeight({});
+  const bigger = await renderWordHeight({ wordGlossSize: 32 });
+  assert.ok(bigger > base, `expected taller canvas (${bigger} > ${base})`);
+});
+
+async function renderLineHeight(customSettings) {
+  const { api, canvas } = loadRenderer();
+  await api.generateImage({
+    lyrics: [{ originalText: 'Sized line', pronText: 'sized reading', transText: 'sized gloss' }],
+    trackName: 'Song', artistName: 'Artist', albumCover: '', template: 'minimal',
+    customSettings: { backgroundType: 'solid', ...customSettings },
+    width: 1080, output: 'dataUrl',
+  });
+  return canvas.height;
+}
+
+test('first slider sizes original lyrics only', async () => {
+  const small = await renderLineHeight({ fontSize: 20 });
+  const big = await renderLineHeight({ fontSize: 40 });
+  assert.ok(big > small, `expected taller canvas (${big} > ${small})`);
+});
+
+test('line pronunciation and translation sizes move their own lines', async () => {
+  const base = await renderLineHeight({});
+  const pronBigger = await renderLineHeight({ pronSize: 32 });
+  const transBigger = await renderLineHeight({ transSize: 32 });
+  assert.ok(pronBigger > base, `expected taller canvas (${pronBigger} > ${base})`);
+  assert.ok(transBigger > base, `expected taller canvas (${transBigger} > ${base})`);
+});
+
+test('right alignment draws with right-aligned text', async () => {
+  const { api, calls } = loadRenderer();
+  await api.generateImage({
+    lyrics: [{
+      originalText: 'Right side',
+      words: [{ w: 'Right' }, { w: 'side' }],
+    }],
+    trackName: 'Song', artistName: 'Artist', albumCover: '', template: 'minimal',
+    customSettings: { lyricsDetail: 'word', backgroundType: 'solid', lyricsAlign: 'right' },
+    width: 1080, output: 'dataUrl',
+  });
+  assert.ok(calls.textAlign.includes('right'), 'expected right text alignment');
+  assert.ok(calls.fillText.includes('Right'));
+});
+
+test('font source toggle uses app setting fonts', async () => {
+  const first = loadRenderer();
+  first.sandbox.window.CONFIG = { visual: { 'original-font-family': 'TestFamily' } };
+  await first.api.generateImage({
+    lyrics: [{ originalText: 'Font check' }],
+    trackName: 'Song', artistName: 'Artist', albumCover: '', template: 'minimal',
+    customSettings: { backgroundType: 'solid', fontSource: 'settings' },
+    width: 1080, output: 'dataUrl',
+  });
+  assert.ok(first.calls.font.some((entry) => entry.includes('TestFamily')), 'expected app setting font');
+  const second = loadRenderer();
+  second.sandbox.window.CONFIG = { visual: { 'original-font-family': 'TestFamily' } };
+  await second.api.generateImage({
+    lyrics: [{ originalText: 'Font check' }],
+    trackName: 'Song', artistName: 'Artist', albumCover: '', template: 'minimal',
+    customSettings: { backgroundType: 'solid', fontSource: 'default' },
+    width: 1080, output: 'dataUrl',
+  });
+  assert.ok(!second.calls.font.some((entry) => entry.includes('TestFamily')), 'default must not use app fonts');
+});
+
+test('custom font family reaches the canvas when selected', async () => {
+  const { api, calls, sandbox } = loadRenderer();
+  sandbox.window.CONFIG = { visual: { 'original-font-family': 'TestFamily' } };
+  await api.generateImage({
+    lyrics: [{ originalText: 'Custom check' }],
+    trackName: 'Song', artistName: 'Artist', albumCover: '', template: 'minimal',
+    customSettings: { backgroundType: 'solid', fontSource: 'custom', customFontFamily: 'MyCustom' },
+    width: 1080, output: 'dataUrl',
+  });
+  assert.ok(calls.font.some((entry) => entry.includes('MyCustom')), 'expected custom font');
+  assert.ok(!calls.font.some((entry) => entry.includes('TestFamily')), 'custom must override app fonts');
+});
+
+test('word annotations use their own colour and weight', async () => {
+  const { api, calls } = loadRenderer();
+  await api.generateImage({
+    lyrics: [{
+      originalText: 'Ab',
+      words: [{ w: 'Ab', reading: 'read-me', gloss: 'gloss-me' }],
+    }],
+    trackName: 'Song', artistName: 'Artist', albumCover: '', template: 'minimal',
+    customSettings: {
+      lyricsDetail: 'word', backgroundType: 'solid',
+      pronColor: '#00ff00', pronWeight: '700',
+      wordReadingColor: '#ff0000', wordReadingWeight: '400',
+      transColor: '#0000ff', transWeight: '700',
+      wordGlossColor: '#ffff00', wordGlossWeight: '400',
+    },
+    width: 1080, output: 'dataUrl',
+  });
+  assert.ok(calls.fillStyle.some((style) => style.includes('255, 0, 0')), 'word reading must use its own colour');
+  assert.ok(!calls.fillStyle.some((style) => style.includes('0, 255, 0')), 'word reading must ignore line pronunciation colour');
+  assert.ok(calls.fillStyle.includes('#ffff00'), 'word gloss must use its own colour');
+  assert.ok(!calls.fillStyle.includes('#0000ff'), 'word gloss must ignore line translation colour');
+});

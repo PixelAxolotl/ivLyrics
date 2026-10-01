@@ -1341,9 +1341,10 @@ function ensureFluentModalStyles() {
 
 .share-image-chip[data-active="true"],
 .share-image-segment-btn[data-active="true"] {
-  border-color: rgba(255, 255, 255, 0.18) !important;
-  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: #1db954 !important;
+  background: rgba(29, 185, 84, 0.18) !important;
   color: #f8fafc !important;
+  box-shadow: 0 0 0 1px #1db954, 0 0 12px rgba(29, 185, 84, 0.35) !important;
 }
 
 .ivlyrics-fluent-shell[data-ui-theme="light"] .share-image-chip,
@@ -1357,7 +1358,10 @@ function ensureFluentModalStyles() {
 
 .ivlyrics-fluent-shell[data-ui-theme="light"] .share-image-chip[data-active="true"],
 .ivlyrics-fluent-shell[data-ui-theme="light"] .share-image-segment-btn[data-active="true"] {
+  border-color: #1db954 !important;
+  background: rgba(29, 185, 84, 0.14) !important;
   color: #0f172a !important;
+  box-shadow: 0 0 0 1px #1db954, 0 0 12px rgba(29, 185, 84, 0.25) !important;
 }
 
 .share-image-advanced-toggle {
@@ -4576,6 +4580,24 @@ const renderShareImageControls = (settings, updateSetting) => {
       }, label))
     )
   );
+  const color = (key, fallbackLabel) => field(labelText(key, fallbackLabel),
+    react.createElement("input", {
+      type: 'color',
+      value: /^#[0-9a-f]{6}$/i.test(settings[key] ?? '') ? settings[key] : '#ffffff',
+      onChange: (event) => updateSetting(key, event.target.value),
+      style: { width: '100%', height: '28px', padding: '2px', border: '1px solid rgba(255,255,255,0.15)', borderRadius: '4px', background: 'rgba(255,255,255,0.05)', cursor: 'pointer' }
+    })
+  );
+  const weights = ['400', '500', '600', '700'];
+  const text = (key, fallbackLabel, placeholder = '') => field(labelText(key, fallbackLabel),
+    react.createElement("input", {
+      type: 'text',
+      value: settings[key] ?? '',
+      placeholder,
+      onChange: (event) => updateSetting(key, event.target.value),
+      style: { width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.15)', background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '12px' }
+    })
+  );
 
   return [
     section('background', '배경', true),
@@ -4595,16 +4617,44 @@ const renderShareImageControls = (settings, updateSetting) => {
     settings.showCover && range('coverSize', '커버 크기', 120, 60, 200),
     settings.showCover && range('coverRadius', '커버 둥글기', 16, 0, 50),
     settings.showCover && range('coverBlur', '커버 블러', 0, 0, 30),
+    settings.showTrackInfo && range('trackTitleSize', '곡 제목 크기', 26, 12, 48),
+    settings.showTrackInfo && color('trackTitleColor', '곡 제목 색상'),
+    settings.showTrackInfo && choice('trackTitleWeight', '곡 제목 굵기', weights.map((weight) => [weight, weight]), true),
+    settings.showTrackInfo && range('trackArtistSize', '아티스트 크기', 18, 10, 36),
+    settings.showTrackInfo && color('trackArtistColor', '아티스트 색상'),
+    settings.showTrackInfo && choice('trackArtistWeight', '아티스트 굵기', weights.map((weight) => [weight, weight]), true),
     section('lyrics', '가사'),
+    choice('lyricsDetail', '내보내기 방식', [
+      ['line', labelText('lineLevel', '줄 단위')], ['word', labelText('wordLevel', '단어 단위')]
+    ]),
+    choice('fontSource', '글꼴', [
+      ['default', labelText('fontDefault', '기본')], ['settings', labelText('fontSettings', '앱 설정')], ['custom', labelText('fontCustom', '직접 입력')]
+    ]),
+    settings.fontSource === 'custom' && text('customFontFamily', '글꼴 이름', '예: Pretendard Variable'),
     checkbox('showPronunciation', '발음'),
+    settings.lyricsDetail !== 'word' && range('pronSize', '발음 크기', 20, 10, 32),
+    settings.lyricsDetail === 'word' && range('wordReadingSize', '문자 발음 크기', 21, 8, 40),
+    settings.lyricsDetail === 'word' && color('wordReadingColor', '문자 발음 색상'),
+    settings.lyricsDetail === 'word' && choice('wordReadingWeight', '문자 발음 굵기', weights.map((weight) => [weight, weight]), true),
+    settings.lyricsDetail !== 'word' && color('pronColor', '발음 색상'),
+    settings.lyricsDetail !== 'word' && choice('pronWeight', '발음 굵기', weights.map((weight) => [weight, weight]), true),
     checkbox('showTranslation', '번역'),
+    settings.lyricsDetail === 'word' && range('wordGlossSize', '단어 번역 크기', 21, 8, 40),
+    settings.lyricsDetail === 'word' && color('wordGlossColor', '문자 번역 색상'),
+    settings.lyricsDetail === 'word' && choice('wordGlossWeight', '문자 번역 굵기', weights.map((weight) => [weight, weight]), true),
+    range('transSize', '번역 크기', 22, 10, 32),
+    color('transColor', '번역 색상'),
+    choice('transWeight', '번역 굵기', weights.map((weight) => [weight, weight]), true),
     choice('lyricsAlign', '가사 정렬', [
-      ['left', labelText('alignLeft', '왼쪽')], ['center', labelText('alignCenter', '가운데')]
+      ['left', labelText('alignLeft', '왼쪽')], ['center', labelText('alignCenter', '가운데')], ['right', labelText('alignRight', '오른쪽')]
     ]),
     range('fontSize', '글꼴 크기', 32, 20, 48),
     range('blockGap', '줄 간격', 32, 16, 60),
+    color('origColor', '원어 색상'),
+    choice('origWeight', '원어 굵기', weights.map((weight) => [weight, weight]), true),
     section('layout', '레이아웃'),
-    choice('aspectRatio', '이미지 비율', [[null, '자동'], [1, '1:1'], [9 / 16, '9:16'], [16 / 9, '16:9']], true),
+    choice('exportScale', '내보내기 배율', [[1, '1x'], [2, '2x'], [3, '3x']], true),
+    choice('aspectRatio', '이미지 비율', [[null, labelText('ratioAuto', '자동')], [1, '1:1'], [9 / 16, '9:16'], [16 / 9, '16:9']], true),
     range('imageWidth', '이미지 너비', 1080, 720, 1920, { step: 60 }),
     range('padding', '여백', 60, 30, 100),
     section('other', '기타'),
@@ -4612,13 +4662,58 @@ const renderShareImageControls = (settings, updateSetting) => {
   ];
 };
 
+// Resolve per-word reading/gloss for share export using the same word-level
+// supplements as the karaoke view (segmenter + ivLyricsWordSupplements).
+// Returns a Map of line idx -> [{w, reading, gloss}]. Lines without data are
+// absent from the map so the renderer falls back to line rendering.
+async function resolveShareWordDetails(lines) {
+  const details = new Map();
+  const segmenter = window.LyricsWordSegmenter;
+  if (!segmenter?.segmentLyrics) return details;
+  const supplements = window.ivLyricsWordSupplements || null;
+  await Promise.all((lines || []).map(async (line) => {
+    try {
+      const text = line?.originalText || line?.displayText || '';
+      if (!text.trim()) return;
+      const sourceLang = supplements?.resolveSourceLanguage
+        ? supplements.resolveSourceLanguage(text)
+        : 'auto';
+      const surfaces = segmenter.segmentLyrics(text, sourceLang);
+      if (!surfaces || surfaces.length === 0) return;
+      const units = surfaces.map((surface) => ({ surface }));
+      let readings = [];
+      let glosses = [];
+      if (supplements) {
+        try {
+          const readingMode = supplements.resolveReadingMode?.(sourceLang);
+          if (readingMode) {
+            readings = await supplements.getWordReadings(units, sourceLang, readingMode, text).catch(() => []);
+          }
+        } catch { /* reading stays empty */ }
+        try {
+          if (supplements.isGlossModeActive?.(sourceLang)) {
+            glosses = await supplements.getWordGlosses(units, text, sourceLang).catch(() => []);
+          }
+        } catch { /* gloss stays empty */ }
+      }
+      details.set(line.idx, units.map((unit, index) => ({
+        w: unit.surface,
+        reading: String(readings?.[index] || ''),
+        gloss: String(glosses?.[index] || ''),
+      })));
+    } catch { /* per-line failure falls back to line rendering */ }
+  }));
+  return details;
+}
+
 // Share Lyrics Image Modal Component
 const ShareImageModal = ({ lyrics, trackInfo, onClose }) => {
   const [selectedIndices, setSelectedIndices] = react.useState([]);
   const [template, setTemplate] = react.useState('cover');
   const [previewUrl, setPreviewUrl] = react.useState(null);
   const [isGenerating, setIsGenerating] = react.useState(false);
-  const [showAdvanced, setShowAdvanced] = react.useState(false);
+  // Advanced panel is always open; the state slot is kept so hook order is stable.
+  const [showAdvanced] = react.useState(true);
   const [customSettings, setCustomSettings] = react.useState({});
   const [showCopyrightModal, setShowCopyrightModal] = react.useState(false);
   const [pendingAction, setPendingAction] = react.useState(null); // 'copy' | 'download' | 'share'
@@ -4695,9 +4790,31 @@ const ShareImageModal = ({ lyrics, trackInfo, onClose }) => {
     [normalizedLyrics]
   );
   const selectedIndexSet = react.useMemo(() => new Set(selectedIndices), [selectedIndices]);
-  const selectedLines = react.useMemo(() => {
+  const selectedLinesBase = react.useMemo(() => {
     return selectedIndices.map((idx) => normalizedLyricsByIdx.get(idx)).filter(Boolean);
   }, [selectedIndices, normalizedLyricsByIdx]);
+
+  // Word-level export details: fetched on demand when the word toggle is
+  // active, then merged into the selected lines so preview and export
+  // (which both consume `selectedLines`) stay in sync.
+  const isWordExport = currentSettings.lyricsDetail === 'word';
+  const [wordDetails, setWordDetails] = react.useState(new Map());
+  react.useEffect(() => {
+    if (!isWordExport) return undefined;
+    let cancelled = false;
+    resolveShareWordDetails(selectedLinesBase).then((details) => {
+      if (!cancelled) setWordDetails(details);
+    }).catch(() => { /* fallback to line rendering */ });
+    return () => {
+      cancelled = true;
+    };
+  }, [isWordExport, selectedLinesBase]);
+  const selectedLines = react.useMemo(() => {
+    if (!isWordExport) return selectedLinesBase;
+    return selectedLinesBase.map((line) => (
+      wordDetails.has(line.idx) ? { ...line, words: wordDetails.get(line.idx) } : line
+    ));
+  }, [selectedLinesBase, wordDetails, isWordExport]);
 
   // Keep one render in flight and retain only the newest pending preview.
   const previewGenerationRef = react.useRef({ running: false, pending: null });
@@ -4941,7 +5058,7 @@ const ShareImageModal = ({ lyrics, trackInfo, onClose }) => {
       react.createElement("div", {
         className: "share-image-modal-selection-pane",
         style: {
-          width: '45%',
+          width: '30%',
           borderRight: '1px solid rgba(255,255,255,0.1)',
           display: 'flex',
           flexDirection: 'column',
@@ -4998,11 +5115,12 @@ const ShareImageModal = ({ lyrics, trackInfo, onClose }) => {
         )
       ),
 
-      // Right: Preview & Options
+      // Middle: Preset & Options
       react.createElement("div", {
         className: "share-image-modal-config-pane",
         style: {
-          width: '55%',
+          width: '36%',
+          borderRight: '1px solid rgba(255,255,255,0.1)',
           display: 'flex',
           flexDirection: 'column',
           padding: '16px',
@@ -5042,43 +5160,7 @@ const ShareImageModal = ({ lyrics, trackInfo, onClose }) => {
           )
         ),
 
-        // Advanced settings toggle
-        react.createElement("button", {
-          className: "share-image-advanced-toggle",
-          onClick: () => setShowAdvanced(!showAdvanced),
-          style: {
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            padding: '8px 0',
-            background: 'transparent',
-            border: 'none',
-            color: 'rgba(255,255,255,0.6)',
-            fontSize: '12px',
-            cursor: 'pointer',
-            marginBottom: showAdvanced ? '12px' : '0',
-          }
-        },
-          react.createElement(
-            "svg",
-            {
-              width: 12,
-              height: 12,
-              viewBox: "0 0 12 12",
-              fill: "none",
-              stroke: "currentColor",
-              strokeWidth: 1.8,
-              style: {
-                transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0deg)',
-                transition: 'transform 0.2s ease',
-              }
-            },
-            react.createElement("path", { d: "M4 2.5 7.5 6 4 9.5" })
-          ),
-          I18n.t("shareImage.advancedSettings") || "세부 설정"
-        ),
-
-        // Advanced settings panel
+        // Advanced settings panel (always open, fills the middle section)
         showAdvanced && react.createElement("div", {
           className: "share-image-advanced-panel",
           style: {
@@ -5090,7 +5172,8 @@ const ShareImageModal = ({ lyrics, trackInfo, onClose }) => {
             gridTemplateColumns: '1fr 1fr',
             gap: '12px',
             fontSize: '11px',
-            maxHeight: '320px',
+            flex: 1,
+            minHeight: 0,
             overflowY: 'auto',
             border: '1px solid rgba(255,255,255,0.05)',
             boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
@@ -5099,7 +5182,28 @@ const ShareImageModal = ({ lyrics, trackInfo, onClose }) => {
           ...renderShareImageControls(currentSettings, updateSetting)
         ),
 
-        // Preview
+      ),
+
+      // Right: Preview (separate panel)
+      react.createElement("div", {
+        className: "share-image-preview-pane",
+        style: {
+          width: '34%',
+          display: 'flex',
+          flexDirection: 'column',
+          padding: '16px',
+          overflowY: 'auto',
+        }
+      },
+        react.createElement("div", {
+          className: "share-image-preview-label",
+          style: {
+            fontSize: '13px',
+            fontWeight: '500',
+            color: 'rgba(255,255,255,0.7)',
+            marginBottom: '12px',
+          }
+        }, I18n.t("shareImage.preview")),
         react.createElement("div", {
           className: "share-image-preview-panel",
           style: {
@@ -5266,9 +5370,9 @@ function openShareImageModal(lyrics, trackInfo) {
     overlayId: "ivLyrics-share-image-overlay",
     shellClassName: "share-image-modal-shell",
     shellStyle: `
-      width: 90%;
-      max-width: 900px;
-      max-height: 85vh;
+      width: 94%;
+      max-width: 1600px;
+      max-height: 92vh;
     `,
     render: (closeModal) =>
       react.createElement(ShareImageModal, {

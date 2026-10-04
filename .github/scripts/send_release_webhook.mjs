@@ -154,7 +154,13 @@ export async function postReleaseWebhookMessage(webhookUrl, message, options = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(message)
     });
-    if (response.ok) return;
+    if (response.ok) {
+      const receipt = await response.json();
+      if (!/^\d+$/.test(receipt?.id || '') || !/^\d+$/.test(receipt?.channel_id || '')) {
+        throw new Error('Discord did not return a created message receipt.');
+      }
+      return receipt;
+    }
 
     let responsePayload = null;
     if (response.status === 429) {
@@ -170,6 +176,38 @@ export async function postReleaseWebhookMessage(webhookUrl, message, options = {
     }
     await sleep(getRetryDelayMs(response, responsePayload, attempt));
   }
+}
+
+export async function verifyReleaseWebhookMessage(webhookUrl, receipt, message, options = {}) {
+  const url = new URL(webhookUrl);
+  url.pathname = `${url.pathname.replace(/\/$/, '')}/messages/${receipt.id}`;
+  url.searchParams.delete('wait');
+  const fetchImpl = options.fetchImpl || globalThis.fetch;
+  const sleep = options.sleep || (milliseconds => new Promise(resolveSleep => setTimeout(resolveSleep, milliseconds)));
+  const maxAttempts = options.maxAttempts || 4;
+  let saved;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const response = await fetchImpl(url.toString());
+    if (response.ok) {
+      saved = await response.json();
+      break;
+    }
+    let payload = null;
+    if (response.status === 429) {
+      try { payload = await response.json(); } catch { /* Retry using the header. */ }
+    }
+    if ((response.status !== 429 && response.status < 500) || attempt === maxAttempts) {
+      throw new Error(`Discord message ${receipt.id} was sent but verification returned HTTP ${response.status}; do not resend it blindly.`);
+    }
+    await sleep(getRetryDelayMs(response, payload, attempt));
+  }
+  if (saved.id !== receipt.id || saved.channel_id !== receipt.channel_id
+    || saved.content !== message.content
+    || saved.embeds?.length !== message.embeds.length
+    || saved.embeds.some((embed, index) => embed.description !== message.embeds[index].description)) {
+    throw new Error(`Discord message ${receipt.id} was sent but its saved content could not be verified.`);
+  }
+  return { messageId: saved.id, channelId: saved.channel_id };
 }
 
 export async function sendReleaseWebhook(env = process.env, options = {}) {
@@ -188,7 +226,7 @@ export async function sendReleaseWebhook(env = process.env, options = {}) {
   }
 
   const body = await readFile(notesPath, 'utf8');
-  const releaseUrl = `https://github.com/${repository}/releases/tag/${encodeURIComponent(tag)}`;
+  const releaseUrl = env.RELEASE_URL || `https://github.com/${repository}/releases/tag/${encodeURIComponent(tag)}`;
   const messages = buildReleaseWebhookMessages({
     platform,
     tag,
@@ -198,10 +236,18 @@ export async function sendReleaseWebhook(env = process.env, options = {}) {
     now: options.now
   });
 
+  const receipts = [];
   for (let index = 0; index < messages.length; index += 1) {
-    await postReleaseWebhookMessage(webhookUrl, messages[index], options);
-    console.log(`Sent ${RELEASE_PLATFORM_CONFIG[platform].label} release notification ${index + 1}/${messages.length}.`);
+    const receipt = await postReleaseWebhookMessage(webhookUrl, messages[index], options);
+    // Record the acknowledgement before verification so partial batches can be
+    // recovered without posting already accepted messages a second time.
+    await options.onReceipt?.({ messageId: receipt.id, channelId: receipt.channel_id, part: index + 1, verified: false });
+    const verified = await verifyReleaseWebhookMessage(webhookUrl, receipt, messages[index], options);
+    receipts.push(verified);
+    await options.onReceipt?.({ ...verified, part: index + 1, verified: true });
+    console.log(`Verified ${RELEASE_PLATFORM_CONFIG[platform].label} release notification ${index + 1}/${messages.length}: message ${verified.messageId}.`);
   }
+  return receipts;
 }
 
 const entryPath = process.argv[1] ? pathToFileURL(resolve(process.argv[1])).href : '';

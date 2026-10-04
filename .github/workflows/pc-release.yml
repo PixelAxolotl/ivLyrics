@@ -12,11 +12,6 @@ on:
         required: true
         type: boolean
         default: false
-      notify_discord:
-        description: "Send release notes to Discord"
-        required: true
-        type: boolean
-        default: true
       dry_run:
         description: "Validate and generate AI notes without publishing"
         required: true
@@ -218,7 +213,7 @@ jobs:
           gh release upload "$RELEASE_TAG" "$archive" "$checksum" --clobber
 
       - name: Send PC release notes to Discord
-        if: ${{ inputs.dry_run == false && inputs.notify_discord == true }}
+        if: ${{ inputs.dry_run == false }}
         env:
           RELEASE_WEBHOOK_URL: ${{ secrets.RELEASE_NOTES_WEBHOOK_URL }}
           RELEASE_PLATFORM: pc

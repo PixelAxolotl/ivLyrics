@@ -9,55 +9,64 @@ on:
         type: choice
         options:
           - latest-all
+          - pc-range
         default: latest-all
+      after_tag:
+        description: "For pc-range: last announced PC tag, excluded (for example v6.6.21)"
+        required: false
+        type: string
+      through_tag:
+        description: "For pc-range: last PC tag to announce, included (blank uses latest)"
+        required: false
+        type: string
+      dry_run:
+        description: "Prepare the notification preview without sending"
+        required: true
+        type: boolean
+        default: true
 
 permissions:
   contents: read
+
+concurrency:
+  group: release-notifications
+  cancel-in-progress: false
 
 jobs:
   notify:
     name: Send existing release notes to Discord
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: pc
-            repository: ivLis-Studio/ivLyrics
-            tag: v6.6.17
-            title: ivLyrics PC v6.6.17
-          - platform: ios
-            repository: ivLis-Studio/ivLyrics-IOS
-            tag: v1.3.13
-            title: ivLyrics iOS v1.3.13
-          - platform: android
-            repository: ivLis-Studio/ivLyrics-Android
-            tag: v1.3.16
-            title: ivLyrics Android v1.3.16
     steps:
       - name: Checkout notification sender
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Download published release notes
-        id: notes
+      - name: Prepare published release notifications
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_REPOSITORY: ${{ matrix.repository }}
-          RELEASE_TAG: ${{ matrix.tag }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          notes_path="$RUNNER_TEMP/release-notes.md"
-          gh release view "$RELEASE_TAG" --repo "$RELEASE_REPOSITORY" --json body --jq .body > "$notes_path"
-          test -s "$notes_path"
-          echo "path=$notes_path" >> "$GITHUB_OUTPUT"
+          RELEASE_SET: ${{ inputs.release_set }}
+          RELEASE_AFTER_TAG: ${{ inputs.after_tag }}
+          RELEASE_THROUGH_TAG: ${{ inputs.through_tag }}
+          RELEASE_NOTIFICATION_DIR: ${{ runner.temp }}/release-notifications
+        run: node .github/scripts/prepare_release_notifications.mjs prepare
 
-      - name: Send existing release notification
+      - name: Upload notification preview
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-notification-preview
+          path: ${{ runner.temp }}/release-notifications
+          if-no-files-found: error
+
+      - name: Send and verify existing release notifications
+        if: ${{ inputs.dry_run == false }}
         env:
           RELEASE_WEBHOOK_URL: ${{ secrets.RELEASE_NOTES_WEBHOOK_URL }}
-          RELEASE_PLATFORM: ${{ matrix.platform }}
-          RELEASE_TAG: ${{ matrix.tag }}
-          RELEASE_TITLE: ${{ matrix.title }}
-          RELEASE_NOTES_PATH: ${{ steps.notes.outputs.path }}
-          GITHUB_REPOSITORY: ${{ matrix.repository }}
-        run: node .github/scripts/send_release_webhook.mjs
+          RELEASE_NOTIFICATION_DIR: ${{ runner.temp }}/release-notifications
+        run: node .github/scripts/prepare_release_notifications.mjs send
+
+      - name: Upload delivery receipts
+        if: ${{ always() && inputs.dry_run == false }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-notification-receipts
+          path: ${{ runner.temp }}/release-notifications/receipts.json
+          if-no-files-found: warn

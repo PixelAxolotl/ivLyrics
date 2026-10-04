@@ -289,91 +289,29 @@
     }
 
     /**
-     * Additional OpenAI-compatible endpoints configured via "Add another".
-     * Each entry: { id, label, baseUrl, apiKey, model, customModel, capabilities }.
-     * Stored under the 'extra-endpoints' setting; empty entries are ignored.
-     * A missing capabilities entry means all capabilities are enabled.
-     */
-    function getExtraEndpoints() {
-        const raw = getSetting('extra-endpoints', []);
-        let list = raw;
-        if (typeof list === 'string') {
-            const trimmed = list.trim();
-            if (!trimmed) return [];
-            try {
-                list = JSON.parse(trimmed);
-            } catch {
-                return [];
-            }
-        }
-        if (!Array.isArray(list)) return [];
-        return list
-            .filter(ep => ep && typeof ep === 'object')
-            .map((ep, index) => ({
-                id: String(ep.id || createEndpointId()),
-                label: String(ep.label || `Endpoint ${index + 2}`).trim() || `Endpoint ${index + 2}`,
-                baseUrl: normalizeBaseUrl(ep.baseUrl) || DEFAULT_OPENAI_BASE_URL,
-                apiKey: String(ep.apiKey || ep.api_key || '').trim(),
-                model: String(ep.model || '').trim(),
-                customModel: String(ep.customModel || ep.custom_model || '').trim(),
-                capabilities: (ep.capabilities && typeof ep.capabilities === 'object' && !Array.isArray(ep.capabilities))
-                    ? ep.capabilities
-                    : {}
-            }))
-            .filter(ep => ep.apiKey || ep.model || (ep.baseUrl && ep.baseUrl !== DEFAULT_OPENAI_BASE_URL));
-    }
-
-    function setExtraEndpoints(endpoints) {
-        setSetting('extra-endpoints', Array.isArray(endpoints) ? endpoints : []);
-    }
-
-    /**
-     * Flatten primary keys + extra endpoints into an ordered failover list.
+     * Flatten the primary and unified provider list into ordered request targets.
      * Each target: { label, baseUrl, apiKey, model, researchWebSearch }.
      * When a capability is given, only endpoints with that capability enabled
      * are included (missing capabilities entry means all enabled).
      */
     function getRequestTargets(capability = null) {
-        const primaryBaseUrl = getBaseUrl();
-        const primaryModel = getSelectedModel();
-        const primaryCaps = getPrimaryCapabilities();
         const targets = [];
-        if (!capability || isEndpointCapabilityEnabled(primaryCaps, capability)) {
-            for (const [index, apiKey] of getApiKeys().entries()) {
+        const seen = new Set();
+        for (const connection of getProviderConnections()) {
+            if (capability && !isEndpointCapabilityEnabled(connection.capabilities, capability)) continue;
+            const baseUrl = normalizeBaseUrl(connection.baseUrl) || DEFAULT_OPENAI_BASE_URL;
+            const researchWebSearch = isEndpointCapabilityEnabled(connection.capabilities, 'researchWebSearch');
+            for (const apiKey of parseConnectionKeys(connection.apiKeys)) {
+                const key = JSON.stringify([baseUrl, apiKey, connection.model, capability === 'tmi' && researchWebSearch]);
+                if (seen.has(key)) continue;
+                seen.add(key);
                 targets.push({
-                    label: index === 0 ? 'Primary' : `Primary key ${index + 1}`,
-                    baseUrl: primaryBaseUrl,
+                    label: connection.name,
+                    baseUrl,
                     apiKey,
-                    model: primaryModel,
-                    researchWebSearch: isEndpointCapabilityEnabled(primaryCaps, 'researchWebSearch')
+                    model: connection.model,
+                    researchWebSearch
                 });
-            }
-        }
-        for (const ep of getExtraEndpoints()) {
-            if (!ep.apiKey) continue;
-            if (capability && !isEndpointCapabilityEnabled(ep.capabilities, capability)) continue;
-            targets.push({
-                label: ep.label,
-                baseUrl: ep.baseUrl || primaryBaseUrl,
-                apiKey: ep.apiKey,
-                model: ep.model || primaryModel,
-                researchWebSearch: isEndpointCapabilityEnabled(ep.capabilities, 'researchWebSearch')
-            });
-        }
-        // Released `fallback-providers` entries (kept editable through the
-        // retained FallbackProvidersSection UI) are bridged here so saved
-        // connections keep working: enabled state, order, models and keys
-        // are preserved. Legacy entries carry no per-capability flags, so
-        // they serve every capability like the primary default.
-        for (const connection of getFallbackProviders()) {
-            if (!connection || connection.enabled === false) continue;
-            const keys = parseConnectionKeys(connection.apiKeys ?? connection.apiKey);
-            if (!keys.length) continue;
-            const baseUrl = normalizeBaseUrl(connection.baseUrl) || primaryBaseUrl;
-            const model = String(connection.model || '').trim();
-            const label = String(connection.name || 'Fallback').trim() || 'Fallback';
-            for (const apiKey of keys) {
-                targets.push({ label, baseUrl, apiKey, model, researchWebSearch: true });
             }
         }
         return targets;
@@ -400,26 +338,83 @@
         return raw.split(/[\n,]/).map(key => key.trim()).filter(Boolean);
     }
 
+    function parseProviderList(raw) {
+        let value = raw;
+        if (typeof value === 'string') {
+            if (!value.trim()) return [];
+            try { value = JSON.parse(value); } catch { return null; }
+        }
+        if (!Array.isArray(value)) return null;
+        return value.filter(item => item && typeof item === 'object' && !Array.isArray(item));
+    }
+
+    function normalizeProviderConnection(item, index, fromEndpoint = false) {
+        const { label, apiKey, api_key, customModel, custom_model, ...saved } = item;
+        const keys = parseConnectionKeys(item.apiKeys ?? apiKey ?? api_key);
+        const model = String(item.model || customModel || custom_model || '').trim();
+        return {
+            ...saved,
+            id: String(item.id || `${fromEndpoint ? 'endpoint' : 'connection'}-${index}`),
+            name: String(item.name || label || `API ${index + 1}`).trim(),
+            baseUrl: normalizeBaseUrl(item.baseUrl) || DEFAULT_OPENAI_BASE_URL,
+            apiKeys: keys.length > 1 ? JSON.stringify(keys) : keys[0] || '',
+            model,
+            inheritPrimaryModel: item.inheritPrimaryModel === true || (fromEndpoint && !model),
+            enabled: item.enabled !== false && item.enabled !== 'false',
+            capabilities: item.capabilities && typeof item.capabilities === 'object' && !Array.isArray(item.capabilities)
+                ? { ...item.capabilities } : {}
+        };
+    }
+
     function getFallbackProviders() {
-        let value = getSetting('fallback-providers', []);
-        if (typeof value === 'string') { try { value = JSON.parse(value); } catch { return []; } }
-        return Array.isArray(value) ? value.filter(item => item && typeof item === 'object' && !Array.isArray(item)) : [];
+        const existing = parseProviderList(getSetting('fallback-providers', []));
+        const imported = parseProviderList(getSetting('extra-endpoints', []));
+        const connections = (existing || []).map((item, index) => normalizeProviderConnection(item, index));
+        if (!imported?.length) return connections;
+
+        // Keep the released list and its order. Fold PR-era endpoints into it
+        // once, preserving incomplete drafts as well as saved credentials.
+        const identity = connection => {
+            const keys = parseConnectionKeys(connection.apiKeys);
+            return keys.length ? JSON.stringify([
+                connection.baseUrl, keys,
+                connection.model || (connection.inheritPrimaryModel ? getSelectedModel() : '')
+            ]) : null;
+        };
+        for (const [index, item] of imported.entries()) {
+            const connection = normalizeProviderConnection(item, index, true);
+            const key = identity(connection);
+            const duplicate = key && connections.find(saved => identity(saved) === key);
+            if (duplicate) {
+                duplicate.capabilities = { ...connection.capabilities, ...duplicate.capabilities };
+                duplicate.enabled = duplicate.enabled && connection.enabled;
+                continue;
+            }
+            while (connections.some(saved => saved.id === connection.id)) connection.id += '-imported';
+            connections.push(connection);
+        }
+        if (existing && typeof window.AIAddonManager?.setAddonSetting === 'function') {
+            try {
+                setSetting('fallback-providers', connections);
+                // Retire the second store only after the canonical write can
+                // be read back. Interrupted/failed migration remains retryable.
+                if (JSON.stringify(parseProviderList(getSetting('fallback-providers', []))) === JSON.stringify(connections)) {
+                    setSetting('extra-endpoints', []);
+                }
+            } catch { /* retain the source list if persistence is unavailable */ }
+        }
+        return connections;
     }
 
     function getProviderConnections() {
-        return [{ id: 'primary', name: 'Primary', apiKeys: getApiKeys(), baseUrl: getBaseUrl(), model: getSelectedModel() },
-            ...getFallbackProviders().filter(connection => connection.enabled !== false).map(connection => ({ ...connection }))];
-    }
-
-    async function withProviderConnections(request) {
-        let lastError;
-        for (const connection of getProviderConnections()) {
-            try { return await request(connection); }
-            catch (error) {
-                lastError = error;
-            }
-        }
-        throw lastError || new Error('[ChatGPT] No OpenAI-compatible provider is configured.');
+        return [
+            { id: 'primary', name: 'Primary', apiKeys: getApiKeys(), baseUrl: getBaseUrl(),
+                model: getSelectedModel(), capabilities: getPrimaryCapabilities() },
+            ...getFallbackProviders().filter(connection => connection.enabled).map(connection => ({
+                ...connection,
+                model: connection.model || (connection.inheritPrimaryModel ? getSelectedModel() : '')
+            }))
+        ];
     }
 
     function getDefaultRequestBodyMergePatch() {
@@ -1419,11 +1414,6 @@
                 const [testStatus, setTestStatus] = useState('');
                 const [availableModels, setAvailableModels] = useState([]);
                 const [modelsLoading, setModelsLoading] = useState(false);
-                const [extraEndpoints, setExtraEndpointsState] = useState(() => getExtraEndpoints());
-                const [endpointTestStatus, setEndpointTestStatus] = useState({});
-                const [endpointModels, setEndpointModels] = useState({});
-                const [endpointModelsLoading, setEndpointModelsLoading] = useState({});
-
                 // 모델 목록 로드
                 const loadModels = useCallback(async () => {
                     const keys = getApiKeys();
@@ -1497,208 +1487,6 @@
                 const isModelInList = availableModels.find(m => m.id === model);
                 const hasApiKey = getApiKeys().length > 0;
 
-                const renderEndpointCard = (endpoint, index) => {
-                    const status = endpointTestStatus[endpoint.id] || '';
-                    const models = endpointModels[endpoint.id] || [];
-                    const modelsLoadingForEndpoint = !!endpointModelsLoading[endpoint.id];
-                    const endpointModel = endpoint.model || '';
-                    const endpointCustomModel = endpoint.customModel || '';
-                    const isEndpointModelInList = models.find(m => m.id === endpointModel);
-                    const hasEndpointApiKey = String(endpoint.apiKey || '').trim().length > 0;
-                    return React.createElement('div', {
-                        key: endpoint.id,
-                        style: { display: 'flex', flexDirection: 'column', gap: '6px', padding: '10px', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '6px', marginTop: '6px' }
-                    },
-                        React.createElement('div', { className: 'ai-addon-input-group' },
-                            React.createElement('input', {
-                                type: 'text',
-                                value: endpoint.label,
-                                onChange: (e) => handleEndpointChange(endpoint.id, 'label', e.target.value),
-                                placeholder: `Endpoint ${index + 2} (e.g., Local Ollama)`
-                            }),
-                            React.createElement('button', {
-                                onClick: () => handleRemoveEndpoint(endpoint.id),
-                                className: 'ai-addon-btn-secondary'
-                            }, 'Remove')
-                        ),
-                        React.createElement('div', { className: 'ai-addon-setting' },
-                            React.createElement('label', null, 'API Key(s)'),
-                            React.createElement('div', { className: 'ai-addon-input-group' },
-                                React.createElement('input', {
-                                    type: 'text',
-                                    value: endpoint.apiKey,
-                                    onChange: (e) => handleEndpointChange(endpoint.id, 'apiKey', e.target.value),
-                                    placeholder: 'sk-...'
-                                }),
-                                React.createElement('button', { onClick: () => window.open(ADDON_INFO.apiKeyUrl, '_blank'), className: 'ai-addon-btn-secondary' }, 'Get API Key')
-                            )
-                        ),
-                        React.createElement('div', { className: 'ai-addon-setting' },
-                            React.createElement('label', null, 'Base URL'),
-                            React.createElement('input', {
-                                type: 'text',
-                                value: endpoint.baseUrl,
-                                onChange: (e) => handleEndpointChange(endpoint.id, 'baseUrl', e.target.value),
-                                placeholder: 'https://api.openai.com/v1'
-                            }),
-                            React.createElement('small', null, 'Change this to use OpenAI-compatible APIs')
-                        ),
-                        React.createElement('div', { className: 'ai-addon-setting' },
-                            React.createElement('label', null, 'Model'),
-                            React.createElement('div', { className: 'ai-addon-input-group' },
-                                React.createElement('select', {
-                                    value: isEndpointModelInList ? endpointModel : '',
-                                    onChange: (e) => handleEndpointModelChange(endpoint.id, e.target.value),
-                                    disabled: modelsLoadingForEndpoint
-                                },
-                                    modelsLoadingForEndpoint
-                                        ? React.createElement('option', { value: '' }, 'Loading models...')
-                                        : models.length > 0
-                                            ? [
-                                                !endpointModel && React.createElement('option', { key: '__placeholder__', value: '' }, '-- Select a model --'),
-                                                ...models.map(m => React.createElement('option', { key: m.id, value: m.id }, m.name)),
-                                                React.createElement('option', { key: 'custom', value: '' }, 'Custom...')
-                                            ].filter(Boolean)
-                                            : [
-                                                React.createElement('option', { key: 'empty', value: '' }, hasEndpointApiKey ? 'No models found' : 'Enter API key first'),
-                                                React.createElement('option', { key: 'custom', value: '' }, 'Custom...')
-                                            ]
-                                ),
-                                React.createElement('button', {
-                                    onClick: () => handleRefreshEndpointModels(endpoint),
-                                    className: 'ai-addon-btn-secondary',
-                                    disabled: modelsLoadingForEndpoint || !hasEndpointApiKey,
-                                    title: 'Refresh model list'
-                                }, modelsLoadingForEndpoint ? '...' : '↻')
-                            ),
-                            models.length > 0 && React.createElement('small', null, `${models.length} models available`)
-                        ),
-                        (!isEndpointModelInList || endpointCustomModel) &&
-                        React.createElement('div', { className: 'ai-addon-setting' },
-                            React.createElement('label', null, 'Custom Model ID'),
-                            React.createElement('input', {
-                                type: 'text',
-                                value: endpointCustomModel,
-                                onChange: (e) => handleEndpointCustomModelChange(endpoint.id, e.target.value),
-                                placeholder: 'e.g., gpt-4-turbo'
-                            })
-                        ),
-                        React.createElement('div', { className: 'ai-addon-input-group' },
-                            React.createElement('button', {
-                                onClick: () => handleTestEndpoint(endpoint),
-                                className: 'ai-addon-btn-primary',
-                                disabled: modelsLoadingForEndpoint || !hasEndpointApiKey
-                            }, 'Test Endpoint'),
-                            status && React.createElement('span', {
-                                className: `ai-addon-test-status ${status.startsWith('✓') ? 'success' : status.startsWith('✗') ? 'error' : ''}`
-                            }, status)
-                        )
-                    );
-                };
-
-                const handleAddEndpoint = useCallback(() => {
-                    setExtraEndpointsState((prev) => {
-                        const next = [...prev, {
-                            id: createEndpointId(),
-                            label: `Endpoint ${(prev.length || 0) + 2}`,
-                            baseUrl: 'https://api.openai.com/v1',
-                            apiKey: '',
-                            model: '',
-                            customModel: ''
-                        }];
-                        setExtraEndpoints(next);
-                        return next;
-                    });
-                    setTestStatus('');
-                }, []);
-
-                const handleEndpointChange = useCallback((id, field, value) => {
-                    setExtraEndpointsState((prev) => {
-                        const next = prev.map(ep => ep.id === id ? { ...ep, [field]: value } : ep);
-                        setExtraEndpoints(next);
-                        return next;
-                    });
-                }, []);
-
-                const handleRemoveEndpoint = useCallback((id) => {
-                    setExtraEndpointsState((prev) => {
-                        const next = prev.filter(ep => ep.id !== id);
-                        setExtraEndpoints(next);
-                        return next;
-                    });
-                    setEndpointTestStatus((prev) => {
-                        const next = { ...prev };
-                        delete next[id];
-                        return next;
-                    });
-                }, []);
-
-                const handleTestEndpoint = useCallback(async (endpoint) => {
-                    setEndpointTestStatus((prev) => ({ ...prev, [endpoint.id]: 'Testing...' }));
-                    try {
-                        await testSingleTarget({
-                            baseUrl: endpoint.baseUrl,
-                            apiKey: endpoint.apiKey,
-                            model: endpoint.model || getSelectedModel()
-                        });
-                        setEndpointTestStatus((prev) => ({ ...prev, [endpoint.id]: '✓ Connection successful!' }));
-                    } catch (e) {
-                        setEndpointTestStatus((prev) => ({ ...prev, [endpoint.id]: `✗ Error: ${e.message}` }));
-                    }
-                }, []);
-
-                const loadEndpointModels = useCallback(async (endpoint) => {
-                    const key = String(endpoint.apiKey || '').trim();
-                    if (!key) {
-                        setEndpointModels((prev) => ({ ...prev, [endpoint.id]: [] }));
-                        return;
-                    }
-                    setEndpointModelsLoading((prev) => ({ ...prev, [endpoint.id]: true }));
-                    try {
-                        const models = await fetchAvailableModels(key, endpoint.baseUrl || DEFAULT_OPENAI_BASE_URL);
-                        setEndpointModels((prev) => ({ ...prev, [endpoint.id]: models }));
-                    } catch (e) {
-                        window.__ivLyricsDebugLog?.('[ChatGPT Addon] Failed to load endpoint models:', e);
-                        setEndpointModels((prev) => ({ ...prev, [endpoint.id]: [] }));
-                    } finally {
-                        setEndpointModelsLoading((prev) => ({ ...prev, [endpoint.id]: false }));
-                    }
-                }, []);
-
-                // Load model lists for saved endpoints on mount (same as primary).
-                useEffect(() => {
-                    getExtraEndpoints().forEach((endpoint) => {
-                        if (String(endpoint.apiKey || '').trim()) {
-                            loadEndpointModels(endpoint);
-                        }
-                    });
-                }, [loadEndpointModels]);
-
-                const handleEndpointModelChange = useCallback((id, value) => {
-                    setExtraEndpointsState((prev) => {
-                        const next = prev.map(ep => ep.id === id ? { ...ep, model: value } : ep);
-                        setExtraEndpoints(next);
-                        return next;
-                    });
-                }, []);
-
-                const handleEndpointCustomModelChange = useCallback((id, value) => {
-                    setExtraEndpointsState((prev) => {
-                        const next = prev.map(ep => {
-                            if (ep.id !== id) return ep;
-                            const updated = { ...ep, customModel: value };
-                            if (value) updated.model = value;
-                            return updated;
-                        });
-                        setExtraEndpoints(next);
-                        return next;
-                    });
-                }, []);
-
-                const handleRefreshEndpointModels = useCallback((endpoint) => {
-                    loadEndpointModels(endpoint);
-                }, [loadEndpointModels]);
-
                 const [primaryCapabilities, setPrimaryCapabilitiesState] = useState(() => getPrimaryCapabilities());
 
                 const togglePrimaryCapability = useCallback((cap) => {
@@ -1710,54 +1498,18 @@
                     });
                 }, []);
 
-                const handleEndpointCapabilityToggle = useCallback((id, cap) => {
-                    setExtraEndpointsState((prev) => {
-                        const next = prev.map(ep => {
-                            if (ep.id !== id) return ep;
-                            const capabilities = { ...(ep.capabilities || {}) };
-                            capabilities[cap] = !isEndpointCapabilityEnabled(capabilities, cap);
-                            return { ...ep, capabilities };
-                        });
-                        setExtraEndpoints(next);
-                        return next;
-                    });
-                }, []);
-
-                // Capability chips shared by the primary endpoint and extra
-                // endpoint cards. Same look as the provider-level
-                // "Enabled Capabilities" chips in Settings.
-                const renderCapabilityChips = (capabilities, onToggle, description) => {
-                    return React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('label', null, t('settings.aiProviders.enabledCapabilities', 'Enabled Capabilities')),
-                        React.createElement('div', { className: 'ai-addon-caps-container' },
-                            ENDPOINT_CAPABILITIES.map(cap => {
-                                const enabled = isEndpointCapabilityEnabled(capabilities, cap);
-                                return React.createElement('div', {
-                                    key: cap,
-                                    className: `ai-addon-cap-chip ${enabled ? 'active' : ''} cap-${cap}`,
-                                    onClick: () => onToggle(cap)
-                                },
-                                    enabled && React.createElement('svg', { width: 14, height: 14, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('polyline', { points: '20 6 9 17 4 12' })),
-                                    t(`settings.aiProviders.supports.${cap}`, ENDPOINT_CAPABILITY_FALLBACKS[cap] || cap)
-                                );
-                            })
-                        ),
-                        description && React.createElement('small', null, description)
-                    );
-                };
-
                 const renderApiKeyRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, aiText('apiKey', 'API Key(s)')),
                         React.createElement('div', { className: 'ai-addon-input-group' },
-                            React.createElement('input', { type: 'text', value: apiKeys, onChange: handleApiKeyChange, placeholder: 'sk-... (multiple: ["key1", "key2"])' }),
-                            React.createElement('button', { onClick: () => window.open(ADDON_INFO.apiKeyUrl, '_blank'), className: 'ai-addon-btn-secondary' }, aiText('getApiKey', 'Get API Key'))
+                            React.createElement('input', { type: 'password', autoComplete: 'off', value: apiKeys, onChange: handleApiKeyChange, placeholder: 'sk-... (multiple: ["key1", "key2"])' }),
+                            React.createElement('button', { type: 'button', onClick: () => window.open(ADDON_INFO.apiKeyUrl, '_blank'), className: 'ai-addon-btn ai-addon-btn-secondary' }, aiText('getApiKey', 'Get API Key'))
                         ),
                         React.createElement('small', null, aiText('apiKeyDesc', 'Enter an API key or JSON array.'))
                     );
                 const renderBaseUrlRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, aiText('baseUrl', 'Base URL')),
                         React.createElement('input', { type: 'text', value: baseUrl, onChange: handleBaseUrlChange, placeholder: DEFAULT_OPENAI_BASE_URL }),
-                        React.createElement('small', null, 'Change this to use OpenAI-compatible APIs')
+                        React.createElement('small', null, aiText('baseUrlDesc', 'Use a custom OpenAI-compatible API URL.'))
                     );
                 const renderModelRow = () => React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('label', null, aiText('model', 'Model')),
@@ -1781,9 +1533,11 @@
                                         ]
                             ),
                             React.createElement('button', {
+                                type: 'button',
                                 onClick: handleRefreshModels,
-                                className: 'ai-addon-btn-secondary',
+                                className: 'ai-addon-btn ai-addon-btn-secondary ai-addon-connection-icon',
                                 disabled: modelsLoading || !hasApiKey,
+                                'aria-label': aiText('refreshModels', 'Refresh model list'),
                                 title: aiText('refreshModels', 'Refresh model list')
                             }, modelsLoading ? '...' : '↻')
                         ),
@@ -1800,24 +1554,16 @@
                     renderModelRow(),
                     (!isModelInList || customModel) &&
                     renderCustomModelRow(),
-                    renderCapabilityChips(
-                        primaryCapabilities,
-                        togglePrimaryCapability,
-                        'Which request types the primary endpoint serves. Disabled types fall through to the additional endpoints below.'
-                    ),
-                    React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('label', null, `Additional OpenAI-compatible endpoints${extraEndpoints.length ? ` (${extraEndpoints.length})` : ''}`),
-                        React.createElement('small', null, 'Each endpoint needs its own Base URL, API key and model. Requests fall back through them in order when the primary fails.'),
-                        ...extraEndpoints.map((endpoint, index) => renderEndpointCard(endpoint, index))
-                    ),
+                    React.createElement(CapabilityControls, {
+                        capabilities: primaryCapabilities, onToggle: togglePrimaryCapability
+                    }),
                     React.createElement(FallbackProvidersSection),
                     // Advanced API Parameters
                     React.createElement(AdvancedParamsSection)
                     ,
                     React.createElement('div', { className: 'ai-addon-setting' },
                         React.createElement('div', { className: 'ai-addon-input-group' },
-                            React.createElement('button', { onClick: handleTest, className: 'ai-addon-btn-primary' }, aiText('testConnection', 'Test Connection')),
-                            React.createElement('button', { onClick: handleAddEndpoint, className: 'ai-addon-btn-secondary', title: 'Add another OpenAI-compatible endpoint' }, 'Add another')
+                            React.createElement('button', { type: 'button', onClick: handleTest, className: 'ai-addon-btn ai-addon-btn-primary' }, aiText('testConnection', 'Test Connection'))
                         ),
                         testStatus && React.createElement('span', {
                             className: `ai-addon-test-status ${testStatus.startsWith('✓') ? 'success' : testStatus.startsWith('✗') ? 'error' : ''}`
@@ -1826,28 +1572,54 @@
                 );
             };
 
+            function CapabilityControls({ capabilities, onToggle }) {
+                return React.createElement('div', { className: 'ai-addon-setting ai-addon-connection-capabilities' },
+                    React.createElement('label', null, aiText('enabledCapabilities', 'Enabled Capabilities')),
+                    React.createElement('div', { className: 'ai-addon-caps-container' },
+                        ENDPOINT_CAPABILITIES.map(capability => {
+                            const enabled = isEndpointCapabilityEnabled(capabilities, capability);
+                            return React.createElement('button', {
+                                key: capability, type: 'button',
+                                className: `ai-addon-cap-chip ${enabled ? 'active' : ''} cap-${capability}`,
+                                'aria-pressed': enabled, onClick: () => onToggle(capability)
+                            }, aiText(`supports.${capability}`, ENDPOINT_CAPABILITY_FALLBACKS[capability]));
+                        })
+                    )
+                );
+            }
+
             function FallbackProvidersSection() {
                 const [connections, setConnections] = useState(getFallbackProviders);
-                const save = next => { setConnections(next); setSetting('fallback-providers', next); };
-                const move = (index, delta) => {
-                    const next = [...connections];
-                    [next[index], next[index + delta]] = [next[index + delta], next[index]];
-                    save(next);
-                };
-                return React.createElement('div', { className: 'ai-addon-setting' },
-                    React.createElement('label', null, t('settings.aiProviders.openaiConnections', 'Additional OpenAI-compatible providers')),
-                    React.createElement('small', null, t('settings.aiProviders.openaiConnectionsDesc', 'Try the primary connection first, then enabled connections below in order when a request fails.')),
+                const save = update => setConnections(previous => {
+                    const next = typeof update === 'function' ? update(previous) : update;
+                    setSetting('fallback-providers', next);
+                    return next;
+                });
+                const move = (id, delta) => save(previous => {
+                    const index = previous.findIndex(connection => connection.id === id);
+                    const target = index + delta;
+                    if (index < 0 || target < 0 || target >= previous.length) return previous;
+                    const next = [...previous];
+                    [next[index], next[target]] = [next[target], next[index]];
+                    return next;
+                });
+                return React.createElement('div', { className: 'ai-addon-setting ai-addon-connections' },
+                    React.createElement('label', null, aiText('openaiConnections', 'Additional OpenAI-compatible providers')),
+                    React.createElement('small', null, aiText('openaiConnectionsDesc', 'Try enabled providers in order when the primary fails.')),
                     connections.map((connection, index) => React.createElement(ConnectionEditor, {
                         key: connection.id,
                         connection, index, count: connections.length,
-                        onChange: patch => save(connections.map(item => item.id === connection.id ? { ...item, ...patch } : item)),
-                        onRemove: () => save(connections.filter(item => item.id !== connection.id)),
-                        onMove: delta => move(index, delta)
+                        onChange: patch => save(previous => previous.map(item => item.id === connection.id ? { ...item, ...patch } : item)),
+                        onRemove: () => save(previous => previous.filter(item => item.id !== connection.id)),
+                        onMove: delta => move(connection.id, delta)
                     })),
                     React.createElement('button', {
-                        className: 'ai-addon-btn-secondary',
-                        onClick: () => save([...connections, { id: `custom-${Date.now()}-${Math.random().toString(36).slice(2)}`, name: `API ${connections.length + 1}`, baseUrl: DEFAULT_OPENAI_BASE_URL, apiKeys: '', model: '', enabled: true }])
-                    }, t('settings.aiProviders.addOpenaiConnection', 'Add provider'))
+                        type: 'button', className: 'ai-addon-btn ai-addon-btn-secondary',
+                        onClick: () => save(previous => [...previous, {
+                            id: createEndpointId(), name: `API ${previous.length + 1}`,
+                            baseUrl: DEFAULT_OPENAI_BASE_URL, apiKeys: '', model: '', enabled: true, capabilities: {}
+                        }])
+                    }, aiText('addOpenaiConnection', 'Add provider'))
                 );
             }
 
@@ -1856,10 +1628,13 @@
                 const [loading, setLoading] = useState(false);
                 const [revision, setRevision] = useState(0);
                 const [status, setStatus] = useState('');
+                const [testing, setTesting] = useState(false);
+                const keys = parseConnectionKeys(connection.apiKeys);
+                const selectedModel = connection.model || (connection.inheritPrimaryModel ? getSelectedModel() : '');
+                const customModel = !models.some(model => model.id === selectedModel);
                 useEffect(() => {
                     let active = true;
                     setModels([]);
-                    const keys = parseConnectionKeys(connection.apiKeys);
                     if (!keys.length) { setLoading(false); return; }
                     setLoading(true);
                     const timer = setTimeout(() => {
@@ -1869,44 +1644,81 @@
                     }, 350);
                     return () => { active = false; clearTimeout(timer); };
                 }, [connection.apiKeys, connection.baseUrl, revision]);
-                const field = (label, key, type = 'text') => React.createElement('label', null, label,
-                    React.createElement('input', { type, value: connection[key] || '', onChange: event => onChange({ [key]: event.target.value }), autoComplete: 'off' }));
-                return React.createElement('div', { style: { padding: '12px', margin: '10px 0', border: '1px solid rgba(255,255,255,.15)', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '8px' } },
-                    React.createElement('div', { className: 'ai-addon-input-group' },
-                        React.createElement('label', null,
-                            React.createElement('input', { type: 'checkbox', checked: connection.enabled !== false, onChange: event => onChange({ enabled: event.target.checked }) }),
-                            `${index + 2}. ${connection.name || 'API'}`),
-                        React.createElement('button', { onClick: () => onMove(-1), disabled: index === 0, 'aria-label': aiText('moveUp', 'Move up') }, '↑'),
-                        React.createElement('button', { onClick: () => onMove(1), disabled: index === count - 1, 'aria-label': aiText('moveDown', 'Move down') }, '↓'),
-                        React.createElement('button', { onClick: onRemove, 'aria-label': aiText('removeConnection', 'Remove provider') }, '×')
+                const field = (label, key, type = 'text') => {
+                    const id = `${ADDON_INFO.id}-${encodeURIComponent(connection.id)}-${key}`;
+                    return React.createElement('div', { className: 'ai-addon-setting ai-addon-connection-field' },
+                        React.createElement('label', { htmlFor: id }, label),
+                        React.createElement('input', {
+                            id, type, value: connection[key] || '', autoComplete: 'off',
+                            placeholder: key === 'model' ? selectedModel : undefined,
+                            onChange: event => onChange({ [key]: event.target.value,
+                                ...(key === 'model' ? { inheritPrimaryModel: false } : {}) })
+                        })
+                    );
+                };
+                const iconButton = (label, glyph, onClick, disabled = false) => React.createElement('button', {
+                    type: 'button', className: 'ai-addon-btn ai-addon-btn-secondary ai-addon-connection-icon',
+                    onClick, disabled, 'aria-label': label, title: label
+                }, glyph);
+                return React.createElement('div', { className: 'ai-addon-connection-card' },
+                    React.createElement('div', { className: 'ai-addon-connection-header' },
+                        React.createElement('label', { className: 'ai-addon-connection-enabled' },
+                            React.createElement('input', {
+                                type: 'checkbox', checked: connection.enabled !== false,
+                                onChange: event => onChange({ enabled: event.target.checked })
+                            }),
+                            React.createElement('span', null, `${index + 2}. ${connection.name || 'API'}`)
+                        ),
+                        React.createElement('div', { className: 'ai-addon-connection-actions' },
+                            iconButton(aiText('moveUp', 'Move up'), '↑', () => onMove(-1), index === 0),
+                            iconButton(aiText('moveDown', 'Move down'), '↓', () => onMove(1), index === count - 1),
+                            iconButton(aiText('removeConnection', 'Remove provider'), '×', onRemove)
+                        )
                     ),
-                    field(t('settings.aiProviders.connectionName', 'Name'), 'name'),
-                    field(aiText('baseUrl', 'Base URL'), 'baseUrl'),
-                    field(aiText('apiKey', 'API Key(s)'), 'apiKeys', 'password'),
-                    React.createElement('div', { className: 'ai-addon-input-group' },
-                        React.createElement('select', { value: connection.model || '', disabled: loading || !models.length, onChange: event => onChange({ model: event.target.value }) },
-                            !models.some(model => model.id === connection.model) && React.createElement('option', { value: connection.model || '' }, connection.model || aiText('selectModel', 'Select a model')),
-                            models.map(model => React.createElement('option', { key: model.id, value: model.id }, model.name))),
-                        React.createElement('button', { onClick: () => setRevision(value => value + 1), disabled: loading, title: aiText('refreshModels', 'Refresh model list') }, loading ? '...' : '↻')
+                    React.createElement('div', { className: 'ai-addon-connection-fields' },
+                        field(aiText('connectionName', 'Name'), 'name'),
+                        field(aiText('baseUrl', 'Base URL'), 'baseUrl'),
+                        field(aiText('apiKey', 'API Key(s)'), 'apiKeys', 'password'),
+                        React.createElement('div', { className: 'ai-addon-setting ai-addon-connection-field' },
+                            React.createElement('label', { htmlFor: `${ADDON_INFO.id}-${encodeURIComponent(connection.id)}-models` }, aiText('model', 'Model')),
+                            React.createElement('div', { className: 'ai-addon-input-group' },
+                                React.createElement('select', {
+                                    id: `${ADDON_INFO.id}-${encodeURIComponent(connection.id)}-models`,
+                                    value: customModel ? '' : selectedModel, disabled: loading || !models.length,
+                                    onChange: event => onChange({ model: event.target.value, inheritPrimaryModel: false })
+                                },
+                                    React.createElement('option', { value: '' }, aiText('modelId', 'Custom Model ID')),
+                                    models.map(model => React.createElement('option', { key: model.id, value: model.id }, model.name))
+                                ),
+                                iconButton(aiText('refreshModels', 'Refresh model list'), loading ? '…' : '↻',
+                                    () => setRevision(value => value + 1), loading || !keys.length)
+                            )
+                        ),
+                        customModel && field(aiText('modelId', 'Model ID'), 'model')
                     ),
-                    field(aiText('modelId', 'Model ID'), 'model'),
-                    React.createElement('button', { className: 'ai-addon-btn-secondary', onClick: async () => {
-                        setStatus(aiText('testingConnection', 'Testing...'));
-                        // The trailing callChatGPTAPIRaw argument is now a
-                        // capability filter, so legacy connections are tested
-                        // directly against their own URL/key/model instead.
-                        try {
-                            const keys = parseConnectionKeys(connection.apiKeys ?? connection.apiKey);
-                            await testSingleTarget({
-                                baseUrl: getBaseUrl(connection),
-                                apiKey: keys[0] || '',
-                                model: getSelectedModel(connection)
-                            });
-                            setStatus('✓ ' + aiText('connectionSuccess', 'Connection successful.'));
-                        }
-                        catch (error) { setStatus(`✗ ${error.message}`); }
-                    } }, aiText('testThisConnection', 'Test this provider')),
-                    status && React.createElement('small', null, status)
+                    React.createElement(CapabilityControls, {
+                        capabilities: connection.capabilities,
+                        onToggle: capability => onChange({ capabilities: {
+                            ...(connection.capabilities || {}),
+                            [capability]: !isEndpointCapabilityEnabled(connection.capabilities, capability)
+                        } })
+                    }),
+                    React.createElement('div', { className: 'ai-addon-connection-footer' },
+                        React.createElement('button', {
+                            type: 'button', className: 'ai-addon-btn ai-addon-btn-secondary',
+                            disabled: testing || loading || !keys.length || !selectedModel,
+                            onClick: async () => {
+                                setTesting(true);
+                                setStatus(aiText('testingConnection', 'Testing...'));
+                                try {
+                                    await testSingleTarget({ baseUrl: connection.baseUrl, apiKey: keys[0], model: selectedModel });
+                                    setStatus('✓ ' + aiText('connectionSuccess', 'Connection successful.'));
+                                } catch (error) { setStatus(`✗ ${error.message}`); }
+                                finally { setTesting(false); }
+                            }
+                        }, aiText('testThisConnection', 'Test this provider')),
+                        status && React.createElement('small', { role: 'status', 'aria-live': 'polite' }, status)
+                    )
                 );
             }
 

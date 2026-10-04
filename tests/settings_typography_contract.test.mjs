@@ -104,6 +104,12 @@ const elements = (node) => {
 const normalize = (value) => {
   if (typeof value === "function") return `[function:${value.name}]`;
   if (typeof value === "symbol") return String(value);
+  // The released oracle inlines its stylesheet. The new connection-only
+  // rules intentionally extend the shared stylesheet without changing any
+  // typography controls; retain the rest of the independent CSS/tree oracle.
+  if (typeof value === "string") {
+    return value.replace(/\/\* OpenAI-compatible connections share one editor and the settings controls\. \*\/[\s\S]*$/, "");
+  }
   if (Array.isArray(value)) return Array.from(value, normalize);
   if (value && typeof value === "object") {
     return Object.fromEntries(Object.entries(value).map(([key, item]) => [

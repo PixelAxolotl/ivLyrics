@@ -7226,4 +7226,133 @@ const SETTINGS_MODAL_CSS = `
         flex-wrap: wrap !important;
     }
 }
+/* OpenAI-compatible connections share one editor and the settings controls. */
+#${APP_NAME}-config-container .ai-addon-connection-card {
+    margin: 14px 0;
+    padding: 16px;
+    border: 1px solid var(--settings-border);
+    border-radius: 9px;
+    background: var(--settings-surface-2);
+    min-width: 0;
+}
+
+#${APP_NAME}-config-container .ai-addon-connection-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+#${APP_NAME}-config-container .chatgpt-settings .ai-addon-connection-header .ai-addon-connection-enabled {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0;
+    min-width: 0;
+    flex: 1;
+    font-size: 13px;
+}
+
+#${APP_NAME}-config-container .ai-addon-connection-enabled span {
+    overflow-wrap: anywhere;
+}
+
+#${APP_NAME}-config-container .ai-addon-connection-enabled input[type="checkbox"] {
+    width: 16px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0;
+    margin: 0;
+    flex: none;
+    accent-color: var(--accent-primary);
+}
+
+#${APP_NAME}-config-container .ai-addon-connection-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
+
+#${APP_NAME}-config-container .chatgpt-settings .ai-addon-connection-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 32px;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0;
+    font-size: 17px;
+    line-height: 1;
+}
+
+#${APP_NAME}-config-container .chatgpt-settings .ai-addon-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+    transform: none;
+}
+
+#${APP_NAME}-config-container .ai-addon-connection-fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+    align-items: start;
+    gap: 14px 16px;
+}
+
+#${APP_NAME}-config-container .chatgpt-settings .ai-addon-connection-field,
+#${APP_NAME}-config-container .ai-addon-connection-card .ai-addon-connection-capabilities {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+#${APP_NAME}-config-container .ai-addon-connection-field input,
+#${APP_NAME}-config-container .ai-addon-connection-field select,
+#${APP_NAME}-config-container .chatgpt-settings .ai-addon-input-group select {
+    width: 100% !important;
+    min-width: 0;
+    box-sizing: border-box;
+}
+
+#${APP_NAME}-config-container .chatgpt-settings input[type="password"] {
+    border: 1px solid var(--settings-border) !important;
+    border-radius: var(--settings-field-radius) !important;
+    background: var(--settings-surface-1) !important;
+    box-shadow: none !important;
+}
+
+#${APP_NAME}-config-container .ai-addon-connection-field .ai-addon-input-group select {
+    flex: 1;
+}
+
+#${APP_NAME}-config-container .ai-addon-connection-card .ai-addon-connection-capabilities {
+    margin-top: 16px;
+}
+
+#${APP_NAME}-config-container .chatgpt-settings .ai-addon-cap-chip {
+    cursor: pointer;
+    font-family: inherit;
+}
+
+#${APP_NAME}-config-container .chatgpt-settings button:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+
+#${APP_NAME}-config-container .ai-addon-connection-footer {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+    margin-top: 16px;
+}
+
+#${APP_NAME}-config-container .ai-addon-connection-footer small {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
 `;

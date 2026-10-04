@@ -3,15 +3,10 @@
  * The timeout signal intentionally remains attached to the response body so a
  * stalled streaming reader is aborted as well as a stalled connection.
  *
- * CORS fallback: some OpenAI-compatible hosts (e.g. NVIDIA NIM) do not send
- * Access-Control-Allow-Origin for Spotify's origin, so Chromium blocks the
- * request before it leaves ("Failed to fetch"). Only when native fetch fails
- * at the network level is the request retried through Spotify's internal HTTP
- * stack (Spicetify.CosmosAsync), which is not subject to CORS. The Cosmos
- * result is normalized into a real Response so provider code keeps working
- * untouched. Streaming is downgraded to a single buffered response on that
- * path because Cosmos cannot deliver SSE incrementally; providers already
- * handle non-streaming JSON responses.
+ * Hosted NVIDIA NIM rejects browser CORS requests. Network failures for that
+ * host retry through Spicetify's configured CORS proxy, preserving the native
+ * Response and SSE stream. Other hosts retain the Cosmos fallback, which
+ * returns a buffered response because Cosmos cannot stream incrementally.
  */
 (() => {
     'use strict';
@@ -66,6 +61,26 @@
             }
         }
         return body;
+    }
+
+    function isHostedNimUrl(input) {
+        try {
+            const url = new URL(typeof input === 'string' ? input : input?.url);
+            return url.protocol === 'https:' && url.hostname === 'integrate.api.nvidia.com';
+        } catch { return false; }
+    }
+
+    function getSpicetifyProxyUrl(input) {
+        const url = typeof input === 'string' ? input : String(input?.url ?? input);
+        let template = 'https://cors-proxy.spicetify.app/{url}';
+        try { template = window.localStorage?.getItem('spicetify:corsProxyTemplate') || template; }
+        catch { /* Use Spicetify's default when local storage is unavailable. */ }
+        if (!template.includes('{url}')) throw new Error('Invalid Spicetify CORS proxy template');
+        const proxyUrl = template.replace('{url}', url);
+        if (!/^https?:$/.test(new URL(proxyUrl).protocol)) {
+            throw new Error('Spicetify CORS proxy must use HTTP or HTTPS');
+        }
+        return proxyUrl;
     }
 
     function withTimeout(promise, timeoutMs) {
@@ -131,6 +146,23 @@
             // a network-level failure: CORS block, DNS, offline, etc. Aborts
             // and timeouts surface as AbortError/DOMException, not TypeError.
             if (!isNetworkTypeError(error) || signal?.aborted) throw error;
+            if (isHostedNimUrl(input)) {
+                try {
+                    // Fetch the relay directly: CosmosAsync.request bypasses
+                    // Spicetify's proxy wrapper, and its shorthand methods do
+                    // not preserve the provider's Authorization header.
+                    return await window.fetch(getSpicetifyProxyUrl(input), {
+                        ...init, signal, credentials: 'omit'
+                    });
+                } catch (proxyError) {
+                    if (signal?.aborted) throw proxyError;
+                    const combined = new Error(
+                        `${error?.message || error} [Spicetify CORS proxy failed: ${proxyError?.message || proxyError}]`
+                    );
+                    combined.cause = proxyError;
+                    throw combined;
+                }
+            }
             try {
                 return await cosmosFallback(input, init, timeoutMs);
             } catch (fallbackError) {

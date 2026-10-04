@@ -119,6 +119,12 @@ curl -fsSL https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/
 
 ## 문제 해결
 
+### NVIDIA NIM 연결
+
+NVIDIA의 호스팅 API가 브라우저 CORS 요청을 차단하면 ivLyrics가 Spicetify의 CORS 프록시로 다시 요청합니다. 모델 목록과 채팅 응답 모두 이 경로를 사용하며, 스트리밍 응답도 유지됩니다. 기본 프록시는 [Spicetify 공식 서비스](https://github.com/spicetify/services)의 `https://cors-proxy.spicetify.app`이고, Spicetify에서 지정한 CORS 프록시 설정이 있으면 해당 설정을 따릅니다. API 키와 요청은 선택된 프록시를 통해 NVIDIA로 전달됩니다.
+
+**설정 → AI 제공자 → NVIDIA NIM**에서 API 키를 입력하고 기본 URL `https://integrate.api.nvidia.com/v1`을 사용하세요. 모델 목록을 새로고침한 뒤 채팅 모델을 선택하고 **연결 테스트**를 누릅니다. 목록의 일부 모델은 실제 요청에서 404를 반환할 수 있으므로, 그 경우 다른 모델로 테스트하세요. 번역에 사용하려면 NVIDIA NIM 제공자를 활성화합니다.
+
 ### 초기화 방법
 
 설정이나 가사 표시에 문제가 있는 경우:

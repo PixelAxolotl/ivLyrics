@@ -116,6 +116,12 @@ curl -fsSL https://raw.githubusercontent.com/ivLis-Studio/ivLyrics/main/updater/
 
 ## Troubleshooting
 
+### NVIDIA NIM connection
+
+If NVIDIA's hosted API blocks a browser CORS request, ivLyrics retries through Spicetify's CORS proxy. This works for both model discovery and chat requests while preserving streaming responses. The default is `https://cors-proxy.spicetify.app`, operated by the [official Spicetify service](https://github.com/spicetify/services); a configured Spicetify CORS proxy takes precedence. API keys and requests pass through the selected proxy on their way to NVIDIA.
+
+In **Settings → AI Providers → NVIDIA NIM**, enter your API key and use the default Base URL, `https://integrate.api.nvidia.com/v1`. Refresh the model list, choose a chat model, and press **Test Connection**. Some listed models can return 404 for actual requests; try another model in that case. Enable the NVIDIA NIM provider to use it for translation.
+
 ### Resetting the App
 
 If you experience problems with settings or lyric display:

@@ -882,7 +882,11 @@ window.LANG_FA = {
     "lyricsLoadedFromFile": "متن {types} با موفقیت از فایل بارگذاری شد",
     "lyricsLoadedFromLrclib": "متن ترانه از LRCLIB بارگذاری شد.",
     "lyricsLoadFailed": "بارگذاری متن ناموفق بود: فرمت فایل نادرست است",
-    "fileReadFailed": "خواندن فایل ناموفق بود: ممکن است فایل خراب باشد"
+    "fileReadFailed": "خواندن فایل ناموفق بود: ممکن است فایل خراب باشد",
+    "mySyncsExportSuccess": "خروجی همگام‌سازی‌ها ذخیره شد",
+    "mySyncsExportSuccessDesc": "از {total} همگام‌سازی، {exported} مورد ذخیره شد. ردشده: {skipped}.",
+    "mySyncsExportEmpty": "همگام‌سازی‌ای برای این کاربر یافت نشد.",
+    "mySyncsExportFailed": "تهیه خروجی همگام‌سازی‌ها ناموفق بود"
   },
   "misc": {
     "and": "و",
@@ -1539,6 +1543,11 @@ window.LANG_FA = {
         "button": "Import",
         "processing": "در حال ورود...",
         "confirm": "همهٔ داده‌های فعلی پایگاه داده بازنویسی می‌شوند. ادامه می‌دهید؟"
+      },
+      "exportMySyncs": {
+        "label": "خروجی گرفتن از همگام‌سازی‌های من",
+        "button": "خروجی گرفتن از همگام‌سازی‌های من",
+        "processing": "در حال تهیه خروجی..."
       }
     },
     "resetSettings": {
@@ -2092,6 +2101,7 @@ window.LANG_FA = {
       "gradient": "گرادیان",
       "minimal": "مینیمال",
       "glass": "شیشه‌ای",
+      "word": "یادگیری واژه‌ها"
     },
     "advancedSettings": "تنظیمات پیشرفته",
     "sections": {
@@ -2132,7 +2142,43 @@ window.LANG_FA = {
       "aspectRatio": "نسبت تصویر",
       "imageWidth": "عرض تصویر",
       "padding": "حاشیه",
-      "showWatermark": "نمایش واترمارک"
+      "showWatermark": "نمایش واترمارک",
+      "trackTitleSize": "اندازه عنوان",
+      "trackTitleColor": "رنگ عنوان",
+      "trackTitleWeight": "ضخامت قلم عنوان",
+      "trackArtistSize": "اندازه نام هنرمند",
+      "trackArtistColor": "رنگ نام هنرمند",
+      "trackArtistWeight": "ضخامت قلم نام هنرمند",
+      "lyricsDetail": "نوع خروجی",
+      "lineLevel": "خط",
+      "wordLevel": "واژه",
+      "origColor": "رنگ متن اصلی",
+      "origWeight": "ضخامت متن اصلی",
+      "pronSize": "اندازه تلفظ خط",
+      "pronColor": "رنگ تلفظ خط",
+      "pronWeight": "ضخامت قلم تلفظ خط",
+      "wordReadingSize": "اندازه خوانش واژه‌ها",
+      "transSize": "اندازه ترجمه خط",
+      "transColor": "رنگ ترجمه خط",
+      "transWeight": "ضخامت قلم ترجمه خط",
+      "wordGlossSize": "اندازه ترجمه واژه‌ها",
+      "fontSource": "منبع قلم",
+      "fontDefault": "پیش‌فرض",
+      "fontSettings": "تنظیمات برنامه",
+      "fontCustom": "سفارشی",
+      "customFontFamily": "قلم سفارشی",
+      "groupOriginal": "متن اصلی ترانه",
+      "groupWordReading": "تلفظ واژه‌ها",
+      "groupWordGloss": "ترجمه واژه‌ها",
+      "groupLinePron": "تلفظ خط",
+      "groupLineTrans": "ترجمه خط",
+      "wordReadingColor": "رنگ خوانش واژه‌ها",
+      "wordReadingWeight": "ضخامت قلم خوانش واژه‌ها",
+      "wordGlossColor": "رنگ ترجمه واژه‌ها",
+      "wordGlossWeight": "ضخامت قلم ترجمه واژه‌ها",
+      "alignRight": "راست",
+      "exportScale": "مقیاس خروجی",
+      "ratioAuto": "خودکار"
     },
     "preview": "پیش‌نمایش",
     "actions": {
@@ -2823,7 +2869,15 @@ window.LANG_FA = {
     "multiVocalDetectedTitle": "چند وکال شناسایی شد",
     "multiVocalDetectedBody": "این متن شامل خط‌هایی با پرانتز یا جداکننده است، بنابراین می‌تواند به‌صورت بخش‌های وکال جداگانه همگام شود. روش کار روی این آهنگ را انتخاب کنید.",
     "multiVocalDecisionNormal": "ادامه در حالت عادی",
-    "multiVocalDecisionMulti": "ادامه در حالت چند وکال"
+    "multiVocalDecisionMulti": "ادامه در حالت چند وکال",
+    "revert": "بازیابی همگام‌سازی منتشرشده",
+    "revertDesc": "تغییرات ارسال‌نشده را کنار بگذارید و همگام‌سازی منتشرشده را بارگذاری کنید.",
+    "revertConfirm": "تغییرات ارسال‌نشده کنار گذاشته و همگام‌سازی منتشرشده بازیابی شود؟",
+    "reverting": "در حال بازیابی همگام‌سازی...",
+    "reverted": "همگام‌سازی منتشرشده بازیابی شد.",
+    "noPublishedSync": "همگام‌سازی منتشرشده‌ای موجود نیست.",
+    "unsubmittedChanges": "تغییرات ارسال‌نشده",
+    "previewUnavailable": "پیش‌نمایش در دسترس نیست."
   },
   "marketplace": {
     "title": "فروشگاه افزونه‌ها",

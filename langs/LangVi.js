@@ -882,7 +882,11 @@ window.LANG_VI = {
     "lyricsLoadedFromFile": "Đã tải thành công lời bài hát {types} từ tệp",
     "lyricsLoadedFromLrclib": "Đã tải lời bài hát từ LRCLIB.",
     "lyricsLoadFailed": "Tải lời bài hát thất bại: Định dạng tệp không hợp lệ",
-    "fileReadFailed": "Đọc tệp thất bại: Tệp có thể bị hỏng"
+    "fileReadFailed": "Đọc tệp thất bại: Tệp có thể bị hỏng",
+    "mySyncsExportSuccess": "Đã xuất đồng bộ",
+    "mySyncsExportSuccessDesc": "Đã xuất {exported} trên {total} bản đồng bộ. Bỏ qua: {skipped}.",
+    "mySyncsExportEmpty": "Không tìm thấy đồng bộ của người dùng này.",
+    "mySyncsExportFailed": "Xuất đồng bộ thất bại"
   },
   "misc": {
     "and": "và",
@@ -1539,6 +1543,11 @@ window.LANG_VI = {
         "button": "Import",
         "processing": "Đang nhập...",
         "confirm": "Toàn bộ dữ liệu hiện có trong cơ sở dữ liệu sẽ bị ghi đè. Tiếp tục?"
+      },
+      "exportMySyncs": {
+        "label": "Xuất đồng bộ của tôi",
+        "button": "Xuất đồng bộ của tôi",
+        "processing": "Đang xuất..."
       }
     },
     "resetSettings": {
@@ -2092,6 +2101,7 @@ window.LANG_VI = {
       "gradient": "Gradient",
       "minimal": "Tối giản",
       "glass": "Kính",
+      "word": "Học từ"
     },
     "advancedSettings": "Cài đặt chi tiết",
     "sections": {
@@ -2132,7 +2142,43 @@ window.LANG_VI = {
       "aspectRatio": "Tỷ lệ ảnh",
       "imageWidth": "Chiều rộng ảnh",
       "padding": "Lề",
-      "showWatermark": "Hiển thị hình mờ (Watermark)"
+      "showWatermark": "Hiển thị hình mờ (Watermark)",
+      "trackTitleSize": "Cỡ tiêu đề",
+      "trackTitleColor": "Màu tiêu đề",
+      "trackTitleWeight": "Độ đậm tiêu đề",
+      "trackArtistSize": "Cỡ tên nghệ sĩ",
+      "trackArtistColor": "Màu tên nghệ sĩ",
+      "trackArtistWeight": "Độ đậm tên nghệ sĩ",
+      "lyricsDetail": "Chế độ xuất",
+      "lineLevel": "Theo dòng",
+      "wordLevel": "Theo từ",
+      "origColor": "Màu bản gốc",
+      "origWeight": "Độ đậm bản gốc",
+      "pronSize": "Cỡ phát âm dòng",
+      "pronColor": "Màu phát âm dòng",
+      "pronWeight": "Độ đậm phát âm dòng",
+      "wordReadingSize": "Cỡ cách đọc từ",
+      "transSize": "Cỡ bản dịch dòng",
+      "transColor": "Màu bản dịch dòng",
+      "transWeight": "Độ đậm bản dịch dòng",
+      "wordGlossSize": "Cỡ bản dịch từ",
+      "fontSource": "Nguồn phông chữ",
+      "fontDefault": "Mặc định",
+      "fontSettings": "Cài đặt ứng dụng",
+      "fontCustom": "Tùy chỉnh",
+      "customFontFamily": "Phông chữ tùy chỉnh",
+      "groupOriginal": "Lời gốc",
+      "groupWordReading": "Phát âm từ",
+      "groupWordGloss": "Dịch từ",
+      "groupLinePron": "Phát âm dòng",
+      "groupLineTrans": "Dịch dòng",
+      "wordReadingColor": "Màu cách đọc từ",
+      "wordReadingWeight": "Độ đậm cách đọc từ",
+      "wordGlossColor": "Màu bản dịch từ",
+      "wordGlossWeight": "Độ đậm bản dịch từ",
+      "alignRight": "Phải",
+      "exportScale": "Tỷ lệ xuất",
+      "ratioAuto": "Tự động"
     },
     "preview": "Xem trước",
     "actions": {
@@ -2823,7 +2869,15 @@ window.LANG_VI = {
     "multiVocalDetectedTitle": "Phát hiện nhiều giọng hát",
     "multiVocalDetectedBody": "Lời bài hát có các dòng chứa ngoặc hoặc dấu phân cách, nên có thể đồng bộ thành các phần giọng hát riêng. Hãy chọn cách làm việc với bài hát này.",
     "multiVocalDecisionNormal": "Tiếp tục ở chế độ thường",
-    "multiVocalDecisionMulti": "Tiếp tục ở chế độ nhiều giọng"
+    "multiVocalDecisionMulti": "Tiếp tục ở chế độ nhiều giọng",
+    "revert": "Khôi phục đồng bộ đã đăng",
+    "revertDesc": "Bỏ thay đổi chưa gửi và tải đồng bộ đã đăng.",
+    "revertConfirm": "Bỏ thay đổi chưa gửi và khôi phục đồng bộ đã đăng?",
+    "reverting": "Đang khôi phục đồng bộ...",
+    "reverted": "Đã khôi phục đồng bộ đã đăng.",
+    "noPublishedSync": "Không có đồng bộ đã đăng.",
+    "unsubmittedChanges": "Thay đổi chưa gửi",
+    "previewUnavailable": "Không có bản xem trước."
   },
   "marketplace": {
     "title": "Cửa hàng Addon",

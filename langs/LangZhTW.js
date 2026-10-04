@@ -882,7 +882,11 @@ window.LANG_ZH_TW = {
     "lyricsLoadedFromFile": "成功從檔案載入 {types} 歌詞",
     "lyricsLoadedFromLrclib": "已從 LRCLIB 載入歌詞。",
     "lyricsLoadFailed": "歌詞載入失敗：錯誤的檔案格式",
-    "fileReadFailed": "檔案讀取失敗：檔案可能已損毀"
+    "fileReadFailed": "檔案讀取失敗：檔案可能已損毀",
+    "mySyncsExportSuccess": "已匯出我的同步",
+    "mySyncsExportSuccessDesc": "已匯出 {exported}/{total} 個同步。略過：{skipped} 個。",
+    "mySyncsExportEmpty": "此使用者尚未提交同步。",
+    "mySyncsExportFailed": "匯出我的同步失敗"
   },
   "misc": {
     "and": "及",
@@ -1539,6 +1543,11 @@ window.LANG_ZH_TW = {
         "button": "匯入",
         "processing": "匯入中...",
         "confirm": "所有現有資料庫資料將被覆蓋。是否繼續？"
+      },
+      "exportMySyncs": {
+        "label": "匯出我的同步",
+        "button": "匯出我的同步",
+        "processing": "正在匯出..."
       }
     },
     "resetSettings": {
@@ -2092,6 +2101,7 @@ window.LANG_ZH_TW = {
       "gradient": "漸層",
       "minimal": "極簡",
       "glass": "玻璃",
+      "word": "單詞學習"
     },
     "advancedSettings": "詳細設定",
     "sections": {
@@ -2132,7 +2142,43 @@ window.LANG_ZH_TW = {
       "aspectRatio": "圖片比例",
       "imageWidth": "圖片寬度",
       "padding": "留白",
-      "showWatermark": "顯示浮水印"
+      "showWatermark": "顯示浮水印",
+      "trackTitleSize": "歌曲標題大小",
+      "trackTitleColor": "歌曲標題顏色",
+      "trackTitleWeight": "歌曲標題字重",
+      "trackArtistSize": "歌手名稱大小",
+      "trackArtistColor": "歌手名稱顏色",
+      "trackArtistWeight": "歌手名稱字重",
+      "lyricsDetail": "匯出方式",
+      "lineLevel": "按行",
+      "wordLevel": "按詞",
+      "origColor": "原文顏色",
+      "origWeight": "原文字重",
+      "pronSize": "整行讀音大小",
+      "pronColor": "整行讀音顏色",
+      "pronWeight": "整行讀音字重",
+      "wordReadingSize": "單詞讀音大小",
+      "transSize": "整行譯文大小",
+      "transColor": "整行譯文顏色",
+      "transWeight": "整行譯文字重",
+      "wordGlossSize": "詞義大小",
+      "fontSource": "字型來源",
+      "fontDefault": "預設",
+      "fontSettings": "應用程式設定",
+      "fontCustom": "自訂",
+      "customFontFamily": "自訂字型",
+      "groupOriginal": "原文歌詞",
+      "groupWordReading": "單詞讀音",
+      "groupWordGloss": "單詞翻譯",
+      "groupLinePron": "整行讀音",
+      "groupLineTrans": "整行翻譯",
+      "wordReadingColor": "單詞讀音顏色",
+      "wordReadingWeight": "單詞讀音字重",
+      "wordGlossColor": "詞義顏色",
+      "wordGlossWeight": "詞義字重",
+      "alignRight": "靠右對齊",
+      "exportScale": "匯出倍率",
+      "ratioAuto": "自動"
     },
     "preview": "預覽",
     "actions": {
@@ -2823,7 +2869,15 @@ window.LANG_ZH_TW = {
     "multiVocalDetectedTitle": "偵測到多人聲",
     "multiVocalDetectedBody": "歌詞中包含括號或分隔符，因此可以拆分為多個人聲部分進行同步。請選擇要以哪種方式處理這首歌。",
     "multiVocalDecisionNormal": "以普通模式繼續",
-    "multiVocalDecisionMulti": "以多人聲模式繼續"
+    "multiVocalDecisionMulti": "以多人聲模式繼續",
+    "revert": "還原已發布的同步",
+    "revertDesc": "捨棄未提交的變更並載入已發布的同步。",
+    "revertConfirm": "捨棄未提交的變更並還原已發布的同步嗎？",
+    "reverting": "正在還原同步...",
+    "reverted": "已還原已發布的同步。",
+    "noPublishedSync": "沒有已發布的同步。",
+    "unsubmittedChanges": "有未提交的變更。",
+    "previewUnavailable": "無法使用預覽。"
   },
   "marketplace": {
     "title": "外掛市集",

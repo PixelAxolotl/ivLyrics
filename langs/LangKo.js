@@ -882,7 +882,11 @@ window.LANG_KO = {
     "lyricsLoadedFromFile": "파일에서 {types} 가사를 성공적으로 불러왔습니다",
     "lyricsLoadedFromLrclib": "LRCLIB에서 가사를 가져왔습니다.",
     "lyricsLoadFailed": "가사 로드 실패: 잘못된 파일 형식",
-    "fileReadFailed": "파일 읽기 실패: 파일이 손상되었을 수 있습니다"
+    "fileReadFailed": "파일 읽기 실패: 파일이 손상되었을 수 있습니다",
+    "mySyncsExportSuccess": "내 싱크를 내보냈습니다.",
+    "mySyncsExportSuccessDesc": "전체 {total}개 중 {exported}개를 내보냈습니다. 건너뛴 항목: {skipped}개.",
+    "mySyncsExportEmpty": "이 사용자가 제출한 싱크가 없습니다.",
+    "mySyncsExportFailed": "내 싱크 내보내기에 실패했습니다."
   },
   "misc": {
     "and": "및",
@@ -1539,6 +1543,11 @@ window.LANG_KO = {
         "button": "불러오기",
         "processing": "불러오는 중...",
         "confirm": "기존 DB 데이터가 모두 덮어씌워집니다. 계속하시겠습니까?"
+      },
+      "exportMySyncs": {
+        "label": "내 싱크 내보내기",
+        "button": "내 싱크 내보내기",
+        "processing": "내보내는 중..."
       }
     },
     "resetSettings": {
@@ -2092,6 +2101,7 @@ window.LANG_KO = {
       "gradient": "그라디언트",
       "minimal": "미니멀",
       "glass": "글래스",
+      "word": "단어 학습"
     },
     "advancedSettings": "세부 설정",
     "sections": {
@@ -2132,7 +2142,43 @@ window.LANG_KO = {
       "aspectRatio": "이미지 비율",
       "imageWidth": "이미지 너비",
       "padding": "여백",
-      "showWatermark": "워터마크 표시"
+      "showWatermark": "워터마크 표시",
+      "trackTitleSize": "곡 제목 크기",
+      "trackTitleColor": "곡 제목 색상",
+      "trackTitleWeight": "곡 제목 굵기",
+      "trackArtistSize": "아티스트 크기",
+      "trackArtistColor": "아티스트 색상",
+      "trackArtistWeight": "아티스트 굵기",
+      "lyricsDetail": "내보내기 방식",
+      "lineLevel": "줄 단위",
+      "wordLevel": "단어 단위",
+      "origColor": "원어 색상",
+      "origWeight": "원어 굵기",
+      "pronSize": "줄 발음 크기",
+      "pronColor": "줄 발음 색상",
+      "pronWeight": "줄 발음 굵기",
+      "wordReadingSize": "단어 발음 크기",
+      "transSize": "줄 번역 크기",
+      "transColor": "줄 번역 색상",
+      "transWeight": "줄 번역 굵기",
+      "wordGlossSize": "단어 뜻 크기",
+      "fontSource": "글꼴 출처",
+      "fontDefault": "기본",
+      "fontSettings": "앱 설정",
+      "fontCustom": "직접 입력",
+      "customFontFamily": "사용자 지정 글꼴",
+      "groupOriginal": "원어 가사",
+      "groupWordReading": "단어 발음",
+      "groupWordGloss": "단어 번역",
+      "groupLinePron": "줄 발음",
+      "groupLineTrans": "줄 번역",
+      "wordReadingColor": "단어 발음 색상",
+      "wordReadingWeight": "단어 발음 굵기",
+      "wordGlossColor": "단어 뜻 색상",
+      "wordGlossWeight": "단어 뜻 굵기",
+      "alignRight": "오른쪽",
+      "exportScale": "내보내기 배율",
+      "ratioAuto": "자동"
     },
     "preview": "미리보기",
     "actions": {
@@ -2823,7 +2869,15 @@ window.LANG_KO = {
     "multiVocalDetectedTitle": "여러 보컬이 감지되었습니다",
     "multiVocalDetectedBody": "괄호나 구분 기호가 포함된 줄이 있어 여러 보컬 파트로 나누어 싱크할 수 있습니다. 이 곡을 어떤 방식으로 작업할지 선택해 주세요.",
     "multiVocalDecisionNormal": "일반 모드로 진행",
-    "multiVocalDecisionMulti": "여러 보컬 모드로 진행"
+    "multiVocalDecisionMulti": "여러 보컬 모드로 진행",
+    "revert": "게시된 싱크로 되돌리기",
+    "revertDesc": "미제출 변경을 버리고 게시된 싱크를 불러옵니다.",
+    "revertConfirm": "미제출 변경을 버리고 게시된 싱크로 되돌릴까요?",
+    "reverting": "싱크를 되돌리는 중...",
+    "reverted": "게시된 싱크로 되돌렸습니다.",
+    "noPublishedSync": "게시된 싱크가 없습니다.",
+    "unsubmittedChanges": "미제출 변경 사항이 있습니다.",
+    "previewUnavailable": "미리보기를 사용할 수 없습니다."
   },
   "marketplace": {
     "title": "에드온 마켓플레이스",

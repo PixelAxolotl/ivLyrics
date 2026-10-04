@@ -882,7 +882,11 @@ window.LANG_EN = {
     "lyricsLoadedFromFile": "Successfully loaded {types} lyrics from file",
     "lyricsLoadedFromLrclib": "Loaded lyrics from LRCLIB.",
     "lyricsLoadFailed": "Failed to load lyrics: Invalid file format",
-    "fileReadFailed": "Failed to read file: File may be corrupted"
+    "fileReadFailed": "Failed to read file: File may be corrupted",
+    "mySyncsExportSuccess": "My syncs exported",
+    "mySyncsExportSuccessDesc": "Exported {exported} of {total} syncs. Skipped: {skipped}.",
+    "mySyncsExportEmpty": "No synced tracks found for this user.",
+    "mySyncsExportFailed": "My syncs export failed"
   },
   "misc": {
     "and": "and",
@@ -1539,6 +1543,11 @@ window.LANG_EN = {
         "button": "Import",
         "processing": "Importing...",
         "confirm": "All existing DB data will be overwritten. Continue?"
+      },
+      "exportMySyncs": {
+        "label": "Export My Syncs",
+        "button": "Export My Syncs",
+        "processing": "Exporting..."
       }
     },
     "resetSettings": {
@@ -2092,6 +2101,7 @@ window.LANG_EN = {
       "gradient": "Gradient",
       "minimal": "Minimal",
       "glass": "Glass",
+      "word": "Word Study"
     },
     "advancedSettings": "Advanced Settings",
     "sections": {
@@ -2859,7 +2869,15 @@ window.LANG_EN = {
     "multiVocalDetectedTitle": "Multiple vocals detected",
     "multiVocalDetectedBody": "This lyric contains lines with parentheses or separators, so it can be synced as separate vocal parts. Choose how to work on this song.",
     "multiVocalDecisionNormal": "Continue in normal mode",
-    "multiVocalDecisionMulti": "Continue in multiple vocal mode"
+    "multiVocalDecisionMulti": "Continue in multiple vocal mode",
+    "revert": "Revert to published sync",
+    "revertDesc": "Discard unsubmitted changes and load the published sync.",
+    "revertConfirm": "Discard unsubmitted changes and revert to the published sync?",
+    "reverting": "Reverting sync...",
+    "reverted": "Restored the published sync.",
+    "noPublishedSync": "No published sync is available.",
+    "unsubmittedChanges": "Unsubmitted changes",
+    "previewUnavailable": "Preview is unavailable."
   },
   "marketplace": {
     "title": "Addon Marketplace",

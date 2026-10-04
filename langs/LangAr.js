@@ -882,7 +882,11 @@ window.LANG_AR = {
     "lyricsLoadedFromFile": "تم تحميل كلمات {types} من الملف بنجاح",
     "lyricsLoadedFromLrclib": "تم جلب الكلمات من LRCLIB.",
     "lyricsLoadFailed": "فشل تحميل الكلمات: تنسيق ملف غير صالح",
-    "fileReadFailed": "فشل قراءة الملف: قد يكون الملف تالفًا"
+    "fileReadFailed": "فشل قراءة الملف: قد يكون الملف تالفًا",
+    "mySyncsExportSuccess": "تم تصدير المزامنات",
+    "mySyncsExportSuccessDesc": "تم تصدير {exported} من {total} مزامنة. تم تخطي: {skipped}.",
+    "mySyncsExportEmpty": "لم يتم العثور على مزامنات لهذا المستخدم.",
+    "mySyncsExportFailed": "فشل تصدير المزامنات"
   },
   "misc": {
     "and": "و",
@@ -1539,6 +1543,11 @@ window.LANG_AR = {
         "button": "Import",
         "processing": "جارٍ الاستيراد...",
         "confirm": "ستُستبدل جميع بيانات قاعدة البيانات الحالية. هل تريد المتابعة؟"
+      },
+      "exportMySyncs": {
+        "label": "تصدير مزامناتي",
+        "button": "تصدير مزامناتي",
+        "processing": "جارٍ التصدير..."
       }
     },
     "resetSettings": {
@@ -2092,6 +2101,7 @@ window.LANG_AR = {
       "gradient": "تدرج",
       "minimal": "بسيط (Minimal)",
       "glass": "زجاجي",
+      "word": "تعلم الكلمات"
     },
     "advancedSettings": "إعدادات متقدمة",
     "sections": {
@@ -2132,7 +2142,43 @@ window.LANG_AR = {
       "aspectRatio": "نسبة الصورة",
       "imageWidth": "عرض الصورة",
       "padding": "الهوامش",
-      "showWatermark": "عرض العلامة المائية"
+      "showWatermark": "عرض العلامة المائية",
+      "trackTitleSize": "حجم العنوان",
+      "trackTitleColor": "لون العنوان",
+      "trackTitleWeight": "سماكة خط العنوان",
+      "trackArtistSize": "حجم اسم الفنان",
+      "trackArtistColor": "لون اسم الفنان",
+      "trackArtistWeight": "سماكة خط اسم الفنان",
+      "lyricsDetail": "نوع التصدير",
+      "lineLevel": "سطر",
+      "wordLevel": "كلمة",
+      "origColor": "لون النص الأصلي",
+      "origWeight": "سماكة النص الأصلي",
+      "pronSize": "حجم نطق السطر",
+      "pronColor": "لون نطق السطر",
+      "pronWeight": "سماكة خط نطق السطر",
+      "wordReadingSize": "حجم قراءة الكلمات",
+      "transSize": "حجم ترجمة السطر",
+      "transColor": "لون ترجمة السطر",
+      "transWeight": "سماكة خط ترجمة السطر",
+      "wordGlossSize": "حجم ترجمة الكلمات",
+      "fontSource": "مصدر الخط",
+      "fontDefault": "افتراضي",
+      "fontSettings": "إعدادات التطبيق",
+      "fontCustom": "مخصص",
+      "customFontFamily": "خط مخصص",
+      "groupOriginal": "الكلمات الأصلية",
+      "groupWordReading": "نطق الكلمات",
+      "groupWordGloss": "ترجمة الكلمات",
+      "groupLinePron": "نطق السطر",
+      "groupLineTrans": "ترجمة السطر",
+      "wordReadingColor": "لون قراءة الكلمات",
+      "wordReadingWeight": "سماكة خط قراءة الكلمات",
+      "wordGlossColor": "لون ترجمة الكلمات",
+      "wordGlossWeight": "سماكة خط ترجمة الكلمات",
+      "alignRight": "يمين",
+      "exportScale": "مقياس التصدير",
+      "ratioAuto": "تلقائي"
     },
     "preview": "معاينة",
     "actions": {
@@ -2823,7 +2869,15 @@ window.LANG_AR = {
     "multiVocalDetectedTitle": "تم اكتشاف أصوات متعددة",
     "multiVocalDetectedBody": "تحتوي هذه الكلمات على أسطر بها أقواس أو فواصل، لذلك يمكن مزامنتها كأجزاء غنائية منفصلة. اختر طريقة العمل على هذه الأغنية.",
     "multiVocalDecisionNormal": "المتابعة في الوضع العادي",
-    "multiVocalDecisionMulti": "المتابعة في وضع الأصوات المتعددة"
+    "multiVocalDecisionMulti": "المتابعة في وضع الأصوات المتعددة",
+    "revert": "استعادة المزامنة المنشورة",
+    "revertDesc": "تجاهل التغييرات غير المرسلة وتحميل المزامنة المنشورة.",
+    "revertConfirm": "هل تريد تجاهل التغييرات غير المرسلة واستعادة المزامنة المنشورة؟",
+    "reverting": "جارٍ استعادة المزامنة...",
+    "reverted": "تمت استعادة المزامنة المنشورة.",
+    "noPublishedSync": "لا توجد مزامنة منشورة.",
+    "unsubmittedChanges": "تغييرات غير مرسلة",
+    "previewUnavailable": "المعاينة غير متاحة."
   },
   "marketplace": {
     "title": "متجر الإضافات",

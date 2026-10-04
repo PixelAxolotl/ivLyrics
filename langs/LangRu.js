@@ -882,7 +882,11 @@ window.LANG_RU = {
     "lyricsLoadedFromFile": "Успешно загружен текст типа {types} из файла",
     "lyricsLoadedFromLrclib": "Текст загружен из LRCLIB.",
     "lyricsLoadFailed": "Ошибка загрузки: неверный формат файла",
-    "fileReadFailed": "Ошибка чтения файла: возможно, файл поврежден"
+    "fileReadFailed": "Ошибка чтения файла: возможно, файл поврежден",
+    "mySyncsExportSuccess": "Синхронизации экспортированы",
+    "mySyncsExportSuccessDesc": "Экспортировано {exported} из {total} синхронизаций. Пропущено: {skipped}.",
+    "mySyncsExportEmpty": "Синхронизации этого пользователя не найдены.",
+    "mySyncsExportFailed": "Не удалось экспортировать синхронизации"
   },
   "misc": {
     "and": "и",
@@ -1539,6 +1543,11 @@ window.LANG_RU = {
         "button": "Import",
         "processing": "Импорт...",
         "confirm": "Все существующие данные базы будут перезаписаны. Продолжить?"
+      },
+      "exportMySyncs": {
+        "label": "Экспорт моих синхронизаций",
+        "button": "Экспорт моих синхронизаций",
+        "processing": "Экспорт..."
       }
     },
     "resetSettings": {
@@ -2092,6 +2101,7 @@ window.LANG_RU = {
       "gradient": "Градиент",
       "minimal": "Минимализм",
       "glass": "Стекло",
+      "word": "Изучение слов"
     },
     "advancedSettings": "Детали",
     "sections": {
@@ -2132,7 +2142,43 @@ window.LANG_RU = {
       "aspectRatio": "Пропорции",
       "imageWidth": "Ширина",
       "padding": "Отступы",
-      "showWatermark": "Водяной знак"
+      "showWatermark": "Водяной знак",
+      "trackTitleSize": "Размер названия",
+      "trackTitleColor": "Цвет названия",
+      "trackTitleWeight": "Толщина шрифта названия",
+      "trackArtistSize": "Размер имени исполнителя",
+      "trackArtistColor": "Цвет имени исполнителя",
+      "trackArtistWeight": "Толщина шрифта исполнителя",
+      "lyricsDetail": "Режим экспорта",
+      "lineLevel": "Строка",
+      "wordLevel": "Слово",
+      "origColor": "Цвет оригинала",
+      "origWeight": "Толщина шрифта оригинала",
+      "pronSize": "Размер произношения строки",
+      "pronColor": "Цвет произношения строки",
+      "pronWeight": "Толщина шрифта произношения строки",
+      "wordReadingSize": "Размер чтения слов",
+      "transSize": "Размер перевода строки",
+      "transColor": "Цвет перевода строки",
+      "transWeight": "Толщина шрифта перевода строки",
+      "wordGlossSize": "Размер перевода слов",
+      "fontSource": "Источник шрифта",
+      "fontDefault": "По умолчанию",
+      "fontSettings": "Настройки приложения",
+      "fontCustom": "Свой шрифт",
+      "customFontFamily": "Название шрифта",
+      "groupOriginal": "Оригинальный текст",
+      "groupWordReading": "Произношение слов",
+      "groupWordGloss": "Перевод слов",
+      "groupLinePron": "Произношение строки",
+      "groupLineTrans": "Перевод строки",
+      "wordReadingColor": "Цвет чтения слов",
+      "wordReadingWeight": "Толщина шрифта чтения слов",
+      "wordGlossColor": "Цвет перевода слов",
+      "wordGlossWeight": "Толщина шрифта перевода слов",
+      "alignRight": "Справа",
+      "exportScale": "Масштаб экспорта",
+      "ratioAuto": "Авто"
     },
     "preview": "Предпросмотр",
     "actions": {
@@ -2823,7 +2869,15 @@ window.LANG_RU = {
     "multiVocalDetectedTitle": "Обнаружено несколько вокалов",
     "multiVocalDetectedBody": "В тексте есть строки со скобками или разделителями, поэтому их можно синхронизировать как отдельные вокальные партии. Выберите, как работать с этой песней.",
     "multiVocalDecisionNormal": "Продолжить в обычном режиме",
-    "multiVocalDecisionMulti": "Продолжить в режиме нескольких вокалов"
+    "multiVocalDecisionMulti": "Продолжить в режиме нескольких вокалов",
+    "revert": "Восстановить опубликованную синхронизацию",
+    "revertDesc": "Отменить неотправленные изменения и загрузить опубликованную синхронизацию.",
+    "revertConfirm": "Отменить неотправленные изменения и восстановить опубликованную синхронизацию?",
+    "reverting": "Восстановление синхронизации...",
+    "reverted": "Опубликованная синхронизация восстановлена.",
+    "noPublishedSync": "Опубликованная синхронизация отсутствует.",
+    "unsubmittedChanges": "Неотправленные изменения",
+    "previewUnavailable": "Предпросмотр недоступен."
   },
   "marketplace": {
     "title": "Магазин дополнений",

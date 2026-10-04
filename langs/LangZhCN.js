@@ -882,7 +882,11 @@ window.LANG_ZH_CN = {
     "lyricsLoadedFromFile": "成功从文件加载 {types} 歌词",
     "lyricsLoadedFromLrclib": "已从 LRCLIB 加载歌词。",
     "lyricsLoadFailed": "歌词加载失败：文件格式错误",
-    "fileReadFailed": "文件读取失败：文件可能已损坏"
+    "fileReadFailed": "文件读取失败：文件可能已损坏",
+    "mySyncsExportSuccess": "已导出我的同步",
+    "mySyncsExportSuccessDesc": "已导出 {exported}/{total} 个同步。跳过：{skipped} 个。",
+    "mySyncsExportEmpty": "该用户尚未提交同步。",
+    "mySyncsExportFailed": "导出我的同步失败"
   },
   "misc": {
     "and": "和",
@@ -1539,6 +1543,11 @@ window.LANG_ZH_CN = {
         "button": "导入",
         "processing": "导入中...",
         "confirm": "所有现有数据库数据将被覆盖。是否继续？"
+      },
+      "exportMySyncs": {
+        "label": "导出我的同步",
+        "button": "导出我的同步",
+        "processing": "正在导出..."
       }
     },
     "resetSettings": {
@@ -2092,6 +2101,7 @@ window.LANG_ZH_CN = {
       "gradient": "渐变",
       "minimal": "极简",
       "glass": "玻璃",
+      "word": "单词学习"
     },
     "advancedSettings": "详细设置",
     "sections": {
@@ -2132,7 +2142,43 @@ window.LANG_ZH_CN = {
       "aspectRatio": "图片比例",
       "imageWidth": "图片宽度",
       "padding": "边距",
-      "showWatermark": "显示水印"
+      "showWatermark": "显示水印",
+      "trackTitleSize": "歌曲标题大小",
+      "trackTitleColor": "歌曲标题颜色",
+      "trackTitleWeight": "歌曲标题字重",
+      "trackArtistSize": "歌手名称大小",
+      "trackArtistColor": "歌手名称颜色",
+      "trackArtistWeight": "歌手名称字重",
+      "lyricsDetail": "导出方式",
+      "lineLevel": "按行",
+      "wordLevel": "按词",
+      "origColor": "原文颜色",
+      "origWeight": "原文字重",
+      "pronSize": "整行读音大小",
+      "pronColor": "整行读音颜色",
+      "pronWeight": "整行读音字重",
+      "wordReadingSize": "单词读音大小",
+      "transSize": "整行译文大小",
+      "transColor": "整行译文颜色",
+      "transWeight": "整行译文字重",
+      "wordGlossSize": "词义大小",
+      "fontSource": "字体来源",
+      "fontDefault": "默认",
+      "fontSettings": "应用设置",
+      "fontCustom": "自定义",
+      "customFontFamily": "自定义字体",
+      "groupOriginal": "原文歌词",
+      "groupWordReading": "单词读音",
+      "groupWordGloss": "单词翻译",
+      "groupLinePron": "整行读音",
+      "groupLineTrans": "整行翻译",
+      "wordReadingColor": "单词读音颜色",
+      "wordReadingWeight": "单词读音字重",
+      "wordGlossColor": "词义颜色",
+      "wordGlossWeight": "词义字重",
+      "alignRight": "右对齐",
+      "exportScale": "导出倍率",
+      "ratioAuto": "自动"
     },
     "preview": "预览",
     "actions": {
@@ -2823,7 +2869,15 @@ window.LANG_ZH_CN = {
     "multiVocalDetectedTitle": "检测到多人声",
     "multiVocalDetectedBody": "歌词中包含括号或分隔符，因此可以拆分为多个人声部分进行同步。请选择要以哪种方式处理这首歌。",
     "multiVocalDecisionNormal": "以普通模式继续",
-    "multiVocalDecisionMulti": "以多人声模式继续"
+    "multiVocalDecisionMulti": "以多人声模式继续",
+    "revert": "恢复已发布的同步",
+    "revertDesc": "放弃未提交的更改并加载已发布的同步。",
+    "revertConfirm": "放弃未提交的更改并恢复已发布的同步吗？",
+    "reverting": "正在恢复同步...",
+    "reverted": "已恢复已发布的同步。",
+    "noPublishedSync": "没有已发布的同步。",
+    "unsubmittedChanges": "有未提交的更改。",
+    "previewUnavailable": "预览不可用。"
   },
   "marketplace": {
     "title": "插件市场",

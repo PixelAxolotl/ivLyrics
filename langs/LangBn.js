@@ -882,7 +882,11 @@ window.LANG_BN = {
     "lyricsLoadedFromFile": "ফাইল থেকে সফলভাবে {types} লিরিক্স লোড করা হয়েছে",
     "lyricsLoadedFromLrclib": "LRCLIB থেকে লিরিক্স আনা হয়েছে।",
     "lyricsLoadFailed": "লিরিক্স লোড ব্যর্থ: ফাইলের ফরম্যাট ভুল",
-    "fileReadFailed": "ফাইল পড়তে ব্যর্থ: ফাইলটি সম্ভবত ক্ষতিগ্রস্ত"
+    "fileReadFailed": "ফাইল পড়তে ব্যর্থ: ফাইলটি সম্ভবত ক্ষতিগ্রস্ত",
+    "mySyncsExportSuccess": "সিঙ্ক রপ্তানি হয়েছে",
+    "mySyncsExportSuccessDesc": "{total}টির মধ্যে {exported}টি সিঙ্ক রপ্তানি হয়েছে। বাদ গেছে: {skipped}টি।",
+    "mySyncsExportEmpty": "এই ব্যবহারকারীর কোনো সিঙ্ক পাওয়া যায়নি।",
+    "mySyncsExportFailed": "সিঙ্ক রপ্তানি ব্যর্থ হয়েছে"
   },
   "misc": {
     "and": "এবং",
@@ -1539,6 +1543,11 @@ window.LANG_BN = {
         "button": "Import",
         "processing": "আমদানি করা হচ্ছে...",
         "confirm": "বর্তমান ডেটাবেসের সব ডেটা প্রতিস্থাপিত হবে। চালিয়ে যাবেন?"
+      },
+      "exportMySyncs": {
+        "label": "আমার সিঙ্ক রপ্তানি করুন",
+        "button": "আমার সিঙ্ক রপ্তানি করুন",
+        "processing": "রপ্তানি হচ্ছে..."
       }
     },
     "resetSettings": {
@@ -2092,6 +2101,7 @@ window.LANG_BN = {
       "gradient": "গ্রেডিয়েন্ট",
       "minimal": "মিনিমাল",
       "glass": "গ্লাস",
+      "word": "শব্দ শেখা"
     },
     "advancedSettings": "বিস্তারিত সেটিংস",
     "sections": {
@@ -2132,7 +2142,43 @@ window.LANG_BN = {
       "aspectRatio": "ইমেজ অনুপাত",
       "imageWidth": "ইমেজ প্রস্থ",
       "padding": "মার্জিন",
-      "showWatermark": "ওয়াটারমার্ক প্রদর্শন"
+      "showWatermark": "ওয়াটারমার্ক প্রদর্শন",
+      "trackTitleSize": "শিরোনামের আকার",
+      "trackTitleColor": "শিরোনামের রং",
+      "trackTitleWeight": "শিরোনামের পুরুত্ব",
+      "trackArtistSize": "শিল্পীর নামের আকার",
+      "trackArtistColor": "শিল্পীর নামের রং",
+      "trackArtistWeight": "শিল্পীর নামের পুরুত্ব",
+      "lyricsDetail": "রপ্তানির ধরন",
+      "lineLevel": "লাইন",
+      "wordLevel": "শব্দ",
+      "origColor": "মূল লেখার রং",
+      "origWeight": "মূল লেখার পুরুত্ব",
+      "pronSize": "লাইন উচ্চারণের আকার",
+      "pronColor": "লাইন উচ্চারণের রং",
+      "pronWeight": "লাইন উচ্চারণের পুরুত্ব",
+      "wordReadingSize": "শব্দ পাঠের আকার",
+      "transSize": "লাইন অনুবাদের আকার",
+      "transColor": "লাইন অনুবাদের রং",
+      "transWeight": "লাইন অনুবাদের পুরুত্ব",
+      "wordGlossSize": "শব্দ অনুবাদের আকার",
+      "fontSource": "ফন্টের উৎস",
+      "fontDefault": "ডিফল্ট",
+      "fontSettings": "অ্যাপের সেটিংস",
+      "fontCustom": "কাস্টম",
+      "customFontFamily": "কাস্টম ফন্ট",
+      "groupOriginal": "মূল গানের কথা",
+      "groupWordReading": "শব্দ উচ্চারণ",
+      "groupWordGloss": "শব্দ অনুবাদ",
+      "groupLinePron": "লাইন উচ্চারণ",
+      "groupLineTrans": "লাইন অনুবাদ",
+      "wordReadingColor": "শব্দ পাঠের রং",
+      "wordReadingWeight": "শব্দ পাঠের পুরুত্ব",
+      "wordGlossColor": "শব্দ অনুবাদের রং",
+      "wordGlossWeight": "শব্দ অনুবাদের পুরুত্ব",
+      "alignRight": "ডান",
+      "exportScale": "রপ্তানির স্কেল",
+      "ratioAuto": "স্বয়ংক্রিয়"
     },
     "preview": "প্রিভিউ",
     "actions": {
@@ -2823,7 +2869,15 @@ window.LANG_BN = {
     "multiVocalDetectedTitle": "একাধিক ভোকাল শনাক্ত হয়েছে",
     "multiVocalDetectedBody": "এই গানে বন্ধনী বা বিভাজকসহ লাইন আছে, তাই এগুলো আলাদা ভোকাল অংশ হিসেবে সিঙ্ক করা যেতে পারে। এই গানটি কীভাবে কাজ করবেন তা নির্বাচন করুন।",
     "multiVocalDecisionNormal": "সাধারণ মোডে চালিয়ে যান",
-    "multiVocalDecisionMulti": "মাল্টি-ভোকাল মোডে চালিয়ে যান"
+    "multiVocalDecisionMulti": "মাল্টি-ভোকাল মোডে চালিয়ে যান",
+    "revert": "প্রকাশিত সিঙ্ক ফিরিয়ে আনুন",
+    "revertDesc": "না পাঠানো পরিবর্তন বাদ দিয়ে প্রকাশিত সিঙ্ক লোড করুন।",
+    "revertConfirm": "না পাঠানো পরিবর্তন বাদ দিয়ে প্রকাশিত সিঙ্ক ফিরিয়ে আনবেন?",
+    "reverting": "সিঙ্ক ফিরিয়ে আনা হচ্ছে...",
+    "reverted": "প্রকাশিত সিঙ্ক ফিরিয়ে আনা হয়েছে।",
+    "noPublishedSync": "কোনো প্রকাশিত সিঙ্ক নেই।",
+    "unsubmittedChanges": "না পাঠানো পরিবর্তন",
+    "previewUnavailable": "প্রিভিউ উপলব্ধ নয়।"
   },
   "marketplace": {
     "title": "অ্যাডঅন মার্কেটপ্লেস",

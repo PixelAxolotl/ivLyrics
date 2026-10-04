@@ -882,7 +882,11 @@ window.LANG_TH = {
     "lyricsLoadedFromFile": "โหลดเนื้อเพลง {types} จากไฟล์สำเร็จ",
     "lyricsLoadedFromLrclib": "โหลดเนื้อเพลงจาก LRCLIB แล้ว",
     "lyricsLoadFailed": "โหลดเนื้อเพลงล้มเหลว: รูปแบบไฟล์ไม่ถูกต้อง",
-    "fileReadFailed": "อ่านไฟล์ล้มเหลว: ไฟล์อาจเสียหาย"
+    "fileReadFailed": "อ่านไฟล์ล้มเหลว: ไฟล์อาจเสียหาย",
+    "mySyncsExportSuccess": "ส่งออกการซิงค์แล้ว",
+    "mySyncsExportSuccessDesc": "ส่งออก {exported} จาก {total} รายการ ข้าม: {skipped} รายการ",
+    "mySyncsExportEmpty": "ไม่พบการซิงค์ของผู้ใช้นี้",
+    "mySyncsExportFailed": "ส่งออกการซิงค์ไม่สำเร็จ"
   },
   "misc": {
     "and": "และ",
@@ -1539,6 +1543,11 @@ window.LANG_TH = {
         "button": "Import",
         "processing": "กำลังนำเข้า...",
         "confirm": "ข้อมูลทั้งหมดในฐานข้อมูลปัจจุบันจะถูกเขียนทับ ดำเนินการต่อหรือไม่?"
+      },
+      "exportMySyncs": {
+        "label": "ส่งออกการซิงค์ของฉัน",
+        "button": "ส่งออกการซิงค์ของฉัน",
+        "processing": "กำลังส่งออก..."
       }
     },
     "resetSettings": {
@@ -2092,6 +2101,7 @@ window.LANG_TH = {
       "gradient": "ไล่เฉดสี",
       "minimal": "มินิมอล",
       "glass": "Glass",
+      "word": "เรียนรู้คำศัพท์"
     },
     "advancedSettings": "การตั้งค่าขั้นสูง",
     "sections": {
@@ -2132,7 +2142,43 @@ window.LANG_TH = {
       "aspectRatio": "สัดส่วนภาพ",
       "imageWidth": "ความกว้างภาพ",
       "padding": "ระยะขอบ",
-      "showWatermark": "แสดงลายน้ำ"
+      "showWatermark": "แสดงลายน้ำ",
+      "trackTitleSize": "ขนาดชื่อเพลง",
+      "trackTitleColor": "สีชื่อเพลง",
+      "trackTitleWeight": "ความหนาชื่อเพลง",
+      "trackArtistSize": "ขนาดชื่อศิลปิน",
+      "trackArtistColor": "สีชื่อศิลปิน",
+      "trackArtistWeight": "ความหนาชื่อศิลปิน",
+      "lyricsDetail": "รูปแบบการส่งออก",
+      "lineLevel": "รายบรรทัด",
+      "wordLevel": "รายคำ",
+      "origColor": "สีข้อความต้นฉบับ",
+      "origWeight": "ความหนาข้อความต้นฉบับ",
+      "pronSize": "ขนาดคำอ่านรายบรรทัด",
+      "pronColor": "สีคำอ่านรายบรรทัด",
+      "pronWeight": "ความหนาคำอ่านรายบรรทัด",
+      "wordReadingSize": "ขนาดคำอ่านรายคำ",
+      "transSize": "ขนาดคำแปลรายบรรทัด",
+      "transColor": "สีคำแปลรายบรรทัด",
+      "transWeight": "ความหนาคำแปลรายบรรทัด",
+      "wordGlossSize": "ขนาดคำแปลรายคำ",
+      "fontSource": "แหล่งแบบอักษร",
+      "fontDefault": "ค่าเริ่มต้น",
+      "fontSettings": "การตั้งค่าแอป",
+      "fontCustom": "กำหนดเอง",
+      "customFontFamily": "แบบอักษรที่กำหนดเอง",
+      "groupOriginal": "เนื้อเพลงต้นฉบับ",
+      "groupWordReading": "คำอ่านรายคำ",
+      "groupWordGloss": "คำแปลรายคำ",
+      "groupLinePron": "คำอ่านรายบรรทัด",
+      "groupLineTrans": "คำแปลรายบรรทัด",
+      "wordReadingColor": "สีคำอ่านรายคำ",
+      "wordReadingWeight": "ความหนาคำอ่านรายคำ",
+      "wordGlossColor": "สีคำแปลรายคำ",
+      "wordGlossWeight": "ความหนาคำแปลรายคำ",
+      "alignRight": "ขวา",
+      "exportScale": "สเกลการส่งออก",
+      "ratioAuto": "อัตโนมัติ"
     },
     "preview": "ตัวอย่าง",
     "actions": {
@@ -2823,7 +2869,15 @@ window.LANG_TH = {
     "multiVocalDetectedTitle": "ตรวจพบหลายเสียงร้อง",
     "multiVocalDetectedBody": "เนื้อเพลงมีบรรทัดที่มีวงเล็บหรือตัวคั่น จึงสามารถซิงค์เป็นพาร์ตเสียงร้องแยกกันได้ เลือกวิธีทำงานกับเพลงนี้",
     "multiVocalDecisionNormal": "ดำเนินการต่อในโหมดปกติ",
-    "multiVocalDecisionMulti": "ดำเนินการต่อในโหมดหลายเสียงร้อง"
+    "multiVocalDecisionMulti": "ดำเนินการต่อในโหมดหลายเสียงร้อง",
+    "revert": "คืนค่าการซิงค์ที่เผยแพร่",
+    "revertDesc": "ทิ้งการเปลี่ยนแปลงที่ยังไม่ได้ส่งและโหลดการซิงค์ที่เผยแพร่",
+    "revertConfirm": "ทิ้งการเปลี่ยนแปลงที่ยังไม่ได้ส่งและคืนค่าการซิงค์ที่เผยแพร่หรือไม่?",
+    "reverting": "กำลังคืนค่าการซิงค์...",
+    "reverted": "คืนค่าการซิงค์ที่เผยแพร่แล้ว",
+    "noPublishedSync": "ไม่มีการซิงค์ที่เผยแพร่",
+    "unsubmittedChanges": "มีการเปลี่ยนแปลงที่ยังไม่ได้ส่ง",
+    "previewUnavailable": "ไม่สามารถแสดงตัวอย่างได้"
   },
   "marketplace": {
     "title": "ร้านค้าส่วนเสริม",

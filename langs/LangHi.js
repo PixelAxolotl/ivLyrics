@@ -882,7 +882,11 @@ window.LANG_HI = {
     "lyricsLoadedFromFile": "{types} लिरिक्स फ़ाइल से सफलतापूर्वक लोड किए गए",
     "lyricsLoadedFromLrclib": "LRCLIB से गीत लोड किए गए।",
     "lyricsLoadFailed": "लिरिक्स लोड विफल: अमान्य फ़ाइल प्रारूप",
-    "fileReadFailed": "फ़ाइल पढ़ना विफल: फ़ाइल क्षतिग्रस्त हो सकती है"
+    "fileReadFailed": "फ़ाइल पढ़ना विफल: फ़ाइल क्षतिग्रस्त हो सकती है",
+    "mySyncsExportSuccess": "सिंक निर्यात किए गए",
+    "mySyncsExportSuccessDesc": "{total} में से {exported} सिंक निर्यात किए गए। छोड़े गए: {skipped}।",
+    "mySyncsExportEmpty": "इस उपयोगकर्ता का कोई सिंक नहीं मिला।",
+    "mySyncsExportFailed": "सिंक निर्यात विफल रहा"
   },
   "misc": {
     "and": "और",
@@ -1539,6 +1543,11 @@ window.LANG_HI = {
         "button": "Import",
         "processing": "आयात हो रहा है...",
         "confirm": "डेटाबेस का मौजूदा सारा डेटा बदल दिया जाएगा। जारी रखें?"
+      },
+      "exportMySyncs": {
+        "label": "मेरे सिंक निर्यात करें",
+        "button": "मेरे सिंक निर्यात करें",
+        "processing": "निर्यात हो रहा है..."
       }
     },
     "resetSettings": {
@@ -2092,6 +2101,7 @@ window.LANG_HI = {
       "gradient": "ग्रेडिएंट",
       "minimal": "मिनिमल",
       "glass": "ग्लास",
+      "word": "शब्द अध्ययन"
     },
     "advancedSettings": "विस्तृत सेटिंग्स",
     "sections": {
@@ -2132,7 +2142,43 @@ window.LANG_HI = {
       "aspectRatio": "छवि अनुपात",
       "imageWidth": "छवि चौड़ाई",
       "padding": "पैडिंग",
-      "showWatermark": "वॉटरमार्क दिखाएं"
+      "showWatermark": "वॉटरमार्क दिखाएं",
+      "trackTitleSize": "शीर्षक का आकार",
+      "trackTitleColor": "शीर्षक का रंग",
+      "trackTitleWeight": "शीर्षक की मोटाई",
+      "trackArtistSize": "कलाकार के नाम का आकार",
+      "trackArtistColor": "कलाकार के नाम का रंग",
+      "trackArtistWeight": "कलाकार के नाम की मोटाई",
+      "lyricsDetail": "निर्यात का प्रकार",
+      "lineLevel": "पंक्ति",
+      "wordLevel": "शब्द",
+      "origColor": "मूल पाठ का रंग",
+      "origWeight": "मूल पाठ की मोटाई",
+      "pronSize": "पंक्ति उच्चारण का आकार",
+      "pronColor": "पंक्ति उच्चारण का रंग",
+      "pronWeight": "पंक्ति उच्चारण की मोटाई",
+      "wordReadingSize": "शब्द पठन का आकार",
+      "transSize": "पंक्ति अनुवाद का आकार",
+      "transColor": "पंक्ति अनुवाद का रंग",
+      "transWeight": "पंक्ति अनुवाद की मोटाई",
+      "wordGlossSize": "शब्द अनुवाद का आकार",
+      "fontSource": "फ़ॉन्ट का स्रोत",
+      "fontDefault": "डिफ़ॉल्ट",
+      "fontSettings": "ऐप की सेटिंग",
+      "fontCustom": "कस्टम",
+      "customFontFamily": "कस्टम फ़ॉन्ट",
+      "groupOriginal": "मूल गीत",
+      "groupWordReading": "शब्द उच्चारण",
+      "groupWordGloss": "शब्द अनुवाद",
+      "groupLinePron": "पंक्ति उच्चारण",
+      "groupLineTrans": "पंक्ति अनुवाद",
+      "wordReadingColor": "शब्द पठन का रंग",
+      "wordReadingWeight": "शब्द पठन की मोटाई",
+      "wordGlossColor": "शब्द अनुवाद का रंग",
+      "wordGlossWeight": "शब्द अनुवाद की मोटाई",
+      "alignRight": "दायाँ",
+      "exportScale": "निर्यात का पैमाना",
+      "ratioAuto": "स्वचालित"
     },
     "preview": "पूर्वावलोकन",
     "actions": {
@@ -2823,7 +2869,15 @@ window.LANG_HI = {
     "multiVocalDetectedTitle": "कई वोकल मिले",
     "multiVocalDetectedBody": "इन गीतों में कोष्ठक या विभाजक वाली पंक्तियां हैं, इसलिए इन्हें अलग-अलग वोकल भागों के रूप में सिंक किया जा सकता है। इस गीत पर काम करने का तरीका चुनें।",
     "multiVocalDecisionNormal": "सामान्य मोड में जारी रखें",
-    "multiVocalDecisionMulti": "मल्टी-वोकल मोड में जारी रखें"
+    "multiVocalDecisionMulti": "मल्टी-वोकल मोड में जारी रखें",
+    "revert": "प्रकाशित सिंक बहाल करें",
+    "revertDesc": "बिना भेजे बदलाव हटाएँ और प्रकाशित सिंक लोड करें।",
+    "revertConfirm": "बिना भेजे बदलाव हटाकर प्रकाशित सिंक बहाल करें?",
+    "reverting": "सिंक बहाल हो रहा है...",
+    "reverted": "प्रकाशित सिंक बहाल किया गया।",
+    "noPublishedSync": "कोई प्रकाशित सिंक उपलब्ध नहीं है।",
+    "unsubmittedChanges": "बिना भेजे बदलाव",
+    "previewUnavailable": "पूर्वावलोकन उपलब्ध नहीं है।"
   },
   "marketplace": {
     "title": "ऐडऑन मार्केटप्लेस",

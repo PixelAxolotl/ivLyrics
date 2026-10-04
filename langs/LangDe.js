@@ -882,7 +882,11 @@ window.LANG_DE = {
     "lyricsLoadedFromFile": "{types}-Songtext erfolgreich aus Datei geladen",
     "lyricsLoadedFromLrclib": "Lyrics wurden aus LRCLIB geladen.",
     "lyricsLoadFailed": "Laden fehlgeschlagen: Ungültiges Dateiformat",
-    "fileReadFailed": "Lesen fehlgeschlagen: Datei möglicherweise beschädigt"
+    "fileReadFailed": "Lesen fehlgeschlagen: Datei möglicherweise beschädigt",
+    "mySyncsExportSuccess": "Meine Syncs exportiert",
+    "mySyncsExportSuccessDesc": "{exported} von {total} Syncs exportiert. Übersprungen: {skipped}.",
+    "mySyncsExportEmpty": "Für diesen Nutzer wurden keine Syncs gefunden.",
+    "mySyncsExportFailed": "Export meiner Syncs fehlgeschlagen"
   },
   "misc": {
     "and": "und",
@@ -1539,6 +1543,11 @@ window.LANG_DE = {
         "button": "Import",
         "processing": "Wird importiert...",
         "confirm": "Alle vorhandenen Datenbankdaten werden überschrieben. Fortfahren?"
+      },
+      "exportMySyncs": {
+        "label": "Meine Syncs exportieren",
+        "button": "Meine Syncs exportieren",
+        "processing": "Export läuft..."
       }
     },
     "resetSettings": {
@@ -2092,6 +2101,7 @@ window.LANG_DE = {
       "gradient": "Verlauf",
       "minimal": "Minimal",
       "glass": "Glas",
+      "word": "Wörter lernen"
     },
     "advancedSettings": "Erweiterte Einstellungen",
     "sections": {
@@ -2132,7 +2142,43 @@ window.LANG_DE = {
       "aspectRatio": "Bildverhältnis",
       "imageWidth": "Bildbreite",
       "padding": "Abstand",
-      "showWatermark": "Wasserzeichen"
+      "showWatermark": "Wasserzeichen",
+      "trackTitleSize": "Titelgröße",
+      "trackTitleColor": "Titelfarbe",
+      "trackTitleWeight": "Schriftstärke des Titels",
+      "trackArtistSize": "Größe des Künstlernamens",
+      "trackArtistColor": "Farbe des Künstlernamens",
+      "trackArtistWeight": "Schriftstärke des Künstlernamens",
+      "lyricsDetail": "Exportmodus",
+      "lineLevel": "Zeile",
+      "wordLevel": "Wort",
+      "origColor": "Farbe des Originals",
+      "origWeight": "Schriftstärke des Originals",
+      "pronSize": "Größe der Zeilenaussprache",
+      "pronColor": "Farbe der Zeilenaussprache",
+      "pronWeight": "Schriftstärke der Zeilenaussprache",
+      "wordReadingSize": "Größe der Wortlesung",
+      "transSize": "Größe der Zeilenübersetzung",
+      "transColor": "Farbe der Zeilenübersetzung",
+      "transWeight": "Schriftstärke der Zeilenübersetzung",
+      "wordGlossSize": "Größe der Wortübersetzung",
+      "fontSource": "Schriftquelle",
+      "fontDefault": "Standard",
+      "fontSettings": "App-Einstellungen",
+      "fontCustom": "Benutzerdefiniert",
+      "customFontFamily": "Eigene Schriftart",
+      "groupOriginal": "Originaltext",
+      "groupWordReading": "Wortaussprache",
+      "groupWordGloss": "Wortübersetzung",
+      "groupLinePron": "Zeilenaussprache",
+      "groupLineTrans": "Zeilenübersetzung",
+      "wordReadingColor": "Farbe der Wortlesung",
+      "wordReadingWeight": "Schriftstärke der Wortlesung",
+      "wordGlossColor": "Farbe der Wortübersetzung",
+      "wordGlossWeight": "Schriftstärke der Wortübersetzung",
+      "alignRight": "Rechts",
+      "exportScale": "Exportskalierung",
+      "ratioAuto": "Automatisch"
     },
     "preview": "Vorschau",
     "actions": {
@@ -2823,7 +2869,15 @@ window.LANG_DE = {
     "multiVocalDetectedTitle": "Mehrere Stimmen erkannt",
     "multiVocalDetectedBody": "Diese Lyrics enthalten Zeilen mit Klammern oder Trennzeichen und können daher als separate Gesangsparts synchronisiert werden. Wähle, wie du an diesem Song arbeiten möchtest.",
     "multiVocalDecisionNormal": "Im normalen Modus fortfahren",
-    "multiVocalDecisionMulti": "Im Mehrstimmenmodus fortfahren"
+    "multiVocalDecisionMulti": "Im Mehrstimmenmodus fortfahren",
+    "revert": "Veröffentlichten Sync wiederherstellen",
+    "revertDesc": "Nicht eingereichte Änderungen verwerfen und den veröffentlichten Sync laden.",
+    "revertConfirm": "Nicht eingereichte Änderungen verwerfen und den veröffentlichten Sync wiederherstellen?",
+    "reverting": "Sync wird wiederhergestellt...",
+    "reverted": "Veröffentlichter Sync wiederhergestellt.",
+    "noPublishedSync": "Kein veröffentlichter Sync verfügbar.",
+    "unsubmittedChanges": "Nicht eingereichte Änderungen",
+    "previewUnavailable": "Vorschau nicht verfügbar."
   },
   "marketplace": {
     "title": "Addon-Marktplatz",

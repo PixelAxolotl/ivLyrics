@@ -882,7 +882,11 @@ window.LANG_JA = {
     "lyricsLoadedFromFile": "ファイルから {types} 歌詞を正常に読み込みました",
     "lyricsLoadedFromLrclib": "LRCLIBから歌詞を読み込みました。",
     "lyricsLoadFailed": "歌詞読み込み失敗: 無効なファイル形式",
-    "fileReadFailed": "ファイル読み取り失敗: ファイルが破損している可能性があります"
+    "fileReadFailed": "ファイル読み取り失敗: ファイルが破損している可能性があります",
+    "mySyncsExportSuccess": "同期をエクスポートしました。",
+    "mySyncsExportSuccessDesc": "{total}件中{exported}件をエクスポートしました。スキップ: {skipped}件。",
+    "mySyncsExportEmpty": "このユーザーが送信した同期がありません。",
+    "mySyncsExportFailed": "同期のエクスポートに失敗しました。"
   },
   "misc": {
     "and": "および",
@@ -1539,6 +1543,11 @@ window.LANG_JA = {
         "button": "インポート",
         "processing": "インポート中...",
         "confirm": "既存のDBデータがすべて上書きされます。続行しますか？"
+      },
+      "exportMySyncs": {
+        "label": "自分の同期をエクスポート",
+        "button": "自分の同期をエクスポート",
+        "processing": "エクスポート中..."
       }
     },
     "resetSettings": {
@@ -2092,6 +2101,7 @@ window.LANG_JA = {
       "gradient": "グラデーション",
       "minimal": "ミニマル",
       "glass": "グラス",
+      "word": "単語学習"
     },
     "advancedSettings": "詳細設定",
     "sections": {
@@ -2132,7 +2142,43 @@ window.LANG_JA = {
       "aspectRatio": "画像比率",
       "imageWidth": "画像幅",
       "padding": "余白",
-      "showWatermark": "透かしを表示"
+      "showWatermark": "透かしを表示",
+      "trackTitleSize": "曲名のサイズ",
+      "trackTitleColor": "曲名の色",
+      "trackTitleWeight": "曲名の太さ",
+      "trackArtistSize": "アーティスト名のサイズ",
+      "trackArtistColor": "アーティスト名の色",
+      "trackArtistWeight": "アーティスト名の太さ",
+      "lyricsDetail": "書き出し形式",
+      "lineLevel": "行単位",
+      "wordLevel": "単語単位",
+      "origColor": "原文の色",
+      "origWeight": "原文の太さ",
+      "pronSize": "行の発音のサイズ",
+      "pronColor": "行の発音の色",
+      "pronWeight": "行の発音の太さ",
+      "wordReadingSize": "単語の読みのサイズ",
+      "transSize": "行の翻訳のサイズ",
+      "transColor": "行の翻訳の色",
+      "transWeight": "行の翻訳の太さ",
+      "wordGlossSize": "単語の意味のサイズ",
+      "fontSource": "フォントの選択",
+      "fontDefault": "デフォルト",
+      "fontSettings": "アプリの設定",
+      "fontCustom": "カスタム",
+      "customFontFamily": "カスタムフォント",
+      "groupOriginal": "原文の歌詞",
+      "groupWordReading": "単語の発音",
+      "groupWordGloss": "単語の翻訳",
+      "groupLinePron": "行の発音",
+      "groupLineTrans": "行の翻訳",
+      "wordReadingColor": "単語の読みの色",
+      "wordReadingWeight": "単語の読みの太さ",
+      "wordGlossColor": "単語の意味の色",
+      "wordGlossWeight": "単語の意味の太さ",
+      "alignRight": "右揃え",
+      "exportScale": "書き出し倍率",
+      "ratioAuto": "自動"
     },
     "preview": "プレビュー",
     "actions": {
@@ -2823,7 +2869,15 @@ window.LANG_JA = {
     "multiVocalDetectedTitle": "複数のボーカルを検出しました",
     "multiVocalDetectedBody": "括弧や区切り記号を含む行があるため、複数のボーカルパートに分けてシンクできます。この曲をどの方法で作業するか選択してください。",
     "multiVocalDecisionNormal": "通常モードで続行",
-    "multiVocalDecisionMulti": "複数ボーカルモードで続行"
+    "multiVocalDecisionMulti": "複数ボーカルモードで続行",
+    "revert": "公開済みの同期に戻す",
+    "revertDesc": "未送信の変更を破棄し、公開済みの同期を読み込みます。",
+    "revertConfirm": "未送信の変更を破棄し、公開済みの同期に戻しますか？",
+    "reverting": "同期を復元中...",
+    "reverted": "公開済みの同期に戻しました。",
+    "noPublishedSync": "公開済みの同期がありません。",
+    "unsubmittedChanges": "未送信の変更があります。",
+    "previewUnavailable": "プレビューを利用できません。"
   },
   "marketplace": {
     "title": "アドオンマーケットプレイス",

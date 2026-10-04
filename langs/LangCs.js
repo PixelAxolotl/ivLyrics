@@ -882,7 +882,11 @@ window.LANG_CS = {
     "lyricsLoadedFromFile": "Úspěšně načteno {types} texty ze souboru",
     "lyricsLoadedFromLrclib": "Načtené texty z LRCLIB.",
     "lyricsLoadFailed": "Nepodařilo se načíst text: Neplatný formát souboru",
-    "fileReadFailed": "Soubor se nepodařilo přečíst: Soubor může být poškozen"
+    "fileReadFailed": "Soubor se nepodařilo přečíst: Soubor může být poškozen",
+    "mySyncsExportSuccess": "Synchronizace exportovány",
+    "mySyncsExportSuccessDesc": "Exportováno {exported} z {total} synchronizací. Přeskočeno: {skipped}.",
+    "mySyncsExportEmpty": "Synchronizace tohoto uživatele nebyly nalezeny.",
+    "mySyncsExportFailed": "Export synchronizací selhal"
   },
   "misc": {
     "and": "a",
@@ -1539,6 +1543,11 @@ window.LANG_CS = {
         "button": "Importovat",
         "processing": "Import...",
         "confirm": "Všechna existující data DB budou přepsána. Pokračovat?"
+      },
+      "exportMySyncs": {
+        "label": "Exportovat mé synchronizace",
+        "button": "Exportovat mé synchronizace",
+        "processing": "Exportování..."
       }
     },
     "resetSettings": {
@@ -2091,7 +2100,8 @@ window.LANG_CS = {
       "cover": "Rozostření obalu",
       "gradient": "Gradient",
       "minimal": "Minimální",
-      "glass": "Sklo"
+      "glass": "Sklo",
+      "word": "Učení slov"
     },
     "advancedSettings": "Pokročilá nastavení",
     "sections": {
@@ -2132,7 +2142,43 @@ window.LANG_CS = {
       "aspectRatio": "Poměr obrazu",
       "imageWidth": "Šířka obrázku",
       "padding": "Okraje",
-      "showWatermark": "Zobrazit vodoznak"
+      "showWatermark": "Zobrazit vodoznak",
+      "trackTitleSize": "Velikost názvu",
+      "trackTitleColor": "Barva názvu",
+      "trackTitleWeight": "Tloušťka názvu",
+      "trackArtistSize": "Velikost jména interpreta",
+      "trackArtistColor": "Barva jména interpreta",
+      "trackArtistWeight": "Tloušťka jména interpreta",
+      "lyricsDetail": "Režim exportu",
+      "lineLevel": "Řádek",
+      "wordLevel": "Slovo",
+      "origColor": "Barva originálu",
+      "origWeight": "Tloušťka originálu",
+      "pronSize": "Velikost výslovnosti řádku",
+      "pronColor": "Barva výslovnosti řádku",
+      "pronWeight": "Tloušťka výslovnosti řádku",
+      "wordReadingSize": "Velikost čtení slov",
+      "transSize": "Velikost překladu řádku",
+      "transColor": "Barva překladu řádku",
+      "transWeight": "Tloušťka překladu řádku",
+      "wordGlossSize": "Velikost překladu slov",
+      "fontSource": "Zdroj písma",
+      "fontDefault": "Výchozí",
+      "fontSettings": "Nastavení aplikace",
+      "fontCustom": "Vlastní",
+      "customFontFamily": "Vlastní písmo",
+      "groupOriginal": "Původní text",
+      "groupWordReading": "Výslovnost slov",
+      "groupWordGloss": "Překlad slov",
+      "groupLinePron": "Výslovnost řádku",
+      "groupLineTrans": "Překlad řádku",
+      "wordReadingColor": "Barva čtení slov",
+      "wordReadingWeight": "Tloušťka čtení slov",
+      "wordGlossColor": "Barva překladu slov",
+      "wordGlossWeight": "Tloušťka překladu slov",
+      "alignRight": "Vpravo",
+      "exportScale": "Měřítko exportu",
+      "ratioAuto": "Automaticky"
     },
     "preview": "Náhled",
     "actions": {
@@ -2823,7 +2869,15 @@ window.LANG_CS = {
     "multiVocalDetectedTitle": "Bylo zjištěno více vokálů",
     "multiVocalDetectedBody": "Tento text obsahuje řádky se závorkami nebo oddělovači, takže je lze synchronizovat jako samostatné vokální party. Vyberte, jak na této skladbě pracovat.",
     "multiVocalDecisionNormal": "Pokračujte v normálním režimu",
-    "multiVocalDecisionMulti": "Pokračujte v režimu více vokálů"
+    "multiVocalDecisionMulti": "Pokračujte v režimu více vokálů",
+    "revert": "Obnovit zveřejněnou synchronizaci",
+    "revertDesc": "Zahodit neodeslané změny a načíst zveřejněnou synchronizaci.",
+    "revertConfirm": "Zahodit neodeslané změny a obnovit zveřejněnou synchronizaci?",
+    "reverting": "Obnovování synchronizace...",
+    "reverted": "Zveřejněná synchronizace obnovena.",
+    "noPublishedSync": "Žádná zveřejněná synchronizace není dostupná.",
+    "unsubmittedChanges": "Neodeslané změny",
+    "previewUnavailable": "Náhled není dostupný."
   },
   "marketplace": {
     "title": "Tržiště doplňků",

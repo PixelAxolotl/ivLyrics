@@ -882,7 +882,11 @@ window.LANG_FR = {
     "lyricsLoadedFromFile": "Paroles {types} chargées depuis le fichier",
     "lyricsLoadedFromLrclib": "Paroles chargées depuis LRCLIB.",
     "lyricsLoadFailed": "Échec chargement : Format invalide",
-    "fileReadFailed": "Échec lecture : Fichier peut-être corrompu"
+    "fileReadFailed": "Échec lecture : Fichier peut-être corrompu",
+    "mySyncsExportSuccess": "Synchronisations exportées",
+    "mySyncsExportSuccessDesc": "{exported} synchronisations exportées sur {total}. Ignorées : {skipped}.",
+    "mySyncsExportEmpty": "Aucune synchronisation trouvée pour cet utilisateur.",
+    "mySyncsExportFailed": "Échec de l’exportation des synchronisations"
   },
   "misc": {
     "and": "et",
@@ -1539,6 +1543,11 @@ window.LANG_FR = {
         "button": "Import",
         "processing": "Importation…",
         "confirm": "Toutes les données existantes seront remplacées. Continuer ?"
+      },
+      "exportMySyncs": {
+        "label": "Exporter mes synchronisations",
+        "button": "Exporter mes synchronisations",
+        "processing": "Exportation en cours..."
       }
     },
     "resetSettings": {
@@ -2092,6 +2101,7 @@ window.LANG_FR = {
       "gradient": "Dégradé",
       "minimal": "Minimal",
       "glass": "Verre",
+      "word": "Étude des mots"
     },
     "advancedSettings": "Paramètres avancés",
     "sections": {
@@ -2132,7 +2142,43 @@ window.LANG_FR = {
       "aspectRatio": "Format image",
       "imageWidth": "Largeur image",
       "padding": "Marge",
-      "showWatermark": "Afficher filigrane"
+      "showWatermark": "Afficher filigrane",
+      "trackTitleSize": "Taille du titre",
+      "trackTitleColor": "Couleur du titre",
+      "trackTitleWeight": "Graisse du titre",
+      "trackArtistSize": "Taille du nom de l’artiste",
+      "trackArtistColor": "Couleur du nom de l’artiste",
+      "trackArtistWeight": "Graisse du nom de l’artiste",
+      "lyricsDetail": "Mode d’exportation",
+      "lineLevel": "Ligne",
+      "wordLevel": "Mot",
+      "origColor": "Couleur de l’original",
+      "origWeight": "Graisse de l’original",
+      "pronSize": "Taille de la prononciation de la ligne",
+      "pronColor": "Couleur de la prononciation de la ligne",
+      "pronWeight": "Graisse de la prononciation de la ligne",
+      "wordReadingSize": "Taille de la lecture des mots",
+      "transSize": "Taille de la traduction de la ligne",
+      "transColor": "Couleur de la traduction de la ligne",
+      "transWeight": "Graisse de la traduction de la ligne",
+      "wordGlossSize": "Taille de la traduction des mots",
+      "fontSource": "Source de la police",
+      "fontDefault": "Par défaut",
+      "fontSettings": "Paramètres de l’application",
+      "fontCustom": "Personnalisée",
+      "customFontFamily": "Police personnalisée",
+      "groupOriginal": "Paroles originales",
+      "groupWordReading": "Prononciation des mots",
+      "groupWordGloss": "Traduction des mots",
+      "groupLinePron": "Prononciation de la ligne",
+      "groupLineTrans": "Traduction de la ligne",
+      "wordReadingColor": "Couleur de la lecture des mots",
+      "wordReadingWeight": "Graisse de la lecture des mots",
+      "wordGlossColor": "Couleur de la traduction des mots",
+      "wordGlossWeight": "Graisse de la traduction des mots",
+      "alignRight": "Droite",
+      "exportScale": "Échelle d’exportation",
+      "ratioAuto": "Automatique"
     },
     "preview": "Aperçu",
     "actions": {
@@ -2823,7 +2869,15 @@ window.LANG_FR = {
     "multiVocalDetectedTitle": "Plusieurs voix détectées",
     "multiVocalDetectedBody": "Ces paroles contiennent des lignes avec des parenthèses ou des séparateurs, elles peuvent donc être synchronisées en parties vocales séparées. Choisissez comment travailler sur ce morceau.",
     "multiVocalDecisionNormal": "Continuer en mode normal",
-    "multiVocalDecisionMulti": "Continuer en mode voix multiples"
+    "multiVocalDecisionMulti": "Continuer en mode voix multiples",
+    "revert": "Restaurer la synchronisation publiée",
+    "revertDesc": "Abandonner les modifications non envoyées et charger la synchronisation publiée.",
+    "revertConfirm": "Abandonner les modifications non envoyées et restaurer la synchronisation publiée ?",
+    "reverting": "Restauration en cours...",
+    "reverted": "Synchronisation publiée restaurée.",
+    "noPublishedSync": "Aucune synchronisation publiée disponible.",
+    "unsubmittedChanges": "Modifications non envoyées",
+    "previewUnavailable": "Aperçu indisponible."
   },
   "marketplace": {
     "title": "Boutique d'extensions",

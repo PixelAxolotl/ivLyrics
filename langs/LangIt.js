@@ -882,7 +882,11 @@ window.LANG_IT = {
     "lyricsLoadedFromFile": "Caricati con successo testi {types} dal file",
     "lyricsLoadedFromLrclib": "Testi caricati da LRCLIB.",
     "lyricsLoadFailed": "Caricamento testo fallito: formato file non valido",
-    "fileReadFailed": "Lettura file fallita: il file potrebbe essere danneggiato"
+    "fileReadFailed": "Lettura file fallita: il file potrebbe essere danneggiato",
+    "mySyncsExportSuccess": "Sincronizzazioni esportate",
+    "mySyncsExportSuccessDesc": "Esportate {exported} sincronizzazioni su {total}. Saltate: {skipped}.",
+    "mySyncsExportEmpty": "Nessuna sincronizzazione trovata per questo utente.",
+    "mySyncsExportFailed": "Esportazione delle sincronizzazioni non riuscita"
   },
   "misc": {
     "and": "e",
@@ -1539,6 +1543,11 @@ window.LANG_IT = {
         "button": "Import",
         "processing": "Importazione...",
         "confirm": "Tutti i dati esistenti nel database verranno sovrascritti. Continuare?"
+      },
+      "exportMySyncs": {
+        "label": "Esporta le mie sincronizzazioni",
+        "button": "Esporta le mie sincronizzazioni",
+        "processing": "Esportazione in corso..."
       }
     },
     "resetSettings": {
@@ -2092,6 +2101,7 @@ window.LANG_IT = {
       "gradient": "Gradiente",
       "minimal": "Minimal",
       "glass": "Glass",
+      "word": "Studio delle parole"
     },
     "advancedSettings": "Impostazioni avanzate",
     "sections": {
@@ -2132,7 +2142,43 @@ window.LANG_IT = {
       "aspectRatio": "Proporzioni",
       "imageWidth": "Larghezza immagine",
       "padding": "Margine",
-      "showWatermark": "Mostra watermark"
+      "showWatermark": "Mostra watermark",
+      "trackTitleSize": "Dimensione del titolo",
+      "trackTitleColor": "Colore del titolo",
+      "trackTitleWeight": "Spessore del titolo",
+      "trackArtistSize": "Dimensione dell’artista",
+      "trackArtistColor": "Colore dell’artista",
+      "trackArtistWeight": "Spessore dell’artista",
+      "lyricsDetail": "Modalità di esportazione",
+      "lineLevel": "Riga",
+      "wordLevel": "Parola",
+      "origColor": "Colore dell’originale",
+      "origWeight": "Spessore dell’originale",
+      "pronSize": "Dimensione della pronuncia della riga",
+      "pronColor": "Colore della pronuncia della riga",
+      "pronWeight": "Spessore della pronuncia della riga",
+      "wordReadingSize": "Dimensione della lettura delle parole",
+      "transSize": "Dimensione della traduzione della riga",
+      "transColor": "Colore della traduzione della riga",
+      "transWeight": "Spessore della traduzione della riga",
+      "wordGlossSize": "Dimensione della traduzione delle parole",
+      "fontSource": "Origine del carattere",
+      "fontDefault": "Predefinito",
+      "fontSettings": "Impostazioni dell’app",
+      "fontCustom": "Personalizzato",
+      "customFontFamily": "Carattere personalizzato",
+      "groupOriginal": "Testo originale",
+      "groupWordReading": "Pronuncia delle parole",
+      "groupWordGloss": "Traduzione delle parole",
+      "groupLinePron": "Pronuncia della riga",
+      "groupLineTrans": "Traduzione della riga",
+      "wordReadingColor": "Colore della lettura delle parole",
+      "wordReadingWeight": "Spessore della lettura delle parole",
+      "wordGlossColor": "Colore della traduzione delle parole",
+      "wordGlossWeight": "Spessore della traduzione delle parole",
+      "alignRight": "Destra",
+      "exportScale": "Scala di esportazione",
+      "ratioAuto": "Automatico"
     },
     "preview": "Anteprima",
     "actions": {
@@ -2823,7 +2869,15 @@ window.LANG_IT = {
     "multiVocalDetectedTitle": "Rilevate più voci",
     "multiVocalDetectedBody": "Questo testo contiene righe con parentesi o separatori, quindi può essere sincronizzato come parti vocali separate. Scegli come lavorare su questo brano.",
     "multiVocalDecisionNormal": "Continua in modalità normale",
-    "multiVocalDecisionMulti": "Continua in modalità voci multiple"
+    "multiVocalDecisionMulti": "Continua in modalità voci multiple",
+    "revert": "Ripristina la sincronizzazione pubblicata",
+    "revertDesc": "Scarta le modifiche non inviate e carica la sincronizzazione pubblicata.",
+    "revertConfirm": "Scartare le modifiche non inviate e ripristinare la sincronizzazione pubblicata?",
+    "reverting": "Ripristino in corso...",
+    "reverted": "Sincronizzazione pubblicata ripristinata.",
+    "noPublishedSync": "Nessuna sincronizzazione pubblicata disponibile.",
+    "unsubmittedChanges": "Modifiche non inviate",
+    "previewUnavailable": "Anteprima non disponibile."
   },
   "marketplace": {
     "title": "Marketplace Addon",

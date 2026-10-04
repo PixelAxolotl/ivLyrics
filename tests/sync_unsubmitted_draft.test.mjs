@@ -7,7 +7,7 @@ const source = readFileSync(new URL('../SyncDataCreator.js', import.meta.url), '
 const helpersSource = source.slice(0, source.indexOf('const SyncDataCreator ='));
 
 const loadHelpers = () => {
-	const context = vm.createContext({ console, structuredClone });
+	const context = vm.createContext({ console, structuredClone, window: {} });
 	vm.runInContext(`${helpersSource}\nglobalThis.compare = areSyncCreatorSyncBodiesEqual;`, context);
 	return context.compare;
 };
@@ -43,6 +43,48 @@ test('sub-millisecond rounding is ignored but parallel timing is compared', () =
 	const right = structuredClone(left);
 	right.lines[0].parallel.parts[0].chars[1] = 2.5;
 	assert.equal(compare(left, right), false);
+});
+
+test('unsubmitted comparison includes speaker styling, granularity and vocal part layout', () => {
+	const compare = loadHelpers();
+	for (const extra of [
+		{ granularity: 'word' }, { 'speaker-color': '#ff0000' }, { 'speaker-fallback': 'FEMALE 1' }
+	]) {
+		assert.equal(compare({ lines: [line(0, [1, 2], { speaker: 'CUSTOM' })] },
+			{ lines: [line(0, [1, 2], { speaker: 'CUSTOM', ...extra })] }), false, JSON.stringify(extra));
+	}
+	for (const extra of [{ 'speaker-color': '#ff0000' }, { 'speaker-fallback': 'FEMALE 1' }]) {
+		const left = { lines: [line(0, [1, 2], { styleRanges: [{ start: 0, end: 1, speaker: 'CUSTOM' }] })] };
+		const right = structuredClone(left);
+		Object.assign(right.lines[0].styleRanges[0], extra);
+		assert.equal(compare(left, right), false);
+	}
+	for (const extra of [
+		{ role: 'background' }, { join: [2] }, { granularity: 'word' },
+		{ 'speaker-color': '#ff0000' }, { 'speaker-fallback': 'FEMALE 1' }
+	]) {
+		const left = { lines: [line(0, [1, 2], { parallel: { parts: [{
+			id: 'a', ranges: [{ start: 0, end: 0 }, { start: 1, end: 1 }], chars: [1, 2],
+			role: 'lead', join: [1], speaker: 'CUSTOM'
+		}] } })] };
+		const right = structuredClone(left);
+		Object.assign(right.lines[0].parallel.parts[0], extra);
+		assert.equal(compare(left, right), false, JSON.stringify(extra));
+	}
+});
+
+test('deleting the final published line stays marked as unsubmitted', () => {
+	const start = source.indexOf('\tuseEffect(() => {\n\t\tconst baseline = serverBaselineSyncDataRef.current;');
+	const effect = source.slice(start, source.indexOf('\n\tuseEffect(', start + 1));
+	const baseline = { lines: [line(0, [1])] };
+	let result;
+	const context = vm.createContext({
+		useEffect: callback => callback(), serverBaselineSyncDataRef: { current: baseline },
+		syncData: { lines: [] }, setHasUnsubmittedSync: value => { result = value; },
+		areSyncCreatorSyncBodiesEqual: loadHelpers(),
+	});
+	vm.runInContext(effect, context);
+	assert.equal(result, true);
 });
 
 test('loading prefers the unsubmitted draft and remembers the server baseline', () => {

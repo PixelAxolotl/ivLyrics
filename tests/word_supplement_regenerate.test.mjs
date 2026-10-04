@@ -6,6 +6,7 @@ import vm from "node:vm";
 const supplementsSource = readFileSync(new URL("../WordLevelSupplements.js", import.meta.url), "utf8");
 const indexSource = readFileSync(new URL("../index.js", import.meta.url), "utf8");
 const pagesSource = readFileSync(new URL("../Pages.js", import.meta.url), "utf8");
+const serviceSource = readFileSync(new URL("../LyricsService.js", import.meta.url), "utf8");
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const DEBOUNCE = 350;
@@ -91,6 +92,65 @@ test("word prefetch honors the force flag for explicit regenerate requests", () 
 		pagesSource,
 		/if \(!force && window\.CONFIG\?\.visual\?\.\["prefetch-word-details-enabled"\] === false\)/
 	);
+});
+
+function loadPersistentClear() {
+	const start = serviceSource.indexOf("        async clearWordSupplementsForTrack(");
+	const end = serviceSource.indexOf("\n        },", start) + "\n        },".length;
+	const service = vm.runInNewContext("({" + serviceSource.slice(start, end) + "})", { console });
+	let notifyReady;
+	const ready = new Promise(resolve => { notifyReady = resolve; });
+	const request = {};
+	const transaction = { objectStore: () => ({ openCursor: () => request }) };
+	service._openDB = async () => ({ transaction: () => { notifyReady(); return transaction; } });
+	service._getTrackCacheKeyRange = () => null;
+	return { service, request, transaction, ready };
+}
+
+test("persistent word clear waits for the deletion transaction to commit", async () => {
+	const { service, request, transaction, ready } = loadPersistentClear();
+	let settled = false;
+	const pending = service.clearWordSupplementsForTrack("T1");
+	pending.then(() => { settled = true; });
+	await ready;
+	request.onsuccess({ target: { result: null } });
+	await Promise.resolve();
+	await Promise.resolve();
+	assert.equal(settled, false, "exhausting the cursor is not a committed clear");
+	transaction.oncomplete();
+	assert.equal(await pending, true);
+});
+
+test("an aborted word cache deletion cannot report success", async () => {
+	const { service, request, transaction, ready } = loadPersistentClear();
+	const pending = service.clearWordSupplementsForTrack("T1");
+	await ready;
+	request.onsuccess({ target: { result: null } });
+	transaction.error = new Error("transaction aborted");
+	transaction.onabort();
+	await assert.rejects(pending, /transaction aborted/);
+});
+
+test("word prefetch reports success only when a supplement was actually returned", async () => {
+	const start = pagesSource.indexOf("const prefetchWordSupplementsForLyrics =");
+	const end = pagesSource.indexOf("window.ivLyricsPrefetchWordSupplements =", start);
+	let result = [];
+	const context = vm.createContext({
+		window: { CONFIG: { visual: {} }, ivLyricsWordSupplements: {
+			getWordUnits: () => units, isSuitableSourceLanguage: () => true,
+			resolveReadingMode: () => null, getWordGlosses: async () => result,
+		} },
+		Utils: { getDetectedLanguage: () => "ja" },
+		buildKaraokeTimedChars: () => [{ char: "生" }],
+		applyKaraokeWhitespaceCompensation: chars => chars,
+		assignKaraokeWordIndexes: chars => chars,
+	});
+	vm.runInContext(pagesSource.slice(start, end) + "\nglobalThis.prefetch = prefetchWordSupplementsForLyrics;", context);
+	assert.equal(await context.prefetch([{}], { sourceLang: "ja", force: true }), false);
+	result = ["", " "];
+	assert.equal(await context.prefetch([{}], { sourceLang: "ja", force: true }), false);
+	result = ["life"];
+	assert.equal(await context.prefetch([{}], { sourceLang: "ja", force: true }), true);
 });
 
 test("clearing persistent cache plus invalidate makes the next fetch resend the AI request", async () => {

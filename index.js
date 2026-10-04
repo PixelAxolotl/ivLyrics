@@ -6581,6 +6581,8 @@ class LyricsContainer extends react.Component {
     );
 
     try {
+      // Stop outstanding requests from restoring entries during deletion.
+      window.ivLyricsWordSupplements?.clearCaches?.();
       const cacheCleared = await window.LyricsService?.clearWordSupplementsCache?.(trackId);
       if (cacheCleared === false) {
         throw new Error("Failed to clear word details cache.");

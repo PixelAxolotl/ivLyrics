@@ -7705,13 +7705,13 @@ const useKaraokeWordStackSupplements = ({ line, timedChars, timedText, wordTimed
 	let globalLangTick = "auto";
 	try {
 		globalLangTick = String(
-			supplementsApi?.getSourceLanguage?.() ?? window.Utils?.getDetectedLanguage?.() ?? "auto"
+			supplementsApi?.getSourceLanguage?.() ?? (typeof Utils !== "undefined" ? Utils : window.Utils)?.getDetectedLanguage?.() ?? "auto"
 		);
 	} catch { globalLangTick = "auto"; }
 	const sourceLang = useMemo(() => {
 		if (!supplementsApi) {
 			try {
-				return String(window.Utils?.getDetectedLanguage?.() || "auto");
+				return String((typeof Utils !== "undefined" ? Utils : window.Utils)?.getDetectedLanguage?.() || "auto");
 			} catch {
 				return "auto";
 			}
@@ -7738,7 +7738,7 @@ const useKaraokeWordStackSupplements = ({ line, timedChars, timedText, wordTimed
 		} catch {
 			return null;
 		}
-	}, [suitable, supplementsApi, sourceLang, units]);
+	}, [suitable, supplementsApi, sourceLang, units, settingsRevision]);
 	const glossActive = useMemo(() => {
 		if (!suitable || !supplementsApi || units.length === 0) return false;
 		try {
@@ -7746,7 +7746,7 @@ const useKaraokeWordStackSupplements = ({ line, timedChars, timedText, wordTimed
 		} catch {
 			return false;
 		}
-	}, [suitable, supplementsApi, sourceLang, units]);
+	}, [suitable, supplementsApi, sourceLang, units, settingsRevision]);
 	const lineKey = useMemo(() => {
 		if (!suitable || !supplementsApi || units.length === 0) return "";
 		try {
@@ -7877,7 +7877,7 @@ const prefetchWordSupplementsForLyrics = (karaokeLines, { locale = "auto", sourc
 	if (!force && window.CONFIG?.visual?.["prefetch-word-details-enabled"] === false) return Promise.resolve(false);
 	const lyricsLocale = locale && locale !== "auto"
 		? locale
-		: String(window.Utils?.getDetectedLanguage?.() || "auto");
+		: String((typeof Utils !== "undefined" ? Utils : window.Utils)?.getDetectedLanguage?.() || "auto");
 	// Render-path callers omit trackId and keep the current-player default;
 	// prefetch passes the target track so its warm caches hit on mount.
 	const supplementOptions = trackId ? { trackId: String(trackId) } : {};
@@ -7905,7 +7905,9 @@ const prefetchWordSupplementsForLyrics = (karaokeLines, { locale = "auto", sourc
 		} catch { /* per-line best effort */ }
 	}
 	if (!jobs.length) return Promise.resolve(false);
-	return Promise.all(jobs).then(() => true);
+	return Promise.all(jobs).then(results => results.some(values =>
+		Array.isArray(values) && values.some(value => String(value ?? "").trim())
+	));
 };
 
 window.ivLyricsPrefetchWordSupplements = prefetchWordSupplementsForLyrics;

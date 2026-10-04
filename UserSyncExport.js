@@ -187,19 +187,20 @@
 
   const exportMySyncs = async (options = {}) => {
     const onProgress = typeof options.onProgress === "function" ? options.onProgress : null;
-    const contributions = await listMyContributions();
-    if (contributions.length === 0) {
-      const error = new Error("No synced tracks found for this user.");
-      error.code = "NO_USER_SYNCS";
-      throw error;
-    }
-
+    // The picker needs the button's user activation, before network awaits.
     const windowRef = root;
     let directoryHandle = null;
     if (typeof options.directoryHandle !== "undefined") {
       directoryHandle = options.directoryHandle;
     } else if (windowRef && typeof windowRef.showDirectoryPicker === "function") {
       directoryHandle = await windowRef.showDirectoryPicker({ mode: "readwrite" });
+    }
+
+    const contributions = await listMyContributions();
+    if (contributions.length === 0) {
+      const error = new Error("No synced tracks found for this user.");
+      error.code = "NO_USER_SYNCS";
+      throw error;
     }
 
     const usedNames = new Set();

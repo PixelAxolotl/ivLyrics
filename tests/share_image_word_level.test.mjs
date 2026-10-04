@@ -112,6 +112,24 @@ test('centered cover never overlaps title, artist or lyrics', async () => {
   assert.ok(lyricY >= artistY + 18, `lyrics must clear the artist (${lyricY} >= ${artistY} + 18)`);
 });
 
+for (const detail of ['line', 'word']) {
+  test(`original weight reaches the canvas in ${detail} mode and supports legacy settings`, async () => {
+    for (const settings of [{ origWeight: '400' }, { origWeight: '700' }, { fontWeight: '300' }]) {
+      const { api, calls } = loadRenderer();
+      await api.generateImage({
+        lyrics: [{ originalText: 'Hello', words: [{ w: 'Hello' }] }],
+        albumCover: '', template: 'minimal',
+        customSettings: { backgroundType: 'solid', lyricsDetail: detail, showCover: false,
+          showTrackInfo: false, showWatermark: false, ...settings },
+        output: 'dataUrl',
+      });
+      const rendered = calls.text.find(entry => entry.text === 'Hello');
+      assert.ok(rendered, 'original lyric renders');
+      assert.ok(rendered.font.startsWith((settings.origWeight || settings.fontWeight) + ' '), rendered.font);
+    }
+  });
+}
+
 test('share image renderer handles per-word columns', () => {
   assert.match(shareSource, /lyricsDetail/);
   assert.match(shareSource, /words/);
@@ -146,7 +164,7 @@ function loadRenderer({ cover = false } = {}) {
     set textAlign(value) { this._textAlign = value; calls.textAlign.push(String(value)); },
     get textAlign() { return this._textAlign; },
     setTransform: (...args) => { calls.transform = args; },
-    fillText: (text, x, y) => { calls.fillText.push(String(text)); calls.text.push({ text: String(text), x, y }); },
+    fillText: (text, x, y) => { calls.fillText.push(String(text)); calls.text.push({ text: String(text), x, y, font: ctx.font }); },
     measureText: (text) => ({ width: String(text).length * 10 }),
     fillRect: () => {},
     drawImage: () => {},

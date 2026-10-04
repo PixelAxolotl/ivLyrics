@@ -451,7 +451,7 @@ const LyricsShareImage = (() => {
     const glossLH = glossFontSize * 1.3;
 
     const columns = entries.map((entry) => {
-      ctx.font = `${cfg.fontWeight} ${originalFontSize}px ${fonts.original}`;
+      ctx.font = `${cfg.origWeight} ${originalFontSize}px ${fonts.original}`;
       const origW = ctx.measureText(entry.text).width;
       let readingW = 0;
       if (entry.reading) {
@@ -515,7 +515,7 @@ const LyricsShareImage = (() => {
       const pron = cfg.showPronunciation ? (line.pronText || null) : null;
       const trans = cfg.showTranslation ? (line.transText || null) : null;
 
-      ctx.font = `${cfg.fontWeight} ${originalFontSize}px ${fonts.original}`;
+      ctx.font = `${cfg.origWeight} ${originalFontSize}px ${fonts.original}`;
       const wrappedOrig = wrapText(ctx, orig, maxTextWidth);
 
       ctx.font = `${cfg.pronWeight || '400'} ${pronFontSize}px ${fonts.phonetic}`;
@@ -559,7 +559,7 @@ const LyricsShareImage = (() => {
           const hasReading = row.some((column) => column.entry.reading);
           const hasGloss = row.some((column) => column.entry.gloss);
 
-          ctx.font = `${cfg.fontWeight} ${originalFontSize}px ${fonts.original}`;
+          ctx.font = `${cfg.origWeight} ${originalFontSize}px ${fonts.original}`;
           ctx.fillStyle = cfg.origColor || '#ffffff';
           ctx.textAlign = align;
           for (const column of row) {
@@ -629,7 +629,7 @@ const LyricsShareImage = (() => {
       // 원어 텍스트
       ctx.textAlign = cfg.lyricsAlign;
       ctx.fillStyle = cfg.origColor || '#ffffff';
-      ctx.font = `${cfg.fontWeight} ${originalFontSize}px ${fonts.original}`;
+      ctx.font = `${cfg.origWeight} ${originalFontSize}px ${fonts.original}`;
       for (const line of block.wrappedOrig) {
         ctx.fillText(line, textX, currentY);
         currentY += originalFontSize * cfg.lineHeight;
@@ -693,6 +693,9 @@ const LyricsShareImage = (() => {
     // 프리셋 + 커스텀 설정 병합
     const preset = PRESETS[template]?.settings || PRESETS.cover.settings;
     const cfg = { ...DEFAULT_SETTINGS, ...preset, ...customSettings };
+    // Preserve callers using the previous original-lyric weight setting.
+    cfg.origWeight = customSettings.origWeight ?? customSettings.fontWeight
+      ?? preset.origWeight ?? preset.fontWeight ?? DEFAULT_SETTINGS.origWeight;
 
     // 이미지 너비: optionWidth > customSettings.imageWidth > cfg.imageWidth
     // exportScale 배율은 측정(기본 좌표) → 캔버스 확대 + setTransform 순서로 적용해

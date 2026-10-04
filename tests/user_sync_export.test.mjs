@@ -132,3 +132,91 @@ test("exportMySyncs saves one editor-named file per own contribution", async () 
   const files = vm.runInContext(`globalThis.__savedFiles`, sandbox);
   assert.deepEqual(shapeOf(files), ["Hello-Adele.json", "Rolling-Adele.json"]);
 });
+
+test("folder selection happens before profile network work and cancellation stops export", async () => {
+  const events = [];
+  const { api, sandbox } = loadApiInBrowserGlobals({
+    prelude: `const Utils = {
+      getUserHash: () => "user-1",
+      fetchSyncCreatorProfile: async () => { window.record("profile"); return { contributions: [] }; }
+    };`,
+    windowProps: {
+      record: value => events.push(value),
+      showDirectoryPicker: async () => { events.push("picker"); return {}; },
+    },
+  });
+  await assert.rejects(api.exportMySyncs(), error => error.code === "NO_USER_SYNCS");
+  assert.deepEqual(events, ["picker", "profile"]);
+  events.length = 0;
+  sandbox.window.showDirectoryPicker = async () => {
+    events.push("cancel");
+    const error = new Error("cancelled");
+    error.name = "AbortError";
+    throw error;
+  };
+  await assert.rejects(api.exportMySyncs(), { name: "AbortError" });
+  assert.deepEqual(events, ["cancel"]);
+});
+
+test("directory export preserves duplicate titles and skips unavailable syncs", async () => {
+  const files = new Map(), closed = [];
+  const { api } = loadApiInBrowserGlobals({
+    prelude: `const Utils = {
+      getUserHash: () => "user-1",
+      fetchSyncCreatorProfile: async () => ({ contributions: ["a", "b", "missing"].map(trackId => ({
+        trackId, provider: "lrclib", trackName: "Song", artists: "Artist"
+      })) })
+    };`,
+    windowProps: { SyncDataService: { getSyncData: async trackId => trackId === "missing"
+      ? null : { lines: [{ text: trackId }] } } },
+  });
+  const directoryHandle = {
+    getFileHandle: async name => ({ createWritable: async () => ({
+      write: async text => files.set(name, JSON.parse(text)),
+      close: async () => closed.push(name),
+    }) }),
+  };
+  const result = await api.exportMySyncs({ directoryHandle });
+  assert.deepEqual(shapeOf(result), { total: 3, exported: 2, skipped: 1 });
+  assert.deepEqual([...files.keys()], ["Song-Artist.json", "Song-Artist-2.json"]);
+  assert.equal(files.get("Song-Artist-2.json").lines[0].text, "b");
+  assert.equal(closed.length, 2);
+});
+
+function loadExportSetting(extra = {}) {
+  const source = readFileSync(new URL("../Settings.js", import.meta.url), "utf8");
+  const key = source.indexOf('key: "export-my-syncs"');
+  const start = source.lastIndexOf("            {", key);
+  const end = source.indexOf("\n            },", key) + "\n            }".length;
+  const container = { innerHTML: "" }, translations = [];
+  const sandbox = {
+    ConfigButton: {}, I18n: { t: (key, params) => { translations.push([key, params]); return ""; } },
+    getSettingsResultContainer: () => container,
+    Utils: { escapeHtml: text => text.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;") },
+    ...extra,
+  };
+  const setting = vm.runInNewContext("(" + source.slice(start, end) + ")", sandbox);
+  return { setting, container, translations };
+}
+
+test("export settings tolerate a missing module and render errors as text", async () => {
+  const button = { textContent: "Export", disabled: false };
+  await loadExportSetting().setting.onChange(null, { target: button });
+  const { setting, container } = loadExportSetting({
+    UserSyncExport: { exportMySyncs: async () => { throw new Error('<img src=x onerror="bad()">'); } },
+  });
+  await setting.onChange(null, { target: button });
+  assert.ok(container.innerHTML.includes("&lt;img"));
+  assert.ok(!container.innerHTML.includes("<img"));
+  assert.equal(button.disabled, false);
+  assert.equal(button.textContent, "Export");
+});
+
+test("export result translation receives the exported, total and skipped counts", async () => {
+  const summary = { exported: 2, total: 3, skipped: 1 };
+  const { setting, translations } = loadExportSetting({
+    UserSyncExport: { exportMySyncs: async () => summary },
+  });
+  await setting.onChange(null, { target: { textContent: "Export" } });
+  assert.equal(translations.find(([key]) => key === "notifications.mySyncsExportSuccessDesc")[1], summary);
+});

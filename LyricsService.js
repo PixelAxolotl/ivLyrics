@@ -1909,6 +1909,9 @@
                     const store = tx.objectStore('translations');
                     const request = store.openCursor(trackKeyRange || undefined);
 
+                    tx.oncomplete = () => resolve(true);
+                    tx.onerror = () => reject(tx.error);
+                    tx.onabort = () => reject(tx.error || new Error('Word cache clear aborted.'));
                     request.onsuccess = (event) => {
                         const cursor = event.target.result;
                         if (cursor) {
@@ -1921,8 +1924,6 @@
                                 cursor.delete();
                             }
                             cursor.continue();
-                        } else {
-                            resolve(true);
                         }
                     };
                     request.onerror = () => reject(request.error);

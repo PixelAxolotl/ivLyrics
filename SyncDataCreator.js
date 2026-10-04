@@ -571,19 +571,30 @@ const canonicalSyncCreatorSyncLineForUnsubmittedCompare = (line) => {
 		chars: (Array.isArray(line?.chars) ? line.chars : []).map(finiteTime),
 		kind: normalizeSyncCreatorKind(line?.kind) || SYNC_CREATOR_DEFAULT_KIND,
 		speaker: normalizeSyncCreatorSpeaker(line?.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER,
+		granularity: normalizeSyncCreatorGranularity(line?.granularity),
+		speakerColor: normalizeSyncCreatorSpeakerColor(line?.['speaker-color']),
+		speakerFallback: normalizeSyncCreatorSpeakerFallback(line?.['speaker-fallback']),
 		hiddenRanges: canonicalRanges(line?.hiddenRanges),
 		styleRanges: (Array.isArray(line?.styleRanges) ? line.styleRanges : []).map(range => ([
 			Number(range?.start),
 			Number(range?.end),
 			normalizeSyncCreatorKind(range?.kind) || '',
-			normalizeSyncCreatorSpeaker(range?.speaker) || ''
+			normalizeSyncCreatorSpeaker(range?.speaker) || '',
+			normalizeSyncCreatorSpeakerColor(range?.['speaker-color']),
+			normalizeSyncCreatorSpeakerFallback(range?.['speaker-fallback'])
 		])),
 		parts: (Array.isArray(line?.parallel?.parts) ? line.parallel.parts : []).map(part => ({
 			id: String(part?.id || ''),
+			role: String(part?.role || ''),
 			ranges: canonicalRanges(part?.ranges),
+			join: (Array.isArray(part?.ranges) ? part.ranges.slice(1) : [])
+				.map((_, index) => Number(part?.join?.[index] ?? 1)),
 			chars: (Array.isArray(part?.chars) ? part.chars : []).map(finiteTime),
 			kind: normalizeSyncCreatorKind(part?.kind) || SYNC_CREATOR_DEFAULT_KIND,
-			speaker: normalizeSyncCreatorSpeaker(part?.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER
+			speaker: normalizeSyncCreatorSpeaker(part?.speaker) || SYNC_CREATOR_DEFAULT_SPEAKER,
+			granularity: normalizeSyncCreatorGranularity(part?.granularity || line?.granularity),
+			speakerColor: normalizeSyncCreatorSpeakerColor(part?.['speaker-color']),
+			speakerFallback: normalizeSyncCreatorSpeakerFallback(part?.['speaker-fallback'])
 		}))
 	};
 };
@@ -8875,15 +8886,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 	useEffect(() => {
 		const baseline = serverBaselineSyncDataRef.current;
-		if (!syncData || !Array.isArray(syncData.lines) || syncData.lines.length === 0) {
-			setHasUnsubmittedSync(false);
-			return;
+		if (Array.isArray(baseline?.lines) && baseline.lines.length > 0) {
+			setHasUnsubmittedSync(!areSyncCreatorSyncBodiesEqual(syncData, baseline));
+		} else {
+			setHasUnsubmittedSync(Array.isArray(syncData?.lines) && syncData.lines.length > 0);
 		}
-		if (!baseline || !Array.isArray(baseline.lines) || baseline.lines.length === 0) {
-			setHasUnsubmittedSync(true);
-			return;
-		}
-		setHasUnsubmittedSync(!areSyncCreatorSyncBodiesEqual(syncData, baseline));
 	}, [syncData]);
 
 	useEffect(() => {
@@ -12158,7 +12165,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				),
 				react.createElement('button', { style: { ...s.navBtn, opacity: nextNavigableLineIndex < 0 ? 0.3 : 1 }, onClick: goToNextLine, disabled: nextNavigableLineIndex < 0 }, '›')
 			),
-	
+
 			showLivePreview && renderLivePreviewOverlay(),
 			multiVocalMode && react.createElement('div', { style: s.multiVocalBanner },
 				hasCurrentParallelParts

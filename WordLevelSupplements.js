@@ -18,6 +18,9 @@
 
 	const readingCache = new Map();
 	const glossCache = new Map();
+	// Requests from before an invalidation may finish, but cannot restore
+	// stale results, settle new loading state or change the new breaker.
+	let cacheGeneration = 0;
 	// In-flight promises keyed like the memory caches. Caches only store
 	// completed results, so without sharing, the supplement retry effect
 	// (and a prefetch racing a line mount) would enqueue the same words a
@@ -136,9 +139,8 @@
 		String(notation || "latin").trim().toLowerCase() !== "ipa" && isLatinWord(word);
 	const sameText = (left, right) =>
 		String(left ?? "").trim().toLowerCase() === String(right ?? "").trim().toLowerCase();
-	// Chinese-only: AI readings now carry pinyin tone marks, so persisted word
-	// pronunciations recorded before that change must not be served for
-	// Chinese songs. Non-Chinese caches keep their existing keys.
+	// Include the Chinese pinyin tone format in the reading context so
+	// entries made before tone marks were supported cannot be restored.
 	const CHINESE_TONES_LANG_RE = /^(zh|cmn|yue|cn|tw|hk)(?:-|$)/i;
 	const zhToneCacheFlag = (lang) =>
 		CHINESE_TONES_LANG_RE.test(String(lang || "").trim().toLowerCase()) ? ":zh-tones" : "";
@@ -200,11 +202,13 @@
 			);
 		} catch { /* diagnostics must never break fetching */ }
 	};
-	const trackBatchStart = () => {
+	const trackBatchStart = (generation) => {
+		if (generation !== cacheGeneration) return;
 		pendingWordBatches += 1;
 		if (pendingWordBatches === 1) emitWordLoading({ active: true });
 	};
-	const trackBatchSettle = (completed) => {
+	const trackBatchSettle = (completed, generation) => {
+		if (generation !== cacheGeneration) return;
 		pendingWordBatches = Math.max(0, pendingWordBatches - 1);
 		if (pendingWordBatches === 0) emitWordLoading({ active: false, completed: !!completed });
 	};
@@ -214,15 +218,20 @@
 		batchQueues.delete(batchKey);
 		if (queue.timer) clearTimeout(queue.timer);
 		const items = queue.items;
-		trackBatchStart();
+		const generation = queue.generation;
+		trackBatchStart(generation);
 		if (isAiCoolingDown()) {
 			items.forEach(({ resolve }) => resolve(null));
-			trackBatchSettle(false);
+			trackBatchSettle(false, generation);
 			return;
 		}
 		const allWords = items.flatMap((item) => item.words);
 		try {
 			const allResults = await queue.run(allWords, items.map((item) => item.lineText));
+			if (generation !== cacheGeneration) {
+				items.forEach(({ resolve }) => resolve(null));
+				return;
+			}
 			if (!Array.isArray(allResults) || allResults.length !== allWords.length) {
 				throw new Error(
 					`[ivLyrics] Word batch returned ${Array.isArray(allResults) ? allResults.length : "invalid"} results; expected ${allWords.length}`
@@ -234,8 +243,12 @@
 				item.resolve(allResults.slice(offset, offset + item.words.length));
 				offset += item.words.length;
 			});
-			trackBatchSettle(true);
+			trackBatchSettle(true, generation);
 		} catch (error) {
+			if (generation !== cacheGeneration) {
+				items.forEach(({ resolve }) => resolve(null));
+				return;
+			}
 			if (items.length > 1) {
 				// One malformed line can poison the whole batch count (model
 				// merged/split lines). Retry each line on its own batch key so
@@ -251,24 +264,29 @@
 						words: item.words,
 						lineText: item.lineText,
 						run: queue.run,
+						generation,
 					}).then((slice) => item.resolve(slice));
 				});
-				trackBatchSettle(false);
+				trackBatchSettle(false, generation);
 				return;
 			}
 			noteAiFailure(queue.kind, error);
 			items.forEach(({ resolve }) => resolve(null));
-			trackBatchSettle(false);
+			trackBatchSettle(false, generation);
 		}
 	};
-	const enqueueWordBatch = ({ kind, batchKey, words, lineText, run }) => new Promise((resolve) => {
+	const enqueueWordBatch = ({ kind, batchKey, words, lineText, run, generation }) => new Promise((resolve) => {
+		if (generation !== cacheGeneration) {
+			resolve(null);
+			return;
+		}
 		let queue = batchQueues.get(batchKey);
 		if (!queue || queue.kind !== kind) {
 			if (queue?.timer) clearTimeout(queue.timer);
 			// A colliding queue should not exist (kind is part of the key),
 			// but never leave its items hanging if it does.
 			queue?.items?.forEach?.(({ resolve }) => resolve(null));
-			queue = { kind, run, timer: null, items: [], wordCount: 0 };
+			queue = { kind, run, generation, timer: null, items: [], wordCount: 0 };
 			batchQueues.set(batchKey, queue);
 		}
 		queue.items.push({ words, lineText, resolve });
@@ -296,7 +314,8 @@
 
 	const getSourceLanguage = () => {
 		try {
-			const detected = window.Utils?.getDetectedLanguage?.();
+			const utils = typeof Utils !== "undefined" ? Utils : window.Utils;
+			const detected = utils?.getDetectedLanguage?.();
 			if (detected) return String(detected);
 		} catch { /* ignore */ }
 		return "auto";
@@ -507,6 +526,10 @@
 		// Synchronous, before any await: cache reads/writes below must keep
 		// this track's identity even if playback changes mid-flight.
 		const trackId = resolveTrackId(options);
+		const generation = cacheGeneration;
+		const notation = getPronunciationNotation();
+		const targetLang = getGlossTargetLanguage();
+		const sourceText = String(lineText || "");
 		// AI pronunciation modes (e.g. gemini_romaji) have no local converter:
 		// request per-word pronunciation from the AI provider instead.
 		if (isAiReadingMode(mode)) {
@@ -515,11 +538,12 @@
 				return units.map(() => "");
 			}
 			if (isAiCoolingDown()) return units.map(() => "");
-			const cacheKey = `ai::${normalizeLanguage(language)}::${String(mode).toLowerCase()}::${getPronunciationNotation()}::${units
-				.map((unit) => unit.surface)
-				.join("\\u0001")}`;
+			const cacheKey = JSON.stringify([
+				"ai", trackId, normalizeLanguage(language), String(mode).toLowerCase(),
+				targetLang, notation, sourceText, units.map((unit) => unit.surface)
+			]);
+			const cacheExtra = JSON.stringify([mode, targetLang, sourceText, zhToneCacheFlag(language)]);
 			if (readingCache.has(cacheKey)) return readingCache.get(cacheKey);
-			const notation = getPronunciationNotation();
 			const { active, activeIndexes } = partitionWords(units, (surface) =>
 				isReadingPassthrough(surface, notation)
 			);
@@ -539,29 +563,31 @@
 					targetLang: notation,
 					sourceLang: language,
 					words: cores,
-					extra: `${mode}${zhToneCacheFlag(language)}`,
+					extra: cacheExtra,
 					trackId,
 				});
+				if (generation !== cacheGeneration) return units.map(() => "");
 				if (persisted) {
 					const restored = reinsertSkipped(units.length, coreIndexes, persisted.values);
 					readingCache.set(cacheKey, restored);
 					return restored;
 				}
-				const batchKey = `pron::${trackId}::${normalizeLanguage(language)}::${getGlossTargetLanguage()}::${notation}`;
+				const batchKey = JSON.stringify(["pron", trackId, normalizeLanguage(language), targetLang, notation, mode]);
 				const slice = await enqueueWordBatch({
 					kind: "pronunciation",
 					batchKey,
+					generation,
 					words: cores,
-					lineText: String(lineText || ""),
+					lineText: sourceText,
 					run: (allWords, allLineTexts) => manager.generateWordPronunciation({
 						words: allWords,
 						lineText: allLineTexts.join("\n"),
-						targetLang: getGlossTargetLanguage(),
+						targetLang,
 						sourceLang: language,
-						notation: getPronunciationNotation(),
+						notation,
 					}),
 				});
-				if (!slice) return units.map(() => "");
+				if (!slice || generation !== cacheGeneration) return units.map(() => "");
 				const activeReadings = cores.map((core, corePosition) => {
 					const reading = String(slice[corePosition] ?? "").trim();
 					const surface = units[coreIndexes[corePosition]]?.surface;
@@ -579,10 +605,10 @@
 				// Persist the active subset (same shape as the lookup key);
 				// the full-width array is only the render shape.
 				persistentSet("reading", {
-					targetLang: getPronunciationNotation(),
+					targetLang: notation,
 					sourceLang: language,
 					words: cores,
-					extra: `${mode}${zhToneCacheFlag(language)}`,
+					extra: cacheExtra,
 					values: activeReadings,
 					trackId,
 				});
@@ -591,11 +617,12 @@
 		}
 		const helper = window.ivLyricsTranslationModes;
 		if (!helper?.convertTraditional) return units.map(() => "");
-		const cacheKey = `${normalizeLanguage(language)}::${String(mode).toLowerCase()}::${units
-			.map((unit) => unit.surface)
-			.join("\u0001")}`;
+		const cacheKey = JSON.stringify([
+			"local", trackId, normalizeLanguage(language), String(mode).toLowerCase(),
+			notation, units.map((unit) => unit.surface)
+		]);
 		if (readingCache.has(cacheKey)) return readingCache.get(cacheKey);
-		const localNotation = getPronunciationNotation();
+		const localNotation = notation;
 		const localPartition = partitionWords(units, (surface) =>
 			isReadingPassthrough(surface, localNotation)
 		);
@@ -618,6 +645,7 @@
 				extra: mode,
 				trackId,
 			});
+			if (generation !== cacheGeneration) return units.map(() => "");
 			if (persistedLocal) {
 				const restoredLocal = reinsertSkipped(units.length, localCoreIndexes, persistedLocal.values);
 				readingCache.set(cacheKey, restoredLocal);
@@ -629,6 +657,7 @@
 					mode,
 					texts: localCores,
 				});
+				if (generation !== cacheGeneration) return units.map(() => "");
 				const activeReadings = localCores.map((core, corePosition) => {
 					const reading = String(converted?.[corePosition] ?? "").trim();
 					// A no-op conversion (e.g. kana in -> kana out unchanged for a
@@ -645,7 +674,7 @@
 					readingCache.delete(firstKey);
 				}
 				persistentSet("reading", {
-					targetLang: getPronunciationNotation(),
+					targetLang: localNotation,
 					sourceLang: language,
 					words: localCores,
 					extra: mode,
@@ -681,6 +710,8 @@
 
 	const getWordGlosses = async (units, lineText, sourceLang, options = {}) => {
 		const empty = units.map(() => "");
+		const generation = cacheGeneration;
+		const sourceText = String(lineText || "");
 		// Synchronous, before any await: gloss cache keys, batch keys and
 		// persistent writes must all agree on the requesting track.
 		const trackId = resolveTrackId(options);
@@ -691,9 +722,7 @@
 		if (isAiCoolingDown()) return empty;
 		const targetLang = getGlossTargetLanguage();
 		const sourceLangKey = resolvedSourceLang;
-		const cacheKey = `${trackId}::${targetLang}::${sourceLangKey}::${units
-			.map((unit) => unit.surface)
-			.join("\u0001")}::${String(lineText || "").slice(0, 120)}`;
+		const cacheKey = JSON.stringify([trackId, targetLang, sourceLangKey, units.map((unit) => unit.surface), sourceText]);
 		if (glossCache.has(cacheKey)) return glossCache.get(cacheKey);
 		const glossPartition = partitionWords(units, (surface) =>
 			isGlossPassthrough(surface, targetLang)
@@ -712,9 +741,10 @@
 				targetLang,
 				sourceLang: sourceLangKey,
 				words: glossCores,
-				extra: String(lineText || ""),
+				extra: sourceText,
 				trackId,
 			});
+			if (generation !== cacheGeneration) return empty;
 			if (persisted) {
 				const restored = reinsertSkipped(units.length, glossCoreIndexes, persisted.values);
 				glossCache.set(cacheKey, restored);
@@ -724,8 +754,9 @@
 			const slice = await enqueueWordBatch({
 				kind: "gloss",
 				batchKey,
+				generation,
 				words: glossCores,
-				lineText: String(lineText || ""),
+				lineText: sourceText,
 				run: (allWords, allLineTexts) => manager.generateWordGloss({
 					words: allWords,
 					lineText: allLineTexts.join("\n"),
@@ -733,7 +764,7 @@
 					sourceLang: sourceLangKey,
 				}),
 			});
-			if (!slice) return empty;
+			if (!slice || generation !== cacheGeneration) return empty;
 			const activeGlosses = glossCores.map((core, corePosition) => {
 				const gloss = String(slice[corePosition] ?? "").trim();
 				const surface = units[glossCoreIndexes[corePosition]]?.surface;
@@ -751,7 +782,7 @@
 				targetLang,
 				sourceLang: sourceLangKey,
 				words: glossCores,
-				extra: String(lineText || ""),
+				extra: sourceText,
 				values: activeGlosses,
 				trackId,
 			});
@@ -778,6 +809,7 @@
 		// Drop all memory caches, resolve pending batches empty, and reset
 		// the breaker. Persistent entries are cleared separately per track.
 		clearCaches: () => {
+			cacheGeneration += 1;
 			readingCache.clear();
 			glossCache.clear();
 			pendingReadings.clear();

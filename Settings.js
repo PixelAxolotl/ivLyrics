@@ -11537,7 +11537,7 @@ react.createElement(OptionList, {
               onChange: async (_, event) => {
                 const button = event?.target;
                 if (!button) return;
-                if (typeof UserSyncExport?.exportMySyncs !== "function") return;
+                if (typeof UserSyncExport === "undefined" || typeof UserSyncExport.exportMySyncs !== "function") return;
                 const originalText = button.textContent;
                 button.textContent = I18n.t("settingsAdvanced.dbExportImport.exportMySyncs.processing") || "Exporting...";
                 button.disabled = true;
@@ -11551,7 +11551,6 @@ react.createElement(OptionList, {
                   button.textContent = originalText;
 
                   const resultContainer = getSettingsResultContainer(button, "my-syncs-export-result-container");
-                  const skippedNote = summary.skipped > 0 ? ` (${summary.skipped} skipped)` : "";
                   resultContainer.innerHTML = `<div style="
                     padding: 16px 20px;
                     background: rgba(255, 255, 255, 0.03);
@@ -11574,7 +11573,7 @@ react.createElement(OptionList, {
                       </svg>
                       <div>
                         <div style="font-weight: 600; margin-bottom: 2px;">${I18n.t("notifications.mySyncsExportSuccess") || "My syncs export successful"}</div>
-                        <div style="opacity: 0.8; font-size: 12px;">${I18n.t("notifications.mySyncsExportSuccessDesc") || `Exported ${summary.exported} of ${summary.total} syncs${skippedNote}.`}</div>
+                        <div style="opacity: 0.8; font-size: 12px;">${I18n.t("notifications.mySyncsExportSuccessDesc", summary) || `Exported ${summary.exported} of ${summary.total} syncs. Skipped: ${summary.skipped}.`}</div>
                       </div>
                     </div>
                   </div>`;
@@ -11608,7 +11607,7 @@ react.createElement(OptionList, {
                         </svg>
                         <div>
                           <div style="font-weight: 600; margin-bottom: 2px;">${I18n.t("notifications.mySyncsExportFailed") || "My syncs export failed"}</div>
-                          <div style="opacity: 0.8; font-size: 12px;">${message}</div>
+                          <div style="opacity: 0.8; font-size: 12px;">${Utils.escapeHtml(String(message))}</div>
                         </div>
                       </div>
                     </div>`;

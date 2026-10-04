@@ -2961,6 +2961,15 @@ const Utils = {
     return webMatch ? webMatch[1] : null;
   },
 
+  getTranslationCacheId(uri) {
+    const shared = window.LyricsService?.getTranslationCacheId || window.ivLyricsTrackIdentity?.getTranslationCacheId;
+    if (typeof shared === "function") return shared(uri);
+    const trackId = this.extractTrackId(uri);
+    if (trackId) return trackId;
+    const value = typeof uri === "string" ? uri.trim() : "";
+    return this.isLocalTrackUri(value) ? `local-uri:${value}` : null;
+  },
+
   // ==========================================
   // 커뮤니티 영상 추천 시스템
   // ==========================================

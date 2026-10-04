@@ -4113,7 +4113,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 // 가사 언어 감지
                 const translationRequests = buildPanelTranslationRequests(lyricsData);
                 const lyricsText = translationRequests.map(request => request.text).join('\n');
-                const trackId = trackInfo.trackId;
+                const trackId = window.LyricsService?.getTranslationCacheId?.(trackInfo.uri)
+                    || trackInfo.trackId;
 
                 // 페이지와 동일하게 곡별/전역 override를 먼저 적용한 뒤
                 // Intl.DisplayNames로 translation-mode 키를 만든다.

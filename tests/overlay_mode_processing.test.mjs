@@ -86,6 +86,8 @@ function load({ language = 'en', ai = null, conversions = {}, values = new Map()
             getPlayerPlaybackSnapshot: () => ({ uri: track.uri }),
             detectLanguage: () => language,
             extractTrackId: (uri) => uri.split(':').at(-1),
+            getTranslationCacheId: (uri) => uri.startsWith('spotify:local:')
+                ? `local-uri:${uri}` : uri.split(':').at(-1),
             isSectionHeader: (text) => /^\s*\[[^\]]+\]\s*$/.test(String(text || ''))
         },
         getTranslationTargetLanguage: () => 'ko',

@@ -237,6 +237,15 @@
 
                 const webMatch = value.match(/open\.spotify\.com\/track\/([A-Za-z0-9]{22})(?:[/?#]|$)/);
                 return webMatch ? webMatch[1] : null;
+            },
+
+            // Translation providers need a stable cache identity, not a Spotify ID.
+            // Keep the complete local URI: its last component is only the duration.
+            getTranslationCacheId(uri) {
+                const trackId = api.extractTrackId(uri);
+                if (trackId) return trackId;
+                const value = typeof uri === "string" ? uri.trim() : "";
+                return api.isLocalTrackUri(value) ? `local-uri:${value}` : null;
             }
         };
 
@@ -719,6 +728,10 @@
 
         extractTrackId(uri) {
             return TrackIdentity.extractTrackId(uri);
+        },
+
+        getTranslationCacheId(uri) {
+            return TrackIdentity.getTranslationCacheId(uri);
         },
 
         isSectionHeader(text) {
@@ -7749,6 +7762,10 @@
             return TrackIdentity.extractTrackId(uri);
         },
 
+        getTranslationCacheId(uri) {
+            return TrackIdentity.getTranslationCacheId(uri);
+        },
+
         // 언어 감지 (Extension 내 Utils에서 직접 참조)
         detectLanguage(lyrics) {
             return Utils.detectLanguage(lyrics);
@@ -8233,7 +8250,7 @@
                             throw new Error('AI translator is not available');
                         }
                         const response = await window.Translator.callGemini({
-                            trackId: Utils.extractTrackId(info.uri),
+                            trackId: Utils.getTranslationCacheId(info.uri),
                             artist: info.artist,
                             title: info.title,
                             text: lyricsText,
@@ -8823,7 +8840,7 @@
 
             let finalTrackId = trackId;
             if (!finalTrackId) {
-                finalTrackId = Utils.extractTrackId(Spicetify.Player.data?.item?.uri);
+                finalTrackId = Utils.getTranslationCacheId(Spicetify.Player.data?.item?.uri);
             }
             if (!finalTrackId) {
                 return null;
@@ -8924,7 +8941,7 @@
 
             let finalTrackId = trackId;
             if (!finalTrackId) {
-                finalTrackId = Utils.extractTrackId(Spicetify.Player.data?.item?.uri);
+                finalTrackId = Utils.getTranslationCacheId(Spicetify.Player.data?.item?.uri);
             }
             if (!finalTrackId) {
                 throw new Error('No track ID available');
@@ -9047,7 +9064,7 @@
 
             let finalTrackId = trackId;
             if (!finalTrackId) {
-                finalTrackId = Utils.extractTrackId(Spicetify.Player.data?.item?.uri);
+                finalTrackId = Utils.getTranslationCacheId(Spicetify.Player.data?.item?.uri);
             }
             if (!finalTrackId) {
                 throw new Error("No track ID available");

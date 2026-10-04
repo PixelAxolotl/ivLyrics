@@ -3806,7 +3806,7 @@ const Prefetcher = {
    */
   async _prefetchTranslations(trackInfo, lyrics) {
     const uri = trackInfo.uri;
-    const trackId = Utils.extractTrackId(uri);  // spotify:track:XXXX -> XXXX
+    const trackId = Utils.getTranslationCacheId(uri);
     const cacheKeyBase = `prefetch:translation:${uri}`;
     const versionedCacheKeyBase = `${cacheKeyBase}:${getSyncDataRendererCacheVersion(lyrics)}:pronunciation=${getCurrentLyricsPronunciationNotation()}`;
 
@@ -5732,7 +5732,7 @@ class LyricsContainer extends react.Component {
     const sourceLines = sourceRequests.map((request) => request.text);
     const sourceText = sourceLines.join("\n");
     const trackUri = this.state.uri;
-    const trackId = Utils.extractTrackId(trackUri);
+    const trackId = Utils.getTranslationCacheId(trackUri);
 
     if (!trackId || sourceLines.length === 0) {
       Toast.error(I18n.t("notifications.noLyricsLoaded"));
@@ -5846,7 +5846,7 @@ class LyricsContainer extends react.Component {
       }
     }
 
-    const trackId = Utils.extractTrackId(trackUri);
+    const trackId = Utils.getTranslationCacheId(trackUri);
     if (trackId) {
       window.Translator?.clearMemoryCache?.(trackId);
       window.Translator?.clearInflightRequests?.(trackId);
@@ -5880,7 +5880,7 @@ class LyricsContainer extends react.Component {
     }
 
     const editorTrackUri = this.state.lyricsEditTrackUri || this.state.uri;
-    const trackId = Utils.extractTrackId(editorTrackUri);
+    const trackId = Utils.getTranslationCacheId(editorTrackUri);
     if (!trackId) {
       this.setState({
         lyricsEditError: I18n.t("lyricsCacheEditor.trackMissing"),
@@ -5972,7 +5972,7 @@ class LyricsContainer extends react.Component {
       return;
     }
 
-    const trackId = Utils.extractTrackId(uri);
+    const trackId = Utils.getTranslationCacheId(uri);
     if (!trackId || !title || !artist) {
       return;
     }
@@ -6649,7 +6649,7 @@ class LyricsContainer extends react.Component {
 
     const requestUri = this.state.uri;
     // trackId 가져오기
-    const trackId = Utils.extractTrackId(Spicetify.Player.data?.item?.uri);
+    const trackId = Utils.getTranslationCacheId(requestUri);
     if (!trackId) {
       Toast.error(I18n.t("notifications.noTrackPlaying"));
       return;
@@ -8459,7 +8459,7 @@ class LyricsContainer extends react.Component {
       // Filter out section headers before sending to Gemini for translation
       const text = getNonSectionLyricsText(lyrics);
       const legacyText = getLegacyNonSectionLyricsText(lyrics);
-      const trackId = Utils.extractTrackId(lyricsState.uri || this.state.uri);
+      const trackId = Utils.getTranslationCacheId(lyricsState.uri || this.state.uri);
       const userLang = this.getTranslationTargetLanguage();
 
       const mapResultLinesToLyrics = (linesInput, splitVocalParts = true) => {
@@ -8527,6 +8527,7 @@ class LyricsContainer extends react.Component {
           }
 
           const response = await window.Translator.callGemini({
+            trackId,
             apiKey,
             artist: this.state.artist || lyricsState.artist,
             title: this.state.title || lyricsState.title,

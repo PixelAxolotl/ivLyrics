@@ -46,6 +46,45 @@
 
     const LYRICS_API_BASE = 'https://spclient.wg.spotify.com/color-lyrics/v2/track/';
 
+    const requestSpotifyLyrics = async (trackId) => {
+        let platformError = null;
+        const requestBuilder = Spicetify.Platform?.RequestBuilder;
+        if (typeof requestBuilder?.build === 'function') {
+            try {
+                const response = await requestBuilder.build()
+                    .withHost('https://spclient.wg.spotify.com/color-lyrics/v2')
+                    .withPath(`/track/${trackId}`)
+                    .withEndpointIdentifier('/track/{trackId}')
+                    .withQueryParameters({ format: 'json', vocalRemoval: 'false', market: 'from_token' })
+                    .send();
+                const status = Number(response?.status ?? response?.statusCode ?? 200);
+                if (status === 404 || status === 204) return null;
+                if (status < 200 || status >= 300) {
+                    const error = new Error(`Spotify lyrics request failed (${status})`);
+                    error.status = status;
+                    throw error;
+                }
+                const body = response?.body ?? response;
+                return typeof body === 'string' ? JSON.parse(body) : body;
+            } catch (error) {
+                // Missing lyrics, access restrictions and rate limits do not need
+                // a duplicate request through the older transport.
+                if (error.status >= 400 && error.status < 500) throw error;
+                platformError = error;
+            }
+        }
+
+        // Older Spotify/Spicetify versions expose CosmosAsync instead. Newer
+        // clients can omit it even though the authenticated RequestBuilder works.
+        if (typeof Spicetify.CosmosAsync?.get === 'function') {
+            const body = await Spicetify.CosmosAsync.get(
+                `${LYRICS_API_BASE}${trackId}?format=json&vocalRemoval=false&market=from_token`
+            );
+            return typeof body === 'string' ? JSON.parse(body) : body;
+        }
+        throw platformError || new Error('Spotify lyrics request API unavailable');
+    };
+
     // ============================================
     // Addon Implementation
     // ============================================
@@ -111,16 +150,20 @@
             // Spotify API 호출
             let body;
             try {
-                body = await Spicetify.CosmosAsync.get(
-                    `${LYRICS_API_BASE}${trackId}?format=json&vocalRemoval=false&market=from_token`
-                );
+                body = await requestSpotifyLyrics(trackId);
             } catch (e) {
-                result.error = 'Request error';
+                result.error = e.status ? `Request error (${e.status})` : 'Request error';
+                console.warn('[Spotify Lyrics Addon] Lyrics request failed:', {
+                    trackId,
+                    status: e.status || null,
+                    requestBuilderAvailable: typeof Spicetify.Platform?.RequestBuilder?.build === 'function',
+                    cosmosAvailable: typeof Spicetify.CosmosAsync?.get === 'function'
+                });
                 return result;
             }
 
             const lyrics = body?.lyrics;
-            if (!lyrics) {
+            if (!Array.isArray(lyrics?.lines) || lyrics.lines.length === 0) {
                 result.error = 'No lyrics';
                 return result;
             }

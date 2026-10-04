@@ -19,6 +19,10 @@ on:
         description: "For pc-range: last PC tag to announce, included (blank uses latest)"
         required: false
         type: string
+      resume_run_id:
+        description: "Optional: previous notification run ID whose sent messages should be verified and reused"
+        required: false
+        type: string
       dry_run:
         description: "Prepare the notification preview without sending"
         required: true
@@ -27,6 +31,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: release-notifications
@@ -48,6 +53,19 @@ jobs:
           RELEASE_THROUGH_TAG: ${{ inputs.through_tag }}
           RELEASE_NOTIFICATION_DIR: ${{ runner.temp }}/release-notifications
         run: node .github/scripts/prepare_release_notifications.mjs prepare
+
+      - name: Recover previous delivery receipts
+        if: ${{ inputs.resume_run_id != '' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIOUS_RUN_ID: ${{ inputs.resume_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$PREVIOUS_RUN_ID" =~ ^[0-9]+$ ]]
+          gh run download "$PREVIOUS_RUN_ID" --repo "$GITHUB_REPOSITORY" \
+            --name release-notification-receipts \
+            --dir "$RUNNER_TEMP/release-notifications"
 
       - name: Upload notification preview
         uses: actions/upload-artifact@v7

@@ -91,6 +91,52 @@ test('verification rereads the saved message and retries only reads after a rate
   await assert.rejects(verifyReleaseWebhookMessage(webhook, receipt, message, { fetchImpl: async () => Response.json({ ...receipt, ...message, content: 'other' }) }), /saved content/);
 });
 
+test('Discord trimming surrounding whitespace is accepted while internal changes fail verification', async () => {
+  const receipt = { id: '456', channel_id: '789' };
+  const expected = { content: ' Released\n', embeds: [{ description: ' \n한국어\nEnglish\n\n' }] };
+  const saved = { ...receipt, content: 'Released', embeds: [{ description: '한국어\nEnglish' }] };
+  await verifyReleaseWebhookMessage(webhook, receipt, expected, { fetchImpl: async () => Response.json(saved) });
+  await assert.rejects(verifyReleaseWebhookMessage(webhook, receipt, expected, {
+    fetchImpl: async () => Response.json({ ...saved, embeds: [{ description: '한국어 English' }] })
+  }), /saved content/);
+});
+
+test('partial batch recovery verifies its first message and only posts the unsent parts', async () => {
+  const folder = await mkdtemp(join(tmpdir(), 'ivlyrics-webhook-resume-'));
+  try {
+    const body = '한국어 English\n'.repeat(1000);
+    const notesPath = join(folder, 'notes.md');
+    await writeFile(notesPath, body);
+    const messages = buildReleaseWebhookMessages({ platform: 'pc', tag: 'v6.6.26', title: 'Roundup', body, releaseUrl: releases.at(-1).html_url, now: 0 });
+    const saved = new Map([['456', { id: '456', channel_id: '789', ...messages[0] }]]);
+    const calls = [];
+    let posts = 0;
+    const result = await sendReleaseWebhook({
+      RELEASE_WEBHOOK_URL: webhook, RELEASE_PLATFORM: 'pc', RELEASE_TAG: 'v6.6.26',
+      RELEASE_TITLE: 'Roundup', RELEASE_NOTES_PATH: notesPath, GITHUB_REPOSITORY: repository
+    }, {
+      now: 0, resumeReceipts: [{ part: 1, messageId: '456', channelId: '789', verified: false }],
+      fetchImpl: async (url, init) => {
+        calls.push([url, init?.method || 'GET']);
+        if (init?.method === 'POST') {
+          const id = String(5000 + posts++);
+          const value = { id, channel_id: '789', ...JSON.parse(init.body) };
+          saved.set(id, value);
+          return Response.json(value);
+        }
+        return Response.json(saved.get(new URL(url).pathname.split('/').at(-1)));
+      }
+    });
+    assert.equal(calls[0][1], 'GET');
+    assert.ok(calls[0][0].endsWith('/messages/456'));
+    assert.equal(posts, messages.length - 1);
+    assert.equal(result.length, messages.length);
+    assert.equal(result[0].messageId, '456');
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+
 test('batch delivery records partial receipts and uses the latest release URL for the range', async () => {
   const folder = await mkdtemp(join(tmpdir(), 'ivlyrics-webhook-test-'));
   try {

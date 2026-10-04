@@ -201,11 +201,16 @@ export async function verifyReleaseWebhookMessage(webhookUrl, receipt, message, 
     }
     await sleep(getRetryDelayMs(response, payload, attempt));
   }
+  // Discord trims surrounding whitespace from content and embed descriptions.
+  // Compare the retained text while preserving every internal character.
   if (saved.id !== receipt.id || saved.channel_id !== receipt.channel_id
-    || saved.content !== message.content
+    || String(saved.content || '').trim() !== String(message.content || '').trim()
     || saved.embeds?.length !== message.embeds.length
-    || saved.embeds.some((embed, index) => embed.description !== message.embeds[index].description)) {
+    || saved.embeds.some((embed, index) => String(embed.description || '').trim() !== String(message.embeds[index].description || '').trim())) {
     throw new Error(`Discord message ${receipt.id} was sent but its saved content could not be verified.`);
+  }
+  if (saved.embeds.some((embed, index) => embed.description !== message.embeds[index].description)) {
+    console.log(`Discord normalized boundary whitespace in message ${receipt.id}.`);
   }
   return { messageId: saved.id, channelId: saved.channel_id };
 }
@@ -236,9 +241,19 @@ export async function sendReleaseWebhook(env = process.env, options = {}) {
     now: options.now
   });
 
+  const previousReceipts = options.resumeReceipts || [];
+  const previousByPart = new Map(previousReceipts.map(receipt => [receipt.part, receipt]));
+  if (previousByPart.size !== previousReceipts.length || previousReceipts.some(receipt =>
+    !Number.isInteger(receipt.part) || receipt.part < 1 || receipt.part > messages.length
+    || !/^\d+$/.test(receipt.messageId || '') || !/^\d+$/.test(receipt.channelId || ''))) {
+    throw new Error('Previous notification receipts are invalid for this batch.');
+  }
   const receipts = [];
   for (let index = 0; index < messages.length; index += 1) {
-    const receipt = await postReleaseWebhookMessage(webhookUrl, messages[index], options);
+    const previous = previousByPart.get(index + 1);
+    const receipt = previous
+      ? { id: previous.messageId, channel_id: previous.channelId }
+      : await postReleaseWebhookMessage(webhookUrl, messages[index], options);
     // Record the acknowledgement before verification so partial batches can be
     // recovered without posting already accepted messages a second time.
     await options.onReceipt?.({ messageId: receipt.id, channelId: receipt.channel_id, part: index + 1, verified: false });

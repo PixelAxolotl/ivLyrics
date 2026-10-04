@@ -91,7 +91,16 @@ export async function prepareNotifications(env = process.env) {
 async function sendNotifications(env = process.env) {
   const folder = resolve(env.RELEASE_NOTIFICATION_DIR || 'release-notifications');
   const manifest = JSON.parse(await readFile(resolve(folder, 'manifest.json'), 'utf8'));
-  const receipts = [];
+  let receipts = [];
+  try {
+    receipts = JSON.parse(await readFile(resolve(folder, 'receipts.json'), 'utf8'));
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  if (!Array.isArray(receipts) || receipts.some(receipt => !manifest.some(notification =>
+    notification.platform === receipt.platform && notification.tag === receipt.tag))) {
+    throw new Error('Previous notification receipts belong to a different release batch.');
+  }
   for (const notification of manifest) {
     await sendReleaseWebhook({
       RELEASE_WEBHOOK_URL: env.RELEASE_WEBHOOK_URL,
@@ -101,13 +110,16 @@ async function sendNotifications(env = process.env) {
       RELEASE_URL: notification.releaseUrl,
       RELEASE_NOTES_PATH: notification.notesPath,
       GITHUB_REPOSITORY: notification.repository
-    }, { onReceipt: async receipt => {
-      const existing = receipts.findIndex(item => item.messageId === receipt.messageId);
-      const item = { platform: notification.platform, tag: notification.tag, ...receipt };
-      if (existing === -1) receipts.push(item);
-      else receipts[existing] = item;
-      await writeFile(resolve(folder, 'receipts.json'), JSON.stringify(receipts, null, 2));
-    } });
+    }, {
+      resumeReceipts: receipts.filter(receipt => receipt.platform === notification.platform && receipt.tag === notification.tag),
+      onReceipt: async receipt => {
+        const existing = receipts.findIndex(item => item.messageId === receipt.messageId);
+        const item = { platform: notification.platform, tag: notification.tag, ...receipt };
+        if (existing === -1) receipts.push(item);
+        else receipts[existing] = item;
+        await writeFile(resolve(folder, 'receipts.json'), JSON.stringify(receipts, null, 2));
+      }
+    });
   }
 }
 

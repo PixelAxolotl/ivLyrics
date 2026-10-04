@@ -466,7 +466,8 @@ window.LANG_CS = {
         "tmi": "TMI",
         "lyricsStudy": "Učení",
         "characterPronunciation": "Výslovnost znaků",
-        "culturalAnnotations": "Kulturní kontext"
+        "culturalAnnotations": "Kulturní kontext",
+        "wordSupplements": "Podrobnosti slov"
       },
       "noEnabledProviders": "Nejsou povoleni žádní poskytovatelé AI. Povolte v nastavení alespoň jednoho poskytovatele.",
       "allProvidersFailed": "Všem poskytovatelům AI se nepodařilo požadavek zpracovat.",
@@ -636,6 +637,7 @@ window.LANG_CS = {
     "regeneratePronunciationOnly": "Pouze výslovnost",
     "regenerateTranslationOnly": "Pouze překlad",
     "regenerateBoth": "Výslovnost a překlad",
+    "regenerateWordDetails": "Podrobnosti slov",
     "regenerateAction": "Regenerovat",
     "fullscreen": "Celá obrazovka",
     "exitFullscreen": "Ukončete celou obrazovku"
@@ -852,6 +854,9 @@ window.LANG_CS = {
     "culturalAnnotationsRegenerated": "Vysvětlení kulturního kontextu byla znovu vytvořena.",
     "translationRegenerateFailed": "Obnovení překladu se nezdařilo",
     "culturalAnnotationsRegenerateFailed": "Vysvětlení kulturního kontextu se nepodařilo znovu vytvořit.",
+    "regeneratingWordDetails": "Regeneruji podrobnosti...",
+    "wordDetailsRegenerated": "Podrobnosti regenerovány.",
+    "wordDetailsRegenerateFailed": "Regenerace se nezdařila",
     "lyricsProviderSaved": "Nastavení poskytovatele textů uloženo pro tuto skladbu.",
     "lyricsProviderSaveFailed": "Nastavení poskytovatele textů se nepodařilo uložit.",
     "translationCacheRemoved": "Mezipaměť překladu odstraněna a znovu načtena!",
@@ -877,7 +882,11 @@ window.LANG_CS = {
     "lyricsLoadedFromFile": "Úspěšně načteno {types} texty ze souboru",
     "lyricsLoadedFromLrclib": "Načtené texty z LRCLIB.",
     "lyricsLoadFailed": "Nepodařilo se načíst text: Neplatný formát souboru",
-    "fileReadFailed": "Soubor se nepodařilo přečíst: Soubor může být poškozen"
+    "fileReadFailed": "Soubor se nepodařilo přečíst: Soubor může být poškozen",
+    "mySyncsExportSuccess": "Synchronizace exportovány",
+    "mySyncsExportSuccessDesc": "Exportováno {exported} z {total} synchronizací. Přeskočeno: {skipped}.",
+    "mySyncsExportEmpty": "Synchronizace tohoto uživatele nebyly nalezeny.",
+    "mySyncsExportFailed": "Export synchronizací selhal"
   },
   "misc": {
     "and": "a",
@@ -1378,6 +1387,10 @@ window.LANG_CS = {
       "videoEnabled": {
         "label": "Předběžně načíst pozadí videa",
         "desc": "Načtěte si předem informace o pozadí videa pro další skladbu"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {
@@ -1462,7 +1475,8 @@ window.LANG_CS = {
       "import": {
         "label": "Nastavení importu",
         "button": "Importovat",
-        "processing": "Import..."
+        "processing": "Import...",
+        "confirm": "Bude importováno {count} nastavení a vaše současná nastavení budou nahrazena. Pokračovat?"
       }
     },
     "cloudSync": {
@@ -1529,6 +1543,11 @@ window.LANG_CS = {
         "button": "Importovat",
         "processing": "Import...",
         "confirm": "Všechna existující data DB budou přepsána. Pokračovat?"
+      },
+      "exportMySyncs": {
+        "label": "Exportovat mé synchronizace",
+        "button": "Exportovat mé synchronizace",
+        "processing": "Exportování..."
       }
     },
     "resetSettings": {
@@ -1948,7 +1967,9 @@ window.LANG_CS = {
   "generationStatus": {
     "complete": "Hotovo!",
     "culturalAnnotations": "Vysvětlení kulturního kontextu",
-    "culturalAnnotationsLoading": "Analyzuje se kulturní kontext..."
+    "culturalAnnotationsLoading": "Analyzuje se kulturní kontext...",
+    "wordSupplements": "Podrobnosti slov",
+    "wordSupplementsLoading": "Načítání výslovnosti a glos..."
   },
   "videoBackground": {
     "loading": "Načítání informací o videu...",
@@ -2079,7 +2100,8 @@ window.LANG_CS = {
       "cover": "Rozostření obalu",
       "gradient": "Gradient",
       "minimal": "Minimální",
-      "glass": "Sklo"
+      "glass": "Sklo",
+      "word": "Učení slov"
     },
     "advancedSettings": "Pokročilá nastavení",
     "sections": {
@@ -2120,7 +2142,43 @@ window.LANG_CS = {
       "aspectRatio": "Poměr obrazu",
       "imageWidth": "Šířka obrázku",
       "padding": "Okraje",
-      "showWatermark": "Zobrazit vodoznak"
+      "showWatermark": "Zobrazit vodoznak",
+      "trackTitleSize": "Velikost názvu",
+      "trackTitleColor": "Barva názvu",
+      "trackTitleWeight": "Tloušťka názvu",
+      "trackArtistSize": "Velikost jména interpreta",
+      "trackArtistColor": "Barva jména interpreta",
+      "trackArtistWeight": "Tloušťka jména interpreta",
+      "lyricsDetail": "Režim exportu",
+      "lineLevel": "Řádek",
+      "wordLevel": "Slovo",
+      "origColor": "Barva originálu",
+      "origWeight": "Tloušťka originálu",
+      "pronSize": "Velikost výslovnosti řádku",
+      "pronColor": "Barva výslovnosti řádku",
+      "pronWeight": "Tloušťka výslovnosti řádku",
+      "wordReadingSize": "Velikost čtení slov",
+      "transSize": "Velikost překladu řádku",
+      "transColor": "Barva překladu řádku",
+      "transWeight": "Tloušťka překladu řádku",
+      "wordGlossSize": "Velikost překladu slov",
+      "fontSource": "Zdroj písma",
+      "fontDefault": "Výchozí",
+      "fontSettings": "Nastavení aplikace",
+      "fontCustom": "Vlastní",
+      "customFontFamily": "Vlastní písmo",
+      "groupOriginal": "Původní text",
+      "groupWordReading": "Výslovnost slov",
+      "groupWordGloss": "Překlad slov",
+      "groupLinePron": "Výslovnost řádku",
+      "groupLineTrans": "Překlad řádku",
+      "wordReadingColor": "Barva čtení slov",
+      "wordReadingWeight": "Tloušťka čtení slov",
+      "wordGlossColor": "Barva překladu slov",
+      "wordGlossWeight": "Tloušťka překladu slov",
+      "alignRight": "Vpravo",
+      "exportScale": "Měřítko exportu",
+      "ratioAuto": "Automaticky"
     },
     "preview": "Náhled",
     "actions": {
@@ -2811,7 +2869,15 @@ window.LANG_CS = {
     "multiVocalDetectedTitle": "Bylo zjištěno více vokálů",
     "multiVocalDetectedBody": "Tento text obsahuje řádky se závorkami nebo oddělovači, takže je lze synchronizovat jako samostatné vokální party. Vyberte, jak na této skladbě pracovat.",
     "multiVocalDecisionNormal": "Pokračujte v normálním režimu",
-    "multiVocalDecisionMulti": "Pokračujte v režimu více vokálů"
+    "multiVocalDecisionMulti": "Pokračujte v režimu více vokálů",
+    "revert": "Obnovit zveřejněnou synchronizaci",
+    "revertDesc": "Zahodit neodeslané změny a načíst zveřejněnou synchronizaci.",
+    "revertConfirm": "Zahodit neodeslané změny a obnovit zveřejněnou synchronizaci?",
+    "reverting": "Obnovování synchronizace...",
+    "reverted": "Zveřejněná synchronizace obnovena.",
+    "noPublishedSync": "Žádná zveřejněná synchronizace není dostupná.",
+    "unsubmittedChanges": "Neodeslané změny",
+    "previewUnavailable": "Náhled není dostupný."
   },
   "marketplace": {
     "title": "Tržiště doplňků",

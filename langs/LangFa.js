@@ -466,7 +466,8 @@ window.LANG_FA = {
         "tmi": "TMI",
         "lyricsStudy": "یادگیری",
         "characterPronunciation": "تلفظ حرف‌به‌حرف",
-        "culturalAnnotations": "زمینه فرهنگی"
+        "culturalAnnotations": "زمینه فرهنگی",
+        "wordSupplements": "جزئیات واژه‌ها"
       },
       "noEnabledProviders": "هیچ ارائه دهنده هوش مصنوعی فعال نیست. لطفاً حداقل یک ارائه دهنده را در تنظیمات فعال کنید.",
       "allProvidersFailed": "همه ارائه دهندگان هوش مصنوعی در پردازش درخواست ناموفق بودند.",
@@ -636,6 +637,7 @@ window.LANG_FA = {
     "regeneratePronunciationOnly": "فقط تلفظ",
     "regenerateTranslationOnly": "فقط ترجمه",
     "regenerateBoth": "تلفظ و ترجمه",
+    "regenerateWordDetails": "جزئیات واژه‌ها",
     "regenerateAction": "بازتولید",
     "fullscreen": "تمام صفحه",
     "exitFullscreen": "خروج از تمام‌صفحه"
@@ -852,6 +854,9 @@ window.LANG_FA = {
     "culturalAnnotationsRegenerated": "توضیحات زمینه فرهنگی دوباره ایجاد شد.",
     "translationRegenerateFailed": "تولید مجدد ترجمه ناموفق بود",
     "culturalAnnotationsRegenerateFailed": "ایجاد دوباره توضیحات زمینه فرهنگی ناموفق بود.",
+    "regeneratingWordDetails": "در حال بازسازی جزئیات...",
+    "wordDetailsRegenerated": "جزئیات بازسازی شد.",
+    "wordDetailsRegenerateFailed": "بازسازی ناموفق بود",
     "lyricsProviderSaved": "تنظیم ارائه‌دهنده متن ترانه برای این قطعه ذخیره شد.",
     "lyricsProviderSaveFailed": "ذخیره تنظیم ارائه‌دهنده متن ترانه ناموفق بود.",
     "translationCacheRemoved": "کش ترجمه حذف و دوباره بارگذاری شد!",
@@ -877,7 +882,11 @@ window.LANG_FA = {
     "lyricsLoadedFromFile": "متن {types} با موفقیت از فایل بارگذاری شد",
     "lyricsLoadedFromLrclib": "متن ترانه از LRCLIB بارگذاری شد.",
     "lyricsLoadFailed": "بارگذاری متن ناموفق بود: فرمت فایل نادرست است",
-    "fileReadFailed": "خواندن فایل ناموفق بود: ممکن است فایل خراب باشد"
+    "fileReadFailed": "خواندن فایل ناموفق بود: ممکن است فایل خراب باشد",
+    "mySyncsExportSuccess": "خروجی همگام‌سازی‌ها ذخیره شد",
+    "mySyncsExportSuccessDesc": "از {total} همگام‌سازی، {exported} مورد ذخیره شد. ردشده: {skipped}.",
+    "mySyncsExportEmpty": "همگام‌سازی‌ای برای این کاربر یافت نشد.",
+    "mySyncsExportFailed": "تهیه خروجی همگام‌سازی‌ها ناموفق بود"
   },
   "misc": {
     "and": "و",
@@ -1378,6 +1387,10 @@ window.LANG_FA = {
       "videoEnabled": {
         "label": "پیش‌بارگذاری پس‌زمینه ویدیویی",
         "desc": "دریافت اطلاعات پس‌زمینه ویدیویی آهنگ بعدی پیش از موعد"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {
@@ -1462,7 +1475,8 @@ window.LANG_FA = {
       "import": {
         "label": "وارد کردن تنظیمات",
         "button": "وارد کردن",
-        "processing": "در حال وارد کردن..."
+        "processing": "در حال وارد کردن...",
+        "confirm": "‏{count} تنظیم وارد می‌شود و تنظیمات فعلی شما جایگزین خواهد شد. ادامه می‌دهید؟"
       }
     },
     "cloudSync": {
@@ -1529,6 +1543,11 @@ window.LANG_FA = {
         "button": "Import",
         "processing": "در حال ورود...",
         "confirm": "همهٔ داده‌های فعلی پایگاه داده بازنویسی می‌شوند. ادامه می‌دهید؟"
+      },
+      "exportMySyncs": {
+        "label": "خروجی گرفتن از همگام‌سازی‌های من",
+        "button": "خروجی گرفتن از همگام‌سازی‌های من",
+        "processing": "در حال تهیه خروجی..."
       }
     },
     "resetSettings": {
@@ -1948,7 +1967,9 @@ window.LANG_FA = {
   "generationStatus": {
     "complete": "انجام شد!",
     "culturalAnnotations": "توضیح زمینه فرهنگی",
-    "culturalAnnotationsLoading": "در حال تحلیل زمینه فرهنگی..."
+    "culturalAnnotationsLoading": "در حال تحلیل زمینه فرهنگی...",
+    "wordSupplements": "جزئیات واژه‌ها",
+    "wordSupplementsLoading": "در حال بارگذاری خوانش‌ها و معنی‌ها..."
   },
   "videoBackground": {
     "loading": "در حال بارگذاری اطلاعات ویدیو...",
@@ -2080,6 +2101,7 @@ window.LANG_FA = {
       "gradient": "گرادیان",
       "minimal": "مینیمال",
       "glass": "شیشه‌ای",
+      "word": "یادگیری واژه‌ها"
     },
     "advancedSettings": "تنظیمات پیشرفته",
     "sections": {
@@ -2120,7 +2142,43 @@ window.LANG_FA = {
       "aspectRatio": "نسبت تصویر",
       "imageWidth": "عرض تصویر",
       "padding": "حاشیه",
-      "showWatermark": "نمایش واترمارک"
+      "showWatermark": "نمایش واترمارک",
+      "trackTitleSize": "اندازه عنوان",
+      "trackTitleColor": "رنگ عنوان",
+      "trackTitleWeight": "ضخامت قلم عنوان",
+      "trackArtistSize": "اندازه نام هنرمند",
+      "trackArtistColor": "رنگ نام هنرمند",
+      "trackArtistWeight": "ضخامت قلم نام هنرمند",
+      "lyricsDetail": "نوع خروجی",
+      "lineLevel": "خط",
+      "wordLevel": "واژه",
+      "origColor": "رنگ متن اصلی",
+      "origWeight": "ضخامت متن اصلی",
+      "pronSize": "اندازه تلفظ خط",
+      "pronColor": "رنگ تلفظ خط",
+      "pronWeight": "ضخامت قلم تلفظ خط",
+      "wordReadingSize": "اندازه خوانش واژه‌ها",
+      "transSize": "اندازه ترجمه خط",
+      "transColor": "رنگ ترجمه خط",
+      "transWeight": "ضخامت قلم ترجمه خط",
+      "wordGlossSize": "اندازه ترجمه واژه‌ها",
+      "fontSource": "منبع قلم",
+      "fontDefault": "پیش‌فرض",
+      "fontSettings": "تنظیمات برنامه",
+      "fontCustom": "سفارشی",
+      "customFontFamily": "قلم سفارشی",
+      "groupOriginal": "متن اصلی ترانه",
+      "groupWordReading": "تلفظ واژه‌ها",
+      "groupWordGloss": "ترجمه واژه‌ها",
+      "groupLinePron": "تلفظ خط",
+      "groupLineTrans": "ترجمه خط",
+      "wordReadingColor": "رنگ خوانش واژه‌ها",
+      "wordReadingWeight": "ضخامت قلم خوانش واژه‌ها",
+      "wordGlossColor": "رنگ ترجمه واژه‌ها",
+      "wordGlossWeight": "ضخامت قلم ترجمه واژه‌ها",
+      "alignRight": "راست",
+      "exportScale": "مقیاس خروجی",
+      "ratioAuto": "خودکار"
     },
     "preview": "پیش‌نمایش",
     "actions": {
@@ -2811,7 +2869,15 @@ window.LANG_FA = {
     "multiVocalDetectedTitle": "چند وکال شناسایی شد",
     "multiVocalDetectedBody": "این متن شامل خط‌هایی با پرانتز یا جداکننده است، بنابراین می‌تواند به‌صورت بخش‌های وکال جداگانه همگام شود. روش کار روی این آهنگ را انتخاب کنید.",
     "multiVocalDecisionNormal": "ادامه در حالت عادی",
-    "multiVocalDecisionMulti": "ادامه در حالت چند وکال"
+    "multiVocalDecisionMulti": "ادامه در حالت چند وکال",
+    "revert": "بازیابی همگام‌سازی منتشرشده",
+    "revertDesc": "تغییرات ارسال‌نشده را کنار بگذارید و همگام‌سازی منتشرشده را بارگذاری کنید.",
+    "revertConfirm": "تغییرات ارسال‌نشده کنار گذاشته و همگام‌سازی منتشرشده بازیابی شود؟",
+    "reverting": "در حال بازیابی همگام‌سازی...",
+    "reverted": "همگام‌سازی منتشرشده بازیابی شد.",
+    "noPublishedSync": "همگام‌سازی منتشرشده‌ای موجود نیست.",
+    "unsubmittedChanges": "تغییرات ارسال‌نشده",
+    "previewUnavailable": "پیش‌نمایش در دسترس نیست."
   },
   "marketplace": {
     "title": "فروشگاه افزونه‌ها",

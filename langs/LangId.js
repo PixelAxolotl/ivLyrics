@@ -466,7 +466,8 @@ window.LANG_ID = {
         "tmi": "TMI",
         "lyricsStudy": "Belajar",
         "characterPronunciation": "Pelafalan per karakter",
-        "culturalAnnotations": "Konteks budaya"
+        "culturalAnnotations": "Konteks budaya",
+        "wordSupplements": "Detail kata"
       },
       "noEnabledProviders": "Tidak ada penyedia AI yang diaktifkan. Harap aktifkan setidaknya satu penyedia di pengaturan.",
       "allProvidersFailed": "Semua penyedia AI gagal memproses permintaan.",
@@ -636,6 +637,7 @@ window.LANG_ID = {
     "regeneratePronunciationOnly": "Hanya pelafalan",
     "regenerateTranslationOnly": "Hanya terjemahan",
     "regenerateBoth": "Pelafalan dan terjemahan",
+    "regenerateWordDetails": "Detail kata",
     "regenerateAction": "Buat ulang",
     "fullscreen": "Layar Penuh",
     "exitFullscreen": "Keluar dari layar penuh"
@@ -852,6 +854,9 @@ window.LANG_ID = {
     "culturalAnnotationsRegenerated": "Penjelasan konteks budaya berhasil dibuat ulang.",
     "translationRegenerateFailed": "Gagal membuat ulang terjemahan",
     "culturalAnnotationsRegenerateFailed": "Gagal membuat ulang penjelasan konteks budaya.",
+    "regeneratingWordDetails": "Membuat ulang detail kata...",
+    "wordDetailsRegenerated": "Detail kata dibuat ulang.",
+    "wordDetailsRegenerateFailed": "Gagal membuat ulang",
     "lyricsProviderSaved": "Pengaturan penyedia lirik untuk lagu ini disimpan.",
     "lyricsProviderSaveFailed": "Gagal menyimpan pengaturan penyedia lirik.",
     "translationCacheRemoved": "Cache terjemahan dihapus dan dimuat ulang!",
@@ -877,7 +882,11 @@ window.LANG_ID = {
     "lyricsLoadedFromFile": "Berhasil memuat lirik {types} dari file",
     "lyricsLoadedFromLrclib": "Lirik dimuat dari LRCLIB.",
     "lyricsLoadFailed": "Gagal memuat lirik: Format file salah",
-    "fileReadFailed": "Gagal membaca file: File mungkin rusak"
+    "fileReadFailed": "Gagal membaca file: File mungkin rusak",
+    "mySyncsExportSuccess": "Sinkronisasi diekspor",
+    "mySyncsExportSuccessDesc": "Mengekspor {exported} dari {total} sinkronisasi. Dilewati: {skipped}.",
+    "mySyncsExportEmpty": "Tidak ada sinkronisasi untuk pengguna ini.",
+    "mySyncsExportFailed": "Ekspor sinkronisasi gagal"
   },
   "misc": {
     "and": "dan",
@@ -1378,6 +1387,10 @@ window.LANG_ID = {
       "videoEnabled": {
         "label": "Pra-muat Latar Belakang Video",
         "desc": "Mengambil info latar belakang video lagu berikutnya sebelumnya"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {
@@ -1462,7 +1475,8 @@ window.LANG_ID = {
       "import": {
         "label": "Impor Pengaturan",
         "button": "Impor",
-        "processing": "Mengimpor..."
+        "processing": "Mengimpor...",
+        "confirm": "Ini akan mengimpor {count} setelan dan menggantikan setelan Anda saat ini. Lanjutkan?"
       }
     },
     "cloudSync": {
@@ -1529,6 +1543,11 @@ window.LANG_ID = {
         "button": "Import",
         "processing": "Mengimpor...",
         "confirm": "Semua data database yang ada akan ditimpa. Lanjutkan?"
+      },
+      "exportMySyncs": {
+        "label": "Ekspor sinkronisasi saya",
+        "button": "Ekspor sinkronisasi saya",
+        "processing": "Mengekspor..."
       }
     },
     "resetSettings": {
@@ -1948,7 +1967,9 @@ window.LANG_ID = {
   "generationStatus": {
     "complete": "Selesai!",
     "culturalAnnotations": "Penjelasan konteks budaya",
-    "culturalAnnotationsLoading": "Menganalisis konteks budaya..."
+    "culturalAnnotationsLoading": "Menganalisis konteks budaya...",
+    "wordSupplements": "Detail kata",
+    "wordSupplementsLoading": "Memuat bacaan & glosa..."
   },
   "videoBackground": {
     "loading": "Memuat info video...",
@@ -2080,6 +2101,7 @@ window.LANG_ID = {
       "gradient": "Gradien",
       "minimal": "Minimal",
       "glass": "Glass",
+      "word": "Belajar kata"
     },
     "advancedSettings": "Pengaturan Lanjutan",
     "sections": {
@@ -2120,7 +2142,43 @@ window.LANG_ID = {
       "aspectRatio": "Rasio Gambar",
       "imageWidth": "Lebar Gambar",
       "padding": "Padding",
-      "showWatermark": "Tampilkan Watermark"
+      "showWatermark": "Tampilkan Watermark",
+      "trackTitleSize": "Ukuran judul",
+      "trackTitleColor": "Warna judul",
+      "trackTitleWeight": "Ketebalan judul",
+      "trackArtistSize": "Ukuran nama artis",
+      "trackArtistColor": "Warna nama artis",
+      "trackArtistWeight": "Ketebalan nama artis",
+      "lyricsDetail": "Mode ekspor",
+      "lineLevel": "Baris",
+      "wordLevel": "Kata",
+      "origColor": "Warna asli",
+      "origWeight": "Ketebalan teks asli",
+      "pronSize": "Ukuran pelafalan baris",
+      "pronColor": "Warna pelafalan baris",
+      "pronWeight": "Ketebalan pelafalan baris",
+      "wordReadingSize": "Ukuran bacaan kata",
+      "transSize": "Ukuran terjemahan baris",
+      "transColor": "Warna terjemahan baris",
+      "transWeight": "Ketebalan terjemahan baris",
+      "wordGlossSize": "Ukuran terjemahan kata",
+      "fontSource": "Sumber font",
+      "fontDefault": "Bawaan",
+      "fontSettings": "Pengaturan aplikasi",
+      "fontCustom": "Kustom",
+      "customFontFamily": "Font kustom",
+      "groupOriginal": "Lirik asli",
+      "groupWordReading": "Pelafalan kata",
+      "groupWordGloss": "Terjemahan kata",
+      "groupLinePron": "Pelafalan baris",
+      "groupLineTrans": "Terjemahan baris",
+      "wordReadingColor": "Warna bacaan kata",
+      "wordReadingWeight": "Ketebalan bacaan kata",
+      "wordGlossColor": "Warna terjemahan kata",
+      "wordGlossWeight": "Ketebalan terjemahan kata",
+      "alignRight": "Kanan",
+      "exportScale": "Skala ekspor",
+      "ratioAuto": "Otomatis"
     },
     "preview": "Pratinjau",
     "actions": {
@@ -2811,7 +2869,15 @@ window.LANG_ID = {
     "multiVocalDetectedTitle": "Terdeteksi banyak vokal",
     "multiVocalDetectedBody": "Lirik ini memiliki baris dengan tanda kurung atau pemisah, sehingga dapat disinkronkan sebagai bagian vokal terpisah. Pilih cara mengerjakan lagu ini.",
     "multiVocalDecisionNormal": "Lanjutkan dalam mode normal",
-    "multiVocalDecisionMulti": "Lanjutkan dalam mode banyak vokal"
+    "multiVocalDecisionMulti": "Lanjutkan dalam mode banyak vokal",
+    "revert": "Pulihkan sinkronisasi yang diterbitkan",
+    "revertDesc": "Buang perubahan yang belum dikirim dan muat sinkronisasi yang diterbitkan.",
+    "revertConfirm": "Buang perubahan yang belum dikirim dan pulihkan sinkronisasi yang diterbitkan?",
+    "reverting": "Memulihkan sinkronisasi...",
+    "reverted": "Sinkronisasi yang diterbitkan dipulihkan.",
+    "noPublishedSync": "Tidak ada sinkronisasi yang diterbitkan.",
+    "unsubmittedChanges": "Perubahan belum dikirim",
+    "previewUnavailable": "Pratinjau tidak tersedia."
   },
   "marketplace": {
     "title": "Toko Addon",

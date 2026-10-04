@@ -470,7 +470,8 @@ window.LANG_EN = {
         "tmi": "TMI",
         "lyricsStudy": "Learning",
         "characterPronunciation": "Character pronunciation",
-        "culturalAnnotations": "Cultural context"
+        "culturalAnnotations": "Cultural context",
+        "wordSupplements": "Word details"
       },
       "noEnabledProviders": "No AI providers enabled. Please enable at least one provider in settings.",
       "allProvidersFailed": "All AI providers failed to process the request.",
@@ -636,6 +637,7 @@ window.LANG_EN = {
     "regeneratePronunciationOnly": "Pronunciation Only",
     "regenerateTranslationOnly": "Translation Only",
     "regenerateBoth": "Pronunciation and Translation",
+    "regenerateWordDetails": "Word details",
     "regenerateAction": "Regenerate",
     "fullscreen": "Fullscreen",
     "exitFullscreen": "Exit Fullscreen"
@@ -850,6 +852,9 @@ window.LANG_EN = {
     "regeneratingTranslation": "Regenerating translation...",
     "translationRegenerated": "Translation regenerated",
     "culturalAnnotationsRegenerated": "Cultural context explanations regenerated.",
+    "regeneratingWordDetails": "Regenerating word details...",
+    "wordDetailsRegenerated": "Word details regenerated.",
+    "wordDetailsRegenerateFailed": "Failed to regenerate word details.",
     "translationRegenerateFailed": "Failed to regenerate translation",
     "culturalAnnotationsRegenerateFailed": "Failed to regenerate cultural context explanations.",
     "lyricsProviderSaved": "Lyrics provider setting saved for this track.",
@@ -877,7 +882,11 @@ window.LANG_EN = {
     "lyricsLoadedFromFile": "Successfully loaded {types} lyrics from file",
     "lyricsLoadedFromLrclib": "Loaded lyrics from LRCLIB.",
     "lyricsLoadFailed": "Failed to load lyrics: Invalid file format",
-    "fileReadFailed": "Failed to read file: File may be corrupted"
+    "fileReadFailed": "Failed to read file: File may be corrupted",
+    "mySyncsExportSuccess": "My syncs exported",
+    "mySyncsExportSuccessDesc": "Exported {exported} of {total} syncs. Skipped: {skipped}.",
+    "mySyncsExportEmpty": "No synced tracks found for this user.",
+    "mySyncsExportFailed": "My syncs export failed"
   },
   "misc": {
     "and": "and",
@@ -1378,6 +1387,10 @@ window.LANG_EN = {
       "videoEnabled": {
         "label": "Preload Video Background",
         "desc": "Fetch video background info for the next song in advance"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {
@@ -1462,7 +1475,8 @@ window.LANG_EN = {
       "import": {
         "label": "Import Settings",
         "button": "Import",
-        "processing": "Importing..."
+        "processing": "Importing...",
+        "confirm": "This will import {count} settings and replace your current settings. Continue?"
       }
     },
     "cloudSync": {
@@ -1529,6 +1543,11 @@ window.LANG_EN = {
         "button": "Import",
         "processing": "Importing...",
         "confirm": "All existing DB data will be overwritten. Continue?"
+      },
+      "exportMySyncs": {
+        "label": "Export My Syncs",
+        "button": "Export My Syncs",
+        "processing": "Exporting..."
       }
     },
     "resetSettings": {
@@ -1948,7 +1967,9 @@ window.LANG_EN = {
   "generationStatus": {
     "complete": "Done!",
     "culturalAnnotations": "Cultural context explanations",
-    "culturalAnnotationsLoading": "Analyzing cultural context..."
+    "culturalAnnotationsLoading": "Analyzing cultural context...",
+    "wordSupplements": "Word details",
+    "wordSupplementsLoading": "Loading word readings & glosses..."
   },
   "videoBackground": {
     "loading": "Loading video info...",
@@ -2080,6 +2101,7 @@ window.LANG_EN = {
       "gradient": "Gradient",
       "minimal": "Minimal",
       "glass": "Glass",
+      "word": "Word Study"
     },
     "advancedSettings": "Advanced Settings",
     "sections": {
@@ -2110,8 +2132,44 @@ window.LANG_EN = {
       "coverSize": "Cover Size",
       "coverRadius": "Cover Radius",
       "coverBlur": "Cover Blur",
+      "trackTitleSize": "Track Title Size",
+      "trackTitleColor": "Track Title Color",
+      "trackTitleWeight": "Track Title Weight",
+      "trackArtistSize": "Artist Size",
+      "trackArtistColor": "Artist Color",
+      "trackArtistWeight": "Artist Weight",
       "showPronunciation": "Pronunciation",
       "showTranslation": "Translation",
+      "lyricsDetail": "Export Type",
+      "lineLevel": "Line",
+      "wordLevel": "Word",
+      "origColor": "Original Color",
+      "origWeight": "Original Weight",
+      "pronSize": "Pronunciation Size",
+      "pronColor": "Pronunciation Color",
+      "pronWeight": "Pronunciation Weight",
+      "wordReadingSize": "Word Reading Size",
+      "transSize": "Translation Size",
+      "transColor": "Translation Color",
+      "transWeight": "Translation Weight",
+      "wordGlossSize": "Word Translation Size",
+      "fontSource": "Font Source",
+      "fontDefault": "Default",
+      "fontSettings": "App Settings",
+      "fontCustom": "Custom",
+      "customFontFamily": "Custom Font",
+      "groupOriginal": "Original Lyrics",
+      "groupWordReading": "Word Pronunciation",
+      "groupWordGloss": "Word Translation",
+      "groupLinePron": "Line Pronunciation",
+      "groupLineTrans": "Line Translation",
+      "wordReadingColor": "Word Reading Color",
+      "wordReadingWeight": "Word Reading Weight",
+      "wordGlossColor": "Word Gloss Color",
+      "wordGlossWeight": "Word Gloss Weight",
+      "alignRight": "Right",
+      "exportScale": "Export Scale",
+      "ratioAuto": "Auto",
       "lyricsAlign": "Lyrics Alignment",
       "alignLeft": "Left",
       "alignCenter": "Center",
@@ -2811,7 +2869,15 @@ window.LANG_EN = {
     "multiVocalDetectedTitle": "Multiple vocals detected",
     "multiVocalDetectedBody": "This lyric contains lines with parentheses or separators, so it can be synced as separate vocal parts. Choose how to work on this song.",
     "multiVocalDecisionNormal": "Continue in normal mode",
-    "multiVocalDecisionMulti": "Continue in multiple vocal mode"
+    "multiVocalDecisionMulti": "Continue in multiple vocal mode",
+    "revert": "Revert to published sync",
+    "revertDesc": "Discard unsubmitted changes and load the published sync.",
+    "revertConfirm": "Discard unsubmitted changes and revert to the published sync?",
+    "reverting": "Reverting sync...",
+    "reverted": "Restored the published sync.",
+    "noPublishedSync": "No published sync is available.",
+    "unsubmittedChanges": "Unsubmitted changes",
+    "previewUnavailable": "Preview is unavailable."
   },
   "marketplace": {
     "title": "Addon Marketplace",

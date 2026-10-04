@@ -466,7 +466,8 @@ window.LANG_MS = {
         "tmi": "TMI",
         "lyricsStudy": "Pembelajaran",
         "characterPronunciation": "Sebutan Huruf",
-        "culturalAnnotations": "Konteks budaya"
+        "culturalAnnotations": "Konteks budaya",
+        "wordSupplements": "Perincian perkataan"
       },
       "noEnabledProviders": "Tiada penyedia AI yang aktif. Sila aktifkan sekurang-kurangnya satu penyedia dalam tetapan.",
       "allProvidersFailed": "Semua penyedia AI gagal memproses permintaan.",
@@ -636,6 +637,7 @@ window.LANG_MS = {
     "regeneratePronunciationOnly": "Sebutan sahaja",
     "regenerateTranslationOnly": "Terjemahan sahaja",
     "regenerateBoth": "Sebutan dan terjemahan",
+    "regenerateWordDetails": "Perincian perkataan",
     "regenerateAction": "Jana semula",
     "fullscreen": "Skrin Penuh",
     "exitFullscreen": "Keluar Skrin Penuh"
@@ -852,6 +854,9 @@ window.LANG_MS = {
     "culturalAnnotationsRegenerated": "Penjelasan konteks budaya telah dijana semula.",
     "translationRegenerateFailed": "Gagal menjana semula terjemahan",
     "culturalAnnotationsRegenerateFailed": "Gagal menjana semula penjelasan konteks budaya.",
+    "regeneratingWordDetails": "Menjana semula perincian...",
+    "wordDetailsRegenerated": "Perincian dijana semula.",
+    "wordDetailsRegenerateFailed": "Penjanaan semula gagal",
     "lyricsProviderSaved": "Tetapan penyedia lirik untuk lagu ini telah disimpan.",
     "lyricsProviderSaveFailed": "Gagal menyimpan tetapan penyedia lirik.",
     "translationCacheRemoved": "Cache terjemahan telah dibuang dan dimuatkan semula!",
@@ -877,7 +882,11 @@ window.LANG_MS = {
     "lyricsLoadedFromFile": "Berjaya memuatkan {types} lirik daripada fail",
     "lyricsLoadedFromLrclib": "Lirik dimuatkan daripada LRCLIB.",
     "lyricsLoadFailed": "Gagal memuatkan lirik: Format fail tidak sah",
-    "fileReadFailed": "Gagal membaca fail: Fail mungkin rosak"
+    "fileReadFailed": "Gagal membaca fail: Fail mungkin rosak",
+    "mySyncsExportSuccess": "Penyegerakan dieksport",
+    "mySyncsExportSuccessDesc": "{exported} daripada {total} penyegerakan dieksport. Dilangkau: {skipped}.",
+    "mySyncsExportEmpty": "Tiada penyegerakan untuk pengguna ini.",
+    "mySyncsExportFailed": "Eksport penyegerakan gagal"
   },
   "misc": {
     "and": "dan",
@@ -1378,6 +1387,10 @@ window.LANG_MS = {
       "videoEnabled": {
         "label": "Pra-muat Latar Belakang Video",
         "desc": "Ambil maklumat latar belakang video untuk lagu seterusnya lebih awal"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {
@@ -1462,7 +1475,8 @@ window.LANG_MS = {
       "import": {
         "label": "Import Tetapan",
         "button": "Import",
-        "processing": "Mengimport..."
+        "processing": "Mengimport...",
+        "confirm": "Ini akan mengimport {count} tetapan dan menggantikan tetapan semasa anda. Teruskan?"
       }
     },
     "cloudSync": {
@@ -1529,6 +1543,11 @@ window.LANG_MS = {
         "button": "Import",
         "processing": "Mengimport...",
         "confirm": "Semua data DB sedia ada akan ditulis ganti (overwrite). Adakah anda mahu meneruskan?"
+      },
+      "exportMySyncs": {
+        "label": "Eksport penyegerakan saya",
+        "button": "Eksport penyegerakan saya",
+        "processing": "Mengeksport..."
       }
     },
     "resetSettings": {
@@ -1948,7 +1967,9 @@ window.LANG_MS = {
   "generationStatus": {
     "complete": "Selesai!",
     "culturalAnnotations": "Penjelasan konteks budaya",
-    "culturalAnnotationsLoading": "Menganalisis konteks budaya..."
+    "culturalAnnotationsLoading": "Menganalisis konteks budaya...",
+    "wordSupplements": "Perincian perkataan",
+    "wordSupplementsLoading": "Memuatkan bacaan & glosa..."
   },
   "videoBackground": {
     "loading": "Memuatkan maklumat video...",
@@ -2080,6 +2101,7 @@ window.LANG_MS = {
       "gradient": "Gradien",
       "minimal": "Minimalis",
       "glass": "Kesan Kaca (Glass)",
+      "word": "Pembelajaran perkataan"
     },
     "advancedSettings": "Tetapan Terperinci",
     "sections": {
@@ -2120,7 +2142,43 @@ window.LANG_MS = {
       "aspectRatio": "Nisbah Imej",
       "imageWidth": "Lebar Imej",
       "padding": "Margin Dalam (Padding)",
-      "showWatermark": "Paparkan Tanda Air (Watermark)"
+      "showWatermark": "Paparkan Tanda Air (Watermark)",
+      "trackTitleSize": "Saiz tajuk",
+      "trackTitleColor": "Warna tajuk",
+      "trackTitleWeight": "Ketebalan tajuk",
+      "trackArtistSize": "Saiz nama artis",
+      "trackArtistColor": "Warna nama artis",
+      "trackArtistWeight": "Ketebalan nama artis",
+      "lyricsDetail": "Mod eksport",
+      "lineLevel": "Baris",
+      "wordLevel": "Perkataan",
+      "origColor": "Warna asal",
+      "origWeight": "Ketebalan teks asal",
+      "pronSize": "Saiz sebutan baris",
+      "pronColor": "Warna sebutan baris",
+      "pronWeight": "Ketebalan sebutan baris",
+      "wordReadingSize": "Saiz bacaan perkataan",
+      "transSize": "Saiz terjemahan baris",
+      "transColor": "Warna terjemahan baris",
+      "transWeight": "Ketebalan terjemahan baris",
+      "wordGlossSize": "Saiz terjemahan perkataan",
+      "fontSource": "Sumber fon",
+      "fontDefault": "Lalai",
+      "fontSettings": "Tetapan aplikasi",
+      "fontCustom": "Tersuai",
+      "customFontFamily": "Fon tersuai",
+      "groupOriginal": "Lirik asal",
+      "groupWordReading": "Sebutan perkataan",
+      "groupWordGloss": "Terjemahan perkataan",
+      "groupLinePron": "Sebutan baris",
+      "groupLineTrans": "Terjemahan baris",
+      "wordReadingColor": "Warna bacaan perkataan",
+      "wordReadingWeight": "Ketebalan bacaan perkataan",
+      "wordGlossColor": "Warna terjemahan perkataan",
+      "wordGlossWeight": "Ketebalan terjemahan perkataan",
+      "alignRight": "Kanan",
+      "exportScale": "Skala eksport",
+      "ratioAuto": "Automatik"
     },
     "preview": "Pratonton",
     "actions": {
@@ -2811,7 +2869,15 @@ window.LANG_MS = {
     "multiVocalDetectedTitle": "Berbilang vokal dikesan",
     "multiVocalDetectedBody": "Lirik ini mengandungi baris dengan kurungan atau pemisah, jadi ia boleh diselaraskan sebagai bahagian vokal berasingan. Pilih cara untuk mengerjakan lagu ini.",
     "multiVocalDecisionNormal": "Teruskan dalam mod biasa",
-    "multiVocalDecisionMulti": "Teruskan dalam mod berbilang vokal"
+    "multiVocalDecisionMulti": "Teruskan dalam mod berbilang vokal",
+    "revert": "Pulihkan penyegerakan yang diterbitkan",
+    "revertDesc": "Buang perubahan yang belum dihantar dan muatkan penyegerakan yang diterbitkan.",
+    "revertConfirm": "Buang perubahan yang belum dihantar dan pulihkan penyegerakan yang diterbitkan?",
+    "reverting": "Memulihkan penyegerakan...",
+    "reverted": "Penyegerakan yang diterbitkan telah dipulihkan.",
+    "noPublishedSync": "Tiada penyegerakan yang diterbitkan.",
+    "unsubmittedChanges": "Perubahan belum dihantar",
+    "previewUnavailable": "Pratonton tidak tersedia."
   },
   "marketplace": {
     "title": "Pasaran alat tambah",

@@ -466,7 +466,8 @@ window.LANG_TH = {
         "tmi": "TMI",
         "lyricsStudy": "การเรียนรู้",
         "characterPronunciation": "การออกเสียงรายอักขระ",
-        "culturalAnnotations": "บริบททางวัฒนธรรม"
+        "culturalAnnotations": "บริบททางวัฒนธรรม",
+        "wordSupplements": "รายละเอียดคำ"
       },
       "noEnabledProviders": "ไม่ได้เปิดใช้งานผู้ให้บริการ AI โปรดเปิดใช้งานอย่างน้อยหนึ่งรายในการตั้งค่า",
       "allProvidersFailed": "ผู้ให้บริการ AI ทั้งหมดล้มเหลวในการร้องขอ",
@@ -636,6 +637,7 @@ window.LANG_TH = {
     "regeneratePronunciationOnly": "เฉพาะการออกเสียง",
     "regenerateTranslationOnly": "เฉพาะคำแปล",
     "regenerateBoth": "การออกเสียงและคำแปล",
+    "regenerateWordDetails": "รายละเอียดคำ",
     "regenerateAction": "สร้างใหม่",
     "fullscreen": "เต็มหน้าจอ",
     "exitFullscreen": "ออกจากโหมดเต็มหน้าจอ"
@@ -852,6 +854,9 @@ window.LANG_TH = {
     "culturalAnnotationsRegenerated": "สร้างคำอธิบายบริบททางวัฒนธรรมใหม่แล้ว",
     "translationRegenerateFailed": "สร้างคำแปลใหม่ล้มเหลว",
     "culturalAnnotationsRegenerateFailed": "ไม่สามารถสร้างคำอธิบายบริบททางวัฒนธรรมใหม่ได้",
+    "regeneratingWordDetails": "กำลังสร้างรายละเอียดคำใหม่...",
+    "wordDetailsRegenerated": "สร้างรายละเอียดคำใหม่แล้ว",
+    "wordDetailsRegenerateFailed": "สร้างใหม่ล้มเหลว",
     "lyricsProviderSaved": "บันทึกการตั้งค่าผู้ให้บริการเนื้อเพลงสำหรับเพลงนี้แล้ว",
     "lyricsProviderSaveFailed": "ไม่สามารถบันทึกการตั้งค่าผู้ให้บริการเนื้อเพลงได้",
     "translationCacheRemoved": "ลบแคชคำแปลและโหลดใหม่แล้ว!",
@@ -877,7 +882,11 @@ window.LANG_TH = {
     "lyricsLoadedFromFile": "โหลดเนื้อเพลง {types} จากไฟล์สำเร็จ",
     "lyricsLoadedFromLrclib": "โหลดเนื้อเพลงจาก LRCLIB แล้ว",
     "lyricsLoadFailed": "โหลดเนื้อเพลงล้มเหลว: รูปแบบไฟล์ไม่ถูกต้อง",
-    "fileReadFailed": "อ่านไฟล์ล้มเหลว: ไฟล์อาจเสียหาย"
+    "fileReadFailed": "อ่านไฟล์ล้มเหลว: ไฟล์อาจเสียหาย",
+    "mySyncsExportSuccess": "ส่งออกการซิงค์แล้ว",
+    "mySyncsExportSuccessDesc": "ส่งออก {exported} จาก {total} รายการ ข้าม: {skipped} รายการ",
+    "mySyncsExportEmpty": "ไม่พบการซิงค์ของผู้ใช้นี้",
+    "mySyncsExportFailed": "ส่งออกการซิงค์ไม่สำเร็จ"
   },
   "misc": {
     "and": "และ",
@@ -1378,6 +1387,10 @@ window.LANG_TH = {
       "videoEnabled": {
         "label": "โหลดพื้นหลังวิดีโอล่วงหน้า",
         "desc": "ดึงข้อมูลพื้นหลังวิดีโอของเพลงถัดไปล่วงหน้า"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {
@@ -1462,7 +1475,8 @@ window.LANG_TH = {
       "import": {
         "label": "นำเข้าการตั้งค่า",
         "button": "นำเข้า",
-        "processing": "กำลังนำเข้า..."
+        "processing": "กำลังนำเข้า...",
+        "confirm": "การนำเข้า {count} รายการตั้งค่าและแทนที่การตั้งค่าปัจจุบันของคุณ ต้องการดำเนินการต่อหรือไม่?"
       }
     },
     "cloudSync": {
@@ -1529,6 +1543,11 @@ window.LANG_TH = {
         "button": "Import",
         "processing": "กำลังนำเข้า...",
         "confirm": "ข้อมูลทั้งหมดในฐานข้อมูลปัจจุบันจะถูกเขียนทับ ดำเนินการต่อหรือไม่?"
+      },
+      "exportMySyncs": {
+        "label": "ส่งออกการซิงค์ของฉัน",
+        "button": "ส่งออกการซิงค์ของฉัน",
+        "processing": "กำลังส่งออก..."
       }
     },
     "resetSettings": {
@@ -1948,7 +1967,9 @@ window.LANG_TH = {
   "generationStatus": {
     "complete": "เสร็จแล้ว!",
     "culturalAnnotations": "คำอธิบายบริบททางวัฒนธรรม",
-    "culturalAnnotationsLoading": "กำลังวิเคราะห์บริบททางวัฒนธรรม..."
+    "culturalAnnotationsLoading": "กำลังวิเคราะห์บริบททางวัฒนธรรม...",
+    "wordSupplements": "รายละเอียดคำ",
+    "wordSupplementsLoading": "กำลังโหลดคำอ่านและคำแปล..."
   },
   "videoBackground": {
     "loading": "กำลังโหลดข้อมูลวิดีโอ...",
@@ -2080,6 +2101,7 @@ window.LANG_TH = {
       "gradient": "ไล่เฉดสี",
       "minimal": "มินิมอล",
       "glass": "Glass",
+      "word": "เรียนรู้คำศัพท์"
     },
     "advancedSettings": "การตั้งค่าขั้นสูง",
     "sections": {
@@ -2120,7 +2142,43 @@ window.LANG_TH = {
       "aspectRatio": "สัดส่วนภาพ",
       "imageWidth": "ความกว้างภาพ",
       "padding": "ระยะขอบ",
-      "showWatermark": "แสดงลายน้ำ"
+      "showWatermark": "แสดงลายน้ำ",
+      "trackTitleSize": "ขนาดชื่อเพลง",
+      "trackTitleColor": "สีชื่อเพลง",
+      "trackTitleWeight": "ความหนาชื่อเพลง",
+      "trackArtistSize": "ขนาดชื่อศิลปิน",
+      "trackArtistColor": "สีชื่อศิลปิน",
+      "trackArtistWeight": "ความหนาชื่อศิลปิน",
+      "lyricsDetail": "รูปแบบการส่งออก",
+      "lineLevel": "รายบรรทัด",
+      "wordLevel": "รายคำ",
+      "origColor": "สีข้อความต้นฉบับ",
+      "origWeight": "ความหนาข้อความต้นฉบับ",
+      "pronSize": "ขนาดคำอ่านรายบรรทัด",
+      "pronColor": "สีคำอ่านรายบรรทัด",
+      "pronWeight": "ความหนาคำอ่านรายบรรทัด",
+      "wordReadingSize": "ขนาดคำอ่านรายคำ",
+      "transSize": "ขนาดคำแปลรายบรรทัด",
+      "transColor": "สีคำแปลรายบรรทัด",
+      "transWeight": "ความหนาคำแปลรายบรรทัด",
+      "wordGlossSize": "ขนาดคำแปลรายคำ",
+      "fontSource": "แหล่งแบบอักษร",
+      "fontDefault": "ค่าเริ่มต้น",
+      "fontSettings": "การตั้งค่าแอป",
+      "fontCustom": "กำหนดเอง",
+      "customFontFamily": "แบบอักษรที่กำหนดเอง",
+      "groupOriginal": "เนื้อเพลงต้นฉบับ",
+      "groupWordReading": "คำอ่านรายคำ",
+      "groupWordGloss": "คำแปลรายคำ",
+      "groupLinePron": "คำอ่านรายบรรทัด",
+      "groupLineTrans": "คำแปลรายบรรทัด",
+      "wordReadingColor": "สีคำอ่านรายคำ",
+      "wordReadingWeight": "ความหนาคำอ่านรายคำ",
+      "wordGlossColor": "สีคำแปลรายคำ",
+      "wordGlossWeight": "ความหนาคำแปลรายคำ",
+      "alignRight": "ขวา",
+      "exportScale": "สเกลการส่งออก",
+      "ratioAuto": "อัตโนมัติ"
     },
     "preview": "ตัวอย่าง",
     "actions": {
@@ -2811,7 +2869,15 @@ window.LANG_TH = {
     "multiVocalDetectedTitle": "ตรวจพบหลายเสียงร้อง",
     "multiVocalDetectedBody": "เนื้อเพลงมีบรรทัดที่มีวงเล็บหรือตัวคั่น จึงสามารถซิงค์เป็นพาร์ตเสียงร้องแยกกันได้ เลือกวิธีทำงานกับเพลงนี้",
     "multiVocalDecisionNormal": "ดำเนินการต่อในโหมดปกติ",
-    "multiVocalDecisionMulti": "ดำเนินการต่อในโหมดหลายเสียงร้อง"
+    "multiVocalDecisionMulti": "ดำเนินการต่อในโหมดหลายเสียงร้อง",
+    "revert": "คืนค่าการซิงค์ที่เผยแพร่",
+    "revertDesc": "ทิ้งการเปลี่ยนแปลงที่ยังไม่ได้ส่งและโหลดการซิงค์ที่เผยแพร่",
+    "revertConfirm": "ทิ้งการเปลี่ยนแปลงที่ยังไม่ได้ส่งและคืนค่าการซิงค์ที่เผยแพร่หรือไม่?",
+    "reverting": "กำลังคืนค่าการซิงค์...",
+    "reverted": "คืนค่าการซิงค์ที่เผยแพร่แล้ว",
+    "noPublishedSync": "ไม่มีการซิงค์ที่เผยแพร่",
+    "unsubmittedChanges": "มีการเปลี่ยนแปลงที่ยังไม่ได้ส่ง",
+    "previewUnavailable": "ไม่สามารถแสดงตัวอย่างได้"
   },
   "marketplace": {
     "title": "ร้านค้าส่วนเสริม",

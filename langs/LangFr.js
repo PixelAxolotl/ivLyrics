@@ -466,7 +466,8 @@ window.LANG_FR = {
         "tmi": "TMI",
         "lyricsStudy": "Apprentissage",
         "characterPronunciation": "Prononciation par caractère",
-        "culturalAnnotations": "Contexte culturel"
+        "culturalAnnotations": "Contexte culturel",
+        "wordSupplements": "Détails des mots"
       },
       "noEnabledProviders": "Aucun fournisseur d'IA activé. Veuillez en activer au moins un dans les paramètres.",
       "allProvidersFailed": "Tous les fournisseurs d'IA ont échoué à traiter la demande.",
@@ -636,6 +637,7 @@ window.LANG_FR = {
     "regeneratePronunciationOnly": "Prononciation uniquement",
     "regenerateTranslationOnly": "Traduction uniquement",
     "regenerateBoth": "Prononciation et traduction",
+    "regenerateWordDetails": "Détails des mots",
     "regenerateAction": "Régénérer",
     "fullscreen": "Plein écran",
     "exitFullscreen": "Quitter le plein écran"
@@ -852,6 +854,9 @@ window.LANG_FR = {
     "culturalAnnotationsRegenerated": "Les explications du contexte culturel ont été régénérées.",
     "translationRegenerateFailed": "Échec de la régénération",
     "culturalAnnotationsRegenerateFailed": "Impossible de régénérer les explications du contexte culturel.",
+    "regeneratingWordDetails": "Régénération des détails en cours...",
+    "wordDetailsRegenerated": "Détails régénérés.",
+    "wordDetailsRegenerateFailed": "Échec de la régénération",
     "lyricsProviderSaved": "Fournisseur de paroles enregistré pour ce titre.",
     "lyricsProviderSaveFailed": "Impossible d’enregistrer le fournisseur de paroles.",
     "translationCacheRemoved": "Cache de traduction supprimé et rechargé !",
@@ -877,7 +882,11 @@ window.LANG_FR = {
     "lyricsLoadedFromFile": "Paroles {types} chargées depuis le fichier",
     "lyricsLoadedFromLrclib": "Paroles chargées depuis LRCLIB.",
     "lyricsLoadFailed": "Échec chargement : Format invalide",
-    "fileReadFailed": "Échec lecture : Fichier peut-être corrompu"
+    "fileReadFailed": "Échec lecture : Fichier peut-être corrompu",
+    "mySyncsExportSuccess": "Synchronisations exportées",
+    "mySyncsExportSuccessDesc": "{exported} synchronisations exportées sur {total}. Ignorées : {skipped}.",
+    "mySyncsExportEmpty": "Aucune synchronisation trouvée pour cet utilisateur.",
+    "mySyncsExportFailed": "Échec de l’exportation des synchronisations"
   },
   "misc": {
     "and": "et",
@@ -1378,6 +1387,10 @@ window.LANG_FR = {
       "videoEnabled": {
         "label": "Précharger vidéo",
         "desc": "Récupère à l'avance les infos de la vidéo d'arrière-plan"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {
@@ -1462,7 +1475,8 @@ window.LANG_FR = {
       "import": {
         "label": "Importer paramètres",
         "button": "Importer",
-        "processing": "Importation..."
+        "processing": "Importation...",
+        "confirm": "{count} paramètres seront importés et vos paramètres actuels seront remplacés. Continuer ?"
       }
     },
     "cloudSync": {
@@ -1529,6 +1543,11 @@ window.LANG_FR = {
         "button": "Import",
         "processing": "Importation…",
         "confirm": "Toutes les données existantes seront remplacées. Continuer ?"
+      },
+      "exportMySyncs": {
+        "label": "Exporter mes synchronisations",
+        "button": "Exporter mes synchronisations",
+        "processing": "Exportation en cours..."
       }
     },
     "resetSettings": {
@@ -1948,7 +1967,9 @@ window.LANG_FR = {
   "generationStatus": {
     "complete": "Terminé !",
     "culturalAnnotations": "Explications du contexte culturel",
-    "culturalAnnotationsLoading": "Analyse du contexte culturel..."
+    "culturalAnnotationsLoading": "Analyse du contexte culturel...",
+    "wordSupplements": "Détails des mots",
+    "wordSupplementsLoading": "Chargement des lectures et gloses..."
   },
   "videoBackground": {
     "loading": "Chargement infos vidéo...",
@@ -2080,6 +2101,7 @@ window.LANG_FR = {
       "gradient": "Dégradé",
       "minimal": "Minimal",
       "glass": "Verre",
+      "word": "Étude des mots"
     },
     "advancedSettings": "Paramètres avancés",
     "sections": {
@@ -2120,7 +2142,43 @@ window.LANG_FR = {
       "aspectRatio": "Format image",
       "imageWidth": "Largeur image",
       "padding": "Marge",
-      "showWatermark": "Afficher filigrane"
+      "showWatermark": "Afficher filigrane",
+      "trackTitleSize": "Taille du titre",
+      "trackTitleColor": "Couleur du titre",
+      "trackTitleWeight": "Graisse du titre",
+      "trackArtistSize": "Taille du nom de l’artiste",
+      "trackArtistColor": "Couleur du nom de l’artiste",
+      "trackArtistWeight": "Graisse du nom de l’artiste",
+      "lyricsDetail": "Mode d’exportation",
+      "lineLevel": "Ligne",
+      "wordLevel": "Mot",
+      "origColor": "Couleur de l’original",
+      "origWeight": "Graisse de l’original",
+      "pronSize": "Taille de la prononciation de la ligne",
+      "pronColor": "Couleur de la prononciation de la ligne",
+      "pronWeight": "Graisse de la prononciation de la ligne",
+      "wordReadingSize": "Taille de la lecture des mots",
+      "transSize": "Taille de la traduction de la ligne",
+      "transColor": "Couleur de la traduction de la ligne",
+      "transWeight": "Graisse de la traduction de la ligne",
+      "wordGlossSize": "Taille de la traduction des mots",
+      "fontSource": "Source de la police",
+      "fontDefault": "Par défaut",
+      "fontSettings": "Paramètres de l’application",
+      "fontCustom": "Personnalisée",
+      "customFontFamily": "Police personnalisée",
+      "groupOriginal": "Paroles originales",
+      "groupWordReading": "Prononciation des mots",
+      "groupWordGloss": "Traduction des mots",
+      "groupLinePron": "Prononciation de la ligne",
+      "groupLineTrans": "Traduction de la ligne",
+      "wordReadingColor": "Couleur de la lecture des mots",
+      "wordReadingWeight": "Graisse de la lecture des mots",
+      "wordGlossColor": "Couleur de la traduction des mots",
+      "wordGlossWeight": "Graisse de la traduction des mots",
+      "alignRight": "Droite",
+      "exportScale": "Échelle d’exportation",
+      "ratioAuto": "Automatique"
     },
     "preview": "Aperçu",
     "actions": {
@@ -2811,7 +2869,15 @@ window.LANG_FR = {
     "multiVocalDetectedTitle": "Plusieurs voix détectées",
     "multiVocalDetectedBody": "Ces paroles contiennent des lignes avec des parenthèses ou des séparateurs, elles peuvent donc être synchronisées en parties vocales séparées. Choisissez comment travailler sur ce morceau.",
     "multiVocalDecisionNormal": "Continuer en mode normal",
-    "multiVocalDecisionMulti": "Continuer en mode voix multiples"
+    "multiVocalDecisionMulti": "Continuer en mode voix multiples",
+    "revert": "Restaurer la synchronisation publiée",
+    "revertDesc": "Abandonner les modifications non envoyées et charger la synchronisation publiée.",
+    "revertConfirm": "Abandonner les modifications non envoyées et restaurer la synchronisation publiée ?",
+    "reverting": "Restauration en cours...",
+    "reverted": "Synchronisation publiée restaurée.",
+    "noPublishedSync": "Aucune synchronisation publiée disponible.",
+    "unsubmittedChanges": "Modifications non envoyées",
+    "previewUnavailable": "Aperçu indisponible."
   },
   "marketplace": {
     "title": "Boutique d'extensions",

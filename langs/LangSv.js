@@ -466,7 +466,8 @@ window.LANG_SV = {
         "tmi": "TMI",
         "lyricsStudy": "Inlärning",
         "characterPronunciation": "Teckenuttal",
-        "culturalAnnotations": "Kulturell kontext"
+        "culturalAnnotations": "Kulturell kontext",
+        "wordSupplements": "Orddetaljer"
       },
       "noEnabledProviders": "Inga AI-leverantörer aktiverade. Aktivera minst en leverantör i inställningarna.",
       "allProvidersFailed": "Alla AI-leverantörer kunde inte behandla begäran.",
@@ -636,6 +637,7 @@ window.LANG_SV = {
     "regeneratePronunciationOnly": "Endast uttal",
     "regenerateTranslationOnly": "Endast översättning",
     "regenerateBoth": "Uttal och översättning",
+    "regenerateWordDetails": "Orddetaljer",
     "regenerateAction": "Återskapa",
     "fullscreen": "Helskärm",
     "exitFullscreen": "Avsluta helskärm"
@@ -852,6 +854,9 @@ window.LANG_SV = {
     "culturalAnnotationsRegenerated": "Förklaringarna av den kulturella kontexten har återskapats.",
     "translationRegenerateFailed": "Det gick inte att återskapa översättningen",
     "culturalAnnotationsRegenerateFailed": "Det gick inte att återskapa förklaringarna av den kulturella kontexten.",
+    "regeneratingWordDetails": "Regenererar orddetaljer...",
+    "wordDetailsRegenerated": "Orddetaljer regenererade.",
+    "wordDetailsRegenerateFailed": "Regenerering misslyckades",
     "lyricsProviderSaved": "Låttextkälla sparad för den här låten.",
     "lyricsProviderSaveFailed": "Kunde inte spara låttextkälla.",
     "translationCacheRemoved": "Översättningscacheminnet togs bort och laddades om!",
@@ -877,7 +882,11 @@ window.LANG_SV = {
     "lyricsLoadedFromFile": "{types} sångtexter från filen har laddats in",
     "lyricsLoadedFromLrclib": "Text laddad från LRCLIB.",
     "lyricsLoadFailed": "Det gick inte att läsa in texten: Ogiltigt filformat",
-    "fileReadFailed": "Det gick inte att läsa filen: Filen kan vara skadad"
+    "fileReadFailed": "Det gick inte att läsa filen: Filen kan vara skadad",
+    "mySyncsExportSuccess": "Synkroniseringar exporterade",
+    "mySyncsExportSuccessDesc": "Exporterade {exported} av {total} synkroniseringar. Överhoppade: {skipped}.",
+    "mySyncsExportEmpty": "Inga synkroniseringar hittades för denna användare.",
+    "mySyncsExportFailed": "Export av synkroniseringar misslyckades"
   },
   "misc": {
     "and": "och",
@@ -1378,6 +1387,10 @@ window.LANG_SV = {
       "videoEnabled": {
         "label": "Förladda videobakgrund",
         "desc": "Hämta videobakgrundsinformation för nästa låt i förväg"
+      },
+      "wordDetailsEnabled": {
+        "label": "Preload Word Details",
+        "desc": "Preload per-word readings and translations for word-level karaoke"
       }
     },
     "communitySync": {
@@ -1462,7 +1475,8 @@ window.LANG_SV = {
       "import": {
         "label": "Importera inställningar",
         "button": "Importera",
-        "processing": "Importerar..."
+        "processing": "Importerar...",
+        "confirm": "Detta importerar {count} inställningar och ersätter dina nuvarande inställningar. Fortsätt?"
       }
     },
     "cloudSync": {
@@ -1529,6 +1543,11 @@ window.LANG_SV = {
         "button": "Importera",
         "processing": "Importerar...",
         "confirm": "Alla befintliga DB-data kommer att skrivas över. Fortsätta?"
+      },
+      "exportMySyncs": {
+        "label": "Exportera mina synkroniseringar",
+        "button": "Exportera mina synkroniseringar",
+        "processing": "Exporterar..."
       }
     },
     "resetSettings": {
@@ -1948,7 +1967,9 @@ window.LANG_SV = {
   "generationStatus": {
     "complete": "Klart!",
     "culturalAnnotations": "Förklaringar av kulturell kontext",
-    "culturalAnnotationsLoading": "Analyserar kulturell kontext..."
+    "culturalAnnotationsLoading": "Analyserar kulturell kontext...",
+    "wordSupplements": "Orddetaljer",
+    "wordSupplementsLoading": "Läser in uttal och glosor..."
   },
   "videoBackground": {
     "loading": "Laddar videoinformation...",
@@ -2079,7 +2100,8 @@ window.LANG_SV = {
       "cover": "Omslagsskärpa",
       "gradient": "Gradient",
       "minimal": "Minimal",
-      "glass": "Glas"
+      "glass": "Glas",
+      "word": "Ordinlärning"
     },
     "advancedSettings": "Avancerade inställningar",
     "sections": {
@@ -2120,7 +2142,43 @@ window.LANG_SV = {
       "aspectRatio": "Bildförhållande",
       "imageWidth": "Bildbredd",
       "padding": "Vaddering",
-      "showWatermark": "Visa vattenstämpel"
+      "showWatermark": "Visa vattenstämpel",
+      "trackTitleSize": "Titelstorlek",
+      "trackTitleColor": "Titelfärg",
+      "trackTitleWeight": "Titelns teckenvikt",
+      "trackArtistSize": "Artistnamnets storlek",
+      "trackArtistColor": "Artistnamnets färg",
+      "trackArtistWeight": "Artistnamnets teckenvikt",
+      "lyricsDetail": "Exportläge",
+      "lineLevel": "Rad",
+      "wordLevel": "Ord",
+      "origColor": "Originalets färg",
+      "origWeight": "Originalets teckenvikt",
+      "pronSize": "Storlek på radens uttal",
+      "pronColor": "Färg på radens uttal",
+      "pronWeight": "Teckenvikt för radens uttal",
+      "wordReadingSize": "Storlek på ordläsning",
+      "transSize": "Storlek på radöversättning",
+      "transColor": "Färg på radöversättning",
+      "transWeight": "Teckenvikt för radöversättning",
+      "wordGlossSize": "Storlek på ordöversättning",
+      "fontSource": "Typsnittskälla",
+      "fontDefault": "Standard",
+      "fontSettings": "Appinställningar",
+      "fontCustom": "Eget",
+      "customFontFamily": "Eget typsnitt",
+      "groupOriginal": "Originaltext",
+      "groupWordReading": "Orduttal",
+      "groupWordGloss": "Ordöversättning",
+      "groupLinePron": "Raduttal",
+      "groupLineTrans": "Radöversättning",
+      "wordReadingColor": "Färg på ordläsning",
+      "wordReadingWeight": "Teckenvikt för ordläsning",
+      "wordGlossColor": "Färg på ordöversättning",
+      "wordGlossWeight": "Teckenvikt för ordöversättning",
+      "alignRight": "Höger",
+      "exportScale": "Exportskala",
+      "ratioAuto": "Automatiskt"
     },
     "preview": "Förhandsgranska",
     "actions": {
@@ -2811,7 +2869,15 @@ window.LANG_SV = {
     "multiVocalDetectedTitle": "Flera sångdelar upptäcktes",
     "multiVocalDetectedBody": "Texten innehåller rader med parenteser eller avdelare, så den kan synkas som separata sångdelar. Välj hur du vill arbeta med låten.",
     "multiVocalDecisionNormal": "Fortsätt i normalt läge",
-    "multiVocalDecisionMulti": "Fortsätt i flersångsläge"
+    "multiVocalDecisionMulti": "Fortsätt i flersångsläge",
+    "revert": "Återställ publicerad synkronisering",
+    "revertDesc": "Kasta oskickade ändringar och läs in den publicerade synkroniseringen.",
+    "revertConfirm": "Kasta oskickade ändringar och återställa den publicerade synkroniseringen?",
+    "reverting": "Återställer synkronisering...",
+    "reverted": "Publicerad synkronisering återställd.",
+    "noPublishedSync": "Ingen publicerad synkronisering finns.",
+    "unsubmittedChanges": "Oskickade ändringar",
+    "previewUnavailable": "Förhandsvisning saknas."
   },
   "marketplace": {
     "title": "Marknadsplats för tillägg",

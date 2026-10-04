@@ -466,7 +466,8 @@ window.LANG_TR = {
         "tmi": "Bilgi (TMI)",
         "lyricsStudy": "Öğrenme",
         "characterPronunciation": "Karakter okunuşu",
-        "culturalAnnotations": "Kültürel bağlam"
+        "culturalAnnotations": "Kültürel bağlam",
+        "wordSupplements": "Kelime ayrıntıları"
       },
       "noEnabledProviders": "Etkin YZ sağlayıcısı yok. Lütfen ayarlardan en az bir sağlayıcıyı etkinleştirin.",
       "allProvidersFailed": "Tüm YZ sağlayıcıları isteği işlemekte başarısız oldu.",
@@ -636,6 +637,7 @@ window.LANG_TR = {
     "regeneratePronunciationOnly": "Sadece Okunuş",
     "regenerateTranslationOnly": "Sadece Çeviri",
     "regenerateBoth": "Okunuş ve Çeviri",
+    "regenerateWordDetails": "Kelime ayrıntıları",
     "regenerateAction": "Yeniden Oluştur",
     "fullscreen": "Tam Ekran",
     "exitFullscreen": "Tam Ekrandan Çık"
@@ -852,6 +854,9 @@ window.LANG_TR = {
     "culturalAnnotationsRegenerated": "Kültürel bağlam açıklamaları yeniden oluşturuldu.",
     "translationRegenerateFailed": "Çeviri yeniden oluşturulamadı",
     "culturalAnnotationsRegenerateFailed": "Kültürel bağlam açıklamaları yeniden oluşturulamadı.",
+    "regeneratingWordDetails": "Kelime ayrıntıları yeniden oluşturuluyor...",
+    "wordDetailsRegenerated": "Kelime ayrıntıları oluşturuldu.",
+    "wordDetailsRegenerateFailed": "Yeniden oluşturma başarısız",
     "lyricsProviderSaved": "Söz sağlayıcı ayarı bu parça için kaydedildi.",
     "lyricsProviderSaveFailed": "Söz sağlayıcı ayarı kaydedilemedi.",
     "translationCacheRemoved": "Çeviri önbelleği kaldırıldı ve yeniden yüklendi!",
@@ -877,7 +882,11 @@ window.LANG_TR = {
     "lyricsLoadedFromFile": "Dosyadan {types} sözleri başarıyla yüklendi",
     "lyricsLoadedFromLrclib": "Sözler LRCLIB'den yüklendi.",
     "lyricsLoadFailed": "Sözler yüklenemedi: Geçersiz dosya formatı",
-    "fileReadFailed": "Dosya okunamadı: Dosya bozuk olabilir"
+    "fileReadFailed": "Dosya okunamadı: Dosya bozuk olabilir",
+    "mySyncsExportSuccess": "Senkronizasyonlar dışa aktarıldı",
+    "mySyncsExportSuccessDesc": "{total} senkronizasyondan {exported} tanesi dışa aktarıldı. Atlanan: {skipped}.",
+    "mySyncsExportEmpty": "Bu kullanıcının senkronizasyonu bulunamadı.",
+    "mySyncsExportFailed": "Senkronizasyonlar dışa aktarılamadı"
   },
   "misc": {
     "and": "ve",
@@ -1378,6 +1387,10 @@ window.LANG_TR = {
     "videoEnabled": {
       "label": "Video Arka Planını Ön Yükle",
       "desc": "Sonraki şarkı için video arka plan bilgisini önceden getir"
+    },
+    "wordDetailsEnabled": {
+      "label": "Preload Word Details",
+      "desc": "Preload per-word readings and translations for word-level karaoke"
     }
   },
   "communitySync": {
@@ -1462,7 +1475,8 @@ window.LANG_TR = {
     "import": {
       "label": "Ayarları İçe Aktar",
       "button": "İçe Aktar",
-      "processing": "İçe aktarılıyor..."
+      "processing": "İçe aktarılıyor...",
+      "confirm": "Bu işlem {count} ayarı içe aktarır ve mevcut ayarlarınızın yerini alır. Devam edilsin mi?"
     }
   },
   "cloudSync": {
@@ -1529,6 +1543,11 @@ window.LANG_TR = {
       "button": "İçe Aktar",
       "processing": "İçe aktarılıyor...",
       "confirm": "Mevcut tüm VT verilerinin üzerine yazılacak. Devam edilsin mi?"
+    },
+    "exportMySyncs": {
+      "label": "Senkronizasyonlarımı dışa aktar",
+      "button": "Senkronizasyonlarımı dışa aktar",
+      "processing": "Dışa aktarılıyor..."
     }
   },
   "resetSettings": {
@@ -1948,7 +1967,9 @@ window.LANG_TR = {
   "generationStatus": {
     "complete": "Tamamlandı!",
     "culturalAnnotations": "Kültürel bağlam açıklamaları",
-    "culturalAnnotationsLoading": "Kültürel bağlam analiz ediliyor..."
+    "culturalAnnotationsLoading": "Kültürel bağlam analiz ediliyor...",
+    "wordSupplements": "Kelime ayrıntıları",
+    "wordSupplementsLoading": "Kelime okunuşları ve açıklamalar yükleniyor..."
   },
   "videoBackground": {
     "loading": "Video bilgileri yükleniyor...",
@@ -2079,7 +2100,8 @@ window.LANG_TR = {
       "cover": "Kapak Bulanıklığı",
       "gradient": "Geçiş",
       "minimal": "Minimal",
-      "glass": "Cam"
+      "glass": "Cam",
+      "word": "Kelime çalışması"
     },
     "advancedSettings": "Gelişmiş Ayarlar",
     "sections": {
@@ -2120,7 +2142,43 @@ window.LANG_TR = {
       "aspectRatio": "Görsel Oranı",
       "imageWidth": "Görsel Genişliği",
       "padding": "İç Boşluk",
-      "showWatermark": "Filigranı Göster"
+      "showWatermark": "Filigranı Göster",
+      "trackTitleSize": "Başlık boyutu",
+      "trackTitleColor": "Başlık rengi",
+      "trackTitleWeight": "Başlık kalınlığı",
+      "trackArtistSize": "Sanatçı boyutu",
+      "trackArtistColor": "Sanatçı rengi",
+      "trackArtistWeight": "Sanatçı kalınlığı",
+      "lyricsDetail": "Dışa aktarma türü",
+      "lineLevel": "Satır",
+      "wordLevel": "Kelime",
+      "origColor": "Orijinal renk",
+      "origWeight": "Orijinal kalınlık",
+      "pronSize": "Satır telaffuzu boyutu",
+      "pronColor": "Satır telaffuzu rengi",
+      "pronWeight": "Satır telaffuzu kalınlığı",
+      "wordReadingSize": "Kelime okunuşu boyutu",
+      "transSize": "Satır çevirisi boyutu",
+      "transColor": "Satır çevirisi rengi",
+      "transWeight": "Satır çevirisi kalınlığı",
+      "wordGlossSize": "Kelime çevirisi boyutu",
+      "fontSource": "Yazı tipi kaynağı",
+      "fontDefault": "Varsayılan",
+      "fontSettings": "Uygulama ayarları",
+      "fontCustom": "Özel",
+      "customFontFamily": "Özel yazı tipi",
+      "groupOriginal": "Orijinal sözler",
+      "groupWordReading": "Kelime telaffuzu",
+      "groupWordGloss": "Kelime çevirisi",
+      "groupLinePron": "Satır telaffuzu",
+      "groupLineTrans": "Satır çevirisi",
+      "wordReadingColor": "Kelime okunuşu rengi",
+      "wordReadingWeight": "Kelime okunuşu kalınlığı",
+      "wordGlossColor": "Kelime çevirisi rengi",
+      "wordGlossWeight": "Kelime çevirisi kalınlığı",
+      "alignRight": "Sağ",
+      "exportScale": "Dışa aktarma ölçeği",
+      "ratioAuto": "Otomatik"
     },
     "preview": "Önizleme",
     "actions": {
@@ -2811,7 +2869,15 @@ window.LANG_TR = {
     "multiVocalDetectedTitle": "Çoklu vokal tespit edildi",
     "multiVocalDetectedBody": "Bu sözler parantezli veya ayıraçlı satırlar içeriyor, yani ayrı vokal parçaları olarak senkronize edilebilir. Bu şarkıda nasıl çalışılacağını seçin.",
     "multiVocalDecisionNormal": "Normal modda devam et",
-    "multiVocalDecisionMulti": "Çoklu vokal modunda devam et"
+    "multiVocalDecisionMulti": "Çoklu vokal modunda devam et",
+    "revert": "Yayımlanan senkronizasyonu geri yükle",
+    "revertDesc": "Gönderilmemiş değişiklikleri silip yayımlanan senkronizasyonu yükler.",
+    "revertConfirm": "Gönderilmemiş değişiklikler silinip yayımlanan senkronizasyon geri yüklensin mi?",
+    "reverting": "Senkronizasyon geri yükleniyor...",
+    "reverted": "Yayımlanan senkronizasyon geri yüklendi.",
+    "noPublishedSync": "Yayımlanmış senkronizasyon yok.",
+    "unsubmittedChanges": "Gönderilmemiş değişiklikler",
+    "previewUnavailable": "Önizleme kullanılamıyor."
   },
   "marketplace": {
     "title": "Eklenti Mağazası",

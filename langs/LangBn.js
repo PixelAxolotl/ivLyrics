@@ -884,11 +884,7 @@ window.LANG_BN = {
     "lyricsLoadedFromFile": "ফাইল থেকে সফলভাবে {types} লিরিক্স লোড করা হয়েছে",
     "lyricsLoadedFromLrclib": "LRCLIB থেকে লিরিক্স আনা হয়েছে।",
     "lyricsLoadFailed": "লিরিক্স লোড ব্যর্থ: ফাইলের ফরম্যাট ভুল",
-    "fileReadFailed": "ফাইল পড়তে ব্যর্থ: ফাইলটি সম্ভবত ক্ষতিগ্রস্ত",
-    "mySyncsExportSuccess": "সিঙ্ক রপ্তানি হয়েছে",
-    "mySyncsExportSuccessDesc": "{total}টির মধ্যে {exported}টি সিঙ্ক রপ্তানি হয়েছে। বাদ গেছে: {skipped}টি।",
-    "mySyncsExportEmpty": "এই ব্যবহারকারীর কোনো সিঙ্ক পাওয়া যায়নি।",
-    "mySyncsExportFailed": "সিঙ্ক রপ্তানি ব্যর্থ হয়েছে"
+    "fileReadFailed": "ফাইল পড়তে ব্যর্থ: ফাইলটি সম্ভবত ক্ষতিগ্রস্ত"
   },
   "misc": {
     "and": "এবং",
@@ -1545,11 +1541,6 @@ window.LANG_BN = {
         "button": "Import",
         "processing": "আমদানি করা হচ্ছে...",
         "confirm": "বর্তমান ডেটাবেসের সব ডেটা প্রতিস্থাপিত হবে। চালিয়ে যাবেন?"
-      },
-      "exportMySyncs": {
-        "label": "আমার সিঙ্ক রপ্তানি করুন",
-        "button": "আমার সিঙ্ক রপ্তানি করুন",
-        "processing": "রপ্তানি হচ্ছে..."
       }
     },
     "resetSettings": {

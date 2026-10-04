@@ -884,11 +884,7 @@ window.LANG_IT = {
     "lyricsLoadedFromFile": "Caricati con successo testi {types} dal file",
     "lyricsLoadedFromLrclib": "Testi caricati da LRCLIB.",
     "lyricsLoadFailed": "Caricamento testo fallito: formato file non valido",
-    "fileReadFailed": "Lettura file fallita: il file potrebbe essere danneggiato",
-    "mySyncsExportSuccess": "Sincronizzazioni esportate",
-    "mySyncsExportSuccessDesc": "Esportate {exported} sincronizzazioni su {total}. Saltate: {skipped}.",
-    "mySyncsExportEmpty": "Nessuna sincronizzazione trovata per questo utente.",
-    "mySyncsExportFailed": "Esportazione delle sincronizzazioni non riuscita"
+    "fileReadFailed": "Lettura file fallita: il file potrebbe essere danneggiato"
   },
   "misc": {
     "and": "e",
@@ -1545,11 +1541,6 @@ window.LANG_IT = {
         "button": "Import",
         "processing": "Importazione...",
         "confirm": "Tutti i dati esistenti nel database verranno sovrascritti. Continuare?"
-      },
-      "exportMySyncs": {
-        "label": "Esporta le mie sincronizzazioni",
-        "button": "Esporta le mie sincronizzazioni",
-        "processing": "Esportazione in corso..."
       }
     },
     "resetSettings": {

@@ -884,11 +884,7 @@ window.LANG_AR = {
     "lyricsLoadedFromFile": "تم تحميل كلمات {types} من الملف بنجاح",
     "lyricsLoadedFromLrclib": "تم جلب الكلمات من LRCLIB.",
     "lyricsLoadFailed": "فشل تحميل الكلمات: تنسيق ملف غير صالح",
-    "fileReadFailed": "فشل قراءة الملف: قد يكون الملف تالفًا",
-    "mySyncsExportSuccess": "تم تصدير المزامنات",
-    "mySyncsExportSuccessDesc": "تم تصدير {exported} من {total} مزامنة. تم تخطي: {skipped}.",
-    "mySyncsExportEmpty": "لم يتم العثور على مزامنات لهذا المستخدم.",
-    "mySyncsExportFailed": "فشل تصدير المزامنات"
+    "fileReadFailed": "فشل قراءة الملف: قد يكون الملف تالفًا"
   },
   "misc": {
     "and": "و",
@@ -1545,11 +1541,6 @@ window.LANG_AR = {
         "button": "Import",
         "processing": "جارٍ الاستيراد...",
         "confirm": "ستُستبدل جميع بيانات قاعدة البيانات الحالية. هل تريد المتابعة؟"
-      },
-      "exportMySyncs": {
-        "label": "تصدير مزامناتي",
-        "button": "تصدير مزامناتي",
-        "processing": "جارٍ التصدير..."
       }
     },
     "resetSettings": {

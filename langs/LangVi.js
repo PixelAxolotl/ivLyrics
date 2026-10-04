@@ -884,11 +884,7 @@ window.LANG_VI = {
     "lyricsLoadedFromFile": "Đã tải thành công lời bài hát {types} từ tệp",
     "lyricsLoadedFromLrclib": "Đã tải lời bài hát từ LRCLIB.",
     "lyricsLoadFailed": "Tải lời bài hát thất bại: Định dạng tệp không hợp lệ",
-    "fileReadFailed": "Đọc tệp thất bại: Tệp có thể bị hỏng",
-    "mySyncsExportSuccess": "Đã xuất đồng bộ",
-    "mySyncsExportSuccessDesc": "Đã xuất {exported} trên {total} bản đồng bộ. Bỏ qua: {skipped}.",
-    "mySyncsExportEmpty": "Không tìm thấy đồng bộ của người dùng này.",
-    "mySyncsExportFailed": "Xuất đồng bộ thất bại"
+    "fileReadFailed": "Đọc tệp thất bại: Tệp có thể bị hỏng"
   },
   "misc": {
     "and": "và",
@@ -1545,11 +1541,6 @@ window.LANG_VI = {
         "button": "Import",
         "processing": "Đang nhập...",
         "confirm": "Toàn bộ dữ liệu hiện có trong cơ sở dữ liệu sẽ bị ghi đè. Tiếp tục?"
-      },
-      "exportMySyncs": {
-        "label": "Xuất đồng bộ của tôi",
-        "button": "Xuất đồng bộ của tôi",
-        "processing": "Đang xuất..."
       }
     },
     "resetSettings": {

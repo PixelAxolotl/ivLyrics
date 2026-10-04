@@ -884,11 +884,7 @@ window.LANG_HI = {
     "lyricsLoadedFromFile": "{types} लिरिक्स फ़ाइल से सफलतापूर्वक लोड किए गए",
     "lyricsLoadedFromLrclib": "LRCLIB से गीत लोड किए गए।",
     "lyricsLoadFailed": "लिरिक्स लोड विफल: अमान्य फ़ाइल प्रारूप",
-    "fileReadFailed": "फ़ाइल पढ़ना विफल: फ़ाइल क्षतिग्रस्त हो सकती है",
-    "mySyncsExportSuccess": "सिंक निर्यात किए गए",
-    "mySyncsExportSuccessDesc": "{total} में से {exported} सिंक निर्यात किए गए। छोड़े गए: {skipped}।",
-    "mySyncsExportEmpty": "इस उपयोगकर्ता का कोई सिंक नहीं मिला।",
-    "mySyncsExportFailed": "सिंक निर्यात विफल रहा"
+    "fileReadFailed": "फ़ाइल पढ़ना विफल: फ़ाइल क्षतिग्रस्त हो सकती है"
   },
   "misc": {
     "and": "और",
@@ -1545,11 +1541,6 @@ window.LANG_HI = {
         "button": "Import",
         "processing": "आयात हो रहा है...",
         "confirm": "डेटाबेस का मौजूदा सारा डेटा बदल दिया जाएगा। जारी रखें?"
-      },
-      "exportMySyncs": {
-        "label": "मेरे सिंक निर्यात करें",
-        "button": "मेरे सिंक निर्यात करें",
-        "processing": "निर्यात हो रहा है..."
       }
     },
     "resetSettings": {

@@ -884,11 +884,7 @@ window.LANG_MS = {
     "lyricsLoadedFromFile": "Berjaya memuatkan {types} lirik daripada fail",
     "lyricsLoadedFromLrclib": "Lirik dimuatkan daripada LRCLIB.",
     "lyricsLoadFailed": "Gagal memuatkan lirik: Format fail tidak sah",
-    "fileReadFailed": "Gagal membaca fail: Fail mungkin rosak",
-    "mySyncsExportSuccess": "Penyegerakan dieksport",
-    "mySyncsExportSuccessDesc": "{exported} daripada {total} penyegerakan dieksport. Dilangkau: {skipped}.",
-    "mySyncsExportEmpty": "Tiada penyegerakan untuk pengguna ini.",
-    "mySyncsExportFailed": "Eksport penyegerakan gagal"
+    "fileReadFailed": "Gagal membaca fail: Fail mungkin rosak"
   },
   "misc": {
     "and": "dan",
@@ -1545,11 +1541,6 @@ window.LANG_MS = {
         "button": "Import",
         "processing": "Mengimport...",
         "confirm": "Semua data DB sedia ada akan ditulis ganti (overwrite). Adakah anda mahu meneruskan?"
-      },
-      "exportMySyncs": {
-        "label": "Eksport penyegerakan saya",
-        "button": "Eksport penyegerakan saya",
-        "processing": "Mengeksport..."
       }
     },
     "resetSettings": {

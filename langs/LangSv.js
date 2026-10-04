@@ -884,11 +884,7 @@ window.LANG_SV = {
     "lyricsLoadedFromFile": "{types} sångtexter från filen har laddats in",
     "lyricsLoadedFromLrclib": "Text laddad från LRCLIB.",
     "lyricsLoadFailed": "Det gick inte att läsa in texten: Ogiltigt filformat",
-    "fileReadFailed": "Det gick inte att läsa filen: Filen kan vara skadad",
-    "mySyncsExportSuccess": "Synkroniseringar exporterade",
-    "mySyncsExportSuccessDesc": "Exporterade {exported} av {total} synkroniseringar. Överhoppade: {skipped}.",
-    "mySyncsExportEmpty": "Inga synkroniseringar hittades för denna användare.",
-    "mySyncsExportFailed": "Export av synkroniseringar misslyckades"
+    "fileReadFailed": "Det gick inte att läsa filen: Filen kan vara skadad"
   },
   "misc": {
     "and": "och",
@@ -1545,11 +1541,6 @@ window.LANG_SV = {
         "button": "Importera",
         "processing": "Importerar...",
         "confirm": "Alla befintliga DB-data kommer att skrivas över. Fortsätta?"
-      },
-      "exportMySyncs": {
-        "label": "Exportera mina synkroniseringar",
-        "button": "Exportera mina synkroniseringar",
-        "processing": "Exporterar..."
       }
     },
     "resetSettings": {

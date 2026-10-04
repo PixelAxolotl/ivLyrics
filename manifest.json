@@ -63,7 +63,6 @@
 		"SyncCreatorDraftStore.js",
 		"SyncCreatorScoreTracker.js",
 		"SyncDataCreator.js",
-		"UserSyncExport.js",
 		"Marketplace.js",
 		"LearningMode.js"
 	],

@@ -884,11 +884,7 @@ window.LANG_CS = {
     "lyricsLoadedFromFile": "Úspěšně načteno {types} texty ze souboru",
     "lyricsLoadedFromLrclib": "Načtené texty z LRCLIB.",
     "lyricsLoadFailed": "Nepodařilo se načíst text: Neplatný formát souboru",
-    "fileReadFailed": "Soubor se nepodařilo přečíst: Soubor může být poškozen",
-    "mySyncsExportSuccess": "Synchronizace exportovány",
-    "mySyncsExportSuccessDesc": "Exportováno {exported} z {total} synchronizací. Přeskočeno: {skipped}.",
-    "mySyncsExportEmpty": "Synchronizace tohoto uživatele nebyly nalezeny.",
-    "mySyncsExportFailed": "Export synchronizací selhal"
+    "fileReadFailed": "Soubor se nepodařilo přečíst: Soubor může být poškozen"
   },
   "misc": {
     "and": "a",
@@ -1545,11 +1541,6 @@ window.LANG_CS = {
         "button": "Importovat",
         "processing": "Import...",
         "confirm": "Všechna existující data DB budou přepsána. Pokračovat?"
-      },
-      "exportMySyncs": {
-        "label": "Exportovat mé synchronizace",
-        "button": "Exportovat mé synchronizace",
-        "processing": "Exportování..."
       }
     },
     "resetSettings": {

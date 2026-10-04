@@ -884,11 +884,7 @@ window.LANG_PT = {
     "lyricsLoadedFromFile": "Carregou {types} letra(s) do arquivo com sucesso",
     "lyricsLoadedFromLrclib": "Letras carregadas do LRCLIB.",
     "lyricsLoadFailed": "Falha ao carregar letra: Formato de arquivo inválido",
-    "fileReadFailed": "Falha ao ler arquivo: O arquivo pode estar corrompido",
-    "mySyncsExportSuccess": "Sincronizações exportadas",
-    "mySyncsExportSuccessDesc": "Foram exportadas {exported} de {total} sincronizações. Ignoradas: {skipped}.",
-    "mySyncsExportEmpty": "Nenhuma sincronização encontrada para este usuário.",
-    "mySyncsExportFailed": "Falha ao exportar minhas sincronizações"
+    "fileReadFailed": "Falha ao ler arquivo: O arquivo pode estar corrompido"
   },
   "misc": {
     "and": "e",
@@ -1545,11 +1541,6 @@ window.LANG_PT = {
         "button": "Import",
         "processing": "Importando...",
         "confirm": "Todos os dados atuais do banco de dados serão substituídos. Continuar?"
-      },
-      "exportMySyncs": {
-        "label": "Exportar minhas sincronizações",
-        "button": "Exportar minhas sincronizações",
-        "processing": "Exportando..."
       }
     },
     "resetSettings": {

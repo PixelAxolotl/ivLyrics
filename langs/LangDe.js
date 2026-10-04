@@ -884,11 +884,7 @@ window.LANG_DE = {
     "lyricsLoadedFromFile": "{types}-Songtext erfolgreich aus Datei geladen",
     "lyricsLoadedFromLrclib": "Lyrics wurden aus LRCLIB geladen.",
     "lyricsLoadFailed": "Laden fehlgeschlagen: Ungültiges Dateiformat",
-    "fileReadFailed": "Lesen fehlgeschlagen: Datei möglicherweise beschädigt",
-    "mySyncsExportSuccess": "Meine Syncs exportiert",
-    "mySyncsExportSuccessDesc": "{exported} von {total} Syncs exportiert. Übersprungen: {skipped}.",
-    "mySyncsExportEmpty": "Für diesen Nutzer wurden keine Syncs gefunden.",
-    "mySyncsExportFailed": "Export meiner Syncs fehlgeschlagen"
+    "fileReadFailed": "Lesen fehlgeschlagen: Datei möglicherweise beschädigt"
   },
   "misc": {
     "and": "und",
@@ -1545,11 +1541,6 @@ window.LANG_DE = {
         "button": "Import",
         "processing": "Wird importiert...",
         "confirm": "Alle vorhandenen Datenbankdaten werden überschrieben. Fortfahren?"
-      },
-      "exportMySyncs": {
-        "label": "Meine Syncs exportieren",
-        "button": "Meine Syncs exportieren",
-        "processing": "Export läuft..."
       }
     },
     "resetSettings": {

@@ -884,11 +884,7 @@ window.LANG_ZH_CN = {
     "lyricsLoadedFromFile": "成功从文件加载 {types} 歌词",
     "lyricsLoadedFromLrclib": "已从 LRCLIB 加载歌词。",
     "lyricsLoadFailed": "歌词加载失败：文件格式错误",
-    "fileReadFailed": "文件读取失败：文件可能已损坏",
-    "mySyncsExportSuccess": "已导出我的同步",
-    "mySyncsExportSuccessDesc": "已导出 {exported}/{total} 个同步。跳过：{skipped} 个。",
-    "mySyncsExportEmpty": "该用户尚未提交同步。",
-    "mySyncsExportFailed": "导出我的同步失败"
+    "fileReadFailed": "文件读取失败：文件可能已损坏"
   },
   "misc": {
     "and": "和",
@@ -1545,11 +1541,6 @@ window.LANG_ZH_CN = {
         "button": "导入",
         "processing": "导入中...",
         "confirm": "所有现有数据库数据将被覆盖。是否继续？"
-      },
-      "exportMySyncs": {
-        "label": "导出我的同步",
-        "button": "导出我的同步",
-        "processing": "正在导出..."
       }
     },
     "resetSettings": {

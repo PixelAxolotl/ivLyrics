@@ -884,11 +884,7 @@ window.LANG_TR = {
     "lyricsLoadedFromFile": "Dosyadan {types} sözleri başarıyla yüklendi",
     "lyricsLoadedFromLrclib": "Sözler LRCLIB'den yüklendi.",
     "lyricsLoadFailed": "Sözler yüklenemedi: Geçersiz dosya formatı",
-    "fileReadFailed": "Dosya okunamadı: Dosya bozuk olabilir",
-    "mySyncsExportSuccess": "Senkronizasyonlar dışa aktarıldı",
-    "mySyncsExportSuccessDesc": "{total} senkronizasyondan {exported} tanesi dışa aktarıldı. Atlanan: {skipped}.",
-    "mySyncsExportEmpty": "Bu kullanıcının senkronizasyonu bulunamadı.",
-    "mySyncsExportFailed": "Senkronizasyonlar dışa aktarılamadı"
+    "fileReadFailed": "Dosya okunamadı: Dosya bozuk olabilir"
   },
   "misc": {
     "and": "ve",
@@ -1545,11 +1541,6 @@ window.LANG_TR = {
       "button": "İçe Aktar",
       "processing": "İçe aktarılıyor...",
       "confirm": "Mevcut tüm VT verilerinin üzerine yazılacak. Devam edilsin mi?"
-    },
-    "exportMySyncs": {
-      "label": "Senkronizasyonlarımı dışa aktar",
-      "button": "Senkronizasyonlarımı dışa aktar",
-      "processing": "Dışa aktarılıyor..."
     }
   },
   "resetSettings": {

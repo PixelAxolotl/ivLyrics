@@ -884,11 +884,7 @@ window.LANG_ES = {
     "lyricsLoadedFromFile": "Letras {types} cargadas exitosamente del archivo",
     "lyricsLoadedFromLrclib": "Letras cargadas desde LRCLIB.",
     "lyricsLoadFailed": "Error al cargar letras: formato de archivo inválido",
-    "fileReadFailed": "Error al leer archivo: puede estar dañado",
-    "mySyncsExportSuccess": "Sincronizaciones exportadas",
-    "mySyncsExportSuccessDesc": "Se exportaron {exported} de {total} sincronizaciones. Omitidas: {skipped}.",
-    "mySyncsExportEmpty": "No se encontraron sincronizaciones de este usuario.",
-    "mySyncsExportFailed": "Error al exportar mis sincronizaciones"
+    "fileReadFailed": "Error al leer archivo: puede estar dañado"
   },
   "misc": {
     "and": "y",
@@ -1545,11 +1541,6 @@ window.LANG_ES = {
         "button": "Import",
         "processing": "Importando...",
         "confirm": "Se sobrescribirán todos los datos de la base de datos. ¿Continuar?"
-      },
-      "exportMySyncs": {
-        "label": "Exportar mis sincronizaciones",
-        "button": "Exportar mis sincronizaciones",
-        "processing": "Exportando..."
       }
     },
     "resetSettings": {

@@ -884,11 +884,7 @@ window.LANG_EN = {
     "lyricsLoadedFromFile": "Successfully loaded {types} lyrics from file",
     "lyricsLoadedFromLrclib": "Loaded lyrics from LRCLIB.",
     "lyricsLoadFailed": "Failed to load lyrics: Invalid file format",
-    "fileReadFailed": "Failed to read file: File may be corrupted",
-    "mySyncsExportSuccess": "My syncs exported",
-    "mySyncsExportSuccessDesc": "Exported {exported} of {total} syncs. Skipped: {skipped}.",
-    "mySyncsExportEmpty": "No synced tracks found for this user.",
-    "mySyncsExportFailed": "My syncs export failed"
+    "fileReadFailed": "Failed to read file: File may be corrupted"
   },
   "misc": {
     "and": "and",
@@ -1545,11 +1541,6 @@ window.LANG_EN = {
         "button": "Import",
         "processing": "Importing...",
         "confirm": "All existing DB data will be overwritten. Continue?"
-      },
-      "exportMySyncs": {
-        "label": "Export My Syncs",
-        "button": "Export My Syncs",
-        "processing": "Exporting..."
       }
     },
     "resetSettings": {

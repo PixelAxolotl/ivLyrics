@@ -884,11 +884,7 @@ window.LANG_FA = {
     "lyricsLoadedFromFile": "متن {types} با موفقیت از فایل بارگذاری شد",
     "lyricsLoadedFromLrclib": "متن ترانه از LRCLIB بارگذاری شد.",
     "lyricsLoadFailed": "بارگذاری متن ناموفق بود: فرمت فایل نادرست است",
-    "fileReadFailed": "خواندن فایل ناموفق بود: ممکن است فایل خراب باشد",
-    "mySyncsExportSuccess": "خروجی همگام‌سازی‌ها ذخیره شد",
-    "mySyncsExportSuccessDesc": "از {total} همگام‌سازی، {exported} مورد ذخیره شد. ردشده: {skipped}.",
-    "mySyncsExportEmpty": "همگام‌سازی‌ای برای این کاربر یافت نشد.",
-    "mySyncsExportFailed": "تهیه خروجی همگام‌سازی‌ها ناموفق بود"
+    "fileReadFailed": "خواندن فایل ناموفق بود: ممکن است فایل خراب باشد"
   },
   "misc": {
     "and": "و",
@@ -1545,11 +1541,6 @@ window.LANG_FA = {
         "button": "Import",
         "processing": "در حال ورود...",
         "confirm": "همهٔ داده‌های فعلی پایگاه داده بازنویسی می‌شوند. ادامه می‌دهید؟"
-      },
-      "exportMySyncs": {
-        "label": "خروجی گرفتن از همگام‌سازی‌های من",
-        "button": "خروجی گرفتن از همگام‌سازی‌های من",
-        "processing": "در حال تهیه خروجی..."
       }
     },
     "resetSettings": {

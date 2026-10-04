@@ -884,11 +884,7 @@ window.LANG_ZH_TW = {
     "lyricsLoadedFromFile": "成功從檔案載入 {types} 歌詞",
     "lyricsLoadedFromLrclib": "已從 LRCLIB 載入歌詞。",
     "lyricsLoadFailed": "歌詞載入失敗：錯誤的檔案格式",
-    "fileReadFailed": "檔案讀取失敗：檔案可能已損毀",
-    "mySyncsExportSuccess": "已匯出我的同步",
-    "mySyncsExportSuccessDesc": "已匯出 {exported}/{total} 個同步。略過：{skipped} 個。",
-    "mySyncsExportEmpty": "此使用者尚未提交同步。",
-    "mySyncsExportFailed": "匯出我的同步失敗"
+    "fileReadFailed": "檔案讀取失敗：檔案可能已損毀"
   },
   "misc": {
     "and": "及",
@@ -1545,11 +1541,6 @@ window.LANG_ZH_TW = {
         "button": "匯入",
         "processing": "匯入中...",
         "confirm": "所有現有資料庫資料將被覆蓋。是否繼續？"
-      },
-      "exportMySyncs": {
-        "label": "匯出我的同步",
-        "button": "匯出我的同步",
-        "processing": "正在匯出..."
       }
     },
     "resetSettings": {

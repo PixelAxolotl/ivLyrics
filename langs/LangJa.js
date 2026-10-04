@@ -884,11 +884,7 @@ window.LANG_JA = {
     "lyricsLoadedFromFile": "ファイルから {types} 歌詞を正常に読み込みました",
     "lyricsLoadedFromLrclib": "LRCLIBから歌詞を読み込みました。",
     "lyricsLoadFailed": "歌詞読み込み失敗: 無効なファイル形式",
-    "fileReadFailed": "ファイル読み取り失敗: ファイルが破損している可能性があります",
-    "mySyncsExportSuccess": "同期をエクスポートしました。",
-    "mySyncsExportSuccessDesc": "{total}件中{exported}件をエクスポートしました。スキップ: {skipped}件。",
-    "mySyncsExportEmpty": "このユーザーが送信した同期がありません。",
-    "mySyncsExportFailed": "同期のエクスポートに失敗しました。"
+    "fileReadFailed": "ファイル読み取り失敗: ファイルが破損している可能性があります"
   },
   "misc": {
     "and": "および",
@@ -1545,11 +1541,6 @@ window.LANG_JA = {
         "button": "インポート",
         "processing": "インポート中...",
         "confirm": "既存のDBデータがすべて上書きされます。続行しますか？"
-      },
-      "exportMySyncs": {
-        "label": "自分の同期をエクスポート",
-        "button": "自分の同期をエクスポート",
-        "processing": "エクスポート中..."
       }
     },
     "resetSettings": {

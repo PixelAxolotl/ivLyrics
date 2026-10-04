@@ -884,11 +884,7 @@ window.LANG_TH = {
     "lyricsLoadedFromFile": "โหลดเนื้อเพลง {types} จากไฟล์สำเร็จ",
     "lyricsLoadedFromLrclib": "โหลดเนื้อเพลงจาก LRCLIB แล้ว",
     "lyricsLoadFailed": "โหลดเนื้อเพลงล้มเหลว: รูปแบบไฟล์ไม่ถูกต้อง",
-    "fileReadFailed": "อ่านไฟล์ล้มเหลว: ไฟล์อาจเสียหาย",
-    "mySyncsExportSuccess": "ส่งออกการซิงค์แล้ว",
-    "mySyncsExportSuccessDesc": "ส่งออก {exported} จาก {total} รายการ ข้าม: {skipped} รายการ",
-    "mySyncsExportEmpty": "ไม่พบการซิงค์ของผู้ใช้นี้",
-    "mySyncsExportFailed": "ส่งออกการซิงค์ไม่สำเร็จ"
+    "fileReadFailed": "อ่านไฟล์ล้มเหลว: ไฟล์อาจเสียหาย"
   },
   "misc": {
     "and": "และ",
@@ -1545,11 +1541,6 @@ window.LANG_TH = {
         "button": "Import",
         "processing": "กำลังนำเข้า...",
         "confirm": "ข้อมูลทั้งหมดในฐานข้อมูลปัจจุบันจะถูกเขียนทับ ดำเนินการต่อหรือไม่?"
-      },
-      "exportMySyncs": {
-        "label": "ส่งออกการซิงค์ของฉัน",
-        "button": "ส่งออกการซิงค์ของฉัน",
-        "processing": "กำลังส่งออก..."
       }
     },
     "resetSettings": {

@@ -884,11 +884,7 @@ window.LANG_ID = {
     "lyricsLoadedFromFile": "Berhasil memuat lirik {types} dari file",
     "lyricsLoadedFromLrclib": "Lirik dimuat dari LRCLIB.",
     "lyricsLoadFailed": "Gagal memuat lirik: Format file salah",
-    "fileReadFailed": "Gagal membaca file: File mungkin rusak",
-    "mySyncsExportSuccess": "Sinkronisasi diekspor",
-    "mySyncsExportSuccessDesc": "Mengekspor {exported} dari {total} sinkronisasi. Dilewati: {skipped}.",
-    "mySyncsExportEmpty": "Tidak ada sinkronisasi untuk pengguna ini.",
-    "mySyncsExportFailed": "Ekspor sinkronisasi gagal"
+    "fileReadFailed": "Gagal membaca file: File mungkin rusak"
   },
   "misc": {
     "and": "dan",
@@ -1545,11 +1541,6 @@ window.LANG_ID = {
         "button": "Import",
         "processing": "Mengimpor...",
         "confirm": "Semua data database yang ada akan ditimpa. Lanjutkan?"
-      },
-      "exportMySyncs": {
-        "label": "Ekspor sinkronisasi saya",
-        "button": "Ekspor sinkronisasi saya",
-        "processing": "Mengekspor..."
       }
     },
     "resetSettings": {

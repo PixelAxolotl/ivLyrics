@@ -884,11 +884,7 @@ window.LANG_FR = {
     "lyricsLoadedFromFile": "Paroles {types} chargées depuis le fichier",
     "lyricsLoadedFromLrclib": "Paroles chargées depuis LRCLIB.",
     "lyricsLoadFailed": "Échec chargement : Format invalide",
-    "fileReadFailed": "Échec lecture : Fichier peut-être corrompu",
-    "mySyncsExportSuccess": "Synchronisations exportées",
-    "mySyncsExportSuccessDesc": "{exported} synchronisations exportées sur {total}. Ignorées : {skipped}.",
-    "mySyncsExportEmpty": "Aucune synchronisation trouvée pour cet utilisateur.",
-    "mySyncsExportFailed": "Échec de l’exportation des synchronisations"
+    "fileReadFailed": "Échec lecture : Fichier peut-être corrompu"
   },
   "misc": {
     "and": "et",
@@ -1545,11 +1541,6 @@ window.LANG_FR = {
         "button": "Import",
         "processing": "Importation…",
         "confirm": "Toutes les données existantes seront remplacées. Continuer ?"
-      },
-      "exportMySyncs": {
-        "label": "Exporter mes synchronisations",
-        "button": "Exporter mes synchronisations",
-        "processing": "Exportation en cours..."
       }
     },
     "resetSettings": {

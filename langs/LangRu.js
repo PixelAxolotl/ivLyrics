@@ -884,11 +884,7 @@ window.LANG_RU = {
     "lyricsLoadedFromFile": "Успешно загружен текст типа {types} из файла",
     "lyricsLoadedFromLrclib": "Текст загружен из LRCLIB.",
     "lyricsLoadFailed": "Ошибка загрузки: неверный формат файла",
-    "fileReadFailed": "Ошибка чтения файла: возможно, файл поврежден",
-    "mySyncsExportSuccess": "Синхронизации экспортированы",
-    "mySyncsExportSuccessDesc": "Экспортировано {exported} из {total} синхронизаций. Пропущено: {skipped}.",
-    "mySyncsExportEmpty": "Синхронизации этого пользователя не найдены.",
-    "mySyncsExportFailed": "Не удалось экспортировать синхронизации"
+    "fileReadFailed": "Ошибка чтения файла: возможно, файл поврежден"
   },
   "misc": {
     "and": "и",
@@ -1545,11 +1541,6 @@ window.LANG_RU = {
         "button": "Import",
         "processing": "Импорт...",
         "confirm": "Все существующие данные базы будут перезаписаны. Продолжить?"
-      },
-      "exportMySyncs": {
-        "label": "Экспорт моих синхронизаций",
-        "button": "Экспорт моих синхронизаций",
-        "processing": "Экспорт..."
       }
     },
     "resetSettings": {

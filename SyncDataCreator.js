@@ -9759,7 +9759,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		},
 		granularityButtonActive: {
 			background: TOSS_BLUE_SOFT,
-			borderColor: TOSS_BLUE_BORDER,
+			border: `1px solid ${TOSS_BLUE_BORDER}`,
 			color: TOSS_BLUE
 		},
 		wordInputSeparator: {
@@ -9840,7 +9840,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			background: TOSS_BLUE_SOFT,
 			boxShadow: `inset 2px 0 0 ${TOSS_BLUE}`
 		},
-		candidateItemApplied: { background: TOSS_BLUE_SOFT, borderColor: TOSS_BLUE_BORDER },
+		candidateItemApplied: { background: TOSS_BLUE_SOFT, borderBottom: `1px solid ${TOSS_BLUE_BORDER}` },
 		candidateTitleRow: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', minWidth: 0 },
 		candidateTitle: { fontSize: '13px', fontWeight: '700', color: 'var(--spice-text)', letterSpacing: '-0.005em', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
 		candidateSubtitle: { fontSize: '11px', color: 'var(--spice-subtext)', marginTop: '3px' },
@@ -10272,16 +10272,16 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		},
 		parallelStackLineActive: {
 			background: TOSS_BLUE_SOFT,
-			borderColor: TOSS_BLUE_BORDER,
+			border: `1px solid ${TOSS_BLUE_BORDER}`,
 			boxShadow: `inset 0 0 0 1px ${TOSS_BLUE_RING}`
 		},
 		parallelStackLineDuet: {
 			background: 'rgba(156, 92, 255, 0.055)',
-			borderColor: 'rgba(190, 150, 255, 0.20)'
+			border: '1px solid rgba(190, 150, 255, 0.20)'
 		},
 		parallelStackLineDuetActive: {
 			background: 'rgba(156, 92, 255, 0.13)',
-			borderColor: 'rgba(200, 168, 255, 0.52)'
+			border: '1px solid rgba(200, 168, 255, 0.52)'
 		},
 		parallelStackMeta: {
 			color: 'var(--spice-subtext)',
@@ -11484,7 +11484,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				opacity: isSubmitting || isReverting || !lyricsText ? 0.5 : 1,
 				cursor: isSubmitting || isReverting || !lyricsText ? 'not-allowed' : 'pointer',
 				...(hasUnsubmittedSync && !isSubmitting && !isReverting
-					? { borderColor: TOSS_RED, color: TOSS_RED }
+					? { border: `1px solid ${TOSS_RED}`, color: TOSS_RED }
 					: {})
 			},
 			title: I18n.t('syncCreator.revertDesc') || 'Discard local edits and reload the published sync',

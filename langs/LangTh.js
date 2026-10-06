@@ -29,6 +29,7 @@ window.LANG_TH = {
   },
   "settingsUi": {
     "aiAutosave": "บันทึกการตั้งค่าอัตโนมัติ สร้างใหม่เพื่อใช้กับเพลงปัจจุบัน",
+    "close": "ปิด",
     "groups": {
       "core": "พื้นฐาน",
       "display": "การแสดงผล",
@@ -1953,7 +1954,12 @@ window.LANG_TH = {
     "trackInfo": "ใช้กับแทร็กที่กำลังเล่นอยู่เท่านั้น",
     "globalTitle": "ซิงก์ส่วนกลาง",
     "globalInfo": "ใช้กับทุกเพลงบนอุปกรณ์นี้เท่านั้น และจะไม่ถูกส่งไปยังชุมชน",
-    "communityUnavailableLocal": "ไม่สามารถส่งออฟเซ็ตชุมชนสำหรับเพลงในเครื่องที่ไม่มี Spotify trackId ได้"
+    "communityUnavailableLocal": "ไม่สามารถส่งออฟเซ็ตชุมชนสำหรับเพลงในเครื่องที่ไม่มี Spotify trackId ได้",
+    "noVideo": "ไม่มีวิดีโอที่กำลังเล่น",
+    "quickLyricsLabel": "ออฟเซตเนื้อเพลง",
+    "quickVideoLabel": "ออฟเซตวิดีโอ",
+    "videoTitle": "วิดีโอปัจจุบัน",
+    "videoInfo": "ปรับเวลาของเนื้อเพลงท่อนแรกของวิดีโอปัจจุบันอย่างละเอียดหลังการจับคู่อัตโนมัติ"
   },
   "playbarButton": {
     "label": "เนื้อเพลง Plus"
@@ -2084,6 +2090,7 @@ window.LANG_TH = {
   },
   "close": "ปิด",
   "cancel": "ยกเลิก",
+  "lyricsTitle": "เนื้อเพลงที่ซิงค์แล้ว",
   "shareImage": {
     "title": "แชร์รูปภาพเนื้อเพลง",
     "subtitle": "สร้างรูปภาพจากเนื้อเพลงที่คุณชอบแล้วแชร์",
@@ -2668,6 +2675,7 @@ window.LANG_TH = {
     "stopRecord": "หยุดบันทึก",
     "previewMode": "โหมดตัวอย่าง",
     "stopPreview": "หยุดตัวอย่าง",
+    "preview": "ตัวอย่าง",
     "idleMode": "รอคำสั่ง",
     "submit": "ส่งข้อมูล",
     "submitting": "กำลังส่ง...",

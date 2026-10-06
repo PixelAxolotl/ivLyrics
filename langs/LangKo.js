@@ -29,6 +29,7 @@ window.LANG_KO = {
   },
   "settingsUi": {
     "aiAutosave": "설정은 자동으로 저장됩니다. 다시 생성하면 현재 곡에 적용됩니다.",
+    "close": "닫기",
     "groups": {
       "core": "기본",
       "display": "화면 구성",
@@ -1953,7 +1954,12 @@ window.LANG_KO = {
     "trackInfo": "현재 재생 중인 곡에만 적용됩니다.",
     "globalTitle": "전역 싱크",
     "globalInfo": "이 기기에서만 모든 곡에 적용됩니다. 커뮤니티에는 절대 제출되지 않습니다.",
-    "communityUnavailableLocal": "Spotify trackId가 없는 로컬 곡은 커뮤니티 오프셋을 등록할 수 없습니다."
+    "communityUnavailableLocal": "Spotify trackId가 없는 로컬 곡은 커뮤니티 오프셋을 등록할 수 없습니다.",
+    "noVideo": "재생 중인 영상이 없습니다",
+    "quickLyricsLabel": "가사 오프셋",
+    "quickVideoLabel": "영상 오프셋",
+    "videoTitle": "현재 영상",
+    "videoInfo": "자동 매칭 후 현재 영상의 첫 가사 시점을 미세 조정합니다."
   },
   "playbarButton": {
     "label": "가사 플러스"
@@ -2084,6 +2090,7 @@ window.LANG_KO = {
   },
   "close": "닫기",
   "cancel": "취소",
+  "lyricsTitle": "동기화된 가사",
   "shareImage": {
     "title": "가사 이미지 공유",
     "subtitle": "좋아하는 가사를 이미지로 만들어 공유하세요",
@@ -2668,6 +2675,7 @@ window.LANG_KO = {
     "stopRecord": "기록 중지",
     "previewMode": "미리보기 모드",
     "stopPreview": "미리보기 중지",
+    "preview": "미리보기",
     "idleMode": "대기 중",
     "submit": "제출",
     "submitting": "제출 중...",

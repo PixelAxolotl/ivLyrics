@@ -29,6 +29,7 @@ window.LANG_DE = {
   },
   "settingsUi": {
     "aiAutosave": "Einstellungen werden automatisch gespeichert. Für den aktuellen Titel erneut generieren.",
+    "close": "Schließen",
     "groups": {
       "core": "Arbeitsbereich",
       "display": "Anzeige",
@@ -1953,7 +1954,12 @@ window.LANG_DE = {
     "trackInfo": "Gilt nur für den aktuell wiedergegebenen Track.",
     "globalTitle": "Globale Synchronisierung",
     "globalInfo": "Gilt nur auf diesem Gerät für alle Songs. Wird niemals an die Community gesendet.",
-    "communityUnavailableLocal": "Community-Offsets können für lokale Titel ohne Spotify trackId nicht übermittelt werden."
+    "communityUnavailableLocal": "Community-Offsets können für lokale Titel ohne Spotify trackId nicht übermittelt werden.",
+    "noVideo": "Kein Video wird abgespielt",
+    "quickLyricsLabel": "Songtext-Offset",
+    "quickVideoLabel": "Video-Offset",
+    "videoTitle": "Aktuelles Video",
+    "videoInfo": "Feinjustierung der Startzeit des aktuellen Videos nach dem automatischen Abgleich."
   },
   "playbarButton": {
     "label": "Songtexte Plus"
@@ -2084,6 +2090,7 @@ window.LANG_DE = {
   },
   "close": "Schließen",
   "cancel": "Abbrechen",
+  "lyricsTitle": "Synchronisierter Songtext",
   "shareImage": {
     "title": "Songtext-Bild teilen",
     "subtitle": "Erstellen Sie ein Bild Ihres Lieblingssongtextes",
@@ -2668,6 +2675,7 @@ window.LANG_DE = {
     "stopRecord": "Stopp",
     "previewMode": "Vorschaumodus",
     "stopPreview": "Stopp",
+    "preview": "Vorschau",
     "idleMode": "Bereit",
     "submit": "Senden",
     "submitting": "Sende...",

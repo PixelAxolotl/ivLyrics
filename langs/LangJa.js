@@ -29,6 +29,7 @@ window.LANG_JA = {
   },
   "settingsUi": {
     "aiAutosave": "設定は自動保存されます。現在の曲に適用するには再生成してください。",
+    "close": "閉じる",
     "groups": {
       "core": "基本",
       "display": "画面構成",
@@ -1953,7 +1954,12 @@ window.LANG_JA = {
     "trackInfo": "現在再生中の曲にのみ適用されます。",
     "globalTitle": "グローバル同期",
     "globalInfo": "このデバイス上のすべての曲にのみ適用されます。コミュニティには送信されません。",
-    "communityUnavailableLocal": "Spotify trackId がないローカルトラックでは、コミュニティオフセットを送信できません。"
+    "communityUnavailableLocal": "Spotify trackId がないローカルトラックでは、コミュニティオフセットを送信できません。",
+    "noVideo": "再生中の動画がありません",
+    "quickLyricsLabel": "歌詞オフセット",
+    "quickVideoLabel": "動画オフセット",
+    "videoTitle": "現在の動画",
+    "videoInfo": "自動マッチング後の現在の動画の最初の歌詞タイミングを微調整します。"
   },
   "playbarButton": {
     "label": "歌詞プラス"
@@ -2084,6 +2090,7 @@ window.LANG_JA = {
   },
   "close": "閉じる",
   "cancel": "キャンセル",
+  "lyricsTitle": "同期された歌詞",
   "shareImage": {
     "title": "歌詞画像を共有",
     "subtitle": "お気に入りの歌詞を画像にして共有しましょう",
@@ -2668,6 +2675,7 @@ window.LANG_JA = {
     "stopRecord": "記録停止",
     "previewMode": "プレビューモード",
     "stopPreview": "プレビュー停止",
+    "preview": "プレビュー",
     "idleMode": "待機中",
     "submit": "提出",
     "submitting": "提出中...",

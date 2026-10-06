@@ -29,6 +29,7 @@ window.LANG_AR = {
   },
   "settingsUi": {
     "aiAutosave": "تُحفظ الإعدادات تلقائيًا. أعد الإنشاء لتطبيقها على الأغنية الحالية.",
+    "close": "إغلاق",
     "groups": {
       "core": "الأساس",
       "display": "العرض",
@@ -1953,7 +1954,12 @@ window.LANG_AR = {
     "trackInfo": "تُطبّق على المسار قيد التشغيل فقط.",
     "globalTitle": "مزامنة عامة",
     "globalInfo": "تطبق على كل الأغاني على هذا الجهاز فقط. لا يتم إرسالها إلى المجتمع أبداً.",
-    "communityUnavailableLocal": "لا يمكن إرسال إزاحات المجتمع للمسارات المحلية التي لا تحتوي على Spotify trackId."
+    "communityUnavailableLocal": "لا يمكن إرسال إزاحات المجتمع للمسارات المحلية التي لا تحتوي على Spotify trackId.",
+    "noVideo": "لا يوجد فيديو قيد التشغيل",
+    "quickLyricsLabel": "إزاحة الكلمات",
+    "quickVideoLabel": "إزاحة الفيديو",
+    "videoTitle": "الفيديو الحالي",
+    "videoInfo": "اضبط وقت أول كلمات للفيديو الحالي بدقة بعد المطابقة التلقائية."
   },
   "playbarButton": {
     "label": "كلمات بلس"
@@ -2084,6 +2090,7 @@ window.LANG_AR = {
   },
   "close": "إغلاق",
   "cancel": "إلغاء",
+  "lyricsTitle": "كلمات متزامنة",
   "shareImage": {
     "title": "مشاركة صورة الكلمات",
     "subtitle": "أنشئ صورة من كلماتك المفضلة وشاركها",
@@ -2668,6 +2675,7 @@ window.LANG_AR = {
     "stopRecord": "إيقاف التسجيل",
     "previewMode": "وضع المعاينة",
     "stopPreview": "إيقاف المعاينة",
+    "preview": "معاينة",
     "idleMode": "وضع الخمول",
     "submit": "إرسال",
     "submitting": "جارٍ الإرسال...",

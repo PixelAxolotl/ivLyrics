@@ -29,6 +29,7 @@ window.LANG_TR = {
   },
   "settingsUi": {
     "aiAutosave": "Ayarlar otomatik kaydedilir. Geçerli şarkıya uygulamak için yeniden oluşturun.",
+    "close": "Kapat",
     "groups": {
       "core": "Çalışma Alanı",
       "display": "Görünüm",
@@ -1953,7 +1954,12 @@ window.LANG_TR = {
     "trackInfo": "Yalnızca çalmakta olan parçaya uygulanır.",
     "globalTitle": "Genel Senkronizasyon",
     "globalInfo": "Yalnızca bu cihazdaki her şarkı için geçerlidir. Asla topluluğa gönderilmez.",
-    "communityUnavailableLocal": "Yerel parçalar için Spotify trackId olmadan topluluk ofsetleri gönderilemez."
+    "communityUnavailableLocal": "Yerel parçalar için Spotify trackId olmadan topluluk ofsetleri gönderilemez.",
+    "noVideo": "Oynatılan video yok",
+    "quickLyricsLabel": "Söz ofseti",
+    "quickVideoLabel": "Video ofseti",
+    "videoTitle": "Mevcut video",
+    "videoInfo": "Otomatik eşleşmeden sonra mevcut videonun ilk söz zamanını ince ayarlayın."
   },
   "playbarButton": {
     "label": "ivLyrics"
@@ -2084,6 +2090,7 @@ window.LANG_TR = {
   },
   "close": "Kapat",
   "cancel": "İptal",
+  "lyricsTitle": "Senkronize sözler",
   "shareImage": {
     "title": "Söz Görseli Paylaş",
     "subtitle": "Favori sözlerinizin görsellerini oluşturun ve paylaşın",
@@ -2668,6 +2675,7 @@ window.LANG_TR = {
     "stopRecord": "Kaydı Durdur",
     "previewMode": "Önizleme Modu",
     "stopPreview": "Önizlemeyi Durdur",
+    "preview": "Önizleme",
     "idleMode": "Boşta",
     "submit": "Gönder",
     "submitting": "Gönderiliyor...",

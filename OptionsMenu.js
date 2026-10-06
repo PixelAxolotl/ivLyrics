@@ -3108,10 +3108,14 @@ const TranslationMenu = react.memo(({ friendlyLanguage, hasTranslation }) => {
         // 현재 UI 언어로 언어 이름 표시
         const uiLang = I18n.getCurrentLanguage();
         const displayName = new Intl.DisplayNames([uiLang], { type: "language" }).of(lang);
-        return displayName || lang;
+        if (displayName && displayName !== lang) return displayName;
       } catch {
-        return lang;
+        // fall through to capitalized fallback below
       }
+      // `lang` may be an already-resolved lowercase language name (e.g. the
+      // translation mode key "japanese") rather than a BCP 47 code, which
+      // DisplayNames echoes back unchanged. Capitalize it for display.
+      return lang.charAt(0).toUpperCase() + lang.slice(1);
     };
 
     const displayLanguageName = getDisplayLanguageName(friendlyLanguage);
@@ -4367,8 +4371,23 @@ const SyncAdjustButtonFluent = react.memo(({
     trackUri &&
     typeof TrackSyncAdjustPill !== "undefined"
   );
+  const [hasActiveVideo, setHasActiveVideo] = useState(
+    () => !!readActiveCommunityVideoInfo(trackUri)?.youtubeVideoId
+  );
+  useEffect(() => {
+    setHasActiveVideo(!!readActiveCommunityVideoInfo(trackUri)?.youtubeVideoId);
+    const handleVideoChange = (event) => {
+      if (trackUri && event?.detail?.trackUri && event.detail.trackUri !== trackUri) return;
+      setHasActiveVideo(!!readActiveCommunityVideoInfo(trackUri)?.youtubeVideoId);
+    };
+    window.addEventListener("ivLyrics:communityVideoChanged", handleVideoChange);
+    return () => {
+      window.removeEventListener("ivLyrics:communityVideoChanged", handleVideoChange);
+    };
+  }, [trackUri]);
   const hasVideoSyncControls = Boolean(
     trackUri &&
+    hasActiveVideo &&
     typeof CurrentVideoSyncPill !== "undefined"
   );
   const updatePanelPosition = react.useCallback(() => {
@@ -4648,7 +4667,7 @@ const SyncAdjustButtonFluent = react.memo(({
               "div",
               { className: "lyrics-sync-adjust-track-section", "data-section": "video-sync" },
               react.createElement("div", { className: "lyrics-sync-adjust-section-title" }, I18n.t("syncAdjust.videoTitle") || "Current video"),
-              react.createElement("p", { className: "lyrics-sync-adjust-section-desc" }, I18n.t("syncAdjust.videoInfo") || "Fine-tune the current video's first-lyric time after auto-match. Clamped to 0 and video length, saved to 3 decimals."),
+              react.createElement("p", { className: "lyrics-sync-adjust-section-desc" }, I18n.t("syncAdjust.videoInfo") || "Fine-tune the current video's first-lyric time after auto-match."),
               react.createElement(CurrentVideoSyncPill, {
                 key: `video-${trackUri}`,
                 trackUri,

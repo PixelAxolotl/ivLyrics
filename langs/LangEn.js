@@ -29,6 +29,7 @@ window.LANG_EN = {
   },
   "settingsUi": {
     "aiAutosave": "Settings save automatically. Regenerate to apply them to the current song.",
+    "close": "Close",
     "groups": {
       "core": "Workspace",
       "display": "Display",
@@ -1953,7 +1954,12 @@ window.LANG_EN = {
     "trackInfo": "Applies only to the currently playing track.",
     "globalTitle": "Global Sync",
     "globalInfo": "Applies to every song on this device only. It is never submitted to the community.",
-    "communityUnavailableLocal": "Community offsets cannot be submitted for local tracks without a Spotify trackId."
+    "communityUnavailableLocal": "Community offsets cannot be submitted for local tracks without a Spotify trackId.",
+    "noVideo": "No video playing",
+    "quickLyricsLabel": "Lyrics offset",
+    "quickVideoLabel": "Video offset",
+    "videoTitle": "Current video",
+    "videoInfo": "Fine-tune the current video's first-lyric time after auto-match."
   },
   "playbarButton": {
     "label": "Lyrics Plus"
@@ -2084,6 +2090,7 @@ window.LANG_EN = {
   },
   "close": "Close",
   "cancel": "Cancel",
+  "lyricsTitle": "Synced lyrics",
   "shareImage": {
     "title": "Share Lyrics Image",
     "subtitle": "Create and share images of your favorite lyrics",
@@ -2668,6 +2675,7 @@ window.LANG_EN = {
     "stopRecord": "Stop Record",
     "previewMode": "Preview Mode",
     "stopPreview": "Stop Preview",
+    "preview": "Preview",
     "idleMode": "Idle",
     "submit": "Submit",
     "submitting": "Submitting...",

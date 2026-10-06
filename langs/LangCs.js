@@ -29,6 +29,7 @@ window.LANG_CS = {
   },
   "settingsUi": {
     "aiAutosave": "Nastavení se ukládají automaticky. Pro aktuální skladbu spusťte nové generování.",
+    "close": "Zavřít",
     "groups": {
       "core": "Pracovní prostor",
       "display": "Zobrazení",
@@ -1953,7 +1954,12 @@ window.LANG_CS = {
     "trackInfo": "Platí pouze pro právě přehrávanou skladbu.",
     "globalTitle": "Globální synchronizace",
     "globalInfo": "Platí pouze pro každou skladbu na tomto zařízení. Nikdy se nepředkládá komunitě.",
-    "communityUnavailableLocal": "Komunitní offsety nelze odeslat pro místní stopy bez Spotify trackId."
+    "communityUnavailableLocal": "Komunitní offsety nelze odeslat pro místní stopy bez Spotify trackId.",
+    "noVideo": "Nepřehrává se žádné video",
+    "quickLyricsLabel": "Posun textu",
+    "quickVideoLabel": "Posun videa",
+    "videoTitle": "Aktuální video",
+    "videoInfo": "Po automatickém spárování jemně dolaďte čas prvního textu aktuálního videa."
   },
   "playbarButton": {
     "label": "Texty Plus"
@@ -2084,6 +2090,7 @@ window.LANG_CS = {
   },
   "close": "Zavřít",
   "cancel": "Zrušit",
+  "lyricsTitle": "Synchronizovaný text",
   "shareImage": {
     "title": "Sdílejte obrázek s textem",
     "subtitle": "Vytvářejte a sdílejte obrázky svých oblíbených textů",
@@ -2668,6 +2675,7 @@ window.LANG_CS = {
     "stopRecord": "Zastavit záznam",
     "previewMode": "Režim náhledu",
     "stopPreview": "Zastavit náhled",
+    "preview": "Náhled",
     "idleMode": "Nečinný",
     "submit": "Odeslat",
     "submitting": "Odesílání...",

@@ -29,6 +29,7 @@ window.LANG_FR = {
   },
   "settingsUi": {
     "aiAutosave": "Les réglages sont enregistrés automatiquement. Régénérez pour les appliquer au morceau actuel.",
+    "close": "Fermer",
     "groups": {
       "core": "Espace de travail",
       "display": "Affichage",
@@ -1953,7 +1954,12 @@ window.LANG_FR = {
     "trackInfo": "S’applique uniquement au titre en cours de lecture.",
     "globalTitle": "Synchronisation globale",
     "globalInfo": "S'applique à tous les titres sur cet appareil uniquement. Elle n'est jamais envoyée à la communauté.",
-    "communityUnavailableLocal": "Les offsets communautaires ne peuvent pas être envoyés pour les titres locaux sans Spotify trackId."
+    "communityUnavailableLocal": "Les offsets communautaires ne peuvent pas être envoyés pour les titres locaux sans Spotify trackId.",
+    "noVideo": "Aucune vidéo en cours de lecture",
+    "quickLyricsLabel": "Décalage des paroles",
+    "quickVideoLabel": "Décalage de la vidéo",
+    "videoTitle": "Vidéo actuelle",
+    "videoInfo": "Ajustez précisément le début des paroles de la vidéo actuelle après la correspondance automatique."
   },
   "playbarButton": {
     "label": "Paroles Plus"
@@ -2084,6 +2090,7 @@ window.LANG_FR = {
   },
   "close": "Fermer",
   "cancel": "Annuler",
+  "lyricsTitle": "Paroles synchronisées",
   "shareImage": {
     "title": "Partager image paroles",
     "subtitle": "Créez une image de vos paroles préférées",
@@ -2668,6 +2675,7 @@ window.LANG_FR = {
     "stopRecord": "Arrêter Enreg.",
     "previewMode": "Mode Aperçu",
     "stopPreview": "Arrêter Aperçu",
+    "preview": "Aperçu",
     "idleMode": "En attente",
     "submit": "Soumettre",
     "submitting": "Envoi...",

@@ -29,6 +29,7 @@ window.LANG_VI = {
   },
   "settingsUi": {
     "aiAutosave": "Cài đặt được lưu tự động. Tạo lại để áp dụng cho bài hát hiện tại.",
+    "close": "Đóng",
     "groups": {
       "core": "Cốt lõi",
       "display": "Hiển thị",
@@ -1953,7 +1954,12 @@ window.LANG_VI = {
     "trackInfo": "Chỉ áp dụng cho bài hát đang phát.",
     "globalTitle": "Đồng bộ toàn cục",
     "globalInfo": "Chỉ áp dụng cho mọi bài hát trên thiết bị này. Không bao giờ được gửi lên cộng đồng.",
-    "communityUnavailableLocal": "Không thể gửi độ lệch cộng đồng cho bài hát cục bộ không có Spotify trackId."
+    "communityUnavailableLocal": "Không thể gửi độ lệch cộng đồng cho bài hát cục bộ không có Spotify trackId.",
+    "noVideo": "Không có video nào đang phát",
+    "quickLyricsLabel": "Offset lời bài hát",
+    "quickVideoLabel": "Offset video",
+    "videoTitle": "Video hiện tại",
+    "videoInfo": "Tinh chỉnh thời gian câu hát đầu tiên của video hiện tại sau khi khớp tự động."
   },
   "playbarButton": {
     "label": "Lời bài hát Plus"
@@ -2084,6 +2090,7 @@ window.LANG_VI = {
   },
   "close": "Đóng",
   "cancel": "Hủy",
+  "lyricsTitle": "Lời bài hát đã đồng bộ",
   "shareImage": {
     "title": "Chia sẻ ảnh lời bài hát",
     "subtitle": "Tạo ảnh từ lời bài hát yêu thích để chia sẻ",
@@ -2668,6 +2675,7 @@ window.LANG_VI = {
     "stopRecord": "Dừng ghi",
     "previewMode": "Chế độ xem trước",
     "stopPreview": "Dừng xem trước",
+    "preview": "Xem trước",
     "idleMode": "Đang chờ",
     "submit": "Gửi",
     "submitting": "Đang gửi...",

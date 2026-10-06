@@ -29,6 +29,7 @@ window.LANG_BN = {
   },
   "settingsUi": {
     "aiAutosave": "সেটিংস স্বয়ংক্রিয়ভাবে সংরক্ষিত হয়। বর্তমান গানে প্রয়োগ করতে আবার তৈরি করুন।",
+    "close": "বন্ধ করুন",
     "groups": {
       "core": "মূল",
       "display": "প্রদর্শন",
@@ -1953,7 +1954,12 @@ window.LANG_BN = {
     "trackInfo": "শুধু বর্তমানে চলমান ট্র্যাকে প্রযোজ্য।",
     "globalTitle": "গ্লোবাল সিঙ্ক",
     "globalInfo": "শুধু এই ডিভাইসে সব গানে প্রযোজ্য। এটি কখনও কমিউনিটিতে জমা দেওয়া হয় না।",
-    "communityUnavailableLocal": "Spotify trackId ছাড়া লোকাল ট্র্যাকের জন্য কমিউনিটি অফসেট জমা দেওয়া যাবে না।"
+    "communityUnavailableLocal": "Spotify trackId ছাড়া লোকাল ট্র্যাকের জন্য কমিউনিটি অফসেট জমা দেওয়া যাবে না।",
+    "noVideo": "কোনো ভিডিও চলছে না",
+    "quickLyricsLabel": "লিরিক্স অফসেট",
+    "quickVideoLabel": "ভিডিও অফসেট",
+    "videoTitle": "বর্তমান ভিডিও",
+    "videoInfo": "স্বয়ংক্রিয় মিলের পর বর্তমান ভিডিওর প্রথম লিরিক্সের সময় সূক্ষ্মভাবে সমন্বয় করুন।"
   },
   "playbarButton": {
     "label": "লিরিক্স প্লাস"
@@ -2084,6 +2090,7 @@ window.LANG_BN = {
   },
   "close": "বন্ধ করুন",
   "cancel": "বাতিল",
+  "lyricsTitle": "সমন্বিত লিরিক্স",
   "shareImage": {
     "title": "লিরিক্স ইমেজ শেয়ার",
     "subtitle": "পছন্দের লিরিক্স দিয়ে ইমেজ তৈরি করে শেয়ার করুন",
@@ -2668,6 +2675,7 @@ window.LANG_BN = {
     "stopRecord": "রেকর্ড থামান",
     "previewMode": "প্রিভিউ মোড",
     "stopPreview": "প্রিভিউ থামান",
+    "preview": "প্রিভিউ",
     "idleMode": "অপেক্ষমাণ",
     "submit": "জমা দিন",
     "submitting": "জমা দেওয়া হচ্ছে...",

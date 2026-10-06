@@ -29,6 +29,7 @@ window.LANG_ZH_TW = {
   },
   "settingsUi": {
     "aiAutosave": "設定會自動儲存。重新產生以套用至目前歌曲。",
+    "close": "關閉",
     "groups": {
       "core": "工作區",
       "display": "顯示",
@@ -1953,7 +1954,12 @@ window.LANG_ZH_TW = {
     "trackInfo": "僅套用於目前播放的曲目。",
     "globalTitle": "全域同步",
     "globalInfo": "只會在此裝置上套用到所有歌曲，絕不會提交到社群。",
-    "communityUnavailableLocal": "沒有 Spotify trackId 的本機曲目無法提交社群偏移。"
+    "communityUnavailableLocal": "沒有 Spotify trackId 的本機曲目無法提交社群偏移。",
+    "noVideo": "目前沒有播放影片",
+    "quickLyricsLabel": "歌詞偏移",
+    "quickVideoLabel": "影片偏移",
+    "videoTitle": "目前影片",
+    "videoInfo": "在自動比對後微調目前影片首句歌詞的時間。"
   },
   "playbarButton": {
     "label": "歌詞 Plus"
@@ -2084,6 +2090,7 @@ window.LANG_ZH_TW = {
   },
   "close": "關閉",
   "cancel": "取消",
+  "lyricsTitle": "同步歌詞",
   "shareImage": {
     "title": "分享歌詞圖片",
     "subtitle": "將喜歡的歌詞製作成圖片分享",
@@ -2668,6 +2675,7 @@ window.LANG_ZH_TW = {
     "stopRecord": "停止錄製",
     "previewMode": "預覽模式",
     "stopPreview": "停止預覽",
+    "preview": "預覽",
     "idleMode": "待機中",
     "submit": "提交",
     "submitting": "提交中...",

@@ -29,6 +29,7 @@ window.LANG_IT = {
   },
   "settingsUi": {
     "aiAutosave": "Le impostazioni si salvano automaticamente. Rigenera per applicarle al brano attuale.",
+    "close": "Chiudi",
     "groups": {
       "core": "Area di lavoro",
       "display": "Visualizzazione",
@@ -1953,7 +1954,12 @@ window.LANG_IT = {
     "trackInfo": "Si applica solo alla traccia in riproduzione.",
     "globalTitle": "Sincronizzazione globale",
     "globalInfo": "Si applica a tutti i brani solo su questo dispositivo. Non viene mai inviata alla community.",
-    "communityUnavailableLocal": "Non è possibile inviare offset della community per brani locali senza Spotify trackId."
+    "communityUnavailableLocal": "Non è possibile inviare offset della community per brani locali senza Spotify trackId.",
+    "noVideo": "Nessun video in riproduzione",
+    "quickLyricsLabel": "Offset testo",
+    "quickVideoLabel": "Offset video",
+    "videoTitle": "Video corrente",
+    "videoInfo": "Regola con precisione l'inizio del testo del video corrente dopo l'abbinamento automatico."
   },
   "playbarButton": {
     "label": "Testi Plus"
@@ -2084,6 +2090,7 @@ window.LANG_IT = {
   },
   "close": "Chiudi",
   "cancel": "Annulla",
+  "lyricsTitle": "Testo sincronizzato",
   "shareImage": {
     "title": "Condividi immagine testo",
     "subtitle": "Crea un'immagine con i tuoi testi preferiti e condividila",
@@ -2668,6 +2675,7 @@ window.LANG_IT = {
     "stopRecord": "Stop registrazione",
     "previewMode": "Modo anteprima",
     "stopPreview": "Stop anteprima",
+    "preview": "Anteprima",
     "idleMode": "In attesa",
     "submit": "Invia",
     "submitting": "Invio...",

@@ -29,6 +29,7 @@ window.LANG_ID = {
   },
   "settingsUi": {
     "aiAutosave": "Pengaturan tersimpan otomatis. Buat ulang untuk menerapkannya pada lagu saat ini.",
+    "close": "Tutup",
     "groups": {
       "core": "Inti",
       "display": "Tampilan",
@@ -1953,7 +1954,12 @@ window.LANG_ID = {
     "trackInfo": "Hanya berlaku untuk trek yang sedang diputar.",
     "globalTitle": "Sinkronisasi Global",
     "globalInfo": "Berlaku untuk semua lagu hanya di perangkat ini. Tidak pernah dikirim ke komunitas.",
-    "communityUnavailableLocal": "Offset komunitas tidak dapat dikirim untuk lagu lokal tanpa Spotify trackId."
+    "communityUnavailableLocal": "Offset komunitas tidak dapat dikirim untuk lagu lokal tanpa Spotify trackId.",
+    "noVideo": "Tidak ada video yang diputar",
+    "quickLyricsLabel": "Offset lirik",
+    "quickVideoLabel": "Offset video",
+    "videoTitle": "Video saat ini",
+    "videoInfo": "Sesuaikan waktu lirik pertama video saat ini setelah pencocokan otomatis."
   },
   "playbarButton": {
     "label": "Lirik Plus"
@@ -2084,6 +2090,7 @@ window.LANG_ID = {
   },
   "close": "Tutup",
   "cancel": "Batal",
+  "lyricsTitle": "Lirik tersinkron",
   "shareImage": {
     "title": "Bagikan Gambar Lirik",
     "subtitle": "Buat gambar dari lirik favoritmu dan bagikan",
@@ -2668,6 +2675,7 @@ window.LANG_ID = {
     "stopRecord": "Berhenti Rekam",
     "previewMode": "Mode Pratinjau",
     "stopPreview": "Berhenti Pratinjau",
+    "preview": "Pratinjau",
     "idleMode": "Siaga",
     "submit": "Kirim",
     "submitting": "Mengirim...",

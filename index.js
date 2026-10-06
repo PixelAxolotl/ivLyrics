@@ -5001,6 +5001,7 @@ class LyricsContainer extends react.Component {
     this._generationPillTimers = new Map();
     this._generationPillRevisions = new Map();
     this._generationRequestDetails = new Map();
+    this._communityVideoKey = "";
     this._visibleGenerationPills = new Set();
     this._videoBackgroundLoadingTimer = null;
     this._pendingVideoBackgroundStatus = null;
@@ -9795,6 +9796,18 @@ class LyricsContainer extends react.Component {
     };
     window.addEventListener("ivLyrics:word-supplements", this.handleWordSupplementsLoading);
 
+    // Bottom-left quick-sync "Video offset" row renders only while a video is
+    // active. Re-render when the active video identity changes so the row
+    // appears/disappears live (offset slider ticks use a separate event).
+    this.handleCommunityVideoChanged = () => {
+      const active = window.ivLyricsActiveCommunityVideoInfo;
+      const key = active?.youtubeVideoId ? `${active.trackUri}:${active.youtubeVideoId}` : "";
+      if (this._communityVideoKey === key) return;
+      this._communityVideoKey = key;
+      this.forceUpdate();
+    };
+    window.addEventListener("ivLyrics:communityVideoChanged", this.handleCommunityVideoChanged);
+
     // Portrait viewport detection listener
     if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
       this._portraitMql = window.matchMedia("(orientation: portrait)");
@@ -9826,6 +9839,8 @@ class LyricsContainer extends react.Component {
     window.removeEventListener("ivLyrics:lyric-index-changed", this.handleLyricIndexChange);
     window.removeEventListener("ivLyrics:word-supplements", this.handleWordSupplementsLoading);
     this.handleWordSupplementsLoading = null;
+    window.removeEventListener("ivLyrics:communityVideoChanged", this.handleCommunityVideoChanged);
+    this.handleCommunityVideoChanged = null;
     this._wordSupplementsLoadingToken = null;
     window.removeEventListener("ivLyrics:sync-creator-visibility", this.handleSyncCreatorVisibility);
     this._unsubscribeLyricsProviderAttempt?.();
@@ -10717,7 +10732,12 @@ class LyricsContainer extends react.Component {
         })
         : null;
       const videoSyncAdjustPill = quickSyncControlsEnabled &&
+        shouldUseVideoBackground &&
         Boolean(renderTrackUri) &&
+        (() => {
+          const active = window.ivLyricsActiveCommunityVideoInfo;
+          return !!active?.youtubeVideoId && active.trackUri === renderTrackUri;
+        })() &&
         typeof CurrentVideoSyncPill !== "undefined"
         ? react.createElement(CurrentVideoSyncPill, {
           key: `video-${renderTrackUri}`,

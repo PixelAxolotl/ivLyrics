@@ -29,6 +29,7 @@ window.LANG_FA = {
   },
   "settingsUi": {
     "aiAutosave": "تنظیمات خودکار ذخیره می‌شوند. برای اعمال روی آهنگ فعلی، دوباره تولید کنید.",
+    "close": "بستن",
     "groups": {
       "core": "اصلی",
       "display": "نمایش",
@@ -1953,7 +1954,12 @@ window.LANG_FA = {
     "trackInfo": "فقط روی آهنگی که در حال پخش است اعمال می‌شود.",
     "globalTitle": "همگام‌سازی سراسری",
     "globalInfo": "فقط روی همین دستگاه برای همه آهنگ‌ها اعمال می‌شود و هرگز برای انجمن ارسال نمی‌شود.",
-    "communityUnavailableLocal": "برای قطعه‌های محلی بدون Spotify trackId نمی‌توان آفست انجمن ثبت کرد."
+    "communityUnavailableLocal": "برای قطعه‌های محلی بدون Spotify trackId نمی‌توان آفست انجمن ثبت کرد.",
+    "noVideo": "ویدیویی در حال پخش نیست",
+    "quickLyricsLabel": "آفست متن",
+    "quickVideoLabel": "آفست ویدیو",
+    "videoTitle": "ویدیوی فعلی",
+    "videoInfo": "پس از تطبیق خودکار، زمان شروع متن ویدیوی فعلی را دقیق تنظیم کنید."
   },
   "playbarButton": {
     "label": "متن آهنگ پلاس"
@@ -2084,6 +2090,7 @@ window.LANG_FA = {
   },
   "close": "بستن",
   "cancel": "لغو",
+  "lyricsTitle": "متن همگام‌سازی‌شده",
   "shareImage": {
     "title": "اشتراک‌گذاری تصویر متن",
     "subtitle": "متن مورد علاقه خود را به تصویر تبدیل کرده و به اشتراک بگذارید",
@@ -2668,6 +2675,7 @@ window.LANG_FA = {
     "stopRecord": "توقف ضبط",
     "previewMode": "حالت پیش‌نمایش",
     "stopPreview": "توقف پیش‌نمایش",
+    "preview": "پیش‌نمایش",
     "idleMode": "آماده",
     "submit": "ارسال",
     "submitting": "در حال ارسال...",

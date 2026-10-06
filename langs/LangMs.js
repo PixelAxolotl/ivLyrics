@@ -29,6 +29,7 @@ window.LANG_MS = {
   },
   "settingsUi": {
     "aiAutosave": "Tetapan disimpan secara automatik. Jana semula untuk lagu semasa.",
+    "close": "Tutup",
     "groups": {
       "core": "Asas",
       "display": "Konfigurasi Skrin",
@@ -1953,7 +1954,12 @@ window.LANG_MS = {
     "trackInfo": "Digunakan pada trek yang sedang dimainkan sahaja.",
     "globalTitle": "Segerak Global",
     "globalInfo": "Digunakan pada semua lagu hanya pada peranti ini. Tidak akan dihantar kepada komuniti.",
-    "communityUnavailableLocal": "Ofset komuniti tidak boleh dihantar untuk lagu setempat tanpa Spotify trackId."
+    "communityUnavailableLocal": "Ofset komuniti tidak boleh dihantar untuk lagu setempat tanpa Spotify trackId.",
+    "noVideo": "Tiada video sedang dimainkan",
+    "quickLyricsLabel": "Offset lirik",
+    "quickVideoLabel": "Offset video",
+    "videoTitle": "Video semasa",
+    "videoInfo": "Laraskan masa lirik pertama video semasa selepas padanan automatik."
   },
   "playbarButton": {
     "label": "Lirik Plus"
@@ -2084,6 +2090,7 @@ window.LANG_MS = {
   },
   "close": "Tutup",
   "cancel": "Batal",
+  "lyricsTitle": "Lirik disegerakkan",
   "shareImage": {
     "title": "Kongsi Imej Lirik",
     "subtitle": "Cipta dan kongsi imej lirik kegemaran anda",
@@ -2668,6 +2675,7 @@ window.LANG_MS = {
     "stopRecord": "Henti Rakam",
     "previewMode": "Mod Pratonton",
     "stopPreview": "Henti Pratonton",
+    "preview": "Pratonton",
     "idleMode": "Sedia",
     "submit": "Serah",
     "submitting": "Menyerahkan...",

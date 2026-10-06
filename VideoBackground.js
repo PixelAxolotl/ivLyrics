@@ -42,6 +42,45 @@ const getVideoSyncOffsetSeconds = (captionStartTime, lyricsStartTime, videoInfo)
 
 const VIDEO_SYNC_INTERVAL_MS = 250;
 const VIDEO_SYNC_SEEK_THRESHOLD_SECONDS = 0.5;
+const COMMUNITY_VIDEO_START_MAX_SECONDS = 3600;
+
+const normalizeCommunityVideoStartSeconds = (value) => {
+    const parsed = Number.parseFloat(String(value ?? "").trim().replace(",", "."));
+    if (!Number.isFinite(parsed)) return 0;
+    const clamped = Math.max(0, Math.min(COMMUNITY_VIDEO_START_MAX_SECONDS, parsed));
+    return Math.round(clamped * 1000) / 1000;
+};
+
+const clampCommunityVideoStartSeconds = (value, videoDurationSeconds) => {
+    const normalized = normalizeCommunityVideoStartSeconds(value);
+    const parsedDuration = Number(videoDurationSeconds);
+    const maxSeconds = Number.isFinite(parsedDuration) && parsedDuration > 0
+        ? Math.min(COMMUNITY_VIDEO_START_MAX_SECONDS, parsedDuration)
+        : COMMUNITY_VIDEO_START_MAX_SECONDS;
+    return Math.max(0, Math.min(maxSeconds, normalized));
+};
+
+const publishActiveCommunityVideoInfo = (trackUri, videoInfo, videoDurationSeconds) => {
+    if (!videoInfo?.youtubeVideoId) {
+        if (window.ivLyricsActiveCommunityVideoInfo?.trackUri === trackUri) {
+            window.ivLyricsActiveCommunityVideoInfo = null;
+        }
+        window.dispatchEvent(new CustomEvent("ivLyrics:communityVideoChanged", {
+            detail: { trackUri, youtubeVideoId: null },
+        }));
+        return;
+    }
+    window.ivLyricsActiveCommunityVideoInfo = {
+        trackUri,
+        ...videoInfo,
+        videoDurationSeconds: Number.isFinite(Number(videoDurationSeconds)) && Number(videoDurationSeconds) > 0
+            ? Number(videoDurationSeconds)
+            : null,
+    };
+    window.dispatchEvent(new CustomEvent("ivLyrics:communityVideoChanged", {
+        detail: { trackUri, ...window.ivLyricsActiveCommunityVideoInfo },
+    }));
+};
 // Keep the outgoing artwork briefly while a new track's background is being
 // resolved.  This avoids a black flash when YouTube or the helper takes a
 // moment to produce its first frame.
@@ -226,6 +265,21 @@ const settleYouTubeHoldPrime = ({ player, playerState, holdState }) => {
     return true;
 };
 
+const resolveVideoShowWhenPaused = (configVisual) => {
+    if (configVisual?.["video-show-when-paused"] === false) return false;
+    if (configVisual?.["reduce-motion"] === true) return false;
+    if (
+        typeof window !== "undefined" &&
+        window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches === true
+    ) {
+        return false;
+    }
+    return true;
+};
+
+const resolveVideoBackgroundOpacity = ({ isPlayerReady, isPlaying, showWhenPaused }) =>
+    isPlayerReady && (isPlaying || showWhenPaused === true) ? 1 : 0;
+
 const disableYouTubeCaptions = (player) => {
     if (!player) return;
 
@@ -274,6 +328,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
     const [videoInfo, setVideoInfo] = useState(null);
     const [isPlayerReady, setIsPlayerReady] = useState(false);
     const [videoLoadRevision, setVideoLoadRevision] = useState(0);
+    const [videoDurationSeconds, setVideoDurationSeconds] = useState(null);
 
     const [stats, setStats] = useState({
         quality: '-',
@@ -329,6 +384,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
         isHolding: false,
         primePending: false,
     });
+    const videoDurationSecondsRef = useRef(null);
     const computeVideoBackgroundTransform = () => {
         const brightnessValue = Math.min(Math.max(Number(brightness) || 0, 0), 100);
         const brightnessRatio = brightnessValue / 100;
@@ -461,16 +517,33 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
     }, [trackUri]);
 
     useEffect(() => {
-        window.ivLyricsActiveCommunityVideoInfo = videoInfo?.youtubeVideoId
-            ? { trackUri, ...videoInfo }
-            : null;
+        publishActiveCommunityVideoInfo(trackUri, videoInfo, videoDurationSeconds);
 
         return () => {
             if (window.ivLyricsActiveCommunityVideoInfo?.trackUri === trackUri) {
                 window.ivLyricsActiveCommunityVideoInfo = null;
             }
         };
-    }, [trackUri, videoInfo]);
+    }, [trackUri, videoInfo, videoDurationSeconds]);
+
+    // Fine-tune from the Adjust Lyrics Sync tab: patch captionStartTime live.
+    useEffect(() => {
+        const handleVideoStartChange = (event) => {
+            if (!event?.detail || event.detail.trackUri !== trackUri) return;
+            const nextStart = clampCommunityVideoStartSeconds(
+                event.detail.captionStartTime,
+                event.detail.videoDurationSeconds ?? videoDurationSecondsRef.current
+            );
+            setVideoInfo((prev) => {
+                if (!prev?.youtubeVideoId) return prev;
+                if (Math.abs(Number(prev.captionStartTime || 0) - nextStart) < 0.0005) return prev;
+                return { ...prev, captionStartTime: nextStart };
+            });
+        };
+
+        window.addEventListener("ivLyrics:community-video-start-changed", handleVideoStartChange);
+        return () => window.removeEventListener("ivLyrics:community-video-start-changed", handleVideoStartChange);
+    }, [trackUri]);
 
     const reportVideoBackgroundStatus = useCallback((phase, details = {}) => {
         if (typeof onLoadingChange !== "function") return;
@@ -1071,12 +1144,23 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
         };
         const handleLoadedMetadata = () => {
             videoBackgroundDebug("[VideoBackground] Video loadedmetadata, duration:", video.duration);
+            if (Number.isFinite(video.duration) && video.duration > 0) {
+                videoDurationSecondsRef.current = video.duration;
+                setVideoDurationSeconds(video.duration);
+            }
+        };
+        const handleDurationChange = () => {
+            if (Number.isFinite(video.duration) && video.duration > 0) {
+                videoDurationSecondsRef.current = video.duration;
+                setVideoDurationSeconds(video.duration);
+            }
         };
 
         video.addEventListener('canplay', handleCanPlay);
         video.addEventListener('error', handleError);
         video.addEventListener('loadstart', handleLoadStart);
         video.addEventListener('loadedmetadata', handleLoadedMetadata);
+        video.addEventListener('durationchange', handleDurationChange);
 
         readinessTimeout = setTimeout(() => {
             readinessTimeout = null;
@@ -1095,11 +1179,53 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
             video.removeEventListener('error', handleError);
             video.removeEventListener('loadstart', handleLoadStart);
             video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+            video.removeEventListener('durationchange', handleDurationChange);
             video.pause();
             video.removeAttribute('src');
             video.load();
         };
     }, [useHelper, helperVideoUrl, videoInfo, reportVideoBackgroundStatus, showVideoBackgroundError]);
+
+    // Keep the duration ref in sync and reset it when the video changes.
+    useEffect(() => {
+        videoDurationSecondsRef.current = videoDurationSeconds;
+    }, [videoDurationSeconds]);
+
+    useEffect(() => {
+        videoDurationSecondsRef.current = null;
+        setVideoDurationSeconds(null);
+    }, [trackUri, videoInfo?.youtubeVideoId]);
+
+    // YouTube mode: capture duration once the player can report it.
+    useEffect(() => {
+        if (useHelper || !isPlayerReady || !videoInfo?.youtubeVideoId) return undefined;
+        let isActive = true;
+        let attempts = 0;
+        const captureDuration = () => {
+            if (!isActive) return;
+            try {
+                const player = playerRef.current;
+                const duration = typeof player?.getDuration === "function" ? player.getDuration() : 0;
+                if (Number.isFinite(duration) && duration > 0) {
+                    videoDurationSecondsRef.current = duration;
+                    setVideoDurationSeconds((prev) => (
+                        prev !== null && Math.abs(prev - duration) < 0.001 ? prev : duration
+                    ));
+                    return;
+                }
+            } catch (e) { }
+            attempts += 1;
+            if (attempts < 20) {
+                durationTimer = setTimeout(captureDuration, 500);
+            }
+        };
+        let durationTimer = setTimeout(captureDuration, 500);
+        captureDuration();
+        return () => {
+            isActive = false;
+            if (durationTimer) clearTimeout(durationTimer);
+        };
+    }, [useHelper, isPlayerReady, videoInfo?.youtubeVideoId]);
 
 
     // 통계 업데이트
@@ -1544,6 +1670,14 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
     );
 
     // 헬퍼 모드용 video 태그 스타일
+    const showVideoWhenPaused = resolveVideoShowWhenPaused(
+        typeof CONFIG !== "undefined" ? CONFIG.visual : undefined
+    );
+    const videoBackgroundOpacity = resolveVideoBackgroundOpacity({
+        isPlayerReady,
+        isPlaying,
+        showWhenPaused: showVideoWhenPaused,
+    });
     const helperVideoStyle = {
         position: "absolute",
         top: useCoverMode ? "50%" : 0,
@@ -1553,7 +1687,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
         minWidth: useCoverMode ? "100%" : undefined,
         minHeight: useCoverMode ? "100%" : undefined,
         transform: videoTransform,
-        opacity: isPlayerReady && isPlaying ? 1 : 0,
+        opacity: videoBackgroundOpacity,
         transition: "opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1)",
         zIndex: 1,
         pointerEvents: "none",
@@ -1688,7 +1822,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                 minWidth: useCoverMode ? "100%" : undefined,
                 minHeight: useCoverMode ? "100%" : undefined,
                 transform: videoTransform,
-                opacity: isPlayerReady && isPlaying ? 1 : 0, // Hide when paused or not ready
+                opacity: videoBackgroundOpacity, // Frozen frame stays visible when paused if enabled
                 transition: "opacity 0.32s cubic-bezier(0.22, 1, 0.36, 1)",
                 zIndex: 1,
                 pointerEvents: "none",

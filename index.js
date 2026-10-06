@@ -2503,6 +2503,10 @@ const CONFIG = {
     ),
     "video-scale":
       StorageManager.getItem("ivLyrics:visual:video-scale") || "105",
+    "video-show-when-paused": StorageManager.get(
+      "ivLyrics:visual:video-show-when-paused",
+      StorageManager.get("ivLyrics:visual:reduce-motion", false) !== true
+    ),
     "solid-background-color":
       StorageManager.getItem("ivLyrics:visual:solid-background-color") ||
       "#1e3a8a",
@@ -10690,7 +10694,36 @@ class LyricsContainer extends react.Component {
           trackUri: renderTrackUri,
         })
         : null;
-      return { canAdjustTrackSync, quickSyncControlsEnabled, trackSyncAdjustPill };
+      const videoSyncAdjustPill = quickSyncControlsEnabled &&
+        Boolean(renderTrackUri) &&
+        typeof CurrentVideoSyncPill !== "undefined"
+        ? react.createElement(CurrentVideoSyncPill, {
+          key: `video-${renderTrackUri}`,
+          trackUri: renderTrackUri,
+          hideWhenEmpty: true,
+        })
+        : null;
+      const renderQuickSyncRow = (label, pill) => react.createElement(
+        "div",
+        { className: "lyrics-quick-sync-row", key: label },
+        react.createElement("span", { className: "lyrics-quick-sync-label" }, label),
+        pill
+      );
+      const quickSyncStack = (trackSyncAdjustPill || videoSyncAdjustPill)
+        ? react.createElement(
+          "div",
+          { className: "lyrics-quick-sync-stack" },
+          trackSyncAdjustPill && renderQuickSyncRow(
+            I18n.t("syncAdjust.quickLyricsLabel") || "Lyrics offset",
+            trackSyncAdjustPill
+          ),
+          videoSyncAdjustPill && renderQuickSyncRow(
+            I18n.t("syncAdjust.quickVideoLabel") || "Video offset",
+            videoSyncAdjustPill
+          )
+        )
+        : null;
+      return { canAdjustTrackSync, quickSyncControlsEnabled, trackSyncAdjustPill: quickSyncStack };
     };
     const { canAdjustTrackSync, quickSyncControlsEnabled, trackSyncAdjustPill } = computeTrackSyncAdjustPill();
 

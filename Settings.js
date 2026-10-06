@@ -9194,6 +9194,12 @@ const ConfigModal = ({
           type: ConfigSlider,
         },
         {
+          desc: getSettingsText("settings.videoShowWhenPaused.label", "Show video when paused"),
+          info: getSettingsText("settings.videoShowWhenPaused.desc", "Keep the frozen video frame visible while playback is paused."),
+          key: "video-show-when-paused",
+          type: ConfigSlider,
+        },
+        {
           desc: I18n.t("settings.videoScale.label"),
           info: I18n.t("settings.videoScale.desc"),
           key: "video-scale",

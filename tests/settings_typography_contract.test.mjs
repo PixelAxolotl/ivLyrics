@@ -146,6 +146,25 @@ const normalizeReleasedTree = (tree) => {
     general.splice(0, general.length, ...general.filter(node => !moved.includes(node)));
     screen.unshift(...moved);
   }
+  // Auto theme was intentionally removed: Spotify's Chromium forces a dark
+  // prefers-color-scheme even when Windows uses light mode, and the applied
+  // Spotify theme reflects Spotify rather than the OS, so Auto could never
+  // resolve light. Normalize the released oracle to the light/dark selector.
+  for (const element of elements(expected)) {
+    if (element.props.className === "settings-theme-control" && Array.isArray(element.props.children?.[0])) {
+      const buttons = element.props.children[0].filter((node) => node?.props?.key !== "auto");
+      element.props.children[0] = buttons;
+      for (const node of buttons) {
+        if (node?.props?.key === "dark") {
+          node.props["aria-pressed"] = true;
+          node.props.className = "settings-theme-option active";
+        }
+      }
+    }
+    if (element.props["data-ui-theme-preference"] === "auto") {
+      element.props["data-ui-theme-preference"] = "dark";
+    }
+  }
   return expected;
 };
 

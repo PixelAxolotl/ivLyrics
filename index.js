@@ -829,10 +829,17 @@ const hasInstrumentalMarker = (lyrics = []) => {
 
 const getUpdateBannerTheme = () => {
   try {
+    if (typeof window.ivLyricsResolveSettingsUiTheme === "function") {
+      return window.ivLyricsResolveSettingsUiTheme();
+    }
     const storedTheme =
       window.ivLyricsStoragePersistence?.getItem?.("ivLyrics:settings-ui-theme") ??
       localStorage.getItem("ivLyrics:settings-ui-theme");
-    return storedTheme === "light" ? "light" : "dark";
+    if (storedTheme === "light" || storedTheme === "dark") {
+      return storedTheme;
+    }
+    // Legacy "auto" values migrate to dark (Auto feature removed).
+    return "dark";
   } catch {
     return "dark";
   }

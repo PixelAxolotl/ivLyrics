@@ -262,15 +262,17 @@ function formatContributorTimestamp(epochSeconds) {
 
 function getCreatorProfileUiTheme() {
 	try {
+		if (typeof window.ivLyricsResolveSettingsUiTheme === "function") {
+			return window.ivLyricsResolveSettingsUiTheme();
+		}
 		const storedTheme = window.ivLyricsStoragePersistence?.getItem("ivLyrics:settings-ui-theme")
 			?? localStorage.getItem("ivLyrics:settings-ui-theme");
 		if (storedTheme === "light" || storedTheme === "dark") {
 			return storedTheme;
 		}
 
-		return window.matchMedia?.("(prefers-color-scheme: light)")?.matches
-			? "light"
-			: "dark";
+		// Legacy "auto" values migrate to dark (Auto feature removed).
+		return "dark";
 	} catch (error) {
 		return "dark";
 	}

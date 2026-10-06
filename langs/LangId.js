@@ -599,6 +599,7 @@ window.LANG_ID = {
     "apiKeySettingsInfo": "Klik di sini untuk mengonfigurasi penyedia AI Anda",
     "openSettings": "Buka Pengaturan",
     "translationSettings": "Pengaturan Konversi",
+    "regenerate": "Buat ulang",
     "regenerateTranslation": "Buat Ulang Terjemahan",
     "lyricsProviderSelect": "Pilih penyedia lirik",
     "lyricsProviderSelectSubtitle": "Pilih penyedia lirik yang hanya dipakai untuk lagu ini.",

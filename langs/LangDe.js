@@ -599,6 +599,7 @@ window.LANG_DE = {
     "apiKeySettingsInfo": "Klicken Sie hier, um Ihre KI-Anbieter zu konfigurieren",
     "openSettings": "Einstellungen öffnen",
     "translationSettings": "Konvertierungseinstellungen",
+    "regenerate": "Neu erzeugen",
     "regenerateTranslation": "Übersetzung neu generieren",
     "lyricsProviderSelect": "Songtextanbieter auswählen",
     "lyricsProviderSelectSubtitle": "Wähle den Songtextanbieter nur für diesen Titel aus.",

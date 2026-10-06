@@ -2354,12 +2354,13 @@ const IvConfigSlider = react.memo(({ defaultValue, onToggle }) => {
 });
 
 // Helper Component: Simple Button
-const IvConfigButton = react.memo(({ text, onClick }) => {
+const IvConfigButton = react.memo(({ text, onClick, disabled }) => {
   return react.createElement(
     "button",
     {
       className: "ivlyrics-fluent-btn",
-      onClick,
+      onClick: disabled ? undefined : onClick,
+      disabled: !!disabled,
     },
     text
   );
@@ -2388,7 +2389,8 @@ const IvOptionList = react.memo(({ items, onChange }) => {
       } else if (type === IvConfigButton || type === ConfigButton) {
         control = react.createElement(IvConfigButton, {
           text: props.text,
-          onClick: props.onChange || (() => { })
+          onClick: props.onChange || (() => { }),
+          disabled: !!props.disabled,
         });
       }
 
@@ -3557,9 +3559,10 @@ function openRegenerateTranslationChoiceModal({
   targets = {},
   includeCulturalAnnotations = false,
   includeWordSupplements = false,
+  disabledTargets = {},
 }) {
   let closeModal = null;
-  const makeTargetButton = (key, text, target) => ({
+  const makeTargetButton = (key, text, target, disabled = false) => ({
     desc: react.createElement(SettingRowDescription, {
       icon: ICONS.language,
       text,
@@ -3567,11 +3570,18 @@ function openRegenerateTranslationChoiceModal({
     key,
     type: ConfigButton,
     text: I18n.t("menu.regenerateAction"),
+    disabled: !!disabled,
     onChange: () => {
       closeModal?.();
       onSelect?.(target);
     },
   });
+
+  const isPhoneticRunning = !!disabledTargets.phonetic;
+  const isTranslationRunning = !!disabledTargets.translation;
+  const isBothRunning = !!disabledTargets.both;
+  const isCulturalRunning = !!disabledTargets["cultural-annotations"];
+  const isWordRunning = !!disabledTargets["word-supplements"];
 
   const targetItems = [];
   if (targets.needPhonetic) {
@@ -3579,7 +3589,8 @@ function openRegenerateTranslationChoiceModal({
       makeTargetButton(
         "regenerate-phonetic-only",
         I18n.t("menu.regeneratePronunciationOnly"),
-        "phonetic"
+        "phonetic",
+        isPhoneticRunning
       )
     );
   }
@@ -3588,7 +3599,8 @@ function openRegenerateTranslationChoiceModal({
       makeTargetButton(
         "regenerate-translation-only",
         I18n.t("menu.regenerateTranslationOnly"),
-        "translation"
+        "translation",
+        isTranslationRunning
       )
     );
   }
@@ -3597,7 +3609,8 @@ function openRegenerateTranslationChoiceModal({
       makeTargetButton(
         "regenerate-both",
         I18n.t("menu.regenerateBoth"),
-        "all"
+        "all",
+        isBothRunning
       )
     );
   }
@@ -3606,7 +3619,8 @@ function openRegenerateTranslationChoiceModal({
       makeTargetButton(
         "regenerate-cultural-annotations",
         I18n.t("settings.culturalAnnotations.label"),
-        "cultural-annotations"
+        "cultural-annotations",
+        isCulturalRunning
       )
     );
   }
@@ -3615,7 +3629,8 @@ function openRegenerateTranslationChoiceModal({
       makeTargetButton(
         "regenerate-word-supplements",
         I18n.t("menu.regenerateWordDetails") || "Word details",
-        "word-supplements"
+        "word-supplements",
+        isWordRunning
       )
     );
   }
@@ -3637,16 +3652,17 @@ function openRegenerateTranslationChoiceModal({
 
 const RegenerateTranslationButton = react.memo(
   ({ onRegenerate, isEnabled, isLoading }) => {
+    const label = I18n.t("menu.regenerate") || I18n.t("menu.regenerateTranslation") || "Regenerate";
     return react.createElement(
       IvLyricsTooltip,
-      { label: I18n.t("menu.regenerateTranslation"), showDelay: 0 },
+      { label, showDelay: 0 },
       react.createElement(
         "button",
         {
           className: "lyrics-config-button" + (isLoading ? " loading-spin" : ""),
           onClick: onRegenerate,
-          disabled: !isEnabled || isLoading,
-          "aria-label": I18n.t("menu.regenerateTranslation"),
+          disabled: !isEnabled,
+          "aria-label": label,
         },
         react.createElement(IvLyricsToolbarIcon, { name: "regenerate" })
       )

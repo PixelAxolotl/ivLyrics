@@ -599,6 +599,7 @@ window.LANG_RU = {
     "apiKeySettingsInfo": "Нажмите здесь, чтобы настроить провайдеров ИИ",
     "openSettings": "Открыть настройки",
     "translationSettings": "Настройки перевода",
+    "regenerate": "Пересоздать",
     "regenerateTranslation": "Перегенерировать перевод",
     "lyricsProviderSelect": "Выбрать источник текста",
     "lyricsProviderSelectSubtitle": "Выберите источник текста только для этого трека.",

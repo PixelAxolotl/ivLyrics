@@ -599,6 +599,7 @@ window.LANG_FA = {
     "apiKeySettingsInfo": "برای پیکربندی ارائه‌دهندگان هوش مصنوعی اینجا کلیک کنید",
     "openSettings": "باز کردن تنظیمات",
     "translationSettings": "تنظیمات تبدیل",
+    "regenerate": "بازتولید",
     "regenerateTranslation": "تولید مجدد ترجمه",
     "lyricsProviderSelect": "انتخاب ارائه‌دهنده متن ترانه",
     "lyricsProviderSelectSubtitle": "ارائه‌دهنده متن ترانه را فقط برای این قطعه انتخاب کنید.",

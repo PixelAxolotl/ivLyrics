@@ -599,6 +599,7 @@ window.LANG_HI = {
     "apiKeySettingsInfo": "AI प्रदाताओं को कॉन्फ़िगर करने के लिए यहाँ क्लिक करें",
     "openSettings": "सेटिंग्स खोलें",
     "translationSettings": "रूपांतरण सेटिंग्स",
+    "regenerate": "फिर से बनाएँ",
     "regenerateTranslation": "अनुवाद फिर से करें",
     "lyricsProviderSelect": "गीत प्रदाता चुनें",
     "lyricsProviderSelectSubtitle": "केवल इस ट्रैक के लिए इस्तेमाल होने वाला गीत प्रदाता चुनें।",

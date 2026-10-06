@@ -599,6 +599,7 @@ window.LANG_ZH_TW = {
     "apiKeySettingsInfo": "點此設定您的 AI 提供者",
     "openSettings": "開啟設定",
     "translationSettings": "轉換設定",
+    "regenerate": "重新生成",
     "regenerateTranslation": "重新產生翻譯",
     "lyricsProviderSelect": "選擇歌詞提供者",
     "lyricsProviderSelectSubtitle": "選擇僅用於這首歌的歌詞提供者。",

@@ -599,6 +599,7 @@ window.LANG_CS = {
     "apiKeySettingsInfo": "Kliknutím sem nakonfigurujete poskytovatele AI",
     "openSettings": "Otevřít nastavení",
     "translationSettings": "Nastavení převodu",
+    "regenerate": "Regenerovat",
     "regenerateTranslation": "Obnovit překlad",
     "lyricsProviderSelect": "Vyberte poskytovatele textů",
     "lyricsProviderSelectSubtitle": "Vyberte poskytovatele textů, který chcete použít pouze pro tuto skladbu.",

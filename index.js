@@ -6463,6 +6463,21 @@ class LyricsContainer extends react.Component {
     const targets = this.getRegenerationTargets();
     const includeCulturalAnnotations = this.isCulturalAnnotationsEnabled();
     const includeWordSupplements = !!window.ivLyricsWordSupplements;
+    const isPhoneticRunning =
+      !!this.state.isPhoneticLoading ||
+      (this._activePhoneticLoadingTokens?.size || 0) > 0 ||
+      this.state.generationPills?.pronunciation?.phase === "loading";
+    const isTranslationRunning =
+      !!this.state.isTranslationLoading ||
+      (this._activeTranslationLoadingTokens?.size || 0) > 0 ||
+      this.state.generationPills?.translation?.phase === "loading";
+    const isCulturalRunning =
+      !!this.state.isCulturalAnnotationsLoading ||
+      (this._activeCulturalAnnotationsLoadingTokens?.size || 0) > 0 ||
+      this.state.generationPills?.["cultural-annotations"]?.phase === "loading";
+    const isWordRunning =
+      (this._activeWordSupplementsLoadingTokens?.size || 0) > 0 ||
+      this.state.generationPills?.["word-supplements"]?.phase === "loading";
     if (
       (includeCulturalAnnotations || includeWordSupplements || (targets.needPhonetic && targets.needTranslation)) &&
       typeof openRegenerateTranslationChoiceModal === "function"
@@ -6471,6 +6486,13 @@ class LyricsContainer extends react.Component {
         targets,
         includeCulturalAnnotations,
         includeWordSupplements,
+        disabledTargets: {
+          phonetic: isPhoneticRunning,
+          translation: isTranslationRunning,
+          both: isPhoneticRunning || isTranslationRunning,
+          "cultural-annotations": isCulturalRunning,
+          "word-supplements": isWordRunning,
+        },
         onSelect: (target) => {
           if (target === "cultural-annotations") {
             this.regenerateCulturalAnnotations();
@@ -10918,7 +10940,8 @@ class LyricsContainer extends react.Component {
                 isLoading:
                   this.state.isTranslationLoading ||
                   this.state.isPhoneticLoading ||
-                  this.state.isCulturalAnnotationsLoading,
+                  this.state.isCulturalAnnotationsLoading ||
+                  this.state.generationPills?.["word-supplements"]?.phase === "loading",
               }),
               window.IvLyricsLearningMode?.StudyButton &&
               react.createElement(window.IvLyricsLearningMode.StudyButton, {

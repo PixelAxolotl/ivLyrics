@@ -599,6 +599,7 @@ window.LANG_KO = {
     "apiKeySettingsInfo": "AI 제공자를 설정하려면 여기를 클릭하세요",
     "openSettings": "설정 열기",
     "translationSettings": "변환 설정",
+    "regenerate": "재생성",
     "regenerateTranslation": "번역 재생성",
     "lyricsProviderSelect": "가사 제공자 선택",
     "lyricsProviderSelectSubtitle": "이 곡에서만 사용할 가사 제공자를 선택합니다.",

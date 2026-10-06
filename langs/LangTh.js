@@ -599,6 +599,7 @@ window.LANG_TH = {
     "apiKeySettingsInfo": "คลิกที่นี่เพื่อกำหนดค่าผู้ให้บริการ AI ของคุณ",
     "openSettings": "เปิดการตั้งค่า",
     "translationSettings": "ตั้งค่าการแปลง",
+    "regenerate": "สร้างใหม่",
     "regenerateTranslation": "สร้างคำแปลใหม่",
     "lyricsProviderSelect": "เลือกผู้ให้บริการเนื้อเพลง",
     "lyricsProviderSelectSubtitle": "เลือกผู้ให้บริการเนื้อเพลงที่จะใช้เฉพาะเพลงนี้",

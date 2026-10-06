@@ -599,6 +599,7 @@ window.LANG_JA = {
     "apiKeySettingsInfo": "ここをクリックしてAIプロバイダーを設定します",
     "openSettings": "設定を開く",
     "translationSettings": "変換設定",
+    "regenerate": "再生成",
     "regenerateTranslation": "翻訳を再生成",
     "lyricsProviderSelect": "歌詞プロバイダーを選択",
     "lyricsProviderSelectSubtitle": "この曲だけで使用する歌詞プロバイダーを選択します。",

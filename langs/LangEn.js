@@ -599,6 +599,7 @@ window.LANG_EN = {
     "apiKeySettingsInfo": "Click here to configure your AI providers",
     "openSettings": "Open Settings",
     "translationSettings": "Conversion Settings",
+    "regenerate": "Regenerate",
     "regenerateTranslation": "Regenerate Translation",
     "lyricsProviderSelect": "Select Lyrics Provider",
     "lyricsProviderSelectSubtitle": "Choose the lyrics provider to use only for this track.",

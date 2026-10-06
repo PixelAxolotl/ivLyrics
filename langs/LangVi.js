@@ -599,6 +599,7 @@ window.LANG_VI = {
     "apiKeySettingsInfo": "Nhấn vào đây để cấu hình các nhà cung cấp AI của bạn",
     "openSettings": "Mở cài đặt",
     "translationSettings": "Cài đặt chuyển đổi",
+    "regenerate": "Tạo lại",
     "regenerateTranslation": "Tạo lại bản dịch",
     "lyricsProviderSelect": "Chọn nhà cung cấp lời bài hát",
     "lyricsProviderSelectSubtitle": "Chọn nhà cung cấp lời chỉ dùng cho bài hát này.",

@@ -599,6 +599,7 @@ window.LANG_SV = {
     "apiKeySettingsInfo": "Klicka här för att konfigurera dina AI-leverantörer",
     "openSettings": "Öppna Inställningar",
     "translationSettings": "Konverteringsinställningar",
+    "regenerate": "Återskapa",
     "regenerateTranslation": "Återskapa översättning",
     "lyricsProviderSelect": "Välj låttextkälla",
     "lyricsProviderSelectSubtitle": "Välj vilken låttextkälla som bara ska användas för den här låten.",

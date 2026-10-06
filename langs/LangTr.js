@@ -599,6 +599,7 @@ window.LANG_TR = {
     "apiKeySettingsInfo": "Yapay zeka sağlayıcılarınızı yapılandırmak için buraya tıklayın",
     "openSettings": "Ayarları Aç",
     "translationSettings": "Dönüştürme Ayarları",
+    "regenerate": "Yeniden Oluştur",
     "regenerateTranslation": "Çeviriyi Yeniden Oluştur",
     "lyricsProviderSelect": "Söz Sağlayıcı Seç",
     "lyricsProviderSelectSubtitle": "Yalnızca bu parça için kullanılacak söz sağlayıcıyı seçin.",

@@ -599,6 +599,7 @@ window.LANG_ES = {
     "apiKeySettingsInfo": "Haz clic aquí para configurar tus proveedores de IA",
     "openSettings": "Abrir ajustes",
     "translationSettings": "Ajustes de conversión",
+    "regenerate": "Regenerar",
     "regenerateTranslation": "Regenerar traducción",
     "lyricsProviderSelect": "Seleccionar proveedor de letras",
     "lyricsProviderSelectSubtitle": "Elige el proveedor de letras solo para esta canción.",

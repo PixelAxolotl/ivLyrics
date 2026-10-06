@@ -599,6 +599,7 @@ window.LANG_MS = {
     "apiKeySettingsInfo": "Klik di sini untuk mengkonfigurasi penyedia AI anda",
     "openSettings": "Buka Tetapan",
     "translationSettings": "Tetapan Penukaran",
+    "regenerate": "Jana semula",
     "regenerateTranslation": "Jana Semula Terjemahan",
     "lyricsProviderSelect": "Pilih penyedia lirik",
     "lyricsProviderSelectSubtitle": "Pilih penyedia lirik yang digunakan hanya untuk lagu ini.",

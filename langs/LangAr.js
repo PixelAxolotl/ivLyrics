@@ -599,6 +599,7 @@ window.LANG_AR = {
     "apiKeySettingsInfo": "انقر هنا لإعداد موفري الذكاء الاصطناعي",
     "openSettings": "فتح الإعدادات",
     "translationSettings": "إعدادات التحويل",
+    "regenerate": "إعادة الإنشاء",
     "regenerateTranslation": "إعادة إنشاء الترجمة",
     "lyricsProviderSelect": "اختيار مزود الكلمات",
     "lyricsProviderSelectSubtitle": "اختر مزود الكلمات المستخدم لهذا المقطع فقط.",

@@ -599,6 +599,7 @@ window.LANG_BN = {
     "apiKeySettingsInfo": "এআই প্রদানকারীদের কনফিগার করতে এখানে ক্লিক করুন",
     "openSettings": "সেটিংস খুলুন",
     "translationSettings": "রূপান্তর সেটিংস",
+    "regenerate": "পুনরায় তৈরি",
     "regenerateTranslation": "অনুবাদ পুনরায় তৈরি করুন",
     "lyricsProviderSelect": "গানের কথা প্রদানকারী নির্বাচন করুন",
     "lyricsProviderSelectSubtitle": "শুধু এই ট্র্যাকের জন্য ব্যবহৃত গানের কথা প্রদানকারী বেছে নিন।",

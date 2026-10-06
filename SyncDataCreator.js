@@ -7804,18 +7804,45 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 		setSyncData(prev => {
 			if (!prev || !prev.lines) return prev;
+			// Bound the whole shift by the earliest timing so relative spacing
+			// is preserved and no char can go negative (server rejects <0).
+			let minTime = Infinity;
+			for (const line of prev.lines) {
+				if (Array.isArray(line.chars)) {
+					for (const t of line.chars) {
+						if (isFiniteSyncCreatorTime(t) && t < minTime) minTime = t;
+					}
+				}
+				if (Array.isArray(line.parallel?.parts)) {
+					for (const part of line.parallel.parts) {
+						if (Array.isArray(part.chars)) {
+							for (const t of part.chars) {
+								if (isFiniteSyncCreatorTime(t) && t < minTime) minTime = t;
+							}
+						}
+					}
+				}
+			}
+			if (!Number.isFinite(minTime)) return prev;
+			const boundedDeltaSec = Math.max(deltaSec, -minTime);
+			if (!Number.isFinite(boundedDeltaSec) || Math.abs(boundedDeltaSec) < 0.0005) return prev;
+			const shiftTime = (t) => (
+				isFiniteSyncCreatorTime(t)
+					? Math.round((t + boundedDeltaSec) * 1000) / 1000
+					: t
+			);
 			return {
 				...prev,
 				lines: prev.lines.map(line => ({
 					...line,
-					chars: line.chars.map(t => Math.round((t + deltaSec) * 1000) / 1000),
+					chars: Array.isArray(line.chars) ? line.chars.map(shiftTime) : line.chars,
 					parallel: line.parallel ? {
 						...line.parallel,
 						parts: Array.isArray(line.parallel.parts)
 							? line.parallel.parts.map(part => ({
 								...part,
 								chars: Array.isArray(part.chars)
-									? part.chars.map(t => Math.round((t + deltaSec) * 1000) / 1000)
+									? part.chars.map(shiftTime)
 									: part.chars
 							}))
 							: line.parallel.parts

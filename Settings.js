@@ -9688,10 +9688,19 @@ react.createElement(
           onChange: (name, value) => {
             CONFIG.visual[name] = value;
             StorageManager.saveConfig(name, value);
-            queueReloadIntoIvLyrics({
-              reopenSettings: true,
-              initialTab: "general",
-            });
+            // Live update without a page reload: drop cached translations so
+            // the new target language is re-requested, then notify the lyrics
+            // page, Now Playing panel, and overlay via a config event.
+            if (window.lyricContainer) {
+              window.lyricContainer._dmResults = {};
+              window.lyricContainer.lastProcessedUri = null;
+              window.lyricContainer.lastProcessedMode = null;
+              window.lyricContainer.forceUpdate();
+            }
+            lyricContainerUpdate?.();
+            window.dispatchEvent(new CustomEvent("ivLyrics", {
+              detail: { type: "config", name, value },
+            }));
           },
         }),
         // 데스크탑 오버레이 섹션

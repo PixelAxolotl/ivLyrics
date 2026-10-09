@@ -3406,7 +3406,14 @@ const getDisplayModeCacheKey = (lyricsState = {}, mode = "") => {
   const pronunciationNotation = mode === "gemini_romaji"
     ? `:${getCurrentLyricsPronunciationNotation()}`
     : "";
-  return `${lyricsState.uri}:${providerKey}:${mode}${pronunciationNotation}:${getSyncDataRendererCacheVersion(lyricsState)}:${providerCacheVersion}:${lyricsShape}`;
+  // Translation output depends on the target language, so it must be part of
+  // the key; otherwise switching languages keeps resolving the previous
+  // language's cached entry. Phonetic romanization is target-independent and
+  // keeps sharing one entry across languages.
+  const translationTarget = mode === "gemini_romaji"
+    ? ""
+    : `:${getCurrentTranslationTargetLanguage()}`;
+  return `${lyricsState.uri}:${providerKey}:${mode}${pronunciationNotation}${translationTarget}:${getSyncDataRendererCacheVersion(lyricsState)}:${providerCacheVersion}:${lyricsShape}`;
 };
 
 // Enhanced cache system with memory-efficient LRU and automatic cleanup
@@ -6545,11 +6552,13 @@ class LyricsContainer extends react.Component {
     }
 
     if (targets.needPhonetic) {
+      if (isPhoneticRunning) return;
       this.regenerateTranslation("phonetic");
       return;
     }
 
     if (targets.needTranslation) {
+      if (isTranslationRunning) return;
       this.regenerateTranslation("translation");
       return;
     }
@@ -7761,23 +7770,30 @@ class LyricsContainer extends react.Component {
     const dataMode = getLyricsDataMode(mode);
     const preferredModeKey =
       typeof dataMode === "number" && dataMode >= 0 ? CONFIG.modes?.[dataMode] : null;
+    const hasUsableLyrics = (value) => Array.isArray(value) && value.length > 0;
     const preferredLyrics =
-      preferredModeKey && lyricsState[preferredModeKey]
+      preferredModeKey && hasUsableLyrics(lyricsState[preferredModeKey])
         ? lyricsState[preferredModeKey]
         : null;
 
     return (
       preferredLyrics ||
-      lyricsState.karaoke ||
-      lyricsState.synced ||
-      lyricsState.unsynced ||
+      (hasUsableLyrics(lyricsState.karaoke) ? lyricsState.karaoke : null) ||
+      (hasUsableLyrics(lyricsState.synced) ? lyricsState.synced : null) ||
+      (hasUsableLyrics(lyricsState.unsynced) ? lyricsState.unsynced : null) ||
       null
     );
   }
 
   lyricsSource(lyricsState, mode) {
     if (!lyricsState) return;
-    if (!this.isCurrentLyricsState(lyricsState)) return;
+    if (!this.isCurrentLyricsState(lyricsState)) {
+      // Stale snapshot (e.g. a sync-editor close racing a track fetch):
+      // clear the render markers so the next render retries instead of
+      // getting stuck with a blank page.
+      this.lastProcessedMode = null;
+      return;
+    }
     const presentationSeq = ++this._lyricsPresentationSeq;
     const isActivePresentation = () =>
       presentationSeq === this._lyricsPresentationSeq &&
@@ -7785,7 +7801,12 @@ class LyricsContainer extends react.Component {
 
     const lyrics = this.resolveLyricsForMode(lyricsState, mode);
     if (!lyrics) {
-      if (lyricsState.isLoading) return;
+      if (lyricsState.isLoading) {
+        // Raw lyrics still loading (common when the sync editor is closed
+        // mid-generation): retry on the next render instead of marking done.
+        this.lastProcessedMode = null;
+        return;
+      }
       if (!isActivePresentation()) return;
       this.setState({
         currentLyrics: [],
@@ -9408,6 +9429,7 @@ class LyricsContainer extends react.Component {
       const active = event?.detail?.active ?? !!document.getElementById("ivLyrics-sync-creator-overlay");
       if (this.state.isSyncCreatorActive !== active) {
         this.lastProcessedMode = null;
+        this.lastProcessedUri = null;
         this.setState({ isSyncCreatorActive: active });
       }
     };
@@ -10033,10 +10055,10 @@ class LyricsContainer extends react.Component {
   isModeAvailable(mode, lyricsState = this.state) {
     if (!lyricsState || mode === -1) return false;
     if (isKaraokeRenderMode(mode)) {
-      return !!lyricsState.karaoke && CONFIG.visual["karaoke-mode-enabled"];
+      return Array.isArray(lyricsState.karaoke) && lyricsState.karaoke.length > 0 && CONFIG.visual["karaoke-mode-enabled"];
     }
-    if (mode === SYNCED) return !!lyricsState.synced;
-    if (mode === UNSYNCED) return !!lyricsState.unsynced;
+    if (mode === SYNCED) return Array.isArray(lyricsState.synced) && lyricsState.synced.length > 0;
+    if (mode === UNSYNCED) return Array.isArray(lyricsState.unsynced) && lyricsState.unsynced.length > 0;
     return false;
   }
 

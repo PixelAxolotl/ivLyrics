@@ -9276,7 +9276,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			|| '';
 
 		if (!resolvedTrackIsrc) {
-			Toast.error('이 곡의 ISRC를 확인할 수 없어 sync-data를 등록할 수 없습니다.');
+			Toast.error(I18n.t('syncCreator.isrcMissingRegister') || "Cannot register sync-data because this song's ISRC cannot be confirmed.");
 			return;
 		}
 
@@ -11558,7 +11558,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	);
 
 	const renderSourcePanel = () => react.createElement('div', { className: 'sync-creator-section sync-creator-source-section', style: s.panel },
-		react.createElement('div', { style: s.panelTitle }, 'Source'),
+		react.createElement('div', { style: s.panelTitle }, I18n.t('syncCreator.sourcePanel') || 'Source'),
 		react.createElement('div', { style: s.sourceTrack },
 			albumArt && react.createElement('img', { src: albumArt, style: s.sourceAlbumArt, alt: trackName }),
 			react.createElement('div', { style: s.trackMeta },
@@ -11709,7 +11709,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	);
 
 	const renderShortcutGuide = () => lyricsText && react.createElement('div', { className: 'sync-creator-section sync-creator-shortcut-section', style: s.panel },
-		react.createElement('div', { style: s.panelTitle }, 'Sync Creator 단축키'),
+		react.createElement('div', { style: s.panelTitle }, I18n.t('syncCreator.shortcutsTitle') || 'Sync Creator Shortcuts'),
 		react.createElement('div', { style: s.panelSubtitle }, syncGranularityRecordingHint),
 		react.createElement('div', { style: { ...s.shortcutsContainer, marginTop: 0, padding: 0, background: 'transparent', border: 'none' } },
 			[

@@ -141,6 +141,14 @@ window.LANG_CS = {
     "downloadDesc": "Stáhněte si překryvnou aplikaci, pokud není nainstalována"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "Barva {label}",
+      "hexValue": "HEX hodnota {label}"
+    },
+    "videoShowWhenPaused": {
+      "label": "Zobrazit video při pozastavení",
+      "desc": "Ponechat zmrazený snímek videa viditelný, dokud je přehrávání pozastaveno."
+    },
     "language": {
       "label": "Jazyk",
       "desc": "Vyberte jazyk rozšíření"
@@ -495,6 +503,35 @@ window.LANG_CS = {
       "selectModel": "Vybrat ze seznamu",
       "loadingModels": "Načítání modelů…",
       "modelsUnavailable": "Seznam modelů se nepodařilo načíst. ID modelu můžete zadat ručně.",
+      "addonUi": {
+        "keyRotationHint": "Zadejte jeden klíč nebo pole JSON pro rotaci",
+        "getApiKeyFree": "Získat API klíč (zdarma)",
+        "enterApiKeyFirst": "Nejprve zadejte API klíč",
+        "selectModelPlaceholder": "-- Vyberte model --",
+        "customModel": "Vlastní model",
+        "customModelId": "Vlastní ID modelu",
+        "modelIdPlaceholder": "Zadejte ID modelu",
+        "geminiCompatibleHint": "Změňte pro použití API kompatibilních s Gemini",
+        "groqFreeHint": "Groq nabízí bezplatnou, ultrarychlou inferenci",
+        "sonarHint": "Modely Sonar zahrnují webové vyhledávání v reálném čase",
+        "deeplFreePro": "DeepL API zdarma / pro",
+        "advancedParams": "Pokročilé parametry API",
+        "maxTokens": "Max. tokenů",
+        "maxOutputTokens": "Max. výstupních tokenů",
+        "temperature": "Teplota",
+        "thinking": "Uvažování",
+        "thinkingBudget": "Rozpočet uvažování",
+        "excludeParamHint": "Zrušte zaškrtnutí pro vyloučení parametru z požadavku API.",
+        "thinkingOffHint": "Zrušte zaškrtnutí pro vyloučení. Vypnuté uvažování povolí streamování v reálném čase.",
+        "mergeJsonHint": "Sloučeno do výchozího těla požadavku. max_completion_tokens a temperature se vyplní standardně",
+        "refreshModelsHint": "Obnovit seznam modelů",
+        "modelsAvailable": "{count} modelů k dispozici",
+        "testing": "Testuje se...",
+        "testFailed": "Chyba: {error}",
+        "emptyResponse": "Prázdná odpověď",
+        "requestBodyMerge": "JSON pro sloučení těla požadavku",
+        "requestBodyMergeInvalid": "JSON pro sloučení těla požadavku musí být objekt JSON.",
+      },
       "testingConnection": "Otestovat připojení…",
       "testConnection": "Otestovat připojení",
       "getApiKey": "Získejte klíč",
@@ -517,6 +554,13 @@ window.LANG_CS = {
     "lyricsProviders": {
       "title": "Poskytovatelé textů",
       "description": "Vyberte a upřednostněte poskytovatele textů. Poskytovatelé nahoře jsou vyzkoušeni jako první.",
+      "spotify": {
+        "title": "Prémiové funkce Spotify",
+        "desc": "Tento doplněk získává texty přímo ze Spotify.",
+        "reqPremium": "Vyžaduje Spotify Premium",
+        "reqMulti": "Podporuje více poskytovatelů",
+        "reqQuality": "Vysoká přesnost a kvalita synchronizace"
+      },
       "preferSyncDataProvider": {
         "label": "Upřednostnit poskytovatele se synchronizačními daty",
         "desc": "Pokud jsou pro aktuální skladbu dostupná synchronizační data, odpovídající poskytovatel textu se vyzkouší před běžným pořadím poskytovatelů."
@@ -567,6 +611,7 @@ window.LANG_CS = {
     "exitFullscreen": "Ukončit celou obrazovku"
   },
   "menu": {
+    "localLyricsApplying": "Používá se",
     "translation": "Převést",
     "settings": "Nastavení",
     "syncAdjust": "Upravit synchronizaci",
@@ -1886,6 +1931,18 @@ window.LANG_CS = {
     },
     "debugTab": {
       "title": "Informace o ladění",
+      "apiEmpty": "Zatím žádné požadavky API. Pusťte si skladbu a uvidíte je zde.",
+      "labelTitle": "Název: ",
+      "labelArtist": "Umělec: ",
+      "labelAlbum": "Album: ",
+      "labelTrackId": "ID stopy: ",
+      "labelProvider": "Poskytovatel: ",
+      "labelType": "Typ: ",
+      "labelError": "Chyba: ",
+      "labelRequest": "POŽADAVEK:",
+      "labelResponse": "ODPOVĚĎ:",
+      "apiLogTitle": "Protokol požadavků API ({count})",
+      "totalRequests": "Celkem: {total} požadavků",
       "subtitle": "Informace, které se mají odeslat vývojáři při hlášení chyb",
       "currentTrack": "Aktuální informace o skladbě",
       "trackInfo": "Informace o skladbě",
@@ -1971,7 +2028,17 @@ window.LANG_CS = {
     "wordSupplements": "Podrobnosti slov",
     "wordSupplementsLoading": "Načítání výslovnosti a glos..."
   },
+  "videoStats": {
+    "title": "Statistiky videa",
+    "quality": "Kvalita:",
+    "resolution": "Rozlišení:",
+    "buffered": "Vyrovnáno:",
+    "source": "Zdroj:",
+    "helperStatus": "Stav pomocníka:",
+    "videoId": "ID videa:"
+  },
   "videoBackground": {
+    "isrcMissing": "Pozadí videa nelze načíst, protože ISRC této skladby nelze ověřit.",
     "loading": "Načítání informací o videu...",
     "notFound": "Video nenalezeno.",
     "error": "Došlo k chybě.",
@@ -1997,6 +2064,7 @@ window.LANG_CS = {
     "videoNotDownloaded": "Video nebylo staženo"
   },
   "translator": {
+    "noProviderConfigured": "Není nastaven žádný poskytovatel AI. Vyberte jej v nastavení.",
     "missingApiKey": "Gemini API klíč není nastaven. Zadejte klíč API v nastavení.",
     "invalidApiKeyFormat": "Neplatný formát klíče API. Gemini Klíč API musí začínat „AIza“.",
     "invalidRequestFormat": "Neplatný formát požadavku. Zkontrolujte prosím svůj klíč API.",
@@ -2011,6 +2079,7 @@ window.LANG_CS = {
     "failedPrefix": "Překlad se nezdařil"
   },
   "utils": {
+    "unknownErrorShort": "Neznámá chyba",
     "allUrlsFailed": "Nepodařilo se získat informace o verzi ze všech adres URL",
     "invalidVersionFormat": "Neplatný formát verze",
     "unknownError": "Neznámá chyba",
@@ -2030,6 +2099,7 @@ window.LANG_CS = {
     "unsynced": "Prostý text"
   },
   "communityVideo": {
+    "isrcMissing": "Komunitní video nelze zaregistrovat, protože ISRC této skladby nelze ověřit.",
     "loginRequired": "K registraci komunitních videí je vyžadováno přihlášení Discord.",
     "title": "Doporučení komunitních videí",
     "loading": "Načítání seznamu videí...",
@@ -2194,6 +2264,14 @@ window.LANG_CS = {
     "noSelection": "Vyberte prosím texty"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ Text zde",
+      "line1": "První řádek",
+      "line2": "Právě hrající řádek",
+      "line3": "Další řádek...",
+      "mainScreen": "Hlavní obrazovka",
+      "nowPlaying": "Právě hraje"
+    },
     "welcome": {
       "title": "Vítejte v ivLyrics!",
       "subtitle": "Užijte si krásné texty na Spotify",
@@ -2643,6 +2721,13 @@ window.LANG_CS = {
     "dismissAll": "Zavřít vše"
   },
   "syncCreator": {
+    "isrcMissingUse": "Synchronizační data nejsou k dispozici, protože ISRC této skladby nelze ověřit.",
+    "isrcMissingRegister": "Synchronizační data nelze zaregistrovat, protože ISRC této skladby nelze ověřit.",
+    "scoreConflict": "Konflikt s jinou editační relací. Váš koncept je zachován. Zavřete druhý editor a úkol znovu otevřete.",
+    "lrclibBadgeInstrumental": "Instrumentální",
+    "sourcePanel": "Zdroj",
+    "shortcutsTitle": "Klávesové zkratky tvůrce synchronizace",
+    "notAvailable": "SyncDataCreator není k dispozici",
     "loginRequired": "K vytvoření synchronizace karaoke je vyžadováno přihlášení Discord.",
     "title": "Vytvořte synchronizaci karaoke",
     "syncGranularityLabel": "Jednotka synchronizace",

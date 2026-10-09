@@ -141,6 +141,14 @@ window.LANG_PT = {
     "downloadDesc": "Se você não tem o app de overlay instalado, baixe-o aqui"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "Cor de {label}",
+      "hexValue": "Valor HEX de {label}"
+    },
+    "videoShowWhenPaused": {
+      "label": "Mostrar vídeo ao pausar",
+      "desc": "Manter o quadro congelado visível enquanto a reprodução estiver pausada."
+    },
     "language": {
       "label": "Idioma",
       "desc": "Selecione o idioma da extensão"
@@ -495,6 +503,35 @@ window.LANG_PT = {
       "selectModel": "Escolher da lista",
       "loadingModels": "Carregando modelos…",
       "modelsUnavailable": "Não foi possível carregar a lista de modelos. Você pode inserir um ID de modelo manualmente.",
+      "addonUi": {
+        "keyRotationHint": "Insira uma única chave ou matriz JSON para rotação",
+        "getApiKeyFree": "Obter chave API (grátis)",
+        "enterApiKeyFirst": "Insira a chave API primeiro",
+        "selectModelPlaceholder": "-- Selecione um modelo --",
+        "customModel": "Modelo personalizado",
+        "customModelId": "ID de modelo personalizado",
+        "modelIdPlaceholder": "Insira um ID de modelo",
+        "geminiCompatibleHint": "Altere para usar APIs compatíveis com Gemini",
+        "groqFreeHint": "Groq oferece inferência gratuita e ultrarrápida",
+        "sonarHint": "Modelos Sonar incluem pesquisa web em tempo real",
+        "deeplFreePro": "DeepL API grátis / pro",
+        "advancedParams": "Parâmetros avançados de API",
+        "maxTokens": "Máx. de tokens",
+        "maxOutputTokens": "Máx. de tokens de saída",
+        "temperature": "Temperatura",
+        "thinking": "Raciocínio",
+        "thinkingBudget": "Orçamento de raciocínio",
+        "excludeParamHint": "Desmarque para excluir o parâmetro da solicitação API.",
+        "thinkingOffHint": "Desmarque para excluir o parâmetro. Desativar o raciocínio ativa o streaming em tempo real.",
+        "mergeJsonHint": "Incorporado ao corpo padrão. max_completion_tokens e temperature preenchidos por padrão",
+        "refreshModelsHint": "Atualizar lista de modelos",
+        "modelsAvailable": "{count} modelos disponíveis",
+        "testing": "Testando...",
+        "testFailed": "Erro: {error}",
+        "emptyResponse": "Resposta vazia",
+        "requestBodyMerge": "JSON de mesclagem do corpo",
+        "requestBodyMergeInvalid": "O JSON de mesclagem do corpo deve ser um objeto JSON.",
+      },
       "testingConnection": "Testar conexão…",
       "testConnection": "Testar conexão",
       "getApiKey": "Obter chave",
@@ -517,6 +554,13 @@ window.LANG_PT = {
     "lyricsProviders": {
       "title": "Provedores de letras",
       "description": "Selecione e priorize os provedores de letras. Os provedores no topo são tentados primeiro.",
+      "spotify": {
+        "title": "Recursos premium do Spotify",
+        "desc": "Este addon obtém letras diretamente do Spotify.",
+        "reqPremium": "Requer Spotify Premium",
+        "reqMulti": "Suporta vários provedores",
+        "reqQuality": "Alta precisão e qualidade de sincronização"
+      },
       "preferSyncDataProvider": {
         "label": "Priorizar provedores com dados de sincronização",
         "desc": "Quando houver dados de sincronização para a faixa atual, tente o provedor de letras correspondente antes da ordem normal."
@@ -567,6 +611,7 @@ window.LANG_PT = {
     "exitFullscreen": "Sair da Tela Cheia"
   },
   "menu": {
+    "localLyricsApplying": "Aplicando",
     "translation": "Conversão",
     "settings": "Configurações",
     "syncAdjust": "Ajuste de Sync",
@@ -1886,6 +1931,18 @@ window.LANG_PT = {
     },
     "debugTab": {
       "title": "Info de Depuração",
+      "apiEmpty": "Sem solicitações API ainda. Toque uma música para vê-las aqui.",
+      "labelTitle": "Título: ",
+      "labelArtist": "Artista: ",
+      "labelAlbum": "Álbum: ",
+      "labelTrackId": "ID da faixa: ",
+      "labelProvider": "Provedor: ",
+      "labelType": "Tipo: ",
+      "labelError": "Erro: ",
+      "labelRequest": "PEDIDO:",
+      "labelResponse": "RESPOSTA:",
+      "apiLogTitle": "Registro de solicitações API ({count})",
+      "totalRequests": "Total: {total} solicitações",
       "subtitle": "Informações para enviar ao desenvolvedor ao reportar bugs",
       "currentTrack": "Info da Faixa Atual",
       "trackInfo": "Informações da Faixa",
@@ -1971,7 +2028,17 @@ window.LANG_PT = {
     "wordSupplements": "Detalhes das palavras",
     "wordSupplementsLoading": "Carregando leituras e glosas..."
   },
+  "videoStats": {
+    "title": "Estatísticas de vídeo",
+    "quality": "Qualidade:",
+    "resolution": "Resolução:",
+    "buffered": "Em buffer:",
+    "source": "Fonte:",
+    "helperStatus": "Status do auxiliar:",
+    "videoId": "ID do vídeo:"
+  },
   "videoBackground": {
+    "isrcMissing": "Não foi possível carregar o fundo de vídeo porque o ISRC desta música não pôde ser confirmado.",
     "loading": "Carregando informações do vídeo...",
     "notFound": "Vídeo não encontrado.",
     "error": "Ocorreu um erro.",
@@ -1997,6 +2064,7 @@ window.LANG_PT = {
     "videoNotDownloaded": "Vídeo não baixado"
   },
   "translator": {
+    "noProviderConfigured": "Nenhum provedor de IA configurado. Selecione um nas configurações.",
     "missingApiKey": "Chave API Gemini não configurada. Insira a chave nas configurações.",
     "invalidApiKeyFormat": "Formato de chave API inválido. Chaves Gemini devem começar com 'AIza'.",
     "invalidRequestFormat": "Formato de solicitação inválido. Verifique sua chave API.",
@@ -2011,6 +2079,7 @@ window.LANG_PT = {
     "failedPrefix": "Falha na tradução"
   },
   "utils": {
+    "unknownErrorShort": "Erro desconhecido",
     "allUrlsFailed": "Falha ao obter informações de versão de todas as URLs",
     "invalidVersionFormat": "Formato de versão inválido",
     "unknownError": "Erro desconhecido",
@@ -2030,6 +2099,7 @@ window.LANG_PT = {
     "unsynced": "Letra Normal"
   },
   "communityVideo": {
+    "isrcMissing": "Não foi possível registrar o vídeo comunitário porque o ISRC desta música não pôde ser confirmado.",
     "loginRequired": "É necessário fazer login no Discord para registrar vídeos da comunidade.",
     "title": "Vídeos Recomendados pela Comunidade",
     "loading": "Carregando lista de vídeos...",
@@ -2194,6 +2264,14 @@ window.LANG_PT = {
     "noSelection": "Selecione a letra"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ Letra aqui",
+      "line1": "Primeira linha",
+      "line2": "Linha em reprodução",
+      "line3": "Próxima linha...",
+      "mainScreen": "Tela principal",
+      "nowPlaying": "Tocando agora"
+    },
     "welcome": {
       "title": "Bem-vindo ao ivLyrics!",
       "subtitle": "Curta letras bonitas no Spotify",
@@ -2643,6 +2721,13 @@ window.LANG_PT = {
     "dismissAll": "Fechar Tudo"
   },
   "syncCreator": {
+    "isrcMissingUse": "Dados de sincronização indisponíveis porque o ISRC desta música não pôde ser confirmado.",
+    "isrcMissingRegister": "Não foi possível registrar os dados de sincronização porque o ISRC desta música não pôde ser confirmado.",
+    "scoreConflict": "Conflito com outra sessão de edição. Seu rascunho foi preservado. Feche o outro editor e reabra esta tarefa.",
+    "lrclibBadgeInstrumental": "Instrumental",
+    "sourcePanel": "Fonte",
+    "shortcutsTitle": "Atalhos do criador de sincronização",
+    "notAvailable": "SyncDataCreator indisponível",
     "loginRequired": "É necessário fazer login no Discord para criar a sincronia de karaokê.",
     "title": "Criar Sync Karaokê",
     "syncGranularityLabel": "Unidade de sincronização",

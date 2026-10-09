@@ -2922,19 +2922,19 @@ const DebugInfoPanel = () => {
         className: "debug-info-block"
       },
         react.createElement("div", null,
-          react.createElement("span", { className: "debug-info-key" }, "Title: "),
+          react.createElement("span", { className: "debug-info-key" }, getSettingsText("settingsAdvanced.debugTab.labelTitle", "Title: ")),
           react.createElement("span", { className: "debug-info-value" }, debugInfo.track.title)
         ),
         react.createElement("div", null,
-          react.createElement("span", { className: "debug-info-key" }, "Artist: "),
+          react.createElement("span", { className: "debug-info-key" }, getSettingsText("settingsAdvanced.debugTab.labelArtist", "Artist: ")),
           react.createElement("span", { className: "debug-info-value" }, debugInfo.track.artist)
         ),
         react.createElement("div", null,
-          react.createElement("span", { className: "debug-info-key" }, "Album: "),
+          react.createElement("span", { className: "debug-info-key" }, getSettingsText("settingsAdvanced.debugTab.labelAlbum", "Album: ")),
           react.createElement("span", { className: "debug-info-value" }, debugInfo.track.album)
         ),
         react.createElement("div", null,
-          react.createElement("span", { className: "debug-info-key" }, "Track ID: "),
+          react.createElement("span", { className: "debug-info-key" }, getSettingsText("settingsAdvanced.debugTab.labelTrackId", "Track ID: ")),
           react.createElement("code", {
             className: "debug-info-code"
           }, debugInfo.track.id)
@@ -2950,9 +2950,9 @@ const DebugInfoPanel = () => {
       react.createElement("div", {
         className: "debug-info-section-label debug-info-section-label-row"
       },
-        react.createElement("span", null, `API 요청 로그 (${apiLogs.length})`),
+        react.createElement("span", null, getSettingsText("settingsAdvanced.debugTab.apiLogTitle", "API Request Log ({count})").replace("{count}", apiLogs.length)),
         window.ApiTracker && react.createElement("span", { className: "debug-info-inline-meta" },
-          `Total: ${window.ApiTracker.getSummary()?.totalRequests || 0} requests`
+          getSettingsText("settingsAdvanced.debugTab.totalRequests", "Total: {total} requests").replace("{total}", window.ApiTracker.getSummary()?.totalRequests || 0)
         )
       ),
       react.createElement("div", {
@@ -2961,7 +2961,7 @@ const DebugInfoPanel = () => {
         apiLogs.length === 0
           ? react.createElement("div", {
             className: "debug-api-empty"
-          }, "아직 API 요청이 없습니다. 곡을 재생하면 여기에 표시됩니다.")
+          }, getSettingsText("settingsAdvanced.debugTab.apiEmpty", "No API requests yet. Play a song to see them here."))
           : apiLogs.map((log, idx) => react.createElement(
             "div",
             {
@@ -3015,7 +3015,7 @@ const DebugInfoPanel = () => {
               log.request && react.createElement("div", { className: "debug-api-detail-group" },
                 react.createElement("div", {
                   className: "debug-json-label"
-                }, "REQUEST:"),
+                }, getSettingsText("settingsAdvanced.debugTab.labelRequest", "REQUEST:")),
                 react.createElement("pre", {
                   className: "debug-json-block"
                 }, JSON.stringify(log.request, null, 2))
@@ -3024,7 +3024,7 @@ const DebugInfoPanel = () => {
               log.response && react.createElement("div", null,
                 react.createElement("div", {
                   className: "debug-json-label"
-                }, "RESPONSE:"),
+                }, getSettingsText("settingsAdvanced.debugTab.labelResponse", "RESPONSE:")),
                 react.createElement("pre", {
                   className: `debug-json-block ${log.status === 'error' ? 'error' : ''}`
                 }, log.error || JSON.stringify(log.response, null, 2))
@@ -3049,7 +3049,7 @@ const DebugInfoPanel = () => {
           react.Fragment,
           null,
           react.createElement("div", null,
-            react.createElement("span", { className: "debug-info-key" }, "Provider: "),
+            react.createElement("span", { className: "debug-info-key" }, getSettingsText("settingsAdvanced.debugTab.labelProvider", "Provider: ")),
             react.createElement("span", {
               className: "debug-info-tag",
               style: {
@@ -3059,7 +3059,7 @@ const DebugInfoPanel = () => {
             }, debugInfo.lyrics.provider)
           ),
           react.createElement("div", { style: { marginTop: "8px" } },
-            react.createElement("span", { className: "debug-info-key" }, "Type: "),
+            react.createElement("span", { className: "debug-info-key" }, getSettingsText("settingsAdvanced.debugTab.labelType", "Type: ")),
             debugInfo.lyrics.hasKaraoke && react.createElement("span", {
               style: { color: "#f472b6", marginRight: "8px" }
             }, `Karaoke (${debugInfo.lyrics.karaokeLineCount} lines)`),
@@ -3071,7 +3071,7 @@ const DebugInfoPanel = () => {
             }, `Unsynced (${debugInfo.lyrics.unsyncedLineCount} lines)`)
           ),
           debugInfo.lyrics.error && react.createElement("div", { style: { marginTop: "8px" } },
-            react.createElement("span", { className: "debug-info-key" }, "Error: "),
+            react.createElement("span", { className: "debug-info-key" }, getSettingsText("settingsAdvanced.debugTab.labelError", "Error: ")),
             react.createElement("span", { style: { color: "#ef4444" } }, debugInfo.lyrics.error)
           )
         ) : react.createElement("span", { className: "debug-info-empty" }, I18n.t("settingsAdvanced.debugTab.noLyrics"))
@@ -3361,8 +3361,8 @@ const ConfigColorControl = ({
         onCommit(nextColor);
       },
       className: "config-color-picker",
-      "aria-label": `${label || "Color"} 색상 선택`,
-      title: `${label || "Color"} 색상 선택`,
+      "aria-label": getSettingsText("settings.colorPicker.choose", "{label} color").replace("{label}", label || "Color"),
+      title: getSettingsText("settings.colorPicker.choose", "{label} color").replace("{label}", label || "Color"),
     }),
     react.createElement("input", {
       type: "text",
@@ -3376,7 +3376,7 @@ const ConfigColorControl = ({
       pattern: "^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$",
       placeholder: "#000000",
       spellCheck: false,
-      "aria-label": `${label || "Color"} HEX 값`,
+      "aria-label": getSettingsText("settings.colorPicker.hexValue", "{label} HEX value").replace("{label}", label || "Color"),
       "aria-invalid": !isValid,
     })
   );

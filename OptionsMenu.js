@@ -5780,7 +5780,7 @@ async function openSyncDataCreator(trackInfo, initialData = null) {
   // SyncDataCreator 컴포넌트가 없으면 경고
   if (typeof SyncDataCreator === "undefined") {
     console.error("[OptionsMenu] SyncDataCreator component not found");
-    Toast.error("SyncDataCreator not available");
+    Toast.error(getOptionsText("syncCreator.notAvailable", "SyncDataCreator not available"));
     closeModal();
     return;
   }

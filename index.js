@@ -7951,7 +7951,7 @@ class LyricsContainer extends react.Component {
           mode === "gemini_romaji"
             ? I18n.t("notifications.romajiTranslationFailed")
             : I18n.t("notifications.koreanTranslationFailed");
-        Toast.error(`${modeDisplayName}: ${error.message || "Unknown error"}`);
+        Toast.error(`${modeDisplayName}: ${error.message || I18n.t("utils.unknownErrorShort") || "Unknown error"}`);
         return null; // Return null on failure
       }
     };

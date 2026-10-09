@@ -141,6 +141,14 @@ window.LANG_FA = {
     "downloadDesc": "اگر برنامه پوشش نصب نیست، آن را دانلود کنید"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "رنگ {label}",
+      "hexValue": "مقدار HEX ‏{label}‏"
+    },
+    "videoShowWhenPaused": {
+      "label": "نمایش ویدیو هنگام توقف",
+      "desc": "قاب منجمد ویدیو را هنگام توقف پخش نمایان نگه دارید."
+    },
     "language": {
       "label": "زبان",
       "desc": "زبان افزونه را انتخاب کنید"
@@ -495,6 +503,35 @@ window.LANG_FA = {
       "selectModel": "انتخاب از فهرست مدل‌ها",
       "loadingModels": "در حال بارگیری مدل‌ها…",
       "modelsUnavailable": "فهرست مدل‌ها بارگیری نشد. می‌توانید شناسهٔ مدل را دستی وارد کنید.",
+      "addonUi": {
+        "keyRotationHint": "یک کلید یا آرایه JSON برای چرخش وارد کنید",
+        "getApiKeyFree": "دریافت کلید API (رایگان)",
+        "enterApiKeyFirst": "ابتدا کلید API را وارد کنید",
+        "selectModelPlaceholder": "-- انتخاب مدل --",
+        "customModel": "مدل سفارشی",
+        "customModelId": "شناسه مدل سفارشی",
+        "modelIdPlaceholder": "شناسه مدل را وارد کنید",
+        "geminiCompatibleHint": "برای استفاده از APIهای سازگار با Gemini تغییر دهید",
+        "groqFreeHint": "Groq استنتاج رایگان و فوق‌سریع ارائه می‌دهد",
+        "sonarHint": "مدل‌های Sonar شامل جستجوی بلادرنگ وب هستند",
+        "deeplFreePro": "DeepL API رایگان / حرفه‌ای",
+        "advancedParams": "پارامترهای پیشرفته API",
+        "maxTokens": "حداکثر توکن",
+        "maxOutputTokens": "حداکثر توکن خروجی",
+        "temperature": "دما",
+        "thinking": "تفکر",
+        "thinkingBudget": "بودجه تفکر",
+        "excludeParamHint": "برای حذف پارامتر از درخواست API تیک را بردارید.",
+        "thinkingOffHint": "برای حذف پارامتر تیک را بردارید. خاموش کردن تفکر، پخش زنده را فعال می‌کند.",
+        "mergeJsonHint": "در بدنه پیش‌فرض درخواست ادغام می‌شود. max_completion_tokens و temperature به‌صورت پیش‌فرض پر می‌شوند",
+        "refreshModelsHint": "به‌روزرسانی فهرست مدل‌ها",
+        "modelsAvailable": "{count} مدل در دسترس",
+        "testing": "در حال آزمایش...",
+        "testFailed": "خطا: {error}",
+        "emptyResponse": "پاسخ خالی",
+        "requestBodyMerge": "ادغام JSON بدنه درخواست",
+        "requestBodyMergeInvalid": "ادغام JSON بدنه درخواست باید یک شیء JSON باشد.",
+      },
       "testingConnection": "آزمایش اتصال…",
       "testConnection": "آزمایش اتصال",
       "getApiKey": "کلید دریافت کنید",
@@ -517,6 +554,13 @@ window.LANG_FA = {
     "lyricsProviders": {
       "title": "ارائه‌دهندگان متن آهنگ",
       "description": "ارائه‌دهندگان متن آهنگ را انتخاب کرده و اولویت‌بندی کنید. ارائه‌دهندگان بالای لیست اول امتحان می‌شوند.",
+      "spotify": {
+        "title": "قابلیت‌های ویژه Spotify",
+        "desc": "این افزونه متن ترانه را مستقیم از Spotify می‌گیرد.",
+        "reqPremium": "نیازمند Spotify Premium",
+        "reqMulti": "پشتیبانی از چند ارائه‌دهنده",
+        "reqQuality": "دقت بالا و کیفیت همگام‌سازی"
+      },
       "preferSyncDataProvider": {
         "label": "اولویت دادن به ارائه‌دهندگان دارای دادهٔ همگام‌سازی",
         "desc": "اگر برای قطعهٔ فعلی دادهٔ همگام‌سازی موجود باشد، ارائه‌دهندهٔ متن ترانهٔ مرتبط پیش از ترتیب عادی ارائه‌دهندگان امتحان می‌شود."
@@ -567,6 +611,7 @@ window.LANG_FA = {
     "exitFullscreen": "خروج از تمام صفحه"
   },
   "menu": {
+    "localLyricsApplying": "در حال اعمال",
     "translation": "تبدیل",
     "settings": "تنظیمات",
     "syncAdjust": "تنظیم هماهنگی",
@@ -1886,6 +1931,18 @@ window.LANG_FA = {
     },
     "debugTab": {
       "title": "اطلاعات دیباگ",
+      "apiEmpty": "هنوز درخواست API وجود ندارد. آهنگی پخش کنید تا اینجا نمایش داده شود.",
+      "labelTitle": "عنوان: ",
+      "labelArtist": "هنرمند: ",
+      "labelAlbum": "آلبوم: ",
+      "labelTrackId": "شناسه قطعه: ",
+      "labelProvider": "ارائه‌دهنده: ",
+      "labelType": "نوع: ",
+      "labelError": "خطا: ",
+      "labelRequest": "درخواست:",
+      "labelResponse": "پاسخ:",
+      "apiLogTitle": "گزارش درخواست‌های API ({count})",
+      "totalRequests": "مجموع: {total} درخواست",
       "subtitle": "اطلاعات برای گزارش باگ به توسعه‌دهنده",
       "currentTrack": "اطلاعات آهنگ فعلی",
       "trackInfo": "اطلاعات آهنگ",
@@ -1971,7 +2028,17 @@ window.LANG_FA = {
     "wordSupplements": "جزئیات واژه‌ها",
     "wordSupplementsLoading": "در حال بارگذاری خوانش‌ها و معنی‌ها..."
   },
+  "videoStats": {
+    "title": "آمار ویدیو",
+    "quality": "کیفیت:",
+    "resolution": "وضوح:",
+    "buffered": "بافرشده:",
+    "source": "منبع:",
+    "helperStatus": "وضعیت دستیار:",
+    "videoId": "شناسه ویدیو:"
+  },
   "videoBackground": {
+    "isrcMissing": "نمی‌توان پس‌زمینه ویدیو را بارگیری کرد چون ISRC این آهنگ تأیید نشد.",
     "loading": "در حال بارگذاری اطلاعات ویدیو...",
     "notFound": "ویدیو یافت نشد.",
     "error": "خطایی رخ داد.",
@@ -1997,6 +2064,7 @@ window.LANG_FA = {
     "videoNotDownloaded": "ویدیو دانلود نشده است"
   },
   "translator": {
+    "noProviderConfigured": "هیچ ارائه‌دهنده هوش مصنوعی پیکربندی نشده است. لطفاً در تنظیمات یکی را انتخاب کنید.",
     "missingApiKey": "کلید Gemini API تنظیم نشده است. لطفاً در تنظیمات کلید API را وارد کنید.",
     "invalidApiKeyFormat": "فرمت کلید API نادرست است. کلید Gemini API باید با 'AIza' شروع شود.",
     "invalidRequestFormat": "فرمت درخواست نادرست است. کلید API را بررسی کنید.",
@@ -2011,6 +2079,7 @@ window.LANG_FA = {
     "failedPrefix": "ترجمه ناموفق"
   },
   "utils": {
+    "unknownErrorShort": "خطای ناشناخته",
     "allUrlsFailed": "دریافت اطلاعات نسخه از تمام URLها ناموفق بود",
     "invalidVersionFormat": "فرمت نسخه نامعتبر",
     "unknownError": "خطای ناشناخته",
@@ -2030,6 +2099,7 @@ window.LANG_FA = {
     "unsynced": "متن ساده"
   },
   "communityVideo": {
+    "isrcMissing": "نمی‌توان ویدیوی جامعه را ثبت کرد چون ISRC این آهنگ تأیید نشد.",
     "loginRequired": "برای ثبت ویدیوهای انجمن باید وارد دیسکورد شوید.",
     "title": "پیشنهاد ویدیو انجمن",
     "loading": "در حال بارگذاری لیست ویدیو...",
@@ -2194,6 +2264,14 @@ window.LANG_FA = {
     "noSelection": "متن را انتخاب کنید"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ متن ترانه اینجا",
+      "line1": "خط اول",
+      "line2": "خط در حال پخش",
+      "line3": "خط بعدی...",
+      "mainScreen": "صفحه اصلی",
+      "nowPlaying": "در حال پخش"
+    },
     "welcome": {
       "title": "به ivLyrics خوش آمدید!",
       "subtitle": "از متن‌های زیبا در Spotify لذت ببرید",
@@ -2643,6 +2721,13 @@ window.LANG_FA = {
     "dismissAll": "بستن همه"
   },
   "syncCreator": {
+    "isrcMissingUse": "داده همگام‌سازی در دسترس نیست چون ISRC این آهنگ تأیید نشد.",
+    "isrcMissingRegister": "نمی‌توان داده همگام‌سازی را ثبت کرد چون ISRC این آهنگ تأیید نشد.",
+    "scoreConflict": "با یک نشست ویرایش دیگر تداخل دارد. پیش‌نویس شما حفظ شده است. ویرایشگر دیگر را ببندید و این کار را دوباره باز کنید.",
+    "lrclibBadgeInstrumental": "بی‌کلام",
+    "sourcePanel": "منبع",
+    "shortcutsTitle": "میانبرهای سازنده همگام‌سازی",
+    "notAvailable": "SyncDataCreator در دسترس نیست",
     "loginRequired": "برای ساخت همگام‌سازی کارائوکه باید وارد دیسکورد شوید.",
     "title": "ایجاد سینک کارائوکه",
     "syncGranularityLabel": "واحد همگام‌سازی",

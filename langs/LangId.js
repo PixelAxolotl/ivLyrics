@@ -141,6 +141,14 @@ window.LANG_ID = {
     "downloadDesc": "Unduh aplikasi overlay jika belum terinstal"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "Warna {label}",
+      "hexValue": "Nilai HEX {label}"
+    },
+    "videoShowWhenPaused": {
+      "label": "Tampilkan video saat dijeda",
+      "desc": "Tetap tampilkan bingkai video yang membeku selama pemutaran dijeda."
+    },
     "language": {
       "label": "Bahasa",
       "desc": "Pilih bahasa ekstensi"
@@ -495,6 +503,35 @@ window.LANG_ID = {
       "selectModel": "Pilih dari daftar model",
       "loadingModels": "Memuat model…",
       "modelsUnavailable": "Daftar model tidak dapat dimuat. Anda dapat memasukkan ID model secara manual.",
+      "addonUi": {
+        "keyRotationHint": "Masukkan satu kunci atau array JSON untuk rotasi",
+        "getApiKeyFree": "Dapatkan Kunci API (Gratis)",
+        "enterApiKeyFirst": "Masukkan kunci API terlebih dahulu",
+        "selectModelPlaceholder": "-- Pilih model --",
+        "customModel": "Model Kustom",
+        "customModelId": "ID Model Kustom",
+        "modelIdPlaceholder": "Masukkan ID model",
+        "geminiCompatibleHint": "Ubah untuk menggunakan API yang kompatibel dengan Gemini",
+        "groqFreeHint": "Groq menyediakan inferensi gratis yang sangat cepat",
+        "sonarHint": "Model Sonar mencakup pencarian web waktu nyata",
+        "deeplFreePro": "DeepL API gratis / pro",
+        "advancedParams": "Parameter API Lanjutan",
+        "maxTokens": "Token Maks",
+        "maxOutputTokens": "Token Output Maks",
+        "temperature": "Suhu",
+        "thinking": "Penalaran",
+        "thinkingBudget": "Anggaran penalaran",
+        "excludeParamHint": "Hapus centang untuk mengecualikan parameter dari permintaan API.",
+        "thinkingOffHint": "Hapus centang untuk mengecualikan parameter. Menonaktifkan penalaran mengaktifkan streaming waktu nyata.",
+        "mergeJsonHint": "Digabungkan ke isi permintaan default. max_completion_tokens dan temperature diisi secara default",
+        "refreshModelsHint": "Segarkan daftar model",
+        "modelsAvailable": "{count} model tersedia",
+        "testing": "Menguji...",
+        "testFailed": "Kesalahan: {error}",
+        "emptyResponse": "Respons kosong",
+        "requestBodyMerge": "JSON Gabungan Isi Permintaan",
+        "requestBodyMergeInvalid": "JSON Gabungan Isi Permintaan harus berupa objek JSON.",
+      },
       "testingConnection": "Uji koneksi…",
       "testConnection": "Uji koneksi",
       "getApiKey": "Dapatkan Kunci",
@@ -517,6 +554,13 @@ window.LANG_ID = {
     "lyricsProviders": {
       "title": "Penyedia Lirik",
       "description": "Pilih dan prioritaskan penyedia lirik. Penyedia di urutan teratas akan dicoba terlebih dahulu.",
+      "spotify": {
+        "title": "Fitur Spotify Premium",
+        "desc": "Addon ini mengambil lirik langsung dari Spotify.",
+        "reqPremium": "Memerlukan Spotify Premium",
+        "reqMulti": "Mendukung banyak penyedia",
+        "reqQuality": "Akurasi tinggi & kualitas sinkron"
+      },
       "preferSyncDataProvider": {
         "label": "Prioritaskan penyedia dengan data sinkronisasi",
         "desc": "Jika data sinkronisasi tersedia untuk lagu saat ini, coba penyedia lirik yang cocok sebelum urutan penyedia biasa."
@@ -567,6 +611,7 @@ window.LANG_ID = {
     "exitFullscreen": "Keluar Layar Penuh"
   },
   "menu": {
+    "localLyricsApplying": "Menerapkan",
     "translation": "Konversi",
     "settings": "Pengaturan",
     "syncAdjust": "Atur Sinkronisasi",
@@ -1886,6 +1931,18 @@ window.LANG_ID = {
     },
     "debugTab": {
       "title": "Info Debug",
+      "apiEmpty": "Belum ada permintaan API. Putar lagu untuk melihatnya di sini.",
+      "labelTitle": "Judul: ",
+      "labelArtist": "Artis: ",
+      "labelAlbum": "Album: ",
+      "labelTrackId": "ID Trek: ",
+      "labelProvider": "Penyedia: ",
+      "labelType": "Jenis: ",
+      "labelError": "Kesalahan: ",
+      "labelRequest": "PERMINTAAN:",
+      "labelResponse": "RESPONS:",
+      "apiLogTitle": "Log Permintaan API ({count})",
+      "totalRequests": "Total: {total} permintaan",
       "subtitle": "Info untuk diberikan ke pengembang saat melaporkan bug",
       "currentTrack": "Info Trek Saat Ini",
       "trackInfo": "Info Trek",
@@ -1971,7 +2028,17 @@ window.LANG_ID = {
     "wordSupplements": "Detail kata",
     "wordSupplementsLoading": "Memuat bacaan & glosa..."
   },
+  "videoStats": {
+    "title": "Statistik Video",
+    "quality": "Kualitas:",
+    "resolution": "Resolusi:",
+    "buffered": "Terbuffer:",
+    "source": "Sumber:",
+    "helperStatus": "Status Helper:",
+    "videoId": "ID Video:"
+  },
   "videoBackground": {
+    "isrcMissing": "Tidak dapat memuat latar video karena ISRC lagu ini tidak dapat dikonfirmasi.",
     "loading": "Memuat info video...",
     "notFound": "Video tidak ditemukan.",
     "error": "Terjadi kesalahan.",
@@ -1997,6 +2064,7 @@ window.LANG_ID = {
     "videoNotDownloaded": "Video belum diunduh"
   },
   "translator": {
+    "noProviderConfigured": "Belum ada penyedia AI yang dikonfigurasi. Silakan pilih di pengaturan.",
     "missingApiKey": "Kunci API Gemini belum diatur. Silakan masukkan Kunci API di pengaturan.",
     "invalidApiKeyFormat": "Format Kunci API tidak valid. Kunci API Gemini harus dimulai dengan 'AIza'.",
     "invalidRequestFormat": "Format permintaan tidak valid. Periksa Kunci API Anda.",
@@ -2011,6 +2079,7 @@ window.LANG_ID = {
     "failedPrefix": "Gagal Menerjemahkan"
   },
   "utils": {
+    "unknownErrorShort": "Kesalahan tak dikenal",
     "allUrlsFailed": "Gagal mendapatkan info versi dari semua URL",
     "invalidVersionFormat": "Format versi tidak valid",
     "unknownError": "Kesalahan tidak diketahui",
@@ -2030,6 +2099,7 @@ window.LANG_ID = {
     "unsynced": "Lirik Umum"
   },
   "communityVideo": {
+    "isrcMissing": "Tidak dapat mendaftarkan video komunitas karena ISRC lagu ini tidak dapat dikonfirmasi.",
     "loginRequired": "Login Discord diperlukan untuk mendaftarkan video komunitas.",
     "title": "Rekomendasi Video Komunitas",
     "loading": "Memuat daftar video...",
@@ -2194,6 +2264,14 @@ window.LANG_ID = {
     "noSelection": "Pilih lirik terlebih dahulu"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ Lirik di sini",
+      "line1": "Baris pertama",
+      "line2": "Baris yang diputar",
+      "line3": "Baris berikutnya...",
+      "mainScreen": "Layar utama",
+      "nowPlaying": "Sedang diputar"
+    },
     "welcome": {
       "title": "Selamat Datang di ivLyrics!",
       "subtitle": "Nikmati lirik indah di Spotify",
@@ -2643,6 +2721,13 @@ window.LANG_ID = {
     "dismissAll": "Tutup Semua"
   },
   "syncCreator": {
+    "isrcMissingUse": "Data sinkron tidak tersedia karena ISRC lagu ini tidak dapat dikonfirmasi.",
+    "isrcMissingRegister": "Tidak dapat mendaftarkan data sinkron karena ISRC lagu ini tidak dapat dikonfirmasi.",
+    "scoreConflict": "Berkonflik dengan sesi pengeditan lain. Draf Anda aman. Tutup editor lain dan buka kembali tugas ini.",
+    "lrclibBadgeInstrumental": "Instrumental",
+    "sourcePanel": "Sumber",
+    "shortcutsTitle": "Pintasan pembuat sinkron",
+    "notAvailable": "SyncDataCreator tidak tersedia",
     "loginRequired": "Login Discord diperlukan untuk membuat sinkronisasi karaoke.",
     "title": "Buat Sinkronisasi Karaoke",
     "syncGranularityLabel": "Satuan sinkronisasi",

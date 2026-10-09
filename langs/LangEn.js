@@ -141,6 +141,14 @@ window.LANG_EN = {
     "downloadDesc": "Download the overlay app if it is not installed"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "{label} color",
+      "hexValue": "{label} HEX value"
+    },
+    "videoShowWhenPaused": {
+      "label": "Show video when paused",
+      "desc": "Keep the frozen video frame visible while playback is paused."
+    },
     "language": {
       "label": "Language",
       "desc": "Select the language for the extension"
@@ -495,6 +503,35 @@ window.LANG_EN = {
       "selectModel": "Choose from model list",
       "loadingModels": "Loading models…",
       "modelsUnavailable": "Could not load the model list. You can enter a model ID manually.",
+      "addonUi": {
+        "keyRotationHint": "Enter a single key or JSON array for rotation",
+        "getApiKeyFree": "Get API Key (Free)",
+        "enterApiKeyFirst": "Enter API key first",
+        "selectModelPlaceholder": "-- Select a model --",
+        "customModel": "Custom Model",
+        "customModelId": "Custom Model ID",
+        "modelIdPlaceholder": "Enter a model ID",
+        "geminiCompatibleHint": "Change this to use Gemini-compatible APIs",
+        "groqFreeHint": "Groq provides free, ultra-fast inference",
+        "sonarHint": "Sonar models include real-time web search",
+        "deeplFreePro": "DeepL API Free / Pro",
+        "advancedParams": "Advanced API Parameters",
+        "maxTokens": "Max Tokens",
+        "maxOutputTokens": "Max Output Tokens",
+        "temperature": "Temperature",
+        "thinking": "Thinking",
+        "thinkingBudget": "Thinking Budget",
+        "excludeParamHint": "Uncheck to exclude parameter from API request.",
+        "thinkingOffHint": "Uncheck to exclude parameter from API request. Thinking OFF enables real-time streaming.",
+        "mergeJsonHint": "Merged into the default request body. max_completion_tokens and temperature are filled in by default",
+        "refreshModelsHint": "Refresh model list",
+        "modelsAvailable": "{count} models available",
+        "testing": "Testing...",
+        "testFailed": "Error: {error}",
+        "emptyResponse": "Empty response",
+        "requestBodyMerge": "Request Body Merge JSON",
+        "requestBodyMergeInvalid": "Request Body Merge JSON must be a JSON object.",
+      },
       "testingConnection": "Test Connection…",
       "testConnection": "Test Connection",
       "getApiKey": "Get Key",
@@ -517,6 +554,13 @@ window.LANG_EN = {
     "lyricsProviders": {
       "title": "Lyrics Providers",
       "description": "Select and prioritize lyrics providers. Providers at the top are tried first.",
+      "spotify": {
+        "title": "Spotify Premium Features",
+        "desc": "This addon retrieves lyrics directly from Spotify.",
+        "reqPremium": "Requires Spotify Premium",
+        "reqMulti": "Supports multiple providers",
+        "reqQuality": "High accuracy & sync quality"
+      },
       "preferSyncDataProvider": {
         "label": "Prioritize providers with ivLyrics Sync data",
         "desc": "When OpenDB has ivLyrics Sync data for the current track, try its matching lyrics provider before the normal provider order."
@@ -567,6 +611,7 @@ window.LANG_EN = {
     "exitFullscreen": "Exit Fullscreen"
   },
   "menu": {
+    "localLyricsApplying": "Applying",
     "translation": "Convert",
     "settings": "Settings",
     "syncAdjust": "Adjust Sync",
@@ -1886,6 +1931,18 @@ window.LANG_EN = {
     },
     "debugTab": {
       "title": "Debug Info",
+      "apiEmpty": "No API requests yet. Play a song to see them here.",
+      "labelTitle": "Title: ",
+      "labelArtist": "Artist: ",
+      "labelAlbum": "Album: ",
+      "labelTrackId": "Track ID: ",
+      "labelProvider": "Provider: ",
+      "labelType": "Type: ",
+      "labelError": "Error: ",
+      "labelRequest": "REQUEST:",
+      "labelResponse": "RESPONSE:",
+      "apiLogTitle": "API Request Log ({count})",
+      "totalRequests": "Total: {total} requests",
       "subtitle": "Information to send to developer when reporting bugs",
       "currentTrack": "Current Track Info",
       "trackInfo": "Track Info",
@@ -1971,7 +2028,17 @@ window.LANG_EN = {
     "wordSupplements": "Word details",
     "wordSupplementsLoading": "Loading word readings & glosses..."
   },
+  "videoStats": {
+    "title": "Video Stats",
+    "quality": "Quality:",
+    "resolution": "Resolution:",
+    "buffered": "Buffered:",
+    "source": "Source:",
+    "helperStatus": "Helper Status:",
+    "videoId": "Video ID:"
+  },
   "videoBackground": {
+    "isrcMissing": "Unable to load the video background because this song's ISRC cannot be confirmed.",
     "loading": "Loading video info...",
     "notFound": "Video not found.",
     "error": "An error occurred.",
@@ -1997,6 +2064,7 @@ window.LANG_EN = {
     "videoNotDownloaded": "Video not downloaded"
   },
   "translator": {
+    "noProviderConfigured": "No AI provider is configured. Please select an AI provider in settings.",
     "missingApiKey": "Gemini API key is not set. Please enter API key in settings.",
     "invalidApiKeyFormat": "Invalid API key format. Gemini API key must start with 'AIza'.",
     "invalidRequestFormat": "Invalid request format. Please check your API key.",
@@ -2011,6 +2079,7 @@ window.LANG_EN = {
     "failedPrefix": "Translation Failed"
   },
   "utils": {
+    "unknownErrorShort": "Unknown error",
     "allUrlsFailed": "Failed to get version info from all URLs",
     "invalidVersionFormat": "Invalid version format",
     "unknownError": "Unknown error",
@@ -2030,6 +2099,7 @@ window.LANG_EN = {
     "unsynced": "Plain Text"
   },
   "communityVideo": {
+    "isrcMissing": "Cannot register the community video because this song's ISRC cannot be confirmed.",
     "loginRequired": "Discord login is required to register community videos.",
     "title": "Community Video Recommendations",
     "loading": "Loading video list...",
@@ -2194,6 +2264,14 @@ window.LANG_EN = {
     "noSelection": "Please select lyrics"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ Lyrics here",
+      "line1": "First lyric",
+      "line2": "Currently playing lyric",
+      "line3": "Next lyric...",
+      "mainScreen": "Main screen",
+      "nowPlaying": "Now playing"
+    },
     "welcome": {
       "title": "Welcome to ivLyrics!",
       "subtitle": "Enjoy beautiful lyrics on Spotify",
@@ -2643,6 +2721,13 @@ window.LANG_EN = {
     "dismissAll": "Close All"
   },
   "syncCreator": {
+    "isrcMissingUse": "Sync-data is unavailable because this song's ISRC cannot be confirmed.",
+    "isrcMissingRegister": "Cannot register sync-data because this song's ISRC cannot be confirmed.",
+    "scoreConflict": "Conflicts with another editing session. Your current draft is preserved. Close the other editor and reopen this task.",
+    "lrclibBadgeInstrumental": "Instrumental",
+    "sourcePanel": "Source",
+    "shortcutsTitle": "Sync Creator Shortcuts",
+    "notAvailable": "SyncDataCreator not available",
     "loginRequired": "Discord login is required to create karaoke sync.",
     "title": "Create Karaoke Sync",
     "syncGranularityLabel": "Sync unit",

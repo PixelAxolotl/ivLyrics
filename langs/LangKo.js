@@ -141,6 +141,14 @@ window.LANG_KO = {
     "downloadDesc": "오버레이 앱이 설치되어 있지 않다면 다운로드하세요"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "{label} 색상 선택",
+      "hexValue": "{label} HEX 값"
+    },
+    "videoShowWhenPaused": {
+      "label": "일시정지 중에도 영상 표시",
+      "desc": "재생이 일시정지된 동안 멈춘 영상 프레임을 계속 표시합니다."
+    },
     "language": {
       "label": "언어",
       "desc": "확장 프로그램의 언어를 선택합니다"
@@ -495,6 +503,35 @@ window.LANG_KO = {
       "selectModel": "모델 목록에서 선택",
       "loadingModels": "모델 불러오는 중…",
       "modelsUnavailable": "모델 목록을 불러오지 못했습니다. 모델 ID를 직접 입력할 수 있습니다.",
+      "addonUi": {
+        "keyRotationHint": "단일 키 또는 JSON 배열로 입력하세요",
+        "getApiKeyFree": "API 키 받기 (무료)",
+        "enterApiKeyFirst": "먼저 API 키를 입력하세요",
+        "selectModelPlaceholder": "-- 모델을 선택하세요 --",
+        "customModel": "사용자 지정 모델",
+        "customModelId": "사용자 지정 모델 ID",
+        "modelIdPlaceholder": "모델 ID를 입력하세요",
+        "geminiCompatibleHint": "Gemini 호환 API를 사용하려면 변경하세요",
+        "groqFreeHint": "Groq는 무료로 초고속 추론을 제공합니다",
+        "sonarHint": "Sonar 모델은 실시간 웹 검색을 포함합니다",
+        "deeplFreePro": "DeepL API 무료 / 유료",
+        "advancedParams": "고급 API 매개변수",
+        "maxTokens": "최대 토큰",
+        "maxOutputTokens": "최대 출력 토큰",
+        "temperature": "온도",
+        "thinking": "사고 과정",
+        "thinkingBudget": "사고 예산",
+        "excludeParamHint": "체크를 해제하면 API 요청에서 매개변수가 제외됩니다.",
+        "thinkingOffHint": "체크를 해제하면 API 요청에서 매개변수가 제외됩니다. 사고 과정을 끄면 실시간 스트리밍이 켜집니다.",
+        "mergeJsonHint": "기본 요청 본문에 병합됩니다. max_completion_tokens와 temperature는 기본값으로 채워집니다",
+        "refreshModelsHint": "모델 목록 새로고침",
+        "modelsAvailable": "{count}개의 모델 사용 가능",
+        "testing": "테스트 중...",
+        "testFailed": "오류: {error}",
+        "emptyResponse": "빈 응답",
+        "requestBodyMerge": "요청 본문 병합 JSON",
+        "requestBodyMergeInvalid": "요청 본문 병합 JSON은 JSON 객체여야 합니다.",
+      },
       "testingConnection": "연결 테스트…",
       "testConnection": "연결 테스트",
       "getApiKey": "키 받기",
@@ -517,6 +554,13 @@ window.LANG_KO = {
     "lyricsProviders": {
       "title": "가사 제공자",
       "description": "가사를 가져올 제공자를 선택하고 우선순위를 설정합니다. 위에 있는 제공자부터 먼저 시도합니다.",
+      "spotify": {
+        "title": "Spotify 프리미엄 기능",
+        "desc": "이 애드온은 Spotify에서 직접 가사를 가져옵니다.",
+        "reqPremium": "Spotify 프리미엄 필요",
+        "reqMulti": "여러 제공자 지원",
+        "reqQuality": "높은 정확도와 싱크 품질"
+      },
       "preferSyncDataProvider": {
         "label": "ivLyrics Sync 데이터가 있는 제공자 우선",
         "desc": "OpenDB에 현재 곡의 ivLyrics Sync 데이터가 있으면 해당 가사 제공자를 일반 우선순위보다 먼저 시도합니다."
@@ -567,6 +611,7 @@ window.LANG_KO = {
     "exitFullscreen": "전체화면 종료"
   },
   "menu": {
+    "localLyricsApplying": "적용 중",
     "translation": "변환",
     "settings": "설정",
     "syncAdjust": "싱크 조절",
@@ -1886,6 +1931,18 @@ window.LANG_KO = {
     },
     "debugTab": {
       "title": "디버그 정보",
+      "apiEmpty": "아직 API 요청이 없습니다. 곡을 재생하면 여기에 표시됩니다.",
+      "labelTitle": "제목: ",
+      "labelArtist": "아티스트: ",
+      "labelAlbum": "앨범: ",
+      "labelTrackId": "트랙 ID: ",
+      "labelProvider": "제공자: ",
+      "labelType": "유형: ",
+      "labelError": "오류: ",
+      "labelRequest": "요청:",
+      "labelResponse": "응답:",
+      "apiLogTitle": "API 요청 로그 ({count})",
+      "totalRequests": "전체: {total}개 요청",
       "subtitle": "버그 리포트 시 개발자에게 전달할 정보입니다",
       "currentTrack": "현재 트랙 정보",
       "trackInfo": "트랙 정보",
@@ -1971,7 +2028,17 @@ window.LANG_KO = {
     "wordSupplements": "단어 상세",
     "wordSupplementsLoading": "단어 읽기와 뜻을 불러오는 중..."
   },
+  "videoStats": {
+    "title": "비디오 통계",
+    "quality": "품질:",
+    "resolution": "해상도:",
+    "buffered": "버퍼링:",
+    "source": "소스:",
+    "helperStatus": "헬퍼 상태:",
+    "videoId": "비디오 ID:"
+  },
   "videoBackground": {
+    "isrcMissing": "이 곡의 ISRC를 확인할 수 없어 영상 배경을 불러올 수 없습니다.",
     "loading": "동영상 정보를 불러오는 중...",
     "notFound": "동영상을 찾을 수 없습니다.",
     "error": "오류가 발생했습니다.",
@@ -1997,6 +2064,7 @@ window.LANG_KO = {
     "videoNotDownloaded": "영상이 다운로드되지 않았습니다"
   },
   "translator": {
+    "noProviderConfigured": "AI 제공자가 설정되지 않았습니다. 설정에서 AI 제공자를 선택해주세요.",
     "missingApiKey": "Gemini API 키가 설정되지 않았습니다. 설정에서 API 키를 입력해주세요.",
     "invalidApiKeyFormat": "올바르지 않은 API 키 형식입니다. Gemini API 키는 'AIza'로 시작해야 합니다.",
     "invalidRequestFormat": "요청 형식이 올바르지 않습니다. API 키를 확인해주세요.",
@@ -2011,6 +2079,7 @@ window.LANG_KO = {
     "failedPrefix": "번역 실패"
   },
   "utils": {
+    "unknownErrorShort": "알 수 없는 오류",
     "allUrlsFailed": "모든 URL에서 버전 정보를 가져오지 못했습니다",
     "invalidVersionFormat": "잘못된 버전 형식",
     "unknownError": "알 수 없는 오류",
@@ -2030,6 +2099,7 @@ window.LANG_KO = {
     "unsynced": "일반가사"
   },
   "communityVideo": {
+    "isrcMissing": "이 곡의 ISRC를 확인할 수 없어 커뮤니티 영상을 등록할 수 없습니다.",
     "loginRequired": "커뮤니티 영상 등록은 Discord 로그인이 필요합니다.",
     "title": "커뮤니티 영상 추천",
     "loading": "영상 목록 불러오는 중...",
@@ -2194,6 +2264,14 @@ window.LANG_KO = {
     "noSelection": "가사를 선택하세요"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ 가사가 여기에",
+      "line1": "첫 번째 가사",
+      "line2": "현재 재생 중인 가사",
+      "line3": "다음 가사...",
+      "mainScreen": "메인 화면",
+      "nowPlaying": "지금 재생 중"
+    },
     "welcome": {
       "title": "ivLyrics에 오신 것을 환영합니다!",
       "subtitle": "Spotify에서 아름다운 가사를 즐기세요",
@@ -2643,6 +2721,13 @@ window.LANG_KO = {
     "dismissAll": "모두 닫기"
   },
   "syncCreator": {
+    "isrcMissingUse": "이 곡의 ISRC를 확인할 수 없어 sync-data를 사용할 수 없습니다.",
+    "isrcMissingRegister": "이 곡의 ISRC를 확인할 수 없어 sync-data를 등록할 수 없습니다.",
+    "scoreConflict": "다른 작업 상태와 충돌했습니다. 현재 초안은 보존됩니다. 다른 편집기를 닫고 이 작업을 다시 열어 주세요.",
+    "lrclibBadgeInstrumental": "연주곡",
+    "sourcePanel": "소스",
+    "shortcutsTitle": "싱크 생성기 단축키",
+    "notAvailable": "SyncDataCreator를 사용할 수 없습니다",
     "loginRequired": "노래방 싱크 생성은 Discord 로그인이 필요합니다.",
     "title": "노래방 싱크 생성",
     "syncGranularityLabel": "싱크 단위",

@@ -141,6 +141,14 @@ window.LANG_BN = {
     "downloadDesc": "ওভারলে অ্যাপ ইনস্টল করা না থাকলে ডাউনলোড করুন"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "{label} রং",
+      "hexValue": "{label} HEX মান"
+    },
+    "videoShowWhenPaused": {
+      "label": "বিরতিতে ভিডিও দেখান",
+      "desc": "প্লেব্যাক বিরত থাকাকালীন জমে থাকা ভিডিও ফ্রেম দৃশ্যমান রাখুন।"
+    },
     "language": {
       "label": "ভাষা",
       "desc": "এক্সটেনশনের ভাষা নির্বাচন করুন"
@@ -495,6 +503,35 @@ window.LANG_BN = {
       "selectModel": "মডেল তালিকা থেকে বাছুন",
       "loadingModels": "মডেল লোড হচ্ছে…",
       "modelsUnavailable": "মডেলের তালিকা লোড করা যায়নি। আপনি ম্যানুয়ালি মডেল ID লিখতে পারেন।",
+      "addonUi": {
+        "keyRotationHint": "ঘূর্ণনের জন্য একটি কী বা JSON অ্যারে লিখুন",
+        "getApiKeyFree": "API কী নিন (বিনামূল্যে)",
+        "enterApiKeyFirst": "আগে API কী লিখুন",
+        "selectModelPlaceholder": "-- মডেল বেছে নিন --",
+        "customModel": "কাস্টম মডেল",
+        "customModelId": "কাস্টম মডেল ID",
+        "modelIdPlaceholder": "মডেল ID লিখুন",
+        "geminiCompatibleHint": "Gemini-সামঞ্জস্যপূর্ণ API ব্যবহার করতে বদলান",
+        "groqFreeHint": "Groq বিনামূল্যে অতি-দ্রুত ইনফারেন্স দেয়",
+        "sonarHint": "Sonar মডেলে রিয়েল-টাইম ওয়েব অনুসন্ধান থাকে",
+        "deeplFreePro": "DeepL API ফ্রি / প্রো",
+        "advancedParams": "উন্নত API প্যারামিটার",
+        "maxTokens": "সর্বোচ্চ টোকেন",
+        "maxOutputTokens": "সর্বোচ্চ আউটপুট টোকেন",
+        "temperature": "তাপমাত্রা",
+        "thinking": "চিন্তা",
+        "thinkingBudget": "চিন্তা বাজেট",
+        "excludeParamHint": "API অনুরোধ থেকে প্যারামিটার বাদ দিতে আনচেক করুন।",
+        "thinkingOffHint": "API অনুরোধ থেকে বাদ দিতে আনচেক করুন। চিন্তা বন্ধ করলে রিয়েল-টাইম স্ট্রিমিং চালু হয়।",
+        "mergeJsonHint": "ডিফল্ট অনুরোধ বডিতে একীভূত হয়। max_completion_tokens ও temperature ডিফল্টভাবে পূরণ হয়",
+        "refreshModelsHint": "মডেল তালিকা রিফ্রেশ করুন",
+        "modelsAvailable": "{count}টি মডেল উপলব্ধ",
+        "testing": "পরীক্ষা চলছে...",
+        "testFailed": "ত্রুটি: {error}",
+        "emptyResponse": "খালি প্রতিক্রিয়া",
+        "requestBodyMerge": "অনুরোধ বডি মার্জ JSON",
+        "requestBodyMergeInvalid": "অনুরোধ বডি মার্জ JSON অবশ্যই একটি JSON অবজেক্ট হতে হবে।",
+      },
       "testingConnection": "সংযোগ পরীক্ষা করুন…",
       "testConnection": "সংযোগ পরীক্ষা করুন",
       "getApiKey": "পুনরায় তৈরি করুন কী",
@@ -517,6 +554,13 @@ window.LANG_BN = {
     "lyricsProviders": {
       "title": "লিরিক্স প্রদানকারী",
       "description": "লিরিক্স প্রদানকারী নির্বাচন করুন এবং অগ্রাধিকার সেট করুন। তালিকার উপরের প্রদানকারীগুলো আগে ব্যবহার করা হবে।",
+      "spotify": {
+        "title": "Spotify প্রিমিয়াম বৈশিষ্ট্য",
+        "desc": "এই অ্যাডঅন Spotify থেকে সরাসরি গানের কথা আনে।",
+        "reqPremium": "Spotify Premium প্রয়োজন",
+        "reqMulti": "একাধিক প্রদানকারী সমর্থিত",
+        "reqQuality": "উচ্চ নির্ভুলতা ও সিঙ্ক গুণমান"
+      },
       "preferSyncDataProvider": {
         "label": "সিঙ্ক ডেটাসহ প্রদানকারীকে অগ্রাধিকার দিন",
         "desc": "বর্তমান গানের জন্য সিঙ্ক ডেটা থাকলে, স্বাভাবিক প্রদানকারী ক্রমের আগে সংশ্লিষ্ট গানের কথা প্রদানকারীকে চেষ্টা করা হবে।"
@@ -567,6 +611,7 @@ window.LANG_BN = {
     "exitFullscreen": "ফুলস্ক্রিন থেকে বের হন"
   },
   "menu": {
+    "localLyricsApplying": "প্রয়োগ চলছে",
     "translation": "রূপান্তর",
     "settings": "সেটিংস",
     "syncAdjust": "সিঙ্ক সমন্বয়",
@@ -1886,6 +1931,18 @@ window.LANG_BN = {
     },
     "debugTab": {
       "title": "ডিবাগ তথ্য",
+      "apiEmpty": "এখনও কোনো API অনুরোধ নেই। গান চালালে এখানে দেখা যাবে।",
+      "labelTitle": "শিরোনাম: ",
+      "labelArtist": "শিল্পী: ",
+      "labelAlbum": "অ্যালবাম: ",
+      "labelTrackId": "ট্র্যাক ID: ",
+      "labelProvider": "প্রদানকারী: ",
+      "labelType": "ধরন: ",
+      "labelError": "ত্রুটি: ",
+      "labelRequest": "অনুরোধ:",
+      "labelResponse": "প্রতিক্রিয়া:",
+      "apiLogTitle": "API অনুরোধ লগ ({count})",
+      "totalRequests": "মোট: {total}টি অনুরোধ",
       "subtitle": "বাগ রিপোর্ট করার সময় ডেভেলপারকে দেওয়ার তথ্য",
       "currentTrack": "বর্তমান ট্র্যাক তথ্য",
       "trackInfo": "ট্র্যাক তথ্য",
@@ -1971,7 +2028,17 @@ window.LANG_BN = {
     "wordSupplements": "শব্দের বিবরণ",
     "wordSupplementsLoading": "শব্দ উচ্চারণ ও অর্থ লোড হচ্ছে..."
   },
+  "videoStats": {
+    "title": "ভিডিও পরিসংখ্যান",
+    "quality": "মান:",
+    "resolution": "রেজোলিউশন:",
+    "buffered": "বাফারকৃত:",
+    "source": "উৎস:",
+    "helperStatus": "হেল্পার অবস্থা:",
+    "videoId": "ভিডিও ID:"
+  },
   "videoBackground": {
+    "isrcMissing": "এই গানের ISRC নিশ্চিত করা যায়নি বলে ভিডিও পটভূমি লোড করা যায়নি।",
     "loading": "ভিডিও তথ্য লোড হচ্ছে...",
     "notFound": "ভিডিও পাওয়া যায়নি।",
     "error": "ত্রুটি ঘটেছে।",
@@ -1997,6 +2064,7 @@ window.LANG_BN = {
     "videoNotDownloaded": "ভিডিও ডাউনলোড করা হয়নি"
   },
   "translator": {
+    "noProviderConfigured": "কোনো AI প্রদানকারী কনফিগার করা হয়নি। সেটিংসে AI প্রদানকারী বেছে নিন।",
     "missingApiKey": "Gemini API কি সেট করা নেই। সেটিংসে API কি লিখুন।",
     "invalidApiKeyFormat": "API কি ফরম্যাট সঠিক নয়। Gemini API কি 'AIza' দিয়ে শুরু হওয়া উচিত।",
     "invalidRequestFormat": "অনুরোধের ফরম্যাট সঠিক নয়। API কি চেক করুন।",
@@ -2011,6 +2079,7 @@ window.LANG_BN = {
     "failedPrefix": "অনুবাদ ব্যর্থ"
   },
   "utils": {
+    "unknownErrorShort": "অজানা ত্রুটি",
     "allUrlsFailed": "কোনো URL থেকেই সংস্করণ তথ্য পাওয়া যায়নি",
     "invalidVersionFormat": "ভুল সংস্করণ ফরম্যাট",
     "unknownError": "অজানা ত্রুটি",
@@ -2030,6 +2099,7 @@ window.LANG_BN = {
     "unsynced": "সাধারণ লিরিক্স"
   },
   "communityVideo": {
+    "isrcMissing": "এই গানের ISRC নিশ্চিত করা যায়নি বলে কমিউনিটি ভিডিও নিবন্ধন করা যায়নি।",
     "loginRequired": "কমিউনিটি ভিডিও নিবন্ধন করতে Discord-এ লগইন করতে হবে।",
     "title": "কমিউনিটি ভিডিও সুপারিশ",
     "loading": "ভিডিও তালিকা লোড হচ্ছে...",
@@ -2194,6 +2264,14 @@ window.LANG_BN = {
     "noSelection": "লিরিক্স নির্বাচন করুন"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ গানের কথা এখানে",
+      "line1": "প্রথম লাইন",
+      "line2": "চলমান লাইন",
+      "line3": "পরের লাইন...",
+      "mainScreen": "প্রধান স্ক্রিন",
+      "nowPlaying": "এখন বাজছে"
+    },
     "welcome": {
       "title": "ivLyrics-এ স্বাগতম!",
       "subtitle": "Spotify-তে সুন্দর লিরিক্স উপভোগ করুন",
@@ -2643,6 +2721,13 @@ window.LANG_BN = {
     "dismissAll": "সব বন্ধ করুন"
   },
   "syncCreator": {
+    "isrcMissingUse": "এই গানের ISRC নিশ্চিত করা যায়নি বলে সিঙ্ক-ডেটা উপলব্ধ নয়।",
+    "isrcMissingRegister": "এই গানের ISRC নিশ্চিত করা যায়নি বলে সিঙ্ক-ডেটা নিবন্ধন করা যায়নি।",
+    "scoreConflict": "অন্য সম্পাদনা সেশনের সাথে সাংঘর্ষিক। আপনার খসড়া সংরক্ষিত আছে। অন্য সম্পাদক বন্ধ করে এই কাজটি আবার খুলুন।",
+    "lrclibBadgeInstrumental": "বাদ্যযন্ত্র",
+    "sourcePanel": "উৎস",
+    "shortcutsTitle": "সিঙ্ক নির্মাতা শর্টকাট",
+    "notAvailable": "SyncDataCreator উপলব্ধ নয়",
     "loginRequired": "কারাওকে সিঙ্ক তৈরি করতে Discord-এ লগইন করতে হবে।",
     "title": "কারাওকে সিঙ্ক তৈরি",
     "syncGranularityLabel": "সিঙ্ক একক",

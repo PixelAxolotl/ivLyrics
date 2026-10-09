@@ -475,7 +475,7 @@
         try {
             const parsed = JSON.parse(raw);
             if (!isPlainObject(parsed)) {
-                return 'Request Body Merge JSON must be a JSON object.';
+                return aiText('addonUi.requestBodyMergeInvalid', 'Request Body Merge JSON must be a JSON object.');
             }
             return '';
         } catch (e) {
@@ -1748,11 +1748,11 @@
                         onClick: toggleExpanded
                     },
                         React.createElement('span', { style: { fontSize: '10px', transition: 'transform 0.2s', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', display: 'inline-block' } }, '▶'),
-                        React.createElement('label', { style: { cursor: 'pointer', margin: 0, fontSize: '12px', opacity: 0.8 } }, 'Advanced API Parameters')
+                        React.createElement('label', { style: { cursor: 'pointer', margin: 0, fontSize: '12px', opacity: 0.8 } }, aiText('addonUi.advancedParams', 'Advanced API Parameters'))
                     ),
                     expanded && React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '8px', borderLeft: '2px solid rgba(255,255,255,0.1)' } },
                         React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '4px' } },
-                            React.createElement('span', { style: { fontSize: '12px' } }, 'Request Body Merge JSON'),
+                            React.createElement('span', { style: { fontSize: '12px' } }, aiText('addonUi.requestBodyMerge', 'Request Body Merge JSON')),
                             React.createElement('textarea', {
                                 value: requestBodyMergeJson,
                                 rows: 7,
@@ -1767,7 +1767,7 @@
                             }),
                             requestBodyMergeError
                                 ? React.createElement('small', { style: { color: '#ff9b9b', fontSize: '11px' } }, requestBodyMergeError)
-                                : React.createElement('small', { style: { opacity: 0.65, fontSize: '11px' } }, 'Merged into the default request body. max_completion_tokens and temperature are filled in by default. Set a key to null to remove it.')
+                                : React.createElement('small', { style: { opacity: 0.65, fontSize: '11px' } }, aiText('addonUi.mergeJsonHint', 'Merged into the default request body. max_completion_tokens and temperature are filled in by default.'))
                         )
                     )
                 );

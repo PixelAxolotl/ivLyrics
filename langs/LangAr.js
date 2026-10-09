@@ -141,6 +141,14 @@ window.LANG_AR = {
     "downloadDesc": "إذا لم يكن تطبيق التراكب مثبتًا، قم بتنزيله"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "لون {label}",
+      "hexValue": "قيمة HEX لـ {label}"
+    },
+    "videoShowWhenPaused": {
+      "label": "إظهار الفيديو عند الإيقاف",
+      "desc": "إبقاء إطار الفيديو المجمد ظاهرًا أثناء إيقاف التشغيل."
+    },
     "language": {
       "label": "اللغة",
       "desc": "اختر لغة الإضافة"
@@ -495,6 +503,35 @@ window.LANG_AR = {
       "selectModel": "اختر من قائمة النماذج",
       "loadingModels": "جارٍ تحميل النماذج…",
       "modelsUnavailable": "تعذر تحميل قائمة النماذج. يمكنك إدخال معرّف النموذج يدويًا.",
+      "addonUi": {
+        "keyRotationHint": "أدخل مفتاحًا واحدًا أو مصفوفة JSON للتناوب",
+        "getApiKeyFree": "الحصول على مفتاح API (مجانًا)",
+        "enterApiKeyFirst": "أدخل مفتاح API أولًا",
+        "selectModelPlaceholder": "-- اختر نموذجًا --",
+        "customModel": "نموذج مخصص",
+        "customModelId": "معرّف نموذج مخصص",
+        "modelIdPlaceholder": "أدخل معرّف النموذج",
+        "geminiCompatibleHint": "غيّره لاستخدام واجهات متوافقة مع Gemini",
+        "groqFreeHint": "توفر Groq استدلالًا مجانيًا فائق السرعة",
+        "sonarHint": "تشمل نماذج Sonar البحث المباشر في الويب",
+        "deeplFreePro": "DeepL API مجاني / احترافي",
+        "advancedParams": "معلمات API المتقدمة",
+        "maxTokens": "الحد الأقصى للرموز",
+        "maxOutputTokens": "الحد الأقصى لرموز الإخراج",
+        "temperature": "الحرارة",
+        "thinking": "التفكير",
+        "thinkingBudget": "ميزانية التفكير",
+        "excludeParamHint": "ألغِ التحديد لاستبعاد المعلمة من طلب API.",
+        "thinkingOffHint": "ألغِ التحديد لاستبعاد المعلمة. إيقاف التفكير يفعّل البث الفوري.",
+        "mergeJsonHint": "يُدمج في نص الطلب الافتراضي. تُملأ max_completion_tokens و temperature افتراضيًا",
+        "refreshModelsHint": "تحديث قائمة النماذج",
+        "modelsAvailable": "{count} من النماذج متاحة",
+        "testing": "جارٍ الاختبار...",
+        "testFailed": "خطأ: {error}",
+        "emptyResponse": "استجابة فارغة",
+        "requestBodyMerge": "دمج JSON في نص الطلب",
+        "requestBodyMergeInvalid": "يجب أن يكون دمج JSON في نص الطلب كائن JSON.",
+      },
       "testingConnection": "اختبار الاتصال…",
       "testConnection": "اختبار الاتصال",
       "getApiKey": "الحصول على المفتاح",
@@ -517,6 +554,13 @@ window.LANG_AR = {
     "lyricsProviders": {
       "title": "موفرو الكلمات",
       "description": "اختر موفري الكلمات وقم بترتيب أولوياتهم. يتم تجربة الموفرين في الأعلى أولاً.",
+      "spotify": {
+        "title": "ميزات Spotify المميزة",
+        "desc": "يجلب هذا الملحق الكلمات مباشرة من Spotify.",
+        "reqPremium": "يتطلب Spotify Premium",
+        "reqMulti": "يدعم عدة موفرين",
+        "reqQuality": "دقة عالية وجودة مزامنة"
+      },
       "preferSyncDataProvider": {
         "label": "إعطاء الأولوية لموفري بيانات المزامنة",
         "desc": "عند توفر بيانات مزامنة للمقطع الحالي، تتم تجربة موفر كلمات الأغنية المطابق قبل ترتيب الموفرين المعتاد."
@@ -567,6 +611,7 @@ window.LANG_AR = {
     "exitFullscreen": "خروج من ملء الشاشة"
   },
   "menu": {
+    "localLyricsApplying": "جارٍ التطبيق",
     "translation": "تحويل",
     "settings": "الإعدادات",
     "syncAdjust": "ضبط المزامنة",
@@ -1886,6 +1931,18 @@ window.LANG_AR = {
     },
     "debugTab": {
       "title": "معلومات التصحيح",
+      "apiEmpty": "لا توجد طلبات API بعد. شغّل أغنية لرؤيتها هنا.",
+      "labelTitle": "العنوان: ",
+      "labelArtist": "الفنان: ",
+      "labelAlbum": "الألبوم: ",
+      "labelTrackId": "معرّف المقطع: ",
+      "labelProvider": "الموفر: ",
+      "labelType": "النوع: ",
+      "labelError": "خطأ: ",
+      "labelRequest": "الطلب:",
+      "labelResponse": "الاستجابة:",
+      "apiLogTitle": "سجل طلبات API ({count})",
+      "totalRequests": "الإجمالي: {total} من الطلبات",
       "subtitle": "معلومات لتقديمها للمطور عند الإبلاغ عن خطأ",
       "currentTrack": "معلومات المسار الحالي",
       "trackInfo": "معلومات المسار",
@@ -1971,7 +2028,17 @@ window.LANG_AR = {
     "wordSupplements": "تفاصيل الكلمات",
     "wordSupplementsLoading": "جارٍ تحميل القراءات والمعاني..."
   },
+  "videoStats": {
+    "title": "إحصاءات الفيديو",
+    "quality": "الجودة:",
+    "resolution": "الدقة:",
+    "buffered": "المخزّن:",
+    "source": "المصدر:",
+    "helperStatus": "حالة المساعد:",
+    "videoId": "معرّف الفيديو:"
+  },
   "videoBackground": {
+    "isrcMissing": "تعذّر تحميل خلفية الفيديو لتعذّر تأكيد ISRC هذه الأغنية.",
     "loading": "جارٍ تحميل معلومات الفيديو...",
     "notFound": "لم يتم العثور على الفيديو.",
     "error": "حدث خطأ.",
@@ -1997,6 +2064,7 @@ window.LANG_AR = {
     "videoNotDownloaded": "لم يتم تنزيل الفيديو"
   },
   "translator": {
+    "noProviderConfigured": "لم يتم تكوين أي موفر ذكاء اصطناعي. يرجى اختيار موفر في الإعدادات.",
     "missingApiKey": "لم يتم إعداد مفتاح Gemini API. يرجى إدخاله في الإعدادات.",
     "invalidApiKeyFormat": "تنسيق مفتاح API غير صحيح. يجب أن يبدأ مفتاح Gemini بـ 'AIza'.",
     "invalidRequestFormat": "تنسيق الطلب غير صحيح. يرجى التحقق من مفتاح API.",
@@ -2011,6 +2079,7 @@ window.LANG_AR = {
     "failedPrefix": "فشل الترجمة"
   },
   "utils": {
+    "unknownErrorShort": "خطأ غير معروف",
     "allUrlsFailed": "فشل جلب معلومات الإصدار من جميع الروابط",
     "invalidVersionFormat": "تنسيق إصدار غير صالح",
     "unknownError": "خطأ غير معروف",
@@ -2030,6 +2099,7 @@ window.LANG_AR = {
     "unsynced": "كلمات عادية"
   },
   "communityVideo": {
+    "isrcMissing": "تعذّر تسجيل فيديو المجتمع لتعذّر تأكيد ISRC هذه الأغنية.",
     "loginRequired": "يلزم تسجيل الدخول عبر Discord لتسجيل فيديو مجتمعي.",
     "title": "فيديوهات مقترحة من المجتمع",
     "loading": "جارٍ تحميل قائمة الفيديوهات...",
@@ -2194,6 +2264,14 @@ window.LANG_AR = {
     "noSelection": "اختر كلمات"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ الكلمات هنا",
+      "line1": "السطر الأول",
+      "line2": "السطر المشغل حاليًا",
+      "line3": "السطر التالي...",
+      "mainScreen": "الشاشة الرئيسية",
+      "nowPlaying": "يُشغَّل الآن"
+    },
     "welcome": {
       "title": "مرحبًا بك في ivLyrics!",
       "subtitle": "استمتع بكلمات جميلة على Spotify",
@@ -2643,6 +2721,13 @@ window.LANG_AR = {
     "dismissAll": "إغلاق الكل"
   },
   "syncCreator": {
+    "isrcMissingUse": "بيانات المزامنة غير متاحة لتعذّر تأكيد ISRC هذه الأغنية.",
+    "isrcMissingRegister": "تعذّر تسجيل بيانات المزامنة لتعذّر تأكيد ISRC هذه الأغنية.",
+    "scoreConflict": "تعارض مع جلسة تحرير أخرى. مسودتك محفوظة. أغلق المحرر الآخر وأعد فتح هذه المهمة.",
+    "lrclibBadgeInstrumental": "موسيقى",
+    "sourcePanel": "المصدر",
+    "shortcutsTitle": "اختصارات منشئ المزامنة",
+    "notAvailable": "SyncDataCreator غير متاح",
     "loginRequired": "يلزم تسجيل الدخول عبر Discord لإنشاء مزامنة الكاراوكي.",
     "title": "إنشاء مزامنة كاريوكي",
     "syncGranularityLabel": "وحدة المزامنة",

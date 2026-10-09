@@ -3349,7 +3349,7 @@ const Utils = {
   async submitCommunityVideo(trackUri, videoId, videoTitle, startTime = 0, skipSegments = []) {
     const identity = await this.getCommunityVideoIdentity(trackUri);
     if (!identity) {
-      throw new Error("이 곡의 ISRC를 확인할 수 없어 커뮤니티 영상을 등록할 수 없습니다.");
+      throw new Error(I18n.t("communityVideo.isrcMissing") || "Cannot register the community video because this song's ISRC cannot be confirmed.");
     }
 
     await this.requireDiscordAuth(

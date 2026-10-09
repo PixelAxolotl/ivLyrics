@@ -141,6 +141,14 @@ window.LANG_VI = {
     "downloadDesc": "Nếu chưa cài đặt ứng dụng lớp phủ, hãy tải xuống tại đây"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "Màu {label}",
+      "hexValue": "Giá trị HEX {label}"
+    },
+    "videoShowWhenPaused": {
+      "label": "Hiện video khi tạm dừng",
+      "desc": "Giữ khung hình đóng băng hiển thị trong khi tạm dừng phát."
+    },
     "language": {
       "label": "Ngôn ngữ",
       "desc": "Chọn ngôn ngữ cho tiện ích mở rộng"
@@ -495,6 +503,35 @@ window.LANG_VI = {
       "selectModel": "Chọn từ danh sách",
       "loadingModels": "Đang tải mô hình…",
       "modelsUnavailable": "Không thể tải danh sách mô hình. Bạn có thể nhập ID mô hình theo cách thủ công.",
+      "addonUi": {
+        "keyRotationHint": "Nhập một khóa hoặc mảng JSON để xoay vòng",
+        "getApiKeyFree": "Lấy khóa API (miễn phí)",
+        "enterApiKeyFirst": "Nhập khóa API trước",
+        "selectModelPlaceholder": "-- Chọn mô hình --",
+        "customModel": "Mô hình tùy chỉnh",
+        "customModelId": "ID mô hình tùy chỉnh",
+        "modelIdPlaceholder": "Nhập ID mô hình",
+        "geminiCompatibleHint": "Thay đổi để dùng API tương thích Gemini",
+        "groqFreeHint": "Groq cung cấp suy luận miễn phí, siêu nhanh",
+        "sonarHint": "Mô hình Sonar có tìm kiếm web thời gian thực",
+        "deeplFreePro": "DeepL API miễn phí / pro",
+        "advancedParams": "Tham số API nâng cao",
+        "maxTokens": "Token tối đa",
+        "maxOutputTokens": "Token đầu ra tối đa",
+        "temperature": "Nhiệt độ",
+        "thinking": "Suy luận",
+        "thinkingBudget": "Ngân sách suy luận",
+        "excludeParamHint": "Bỏ chọn để loại tham số khỏi yêu cầu API.",
+        "thinkingOffHint": "Bỏ chọn để loại tham số. Tắt suy luận sẽ bật phát trực tiếp thời gian thực.",
+        "mergeJsonHint": "Được hợp nhất vào nội dung yêu cầu mặc định. max_completion_tokens và temperature được điền mặc định",
+        "refreshModelsHint": "Làm mới danh sách mô hình",
+        "modelsAvailable": "{count} mô hình khả dụng",
+        "testing": "Đang kiểm tra...",
+        "testFailed": "Lỗi: {error}",
+        "emptyResponse": "Phản hồi trống",
+        "requestBodyMerge": "JSON hợp nhất nội dung yêu cầu",
+        "requestBodyMergeInvalid": "JSON hợp nhất nội dung yêu cầu phải là một đối tượng JSON.",
+      },
       "testingConnection": "Kiểm tra kết nối…",
       "testConnection": "Kiểm tra kết nối",
       "getApiKey": "Nhận khóa",
@@ -517,6 +554,13 @@ window.LANG_VI = {
     "lyricsProviders": {
       "title": "Nhà cung cấp lời bài hát",
       "description": "Lựa chọn và ưu tiên các nhà cung cấp lời bài hát. Các nhà cung cấp ở đầu danh sách sẽ được thử trước.",
+      "spotify": {
+        "title": "Tính năng Spotify Premium",
+        "desc": "Tiện ích này lấy lời bài hát trực tiếp từ Spotify.",
+        "reqPremium": "Yêu cầu Spotify Premium",
+        "reqMulti": "Hỗ trợ nhiều nhà cung cấp",
+        "reqQuality": "Độ chính xác và đồng bộ cao"
+      },
       "preferSyncDataProvider": {
         "label": "Ưu tiên nhà cung cấp có dữ liệu đồng bộ",
         "desc": "Khi bài hát hiện tại có dữ liệu đồng bộ, hãy thử nhà cung cấp lời tương ứng trước thứ tự thông thường."
@@ -567,6 +611,7 @@ window.LANG_VI = {
     "exitFullscreen": "Thoát toàn màn hình"
   },
   "menu": {
+    "localLyricsApplying": "Đang áp dụng",
     "translation": "Chuyển đổi",
     "settings": "Cài đặt",
     "syncAdjust": "Chỉnh sửa đồng bộ",
@@ -1886,6 +1931,18 @@ window.LANG_VI = {
     },
     "debugTab": {
       "title": "Thông tin gỡ lỗi",
+      "apiEmpty": "Chưa có yêu cầu API. Phát một bài hát để xem tại đây.",
+      "labelTitle": "Tiêu đề: ",
+      "labelArtist": "Nghệ sĩ: ",
+      "labelAlbum": "Album: ",
+      "labelTrackId": "ID bản nhạc: ",
+      "labelProvider": "Nhà cung cấp: ",
+      "labelType": "Loại: ",
+      "labelError": "Lỗi: ",
+      "labelRequest": "YÊU CẦU:",
+      "labelResponse": "PHẢN HỒI:",
+      "apiLogTitle": "Nhật ký yêu cầu API ({count})",
+      "totalRequests": "Tổng: {total} yêu cầu",
       "subtitle": "Thông tin để gửi cho nhà phát triển khi báo lỗi",
       "currentTrack": "Thông tin track hiện tại",
       "trackInfo": "Thông tin track",
@@ -1971,7 +2028,17 @@ window.LANG_VI = {
     "wordSupplements": "Chi tiết từ",
     "wordSupplementsLoading": "Đang tải cách đọc & nghĩa..."
   },
+  "videoStats": {
+    "title": "Thống kê video",
+    "quality": "Chất lượng:",
+    "resolution": "Độ phân giải:",
+    "buffered": "Đã đệm:",
+    "source": "Nguồn:",
+    "helperStatus": "Trạng thái trợ giúp:",
+    "videoId": "ID video:"
+  },
   "videoBackground": {
+    "isrcMissing": "Không thể tải nền video vì không xác nhận được ISRC của bài hát này.",
     "loading": "Đang tải thông tin video...",
     "notFound": "Không tìm thấy video.",
     "error": "Đã xảy ra lỗi.",
@@ -1997,6 +2064,7 @@ window.LANG_VI = {
     "videoNotDownloaded": "Video chưa được tải xuống"
   },
   "translator": {
+    "noProviderConfigured": "Chưa cấu hình nhà cung cấp AI. Vui lòng chọn trong cài đặt.",
     "missingApiKey": "Chưa thiết lập Gemini API Key. Vui lòng nhập API Key trong cài đặt.",
     "invalidApiKeyFormat": "Định dạng API Key không hợp lệ. Gemini API Key phải bắt đầu bằng 'AIza'.",
     "invalidRequestFormat": "Định dạng yêu cầu không hợp lệ. Vui lòng kiểm tra lại API Key.",
@@ -2011,6 +2079,7 @@ window.LANG_VI = {
     "failedPrefix": "Dịch thất bại"
   },
   "utils": {
+    "unknownErrorShort": "Lỗi không xác định",
     "allUrlsFailed": "Không thể lấy thông tin phiên bản từ tất cả các URL",
     "invalidVersionFormat": "Định dạng phiên bản không hợp lệ",
     "unknownError": "Lỗi không xác định",
@@ -2030,6 +2099,7 @@ window.LANG_VI = {
     "unsynced": "Lời thường"
   },
   "communityVideo": {
+    "isrcMissing": "Không thể đăng ký video cộng đồng vì không xác nhận được ISRC của bài hát này.",
     "loginRequired": "Cần đăng nhập Discord để đăng ký video cộng đồng.",
     "title": "Video cộng đồng đề xuất",
     "loading": "Đang tải danh sách video...",
@@ -2194,6 +2264,14 @@ window.LANG_VI = {
     "noSelection": "Vui lòng chọn lời bài hát"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ Lời bài hát ở đây",
+      "line1": "Dòng đầu",
+      "line2": "Dòng đang phát",
+      "line3": "Dòng tiếp...",
+      "mainScreen": "Màn hình chính",
+      "nowPlaying": "Đang phát"
+    },
     "welcome": {
       "title": "Chào mừng đến với ivLyrics!",
       "subtitle": "Thưởng thức lời bài hát tuyệt đẹp trên Spotify",
@@ -2643,6 +2721,13 @@ window.LANG_VI = {
     "dismissAll": "Đóng tất cả"
   },
   "syncCreator": {
+    "isrcMissingUse": "Dữ liệu đồng bộ không khả dụng vì không xác nhận được ISRC của bài hát này.",
+    "isrcMissingRegister": "Không thể đăng ký dữ liệu đồng bộ vì không xác nhận được ISRC của bài hát này.",
+    "scoreConflict": "Xung đột với phiên chỉnh sửa khác. Bản nháp của bạn được giữ lại. Hãy đóng trình chỉnh sửa kia và mở lại tác vụ này.",
+    "lrclibBadgeInstrumental": "Không lời",
+    "sourcePanel": "Nguồn",
+    "shortcutsTitle": "Phím tắt trình tạo đồng bộ",
+    "notAvailable": "SyncDataCreator không khả dụng",
     "loginRequired": "Cần đăng nhập Discord để tạo đồng bộ karaoke.",
     "title": "Tạo đồng bộ Karaoke",
     "syncGranularityLabel": "Đơn vị đồng bộ",

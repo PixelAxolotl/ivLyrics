@@ -3059,7 +3059,7 @@
         }
 
         function getMissingIsrcMessage() {
-            return '이 곡의 ISRC를 확인할 수 없어 sync-data를 사용할 수 없습니다.';
+            return (typeof I18n !== "undefined" && I18n.t("syncCreator.isrcMissingUse")) || "Sync-data is unavailable because this song's ISRC cannot be confirmed.";
         }
 
         function getOpenDbStorage() {
@@ -4099,7 +4099,7 @@
 
             const identity = await resolveSyncDataIdentity(trackId, metadata);
             if (!identity) {
-                throw new Error('이 곡의 ISRC를 확인할 수 없어 sync-data를 등록할 수 없습니다.');
+                throw new Error(I18n.t('syncCreator.isrcMissingRegister') || "Cannot register sync-data because this song's ISRC cannot be confirmed.");
             }
 
             const userHash = getUserHash();

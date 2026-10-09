@@ -79,7 +79,7 @@
                             setKey(event.target.value);
                             window.AIAddonManager.setAddonSetting(ID, 'api-key', event.target.value.trim());
                         } }),
-                    React.createElement('small', null, 'DeepL API Free / Pro')
+                    React.createElement('small', null, t('settings.aiProviders.addonUi.deeplFreePro', 'DeepL API Free / Pro'))
                 );
             };
         },

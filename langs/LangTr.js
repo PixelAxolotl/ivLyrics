@@ -141,6 +141,14 @@ window.LANG_TR = {
     "downloadDesc": "Katman uygulaması yüklü değilse indirin"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "{label} rengi",
+      "hexValue": "{label} HEX değeri"
+    },
+    "videoShowWhenPaused": {
+      "label": "Duraklatıldığında videoyu göster",
+      "desc": "Oynatma duraklatılmışken donmuş video karesini görünür tut."
+    },
     "language": {
       "label": "Dil",
       "desc": "Uzantı için kullanılacak dili seçin"
@@ -495,6 +503,35 @@ window.LANG_TR = {
       "selectModel": "Model listesinden seç",
       "loadingModels": "Modeller yükleniyor…",
       "modelsUnavailable": "Model listesi yüklenemedi. Model kimliğini elle girebilirsiniz.",
+      "addonUi": {
+        "keyRotationHint": "Döndürme için tek anahtar veya JSON dizisi girin",
+        "getApiKeyFree": "API Anahtarı Al (Ücretsiz)",
+        "enterApiKeyFirst": "Önce API anahtarını girin",
+        "selectModelPlaceholder": "-- Model seçin --",
+        "customModel": "Özel Model",
+        "customModelId": "Özel Model Kimliği",
+        "modelIdPlaceholder": "Model kimliği girin",
+        "geminiCompatibleHint": "Gemini uyumlu API'ler kullanmak için değiştirin",
+        "groqFreeHint": "Groq ücretsiz, ultra hızlı çıkarım sunar",
+        "sonarHint": "Sonar modelleri gerçek zamanlı web araması içerir",
+        "deeplFreePro": "DeepL API ücretsiz / pro",
+        "advancedParams": "Gelişmiş API Parametreleri",
+        "maxTokens": "Maks. Jeton",
+        "maxOutputTokens": "Maks. Çıktı Jetonu",
+        "temperature": "Sıcaklık",
+        "thinking": "Düşünme",
+        "thinkingBudget": "Düşünme Bütçesi",
+        "excludeParamHint": "Parametreyi API isteğinden çıkarmak için işareti kaldırın.",
+        "thinkingOffHint": "Parametreyi çıkarmak için işareti kaldırın. Düşünmeyi kapatmak gerçek zamanlı akışı etkinleştirir.",
+        "mergeJsonHint": "Varsayılan istek gövdesiyle birleştirilir. max_completion_tokens ve temperature varsayılan doldurulur",
+        "refreshModelsHint": "Model listesini yenile",
+        "modelsAvailable": "{count} model kullanılabilir",
+        "testing": "Test ediliyor...",
+        "testFailed": "Hata: {error}",
+        "emptyResponse": "Boş yanıt",
+        "requestBodyMerge": "İstek Gövdesi Birleştirme JSON",
+        "requestBodyMergeInvalid": "İstek Gövdesi Birleştirme JSON bir JSON nesnesi olmalıdır.",
+      },
       "testingConnection": "Bağlantıyı test et…",
       "testConnection": "Bağlantıyı test et",
       "getApiKey": "Anahtar Al",
@@ -517,6 +554,13 @@ window.LANG_TR = {
     "lyricsProviders": {
       "title": "Söz Sağlayıcıları",
       "description": "Söz sağlayıcılarını seçin ve önceliklendirin. En üstteki sağlayıcılar önce denenir.",
+      "spotify": {
+        "title": "Spotify Premium Özellikleri",
+        "desc": "Bu eklenti şarkı sözlerini doğrudan Spotify'dan alır.",
+        "reqPremium": "Spotify Premium gerekli",
+        "reqMulti": "Birden çok sağlayıcıyı destekler",
+        "reqQuality": "Yüksek doğruluk ve senkron kalitesi"
+      },
       "preferSyncDataProvider": {
         "label": "Senkronizasyon verisi olan sağlayıcılara öncelik ver",
         "desc": "Geçerli parça için senkronizasyon verisi varsa eşleşen söz sağlayıcısı normal sağlayıcı sırasından önce denenir."
@@ -567,6 +611,7 @@ window.LANG_TR = {
     "exitFullscreen": "Tam Ekrandan Çık"
   },
   "menu": {
+    "localLyricsApplying": "Uygulanıyor",
     "translation": "Dönüştür",
     "settings": "Ayarlar",
     "syncAdjust": "Senkronizasyonu Ayarla",
@@ -1886,6 +1931,18 @@ window.LANG_TR = {
   },
   "debugTab": {
     "title": "Hata Ayıklama Bilgisi",
+      "apiEmpty": "Henüz API isteği yok. Burada görmek için şarkı çalın.",
+      "labelTitle": "Başlık: ",
+      "labelArtist": "Sanatçı: ",
+      "labelAlbum": "Albüm: ",
+      "labelTrackId": "Parça Kimliği: ",
+      "labelProvider": "Sağlayıcı: ",
+      "labelType": "Tür: ",
+      "labelError": "Hata: ",
+      "labelRequest": "İSTEK:",
+      "labelResponse": "YANIT:",
+      "apiLogTitle": "API İstek Günlüğü ({count})",
+      "totalRequests": "Toplam: {total} istek",
     "subtitle": "Hata bildirirken geliştiriciye gönderilecek bilgiler",
     "currentTrack": "Mevcut Parça Bilgisi",
     "trackInfo": "Parça Bilgisi",
@@ -1971,7 +2028,17 @@ window.LANG_TR = {
     "wordSupplements": "Kelime ayrıntıları",
     "wordSupplementsLoading": "Kelime okunuşları ve açıklamalar yükleniyor..."
   },
+  "videoStats": {
+    "title": "Video İstatistikleri",
+    "quality": "Kalite:",
+    "resolution": "Çözünürlük:",
+    "buffered": "Arabelleğe alınan:",
+    "source": "Kaynak:",
+    "helperStatus": "Yardımcı Durumu:",
+    "videoId": "Video Kimliği:"
+  },
   "videoBackground": {
+    "isrcMissing": "Bu şarkının ISRC'si doğrulanamadığı için video arka planı yüklenemiyor.",
     "loading": "Video bilgileri yükleniyor...",
     "notFound": "Video bulunamadı.",
     "error": "Bir hata oluştu.",
@@ -1997,6 +2064,7 @@ window.LANG_TR = {
     "videoNotDownloaded": "Video indirilmedi"
   },
   "translator": {
+    "noProviderConfigured": "AI sağlayıcı yapılandırılmadı. Lütfen ayarlardan bir AI sağlayıcı seçin.",
     "missingApiKey": "Gemini API anahtarı ayarlanmamış. Lütfen ayarlardan API anahtarını girin.",
     "invalidApiKeyFormat": "Geçersiz API anahtarı biçimi. Gemini API anahtarı 'AIza' ile başlamalıdır.",
     "invalidRequestFormat": "Geçersiz istek biçimi. Lütfen API anahtarınızı kontrol edin.",
@@ -2011,6 +2079,7 @@ window.LANG_TR = {
     "failedPrefix": "Çeviri Başarısız"
   },
   "utils": {
+    "unknownErrorShort": "Bilinmeyen hata",
     "allUrlsFailed": "Tüm URL'lerden sürüm bilgisi alınamadı",
     "invalidVersionFormat": "Geçersiz sürüm biçimi",
     "unknownError": "Bilinmeyen hata",
@@ -2030,6 +2099,7 @@ window.LANG_TR = {
     "unsynced": "Düz Metin"
   },
   "communityVideo": {
+    "isrcMissing": "Bu şarkının ISRC'si doğrulanamadığı için topluluk videosu kaydedilemiyor.",
     "loginRequired": "Topluluk videolarını kaydetmek için Discord girişi gereklidir.",
     "title": "Topluluk Video Önerileri",
     "loading": "Video listesi yükleniyor...",
@@ -2194,6 +2264,14 @@ window.LANG_TR = {
     "noSelection": "Lütfen sözleri seçin"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ Şarkı sözü burada",
+      "line1": "İlk satır",
+      "line2": "Çalan satır",
+      "line3": "Sonraki satır...",
+      "mainScreen": "Ana ekran",
+      "nowPlaying": "Şimdi çalıyor"
+    },
     "welcome": {
       "title": "ivLyrics'e Hoş Geldiniz!",
       "subtitle": "Spotify'da güzel sözlerin tadını çıkarın",
@@ -2643,6 +2721,13 @@ window.LANG_TR = {
     "dismissAll": "Tümünü Kapat"
   },
   "syncCreator": {
+    "isrcMissingUse": "Bu şarkının ISRC'si doğrulanamadığı için senkron verisi kullanılamıyor.",
+    "isrcMissingRegister": "Bu şarkının ISRC'si doğrulanamadığı için senkron verisi kaydedilemiyor.",
+    "scoreConflict": "Başka bir düzenleme oturumuyla çakışıyor. Taslağın korundu. Diğer düzenleyiciyi kapatıp bu görevi yeniden aç.",
+    "lrclibBadgeInstrumental": "Enstrümantal",
+    "sourcePanel": "Kaynak",
+    "shortcutsTitle": "Senkron Oluşturucu Kısayolları",
+    "notAvailable": "SyncDataCreator kullanılamıyor",
     "loginRequired": "Karaoke senkronizasyonu oluşturmak için Discord girişi gereklidir.",
     "title": "Karaoke Senk. Oluştur",
     "syncGranularityLabel": "Senkronizasyon birimi",

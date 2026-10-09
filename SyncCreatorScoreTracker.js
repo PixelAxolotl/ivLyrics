@@ -94,7 +94,7 @@
         // acknowledged events, then let the caller retry the current event.
         const resolveScoreConflict = async (next, error) => {
           if (error?.status !== 409) throw error;
-          const failure = new Error('다른 작업 상태와 충돌했습니다. 현재 초안은 보존됩니다. 다른 편집기를 닫고 이 작업을 다시 열어 주세요.');
+          const failure = new Error((root.I18n?.t?.('syncCreator.scoreConflict')) || '다른 작업 상태와 충돌했습니다. 현재 초안은 보존됩니다. 다른 편집기를 닫고 이 작업을 다시 열어 주세요.');
           failure.status = 409;
           if (recoveredEvents.has(next.eventId)) {
             conflictError = failure;

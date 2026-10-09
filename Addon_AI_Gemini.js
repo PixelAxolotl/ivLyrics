@@ -8,6 +8,15 @@
 
 (() => {
     'use strict';
+    // i18n helper: translated string or English fallback
+    function t(key, fallback) {
+        try {
+            const value = window.I18n?.t?.(key);
+            return value && value !== key ? value : fallback;
+        } catch (e) {
+            return fallback;
+        }
+    }
 
     // ============================================
     // Addon Metadata
@@ -767,10 +776,10 @@
                 }, [loadModels]);
 
                 const handleTest = useCallback(async () => {
-                    setTestStatus('Testing...');
+                    setTestStatus(t('settings.aiProviders.addonUi.testing', 'Testing...'));
                     try {
                         await callGeminiAPIRaw('Reply with just "OK" if you receive this.');
-                        setTestStatus('✓ Connection successful!');
+                        setTestStatus('✓ ' + t('settings.aiProviders.connectionSuccess', 'Connection successful.'));
                     } catch (e) {
                         setTestStatus(`✗ Error: ${e.message}`);
                     }
@@ -779,7 +788,7 @@
                 const hasApiKey = getApiKeys().length > 0;
 
                 const renderApiKeyRow = () => React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('label', null, 'API Key(s)'),
+                        React.createElement('label', null, t('settings.aiProviders.apiKey', 'API Key(s)')),
                         React.createElement('div', { className: 'ai-addon-input-group' },
                             React.createElement('input', {
                                 type: 'text',
@@ -790,22 +799,22 @@
                             React.createElement('button', {
                                 onClick: () => window.open(ADDON_INFO.apiKeyUrl, '_blank'),
                                 className: 'ai-addon-btn-secondary'
-                            }, 'Get API Key')
+                            }, t('settings.aiProviders.getApiKey', 'Get API Key'))
                         ),
-                        React.createElement('small', null, 'Enter a single key or JSON array for rotation')
+                        React.createElement('small', null, t('settings.aiProviders.addonUi.keyRotationHint', 'Enter a single key or JSON array for rotation'))
                     );
                 const renderBaseUrlRow = () => React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('label', null, 'Base URL'),
+                        React.createElement('label', null, t('settings.aiProviders.baseUrl', 'Base URL')),
                         React.createElement('input', {
                             type: 'text',
                             value: baseUrl,
                             onChange: handleBaseUrlChange,
                             placeholder: 'https://generativelanguage.googleapis.com/v1beta'
                         }),
-                        React.createElement('small', null, 'Change this to use Gemini-compatible APIs')
+                        React.createElement('small', null, t('settings.aiProviders.addonUi.geminiCompatibleHint', 'Change this to use Gemini-compatible APIs'))
                     );
                 const renderModelRow = () => React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('label', null, 'Model'),
+                        React.createElement('label', null, t('settings.aiProviders.model', 'Model')),
                         React.createElement('div', { className: 'ai-addon-input-group' },
                             React.createElement('select', {
                                 value: model,
@@ -813,25 +822,25 @@
                                 disabled: modelsLoading
                             },
                                 modelsLoading
-                                    ? React.createElement('option', { value: '' }, 'Loading models...')
+                                    ? React.createElement('option', { value: '' }, t('settings.aiProviders.loadingModels', 'Loading models...'))
                                     : availableModels.length > 0
                                         ? [
-                                            !model && React.createElement('option', { key: '__placeholder__', value: '' }, '-- Select a model --'),
+                                            !model && React.createElement('option', { key: '__placeholder__', value: '' }, t('settings.aiProviders.addonUi.selectModelPlaceholder', '-- Select a model --')),
                                             ...availableModels.map(m => React.createElement('option', { key: m.id, value: m.id }, m.name))
                                         ].filter(Boolean)
-                                        : React.createElement('option', { value: '' }, hasApiKey ? 'No models found' : 'Enter API key first')
+                                        : React.createElement('option', { value: '' }, hasApiKey ? t('settings.aiProviders.noModels', 'No models found') : t('settings.aiProviders.addonUi.enterApiKeyFirst', 'Enter API key first'))
                             ),
                             React.createElement('button', {
                                 onClick: handleRefreshModels,
                                 className: 'ai-addon-btn-secondary',
                                 disabled: modelsLoading || !hasApiKey,
-                                title: 'Refresh model list'
+                                title: t('settings.aiProviders.addonUi.refreshModelsHint', 'Refresh model list')
                             }, modelsLoading ? '...' : '↻')
                         ),
-                        availableModels.length > 0 && React.createElement('small', null, `${availableModels.length} models available`)
+                        availableModels.length > 0 && React.createElement('small', null, t('settings.aiProviders.addonUi.modelsAvailable', '{count} models available').replace('{count}', availableModels.length))
                     );
                 const renderTestRow = () => React.createElement('div', { className: 'ai-addon-setting' },
-                        React.createElement('button', { onClick: handleTest, className: 'ai-addon-btn-primary' }, 'Test Connection'),
+                        React.createElement('button', { onClick: handleTest, className: 'ai-addon-btn-primary' }, t('settings.aiProviders.testConnection', 'Test Connection')),
                         testStatus && React.createElement('span', {
                             className: `ai-addon-test-status ${testStatus.startsWith('✓') ? 'success' : testStatus.startsWith('✗') ? 'error' : ''}`
                         }, testStatus)
@@ -867,7 +876,7 @@
                         onClick: toggleExpanded
                     },
                         React.createElement('span', { style: { fontSize: '10px', transition: 'transform 0.2s', transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)', display: 'inline-block' } }, '▶'),
-                        React.createElement('label', { style: { cursor: 'pointer', margin: 0, fontSize: '12px', opacity: 0.8 } }, 'Advanced API Parameters')
+                        React.createElement('label', { style: { cursor: 'pointer', margin: 0, fontSize: '12px', opacity: 0.8 } }, t('settings.aiProviders.addonUi.advancedParams', 'Advanced API Parameters'))
                     ),
                     expanded && React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '8px', paddingLeft: '8px', borderLeft: '2px solid rgba(255,255,255,0.1)' } },
                         // Max Output Tokens
@@ -876,7 +885,7 @@
                                 type: 'checkbox', checked: maxTokensEnabled,
                                 onChange: (e) => { setMaxTokensEnabled(e.target.checked); setSetting('adv-maxOutputTokens-enabled', e.target.checked); }
                             }),
-                            React.createElement('span', { style: { fontSize: '12px', minWidth: '110px' } }, 'Max Output Tokens'),
+                            React.createElement('span', { style: { fontSize: '12px', minWidth: '110px' } }, t('settings.aiProviders.addonUi.maxOutputTokens', 'Max Output Tokens')),
                             React.createElement('input', {
                                 type: 'number', value: maxTokensValue, disabled: !maxTokensEnabled,
                                 style: { width: '80px', fontSize: '12px' },
@@ -889,15 +898,15 @@
                                 type: 'checkbox', checked: thinkingEnabled,
                                 onChange: (e) => { setThinkingEnabled(e.target.checked); setSetting('adv-thinking-enabled', e.target.checked); }
                             }),
-                            React.createElement('span', { style: { fontSize: '12px', minWidth: '110px' } }, 'Thinking'),
+                            React.createElement('span', { style: { fontSize: '12px', minWidth: '110px' } }, t('settings.aiProviders.addonUi.thinking', 'Thinking')),
                             React.createElement('input', {
                                 type: 'number', value: thinkingBudget, disabled: !thinkingEnabled,
                                 style: { width: '80px', fontSize: '12px' },
-                                placeholder: 'Budget',
+                                placeholder: t('settings.aiProviders.addonUi.thinkingBudget', 'Budget'),
                                 onChange: (e) => { const v = parseInt(e.target.value) || 1024; setThinkingBudget(v); setSetting('adv-thinking-budget', v); }
                             })
                         ),
-                        React.createElement('small', { style: { opacity: 0.5, fontSize: '11px' } }, 'Uncheck to exclude parameter from API request. Thinking OFF enables real-time streaming.')
+                        React.createElement('small', { style: { opacity: 0.5, fontSize: '11px' } }, t('settings.aiProviders.addonUi.thinkingOffHint', 'Uncheck to exclude parameter from API request. Thinking OFF enables real-time streaming.'))
                     )
                 );
             }

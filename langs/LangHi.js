@@ -141,6 +141,14 @@ window.LANG_HI = {
     "downloadDesc": "यदि ओवरले ऐप इंस्टॉल नहीं है, तो इसे डाउनलोड करें"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "{label} रंग",
+      "hexValue": "{label} HEX मान"
+    },
+    "videoShowWhenPaused": {
+      "label": "रोकने पर वीडियो दिखाएँ",
+      "desc": "प्लेबैक रुका रहने पर जमा हुआ वीडियो फ्रेम दिखाते रहें।"
+    },
     "language": {
       "label": "भाषा",
       "desc": "एक्सटेंशन की भाषा चुनें"
@@ -495,6 +503,35 @@ window.LANG_HI = {
       "selectModel": "मॉडल सूची से चुनें",
       "loadingModels": "मॉडल लोड हो रहे हैं…",
       "modelsUnavailable": "मॉडल सूची लोड नहीं हो सकी। आप मॉडल ID मैन्युअल रूप से दर्ज कर सकते हैं।",
+      "addonUi": {
+        "keyRotationHint": "रोटेशन के लिए एक कुंजी या JSON ऐरे दर्ज करें",
+        "getApiKeyFree": "API कुंजी प्राप्त करें (मुफ्त)",
+        "enterApiKeyFirst": "पहले API कुंजी दर्ज करें",
+        "selectModelPlaceholder": "-- मॉडल चुनें --",
+        "customModel": "कस्टम मॉडल",
+        "customModelId": "कस्टम मॉडल ID",
+        "modelIdPlaceholder": "मॉडल ID दर्ज करें",
+        "geminiCompatibleHint": "Gemini-संगत API उपयोग हेतु बदलें",
+        "groqFreeHint": "Groq मुफ्त अति-तेज़ इन्फेरेंस देता है",
+        "sonarHint": "Sonar मॉडल में रीयल-टाइम वेब खोज शामिल है",
+        "deeplFreePro": "DeepL API मुफ्त / प्रो",
+        "advancedParams": "उन्नत API पैरामीटर",
+        "maxTokens": "अधिकतम टोकन",
+        "maxOutputTokens": "अधिकतम आउटपुट टोकन",
+        "temperature": "तापमान",
+        "thinking": "विचार",
+        "thinkingBudget": "विचार बजट",
+        "excludeParamHint": "API अनुरोध से पैरामीटर हटाने हेतु अनचेक करें।",
+        "thinkingOffHint": "API अनुरोध से हटाने हेतु अनचेक करें। विचार बंद करने से रीयल-टाइम स्ट्रीमिंग चालू होती है।",
+        "mergeJsonHint": "डिफ़ॉल्ट अनुरोध बॉडी में विलय होता है। max_completion_tokens और temperature डिफ़ॉल्ट भरे जाते हैं",
+        "refreshModelsHint": "मॉडल सूची ताज़ा करें",
+        "modelsAvailable": "{count} मॉडल उपलब्ध",
+        "testing": "परीक्षण हो रहा...",
+        "testFailed": "त्रुटि: {error}",
+        "emptyResponse": "खाली प्रतिक्रिया",
+        "requestBodyMerge": "अनुरोध बॉडी मर्ज JSON",
+        "requestBodyMergeInvalid": "अनुरोध बॉडी मर्ज JSON एक JSON ऑब्जेक्ट होना चाहिए।",
+      },
       "testingConnection": "कनेक्शन जाँचें…",
       "testConnection": "कनेक्शन जाँचें",
       "getApiKey": "को पुनर्जीवित करें कुंजी",
@@ -517,6 +554,13 @@ window.LANG_HI = {
     "lyricsProviders": {
       "title": "गीत प्रदाता",
       "description": "गीत प्रदाता चुनें और प्राथमिकता दें। शीर्ष पर स्थित प्रदाताओं को पहले आज़माया जाता है।",
+      "spotify": {
+        "title": "Spotify प्रीमियम सुविधाएँ",
+        "desc": "यह ऐडऑन Spotify से सीधे बोल लाता है।",
+        "reqPremium": "Spotify Premium आवश्यक",
+        "reqMulti": "कई प्रदाता समर्थित",
+        "reqQuality": "उच्च सटीकता व सिंक गुणवत्ता"
+      },
       "preferSyncDataProvider": {
         "label": "सिंक डेटा वाले प्रदाताओं को प्राथमिकता दें",
         "desc": "अगर मौजूदा गाने के लिए सिंक डेटा उपलब्ध है, तो सामान्य प्रदाता क्रम से पहले उससे मेल खाने वाले गीत प्रदाता को आज़माएँ।"
@@ -567,6 +611,7 @@ window.LANG_HI = {
     "exitFullscreen": "फुलस्क्रीन से बाहर निकलें"
   },
   "menu": {
+    "localLyricsApplying": "लागू हो रहा",
     "translation": "रूपांतरण",
     "settings": "सेटिंग्स",
     "syncAdjust": "सिंक समायोजन",
@@ -1886,6 +1931,18 @@ window.LANG_HI = {
     },
     "debugTab": {
       "title": "डिबग जानकारी",
+      "apiEmpty": "अभी कोई API अनुरोध नहीं। गाना चलाएँ तो यहाँ दिखेंगे।",
+      "labelTitle": "शीर्षक: ",
+      "labelArtist": "कलाकार: ",
+      "labelAlbum": "एल्बम: ",
+      "labelTrackId": "ट्रैक ID: ",
+      "labelProvider": "प्रदाता: ",
+      "labelType": "प्रकार: ",
+      "labelError": "त्रुटि: ",
+      "labelRequest": "अनुरोध:",
+      "labelResponse": "प्रतिक्रिया:",
+      "apiLogTitle": "API अनुरोध लॉग ({count})",
+      "totalRequests": "कुल: {total} अनुरोध",
       "subtitle": "बग रिपोर्ट करते समय डेवलपर को देने के लिए जानकारी",
       "currentTrack": "वर्तमान ट्रैक जानकारी",
       "trackInfo": "ट्रैक जानकारी",
@@ -1971,7 +2028,17 @@ window.LANG_HI = {
     "wordSupplements": "शब्द विवरण",
     "wordSupplementsLoading": "शब्द उच्चारण और अर्थ लोड हो रहे हैं..."
   },
+  "videoStats": {
+    "title": "वीडियो आँकड़े",
+    "quality": "गुणवत्ता:",
+    "resolution": "रिज़ॉल्यूशन:",
+    "buffered": "बफ़र्ड:",
+    "source": "स्रोत:",
+    "helperStatus": "हेल्पर स्थिति:",
+    "videoId": "वीडियो ID:"
+  },
   "videoBackground": {
+    "isrcMissing": "इस गाने का ISRC पुष्ट नहीं हो सका, इसलिए वीडियो पृष्ठभूमि लोड नहीं हो सकी।",
     "loading": "वीडियो जानकारी लोड हो रही है...",
     "notFound": "वीडियो नहीं मिला।",
     "error": "त्रुटि हुई।",
@@ -1997,6 +2064,7 @@ window.LANG_HI = {
     "videoNotDownloaded": "वीडियो डाउनलोड नहीं किया गया"
   },
   "translator": {
+    "noProviderConfigured": "कोई AI प्रदाता कॉन्फ़िगर नहीं है। कृपया सेटिंग में AI प्रदाता चुनें।",
     "missingApiKey": "Gemini API कुंजी सेट नहीं है। कृपया सेटिंग्स में दर्ज करें।",
     "invalidApiKeyFormat": "अमान्य API कुंजी प्रारूप। Gemini API कुंजी 'AIza' से शुरू होनी चाहिए।",
     "invalidRequestFormat": "अनुरोध प्रारूप अमान्य है। API कुंजी की जाँच करें।",
@@ -2011,6 +2079,7 @@ window.LANG_HI = {
     "failedPrefix": "अनुवाद विफल"
   },
   "utils": {
+    "unknownErrorShort": "अज्ञात त्रुटि",
     "allUrlsFailed": "संस्करण जानकारी प्राप्त करने में विफल",
     "invalidVersionFormat": "अमान्य संस्करण प्रारूप",
     "unknownError": "अज्ञात त्रुटि",
@@ -2030,6 +2099,7 @@ window.LANG_HI = {
     "unsynced": "सामान्य लिरिक्स"
   },
   "communityVideo": {
+    "isrcMissing": "इस गाने का ISRC पुष्ट नहीं हो सका, इसलिए सामुदायिक वीडियो पंजीकृत नहीं हो सका।",
     "loginRequired": "कम्युनिटी वीडियो दर्ज करने के लिए Discord में लॉग इन करना आवश्यक है।",
     "title": "कम्युनिटी वीडियो अनुशंसा",
     "loading": "वीडियो सूची लोड हो रही है...",
@@ -2194,6 +2264,14 @@ window.LANG_HI = {
     "noSelection": "लिरिक्स चुनें"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ बोल यहाँ",
+      "line1": "पहली पंक्ति",
+      "line2": "चल रही पंक्ति",
+      "line3": "अगली पंक्ति...",
+      "mainScreen": "मुख्य स्क्रीन",
+      "nowPlaying": "अभी बज रहा"
+    },
     "welcome": {
       "title": "ivLyrics में आपका स्वागत है!",
       "subtitle": "Spotify पर सुंदर लिरिक्स का आनंद लें",
@@ -2643,6 +2721,13 @@ window.LANG_HI = {
     "dismissAll": "सभी बंद करें"
   },
   "syncCreator": {
+    "isrcMissingUse": "इस गाने का ISRC पुष्ट नहीं हो सका, इसलिए सिंक-डेटा उपलब्ध नहीं है।",
+    "isrcMissingRegister": "इस गाने का ISRC पुष्ट नहीं हो सका, इसलिए सिंक-डेटा पंजीकृत नहीं हो सका।",
+    "scoreConflict": "किसी अन्य संपादन सत्र से टकराव। आपका मसौदा सुरक्षित है। दूसरा संपादक बंद करें और यह कार्य फिर से खोलें।",
+    "lrclibBadgeInstrumental": "वाद्य",
+    "sourcePanel": "स्रोत",
+    "shortcutsTitle": "सिंक निर्माता शॉर्टकट",
+    "notAvailable": "SyncDataCreator उपलब्ध नहीं",
     "loginRequired": "कराओके सिंक बनाने के लिए Discord में लॉग इन करना आवश्यक है।",
     "title": "कराओके सिंक क्रिएटर",
     "syncGranularityLabel": "सिंक इकाई",

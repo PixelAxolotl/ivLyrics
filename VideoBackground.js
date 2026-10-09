@@ -778,7 +778,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                 if (!trackIsrc) {
                     if (!isMounted) return;
                     setVideoInfo(null);
-                    showVideoBackgroundError("이 곡의 ISRC를 확인할 수 없어 영상 배경을 불러올 수 없습니다.");
+                    showVideoBackgroundError(I18n.t("videoBackground.isrcMissing") || "Unable to load the video background because this song's ISRC cannot be confirmed.");
                     return;
                 }
 
@@ -1741,29 +1741,29 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
         },
             react.createElement("div", {
                 style: { marginBottom: "8px", fontWeight: "bold", fontSize: "13px" }
-            }, "  Video Stats"),
+            }, I18n.t("videoStats.title") || "Video Stats"),
             react.createElement("div", {
                 style: { display: "flex", justifyContent: "space-between", marginBottom: "4px" }
             },
-                react.createElement("span", {}, "Quality:"),
+                react.createElement("span", {}, I18n.t("videoStats.quality") || "Quality:"),
                 react.createElement("span", { style: { color: "#1DB954" } }, stats.quality)
             ),
             react.createElement("div", {
                 style: { display: "flex", justifyContent: "space-between", marginBottom: "4px" }
             },
-                react.createElement("span", {}, "Resolution:"),
+                react.createElement("span", {}, I18n.t("videoStats.resolution") || "Resolution:"),
                 react.createElement("span", { style: { color: "#1DB954" } }, stats.resolution)
             ),
             react.createElement("div", {
                 style: { display: "flex", justifyContent: "space-between", marginBottom: "4px" }
             },
-                react.createElement("span", {}, "Buffered:"),
+                react.createElement("span", {}, I18n.t("videoStats.buffered") || "Buffered:"),
                 react.createElement("span", { style: { color: "#1DB954" } }, stats.buffered)
             ),
             react.createElement("div", {
                 style: { display: "flex", justifyContent: "space-between", marginBottom: "4px" }
             },
-            react.createElement("span", {}, "Source:"),
+            react.createElement("span", {}, I18n.t("videoStats.source") || "Source:"),
             react.createElement("span", {
                 style: {
                     color: stats.videoHelper?.includes("Helper") ? "#ff9800" : "#1DB954",
@@ -1775,7 +1775,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
             react.createElement("div", {
                 style: { display: "flex", justifyContent: "space-between", marginBottom: "4px" }
             },
-                react.createElement("span", {}, "Helper Status:"),
+                react.createElement("span", {}, I18n.t("videoStats.helperStatus") || "Helper Status:"),
                 react.createElement("span", {
                 style: {
                     color:
@@ -1798,7 +1798,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
                     borderTop: "1px solid rgba(255, 255, 255, 0.1)"
                 }
             },
-                react.createElement("span", {}, "Video ID:"),
+                react.createElement("span", {}, I18n.t("videoStats.videoId") || "Video ID:"),
                 react.createElement("span", {
                     style: {
                         color: "#888",

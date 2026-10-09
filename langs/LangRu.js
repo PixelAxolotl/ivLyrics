@@ -141,6 +141,14 @@ window.LANG_RU = {
     "downloadDesc": "Если приложение-оверлей не установлено, скачайте его"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "Цвет: {label}",
+      "hexValue": "HEX-значение: {label}"
+    },
+    "videoShowWhenPaused": {
+      "label": "Показывать видео на паузе",
+      "desc": "Оставлять замороженный кадр видимым, пока воспроизведение на паузе."
+    },
     "language": {
       "label": "Язык",
       "desc": "Выберите язык интерфейса расширения"
@@ -495,6 +503,35 @@ window.LANG_RU = {
       "selectModel": "Выбрать из списка",
       "loadingModels": "Загрузка моделей…",
       "modelsUnavailable": "Не удалось загрузить список моделей. Можно ввести ID модели вручную.",
+      "addonUi": {
+        "keyRotationHint": "Введите один ключ или JSON-массив для ротации",
+        "getApiKeyFree": "Получить API-ключ (бесплатно)",
+        "enterApiKeyFirst": "Сначала введите API-ключ",
+        "selectModelPlaceholder": "-- Выберите модель --",
+        "customModel": "Своя модель",
+        "customModelId": "ID своей модели",
+        "modelIdPlaceholder": "Введите ID модели",
+        "geminiCompatibleHint": "Измените, чтобы использовать Gemini-совместимые API",
+        "groqFreeHint": "Groq предоставляет бесплатный сверхбыстрый инференс",
+        "sonarHint": "Модели Sonar включают веб-поиск в реальном времени",
+        "deeplFreePro": "DeepL API бесплатный / про",
+        "advancedParams": "Расширенные параметры API",
+        "maxTokens": "Макс. токенов",
+        "maxOutputTokens": "Макс. выходных токенов",
+        "temperature": "Температура",
+        "thinking": "Размышление",
+        "thinkingBudget": "Бюджет размышления",
+        "excludeParamHint": "Снимите флажок, чтобы исключить параметр из запроса API.",
+        "thinkingOffHint": "Снимите флажок, чтобы исключить параметр. Отключение размышления включает потоковую передачу в реальном времени.",
+        "mergeJsonHint": "Объединяется с телом запроса по умолчанию. max_completion_tokens и temperature заполняются по умолчанию",
+        "refreshModelsHint": "Обновить список моделей",
+        "modelsAvailable": "Доступно моделей: {count}",
+        "testing": "Проверка...",
+        "testFailed": "Ошибка: {error}",
+        "emptyResponse": "Пустой ответ",
+        "requestBodyMerge": "JSON слияния тела запроса",
+        "requestBodyMergeInvalid": "JSON слияния тела запроса должен быть объектом JSON.",
+      },
       "testingConnection": "Проверить подключение…",
       "testConnection": "Проверить подключение",
       "getApiKey": "Получение ключа",
@@ -517,6 +554,13 @@ window.LANG_RU = {
     "lyricsProviders": {
       "title": "Поставщики текста",
       "description": "Выберите и расставьте приоритеты для поставщиков текста. Провайдеры наверху списка будут опрашиваться первыми.",
+      "spotify": {
+        "title": "Премиум-функции Spotify",
+        "desc": "Этот аддон получает тексты напрямую из Spotify.",
+        "reqPremium": "Требуется Spotify Premium",
+        "reqMulti": "Поддерживает несколько провайдеров",
+        "reqQuality": "Высокая точность и качество синхронизации"
+      },
       "preferSyncDataProvider": {
         "label": "Отдавать приоритет провайдерам с данными синхронизации",
         "desc": "Если для текущего трека доступны данные синхронизации, соответствующий провайдер текстов будет проверен раньше обычного порядка."
@@ -567,6 +611,7 @@ window.LANG_RU = {
     "exitFullscreen": "Выйти из полного экрана"
   },
   "menu": {
+    "localLyricsApplying": "Применение",
     "translation": "Преобразование",
     "settings": "Настройки",
     "syncAdjust": "Настройка синхронизации",
@@ -1886,6 +1931,18 @@ window.LANG_RU = {
     },
     "debugTab": {
       "title": "Инфо для отладки",
+      "apiEmpty": "Пока нет запросов API. Включите песню, чтобы увидеть их здесь.",
+      "labelTitle": "Название: ",
+      "labelArtist": "Исполнитель: ",
+      "labelAlbum": "Альбом: ",
+      "labelTrackId": "ID трека: ",
+      "labelProvider": "Провайдер: ",
+      "labelType": "Тип: ",
+      "labelError": "Ошибка: ",
+      "labelRequest": "ЗАПРОС:",
+      "labelResponse": "ОТВЕТ:",
+      "apiLogTitle": "Журнал запросов API ({count})",
+      "totalRequests": "Всего: {total} запросов",
       "subtitle": "Информация для сообщения о багах разработчику",
       "currentTrack": "Текущий трек",
       "trackInfo": "Инфо о треке",
@@ -1971,7 +2028,17 @@ window.LANG_RU = {
     "wordSupplements": "Детали слов",
     "wordSupplementsLoading": "Загрузка чтений и глосс..."
   },
+  "videoStats": {
+    "title": "Статистика видео",
+    "quality": "Качество:",
+    "resolution": "Разрешение:",
+    "buffered": "Буферизовано:",
+    "source": "Источник:",
+    "helperStatus": "Статус помощника:",
+    "videoId": "ID видео:"
+  },
   "videoBackground": {
+    "isrcMissing": "Не удалось загрузить фон видео: ISRC этого трека не определён.",
     "loading": "Загрузка информации о видео...",
     "notFound": "Видео не найдено.",
     "error": "Произошла ошибка.",
@@ -1997,6 +2064,7 @@ window.LANG_RU = {
     "videoNotDownloaded": "Видео не скачано"
   },
   "translator": {
+    "noProviderConfigured": "AI-провайдер не настроен. Выберите AI-провайдера в настройках.",
     "missingApiKey": "Ключ Gemini API не настроен. Введите ключ в настройках.",
     "invalidApiKeyFormat": "Неверный формат ключа. Ключ Gemini API должен начинаться с 'AIza'.",
     "invalidRequestFormat": "Неверный формат запроса. Проверьте API ключ.",
@@ -2011,6 +2079,7 @@ window.LANG_RU = {
     "failedPrefix": "Ошибка перевода"
   },
   "utils": {
+    "unknownErrorShort": "Неизвестная ошибка",
     "allUrlsFailed": "Не удалось получить информацию о версии",
     "invalidVersionFormat": "Неверный формат версии",
     "unknownError": "Неизвестная ошибка",
@@ -2030,6 +2099,7 @@ window.LANG_RU = {
     "unsynced": "Текст"
   },
   "communityVideo": {
+    "isrcMissing": "Не удалось зарегистрировать видео сообщества: ISRC этого трека не определён.",
     "loginRequired": "Чтобы регистрировать видео сообщества, требуется вход через Discord.",
     "title": "Видео от сообщества",
     "loading": "Загрузка списка видео...",
@@ -2194,6 +2264,14 @@ window.LANG_RU = {
     "noSelection": "Выберите текст"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ Текст здесь",
+      "line1": "Первая строка",
+      "line2": "Сейчас играет",
+      "line3": "Следующая строка...",
+      "mainScreen": "Главный экран",
+      "nowPlaying": "Сейчас играет"
+    },
     "welcome": {
       "title": "Добро пожаловать в ivLyrics!",
       "subtitle": "Наслаждайтесь текстами песен в Spotify",
@@ -2643,6 +2721,13 @@ window.LANG_RU = {
     "dismissAll": "Закрыть все"
   },
   "syncCreator": {
+    "isrcMissingUse": "Синхро-данные недоступны: ISRC этого трека не определён.",
+    "isrcMissingRegister": "Не удалось зарегистрировать синхро-данные: ISRC этого трека не определён.",
+    "scoreConflict": "Конфликт с другой сессией редактирования. Черновик сохранён. Закройте другой редактор и откройте задачу заново.",
+    "lrclibBadgeInstrumental": "Инструментал",
+    "sourcePanel": "Источник",
+    "shortcutsTitle": "Горячие клавиши создания синхрона",
+    "notAvailable": "SyncDataCreator недоступен",
     "loginRequired": "Чтобы создать караоке-синхронизацию, требуется вход через Discord.",
     "title": "Создание синхронизации",
     "syncGranularityLabel": "Единица синхронизации",

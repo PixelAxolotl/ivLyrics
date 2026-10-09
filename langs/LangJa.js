@@ -141,6 +141,14 @@ window.LANG_JA = {
     "downloadDesc": "オーバーレイアプリがインストールされていない場合はダウンロードしてください"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "{label}の色",
+      "hexValue": "{label}のHEX値"
+    },
+    "videoShowWhenPaused": {
+      "label": "一時停止中も映像を表示",
+      "desc": "再生の一時停止中も静止した映像フレームを表示し続けます。"
+    },
     "language": {
       "label": "言語",
       "desc": "拡張機能の言語を選択します"
@@ -495,6 +503,35 @@ window.LANG_JA = {
       "selectModel": "モデル一覧から選択",
       "loadingModels": "モデルを読み込み中…",
       "modelsUnavailable": "モデル一覧を読み込めませんでした。モデルIDを直接入力できます。",
+      "addonUi": {
+        "keyRotationHint": "単一のキーまたは JSON 配列を入力してください",
+        "getApiKeyFree": "API キーを取得（無料）",
+        "enterApiKeyFirst": "先に API キーを入力してください",
+        "selectModelPlaceholder": "-- モデルを選択 --",
+        "customModel": "カスタムモデル",
+        "customModelId": "カスタムモデル ID",
+        "modelIdPlaceholder": "モデル ID を入力",
+        "geminiCompatibleHint": "Gemini 互換 API を使う場合は変更してください",
+        "groqFreeHint": "Groq は無料で超高速な推論を提供します",
+        "sonarHint": "Sonar モデルにはリアルタイム Web 検索が含まれます",
+        "deeplFreePro": "DeepL API 無料版 / 有料版",
+        "advancedParams": "詳細 API パラメータ",
+        "maxTokens": "最大トークン",
+        "maxOutputTokens": "最大出力トークン",
+        "temperature": "温度",
+        "thinking": "思考",
+        "thinkingBudget": "思考バジェット",
+        "excludeParamHint": "チェックを外すと API リクエストから除外されます。",
+        "thinkingOffHint": "チェックを外すと API リクエストから除外されます。思考を OFF にするとリアルタイム配信が有効になります。",
+        "mergeJsonHint": "デフォルトのリクエストボディに統合されます。max_completion_tokens と temperature は自動入力されます",
+        "refreshModelsHint": "モデル一覧を更新",
+        "modelsAvailable": "{count} 件のモデルが利用可能",
+        "testing": "テスト中...",
+        "testFailed": "エラー: {error}",
+        "emptyResponse": "空の応答",
+        "requestBodyMerge": "リクエストボディ統合 JSON",
+        "requestBodyMergeInvalid": "リクエストボディ統合 JSON は JSON オブジェクトである必要があります。",
+      },
       "testingConnection": "接続をテスト…",
       "testConnection": "接続をテスト",
       "getApiKey": "キーを取得",
@@ -517,6 +554,13 @@ window.LANG_JA = {
     "lyricsProviders": {
       "title": "歌詞プロバイダー",
       "description": "歌詞を取得するプロバイダーを選択し、優先順位を設定します。上にあるプロバイダーから先に試行されます。",
+      "spotify": {
+        "title": "Spotify プレミアム機能",
+        "desc": "このアドオンは Spotify から直接歌詞を取得します。",
+        "reqPremium": "Spotify Premium が必要",
+        "reqMulti": "複数のプロバイダーに対応",
+        "reqQuality": "高い精度と同期品質"
+      },
       "preferSyncDataProvider": {
         "label": "同期データのあるプロバイダーを優先",
         "desc": "現在の曲に同期データがある場合、通常の優先順位より先に対応する歌詞プロバイダーを試します。"
@@ -567,6 +611,7 @@ window.LANG_JA = {
     "exitFullscreen": "フルスクリーン終了"
   },
   "menu": {
+    "localLyricsApplying": "適用中",
     "translation": "変換",
     "settings": "設定",
     "syncAdjust": "同期調整",
@@ -1886,6 +1931,18 @@ window.LANG_JA = {
     },
     "debugTab": {
       "title": "デバッグ情報",
+      "apiEmpty": "まだ API リクエストがありません。曲を再生するとここに表示されます。",
+      "labelTitle": "タイトル: ",
+      "labelArtist": "アーティスト: ",
+      "labelAlbum": "アルバム: ",
+      "labelTrackId": "トラック ID: ",
+      "labelProvider": "プロバイダー: ",
+      "labelType": "種類: ",
+      "labelError": "エラー: ",
+      "labelRequest": "リクエスト:",
+      "labelResponse": "レスポンス:",
+      "apiLogTitle": "API リクエストログ ({count})",
+      "totalRequests": "合計: {total} 件のリクエスト",
       "subtitle": "バグ報告時に開発者に提供する情報です",
       "currentTrack": "現在のトラック情報",
       "trackInfo": "トラック情報",
@@ -1971,7 +2028,17 @@ window.LANG_JA = {
     "wordSupplements": "単語詳細",
     "wordSupplementsLoading": "単語の読みと意味を読み込み中..."
   },
+  "videoStats": {
+    "title": "動画の統計",
+    "quality": "品質:",
+    "resolution": "解像度:",
+    "buffered": "バッファ済み:",
+    "source": "ソース:",
+    "helperStatus": "ヘルパーの状態:",
+    "videoId": "動画 ID:"
+  },
   "videoBackground": {
+    "isrcMissing": "この曲のISRCを確認できないため、映像背景を読み込めません。",
     "loading": "動画情報を読み込み中...",
     "notFound": "動画が見つかりません。",
     "error": "エラーが発生しました。",
@@ -1997,6 +2064,7 @@ window.LANG_JA = {
     "videoNotDownloaded": "動画がダウンロードされていません"
   },
   "translator": {
+    "noProviderConfigured": "AIプロバイダーが設定されていません。設定でAIプロバイダーを選択してください。",
     "missingApiKey": "Gemini APIキーが設定されていません。設定でAPIキーを入力してください。",
     "invalidApiKeyFormat": "不正なAPIキー形式です。Gemini APIキーは 'AIza' で始まる必要があります。",
     "invalidRequestFormat": "リクエスト形式が正しくありません。APIキーを確認してください。",
@@ -2011,6 +2079,7 @@ window.LANG_JA = {
     "failedPrefix": "翻訳失敗"
   },
   "utils": {
+    "unknownErrorShort": "不明なエラー",
     "allUrlsFailed": "すべてのURLからバージョン情報を取得できませんでした",
     "invalidVersionFormat": "無効なバージョン形式",
     "unknownError": "不明なエラー",
@@ -2030,6 +2099,7 @@ window.LANG_JA = {
     "unsynced": "通常歌詞"
   },
   "communityVideo": {
+    "isrcMissing": "この曲のISRCを確認できないため、コミュニティ映像を登録できません。",
     "loginRequired": "コミュニティ動画を登録するにはDiscordへのログインが必要です。",
     "title": "コミュニティ動画推薦",
     "loading": "動画リストを読み込み中...",
@@ -2194,6 +2264,14 @@ window.LANG_JA = {
     "noSelection": "歌詞を選択してください"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ 歌詞はここに",
+      "line1": "最初の歌詞",
+      "line2": "再生中の歌詞",
+      "line3": "次の歌詞...",
+      "mainScreen": "メイン画面",
+      "nowPlaying": "再生中"
+    },
     "welcome": {
       "title": "ivLyricsへようこそ！",
       "subtitle": "Spotifyで美しい歌詞をお楽しみください",
@@ -2643,6 +2721,13 @@ window.LANG_JA = {
     "dismissAll": "すべて閉じる"
   },
   "syncCreator": {
+    "isrcMissingUse": "この曲のISRCを確認できないため、同期データを利用できません。",
+    "isrcMissingRegister": "この曲のISRCを確認できないため、同期データを登録できません。",
+    "scoreConflict": "他の編集セッションと競合しました。現在の下書きは保持されます。他のエディターを閉じて再度開いてください。",
+    "lrclibBadgeInstrumental": "インストゥルメンタル",
+    "sourcePanel": "ソース",
+    "shortcutsTitle": "同期作成のショートカット",
+    "notAvailable": "SyncDataCreator は利用できません",
     "loginRequired": "カラオケ同期を作成するにはDiscordへのログインが必要です。",
     "title": "カラオケ同期作成",
     "syncGranularityLabel": "同期単位",

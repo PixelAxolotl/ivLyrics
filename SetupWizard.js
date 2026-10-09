@@ -1053,7 +1053,7 @@ const OverlayTipStep = ({ overlayEnabled, onOverlayChange, onNext, onBack }) => 
                   textAlign: "center",
                 },
               },
-              "♪ 가사가 여기에"
+              I18n.t("setupWizard.mock.lyricsHere") || "♪ Lyrics here"
             )
           )
         ),
@@ -1125,7 +1125,7 @@ const OverlayTipStep = ({ overlayEnabled, onOverlayChange, onNext, onBack }) => 
 // NowPlaying Panel Tip step - Panel lyrics feature introduction with animation and toggle
 const NowPlayingTipStep = ({ nowPlayingEnabled, onNowPlayingChange, onNext, onBack }) => {
   const [currentLine, setCurrentLine] = useState(0);
-  const sampleLyrics = ["첫 번째 가사", "현재 재생 중인 가사", "다음 가사..."];
+  const sampleLyrics = [I18n.t("setupWizard.mock.line1") || "First lyric", I18n.t("setupWizard.mock.line2") || "Currently playing lyric", I18n.t("setupWizard.mock.line3") || "Next lyric..."];
 
   // Animation cycle for lyrics scrolling
   react.useEffect(() => {
@@ -1164,7 +1164,7 @@ const NowPlayingTipStep = ({ nowPlayingEnabled, onNowPlayingChange, onNext, onBa
               color: "rgba(255, 255, 255, 0.3)",
             },
           },
-          "메인 화면"
+          I18n.t("setupWizard.mock.mainScreen") || "Main screen"
         ),
         // Right panel with lyrics
         nowPlayingEnabled && react.createElement(
@@ -1195,7 +1195,7 @@ const NowPlayingTipStep = ({ nowPlayingEnabled, onNowPlayingChange, onNext, onBa
                 textAlign: "center",
               },
             },
-            "지금 재생 중"
+            I18n.t("setupWizard.mock.nowPlaying") || "Now playing"
           ),
           // Album art placeholder
           react.createElement("div", {

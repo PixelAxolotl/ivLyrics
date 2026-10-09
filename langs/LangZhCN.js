@@ -141,6 +141,14 @@ window.LANG_ZH_CN = {
     "downloadDesc": "如果尚未安装悬浮窗应用，请先下载"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "{label}颜色",
+      "hexValue": "{label} HEX 值"
+    },
+    "videoShowWhenPaused": {
+      "label": "暂停时仍显示视频",
+      "desc": "在播放暂停期间保持显示冻结的视频帧。"
+    },
     "language": {
       "label": "语言",
       "desc": "选择扩展程序的语言"
@@ -495,6 +503,35 @@ window.LANG_ZH_CN = {
       "selectModel": "从模型列表中选择",
       "loadingModels": "正在加载模型…",
       "modelsUnavailable": "无法加载模型列表。您可以手动输入模型 ID。",
+      "addonUi": {
+        "keyRotationHint": "输入单个密钥或 JSON 数组以轮换使用",
+        "getApiKeyFree": "获取 API 密钥（免费）",
+        "enterApiKeyFirst": "请先输入 API 密钥",
+        "selectModelPlaceholder": "-- 选择模型 --",
+        "customModel": "自定义模型",
+        "customModelId": "自定义模型 ID",
+        "modelIdPlaceholder": "输入模型 ID",
+        "geminiCompatibleHint": "修改此处以使用 Gemini 兼容 API",
+        "groqFreeHint": "Groq 提供免费的超高速推理",
+        "sonarHint": "Sonar 模型包含实时网页搜索",
+        "deeplFreePro": "DeepL API 免费版 / 专业版",
+        "advancedParams": "高级 API 参数",
+        "maxTokens": "最大令牌数",
+        "maxOutputTokens": "最大输出令牌数",
+        "temperature": "温度",
+        "thinking": "思考",
+        "thinkingBudget": "思考预算",
+        "excludeParamHint": "取消勾选可将该参数排除在 API 请求之外。",
+        "thinkingOffHint": "取消勾选可将该参数排除在 API 请求之外。关闭思考可启用实时流式输出。",
+        "mergeJsonHint": "将合并到默认请求正文中。max_completion_tokens 和 temperature 默认自动填充",
+        "refreshModelsHint": "刷新模型列表",
+        "modelsAvailable": "{count} 个模型可用",
+        "testing": "测试中...",
+        "testFailed": "错误：{error}",
+        "emptyResponse": "空响应",
+        "requestBodyMerge": "请求体合并 JSON",
+        "requestBodyMergeInvalid": "请求体合并 JSON 必须是 JSON 对象。",
+      },
       "testingConnection": "测试连接…",
       "testConnection": "测试连接",
       "getApiKey": "获取密钥",
@@ -517,6 +554,13 @@ window.LANG_ZH_CN = {
     "lyricsProviders": {
       "title": "歌词提供者",
       "description": "选择并划分歌词提供者的优先级。排在顶部的提供者将被优先尝试。",
+      "spotify": {
+        "title": "Spotify 高级功能",
+        "desc": "此插件直接从 Spotify 获取歌词。",
+        "reqPremium": "需要 Spotify Premium",
+        "reqMulti": "支持多个提供方",
+        "reqQuality": "高准确度与同步质量"
+      },
       "preferSyncDataProvider": {
         "label": "优先使用有同步数据的提供商",
         "desc": "如果当前歌曲有同步数据，将在常规提供商顺序之前尝试对应的歌词提供商。"
@@ -567,6 +611,7 @@ window.LANG_ZH_CN = {
     "exitFullscreen": "退出全屏"
   },
   "menu": {
+    "localLyricsApplying": "应用中",
     "translation": "转换",
     "settings": "设置",
     "syncAdjust": "同步调节",
@@ -1886,6 +1931,18 @@ window.LANG_ZH_CN = {
     },
     "debugTab": {
       "title": "调试信息",
+      "apiEmpty": "暂无 API 请求。播放歌曲后将在此处显示。",
+      "labelTitle": "标题：",
+      "labelArtist": "艺人：",
+      "labelAlbum": "专辑：",
+      "labelTrackId": "曲目 ID：",
+      "labelProvider": "提供方：",
+      "labelType": "类型：",
+      "labelError": "错误：",
+      "labelRequest": "请求：",
+      "labelResponse": "响应：",
+      "apiLogTitle": "API 请求日志 ({count})",
+      "totalRequests": "共计：{total} 个请求",
       "subtitle": "报告 Bug 时提供给开发者的信息",
       "currentTrack": "当前曲目信息",
       "trackInfo": "曲目信息",
@@ -1971,7 +2028,17 @@ window.LANG_ZH_CN = {
     "wordSupplements": "单词详情",
     "wordSupplementsLoading": "正在加载单词发音和释义..."
   },
+  "videoStats": {
+    "title": "视频统计",
+    "quality": "质量：",
+    "resolution": "分辨率：",
+    "buffered": "已缓冲：",
+    "source": "来源：",
+    "helperStatus": "助手状态：",
+    "videoId": "视频 ID："
+  },
   "videoBackground": {
+    "isrcMissing": "无法确认本歌曲的 ISRC，无法加载视频背景。",
     "loading": "正在加载视频信息...",
     "notFound": "找不到视频。",
     "error": "发生错误。",
@@ -1997,6 +2064,7 @@ window.LANG_ZH_CN = {
     "videoNotDownloaded": "视频未下载"
   },
   "translator": {
+    "noProviderConfigured": "未配置 AI 提供方。请在设置中选择 AI 提供方。",
     "missingApiKey": "未设置 Gemini API 密钥。请在设置中输入 API 密钥。",
     "invalidApiKeyFormat": "API 密钥格式不正确。Gemini API 密钥必须以 'AIza' 开头。",
     "invalidRequestFormat": "请求格式不正确。请检查 API 密钥。",
@@ -2011,6 +2079,7 @@ window.LANG_ZH_CN = {
     "failedPrefix": "翻译失败"
   },
   "utils": {
+    "unknownErrorShort": "未知错误",
     "allUrlsFailed": "无法从所有 URL 获取版本信息",
     "invalidVersionFormat": "无效的版本格式",
     "unknownError": "未知错误",
@@ -2030,6 +2099,7 @@ window.LANG_ZH_CN = {
     "unsynced": "纯文本"
   },
   "communityVideo": {
+    "isrcMissing": "无法确认本歌曲的 ISRC，无法注册社区视频。",
     "loginRequired": "注册社区视频需要登录 Discord。",
     "title": "社区视频推荐",
     "loading": "正在加载视频列表...",
@@ -2194,6 +2264,14 @@ window.LANG_ZH_CN = {
     "noSelection": "请选择歌词"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ 歌词在此",
+      "line1": "第一句歌词",
+      "line2": "当前播放的歌词",
+      "line3": "下一句歌词...",
+      "mainScreen": "主屏幕",
+      "nowPlaying": "正在播放"
+    },
     "welcome": {
       "title": "欢迎使用 ivLyrics!",
       "subtitle": "在 Spotify 上享受精美的歌词体验",
@@ -2643,6 +2721,13 @@ window.LANG_ZH_CN = {
     "dismissAll": "全部关闭"
   },
   "syncCreator": {
+    "isrcMissingUse": "无法确认本歌曲的 ISRC，无法使用同步数据。",
+    "isrcMissingRegister": "无法确认本歌曲的 ISRC，无法注册同步数据。",
+    "scoreConflict": "与其他编辑会话冲突。当前草稿已保留。请关闭其他编辑器并重新打开此任务。",
+    "lrclibBadgeInstrumental": "纯音乐",
+    "sourcePanel": "来源",
+    "shortcutsTitle": "同步创建器快捷键",
+    "notAvailable": "SyncDataCreator 不可用",
     "loginRequired": "创建卡拉 OK 同步需要登录 Discord。",
     "title": "创建卡拉OK同步",
     "syncGranularityLabel": "同步单位",

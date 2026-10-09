@@ -141,6 +141,14 @@ window.LANG_ZH_TW = {
     "downloadDesc": "如果尚未安裝覆蓋應用程式，請點此下載"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "{label}顏色",
+      "hexValue": "{label} HEX 值"
+    },
+    "videoShowWhenPaused": {
+      "label": "暫停時仍顯示影片",
+      "desc": "在播放暫停期間保持顯示凍結的影片影格。"
+    },
     "language": {
       "label": "語言",
       "desc": "選擇擴充功能的顯示語言"
@@ -495,6 +503,35 @@ window.LANG_ZH_TW = {
       "selectModel": "從模型清單中選擇",
       "loadingModels": "正在載入模型…",
       "modelsUnavailable": "無法載入模型清單。您可以手動輸入模型 ID。",
+      "addonUi": {
+        "keyRotationHint": "輸入單一金鑰或 JSON 陣列以輪換使用",
+        "getApiKeyFree": "取得 API 金鑰（免費）",
+        "enterApiKeyFirst": "請先輸入 API 金鑰",
+        "selectModelPlaceholder": "-- 選擇模型 --",
+        "customModel": "自訂模型",
+        "customModelId": "自訂模型 ID",
+        "modelIdPlaceholder": "輸入模型 ID",
+        "geminiCompatibleHint": "修改此處以使用 Gemini 相容 API",
+        "groqFreeHint": "Groq 提供免費的超高速推論",
+        "sonarHint": "Sonar 模型包含即時網頁搜尋",
+        "deeplFreePro": "DeepL API 免費版 / 專業版",
+        "advancedParams": "進階 API 參數",
+        "maxTokens": "最大權杖數",
+        "maxOutputTokens": "最大輸出權杖數",
+        "temperature": "溫度",
+        "thinking": "思考",
+        "thinkingBudget": "思考預算",
+        "excludeParamHint": "取消勾選可將該參數排除在 API 請求之外。",
+        "thinkingOffHint": "取消勾選可將該參數排除在 API 請求之外。關閉思考可啟用即時串流輸出。",
+        "mergeJsonHint": "將合併到預設請求主體中。max_completion_tokens 和 temperature 預設自動填入",
+        "refreshModelsHint": "重新整理模型清單",
+        "modelsAvailable": "{count} 個模型可用",
+        "testing": "測試中...",
+        "testFailed": "錯誤：{error}",
+        "emptyResponse": "空白回應",
+        "requestBodyMerge": "請求主體合併 JSON",
+        "requestBodyMergeInvalid": "請求主體合併 JSON 必須是 JSON 物件。",
+      },
       "testingConnection": "測試連線…",
       "testConnection": "測試連線",
       "getApiKey": "取得金鑰",
@@ -517,6 +554,13 @@ window.LANG_ZH_TW = {
     "lyricsProviders": {
       "title": "歌詞提供者",
       "description": "選擇並劃分歌詞提供者的優先級。排在頂部的提供者將被優先嘗試。",
+      "spotify": {
+        "title": "Spotify 進階功能",
+        "desc": "此外掛直接從 Spotify 取得歌詞。",
+        "reqPremium": "需要 Spotify Premium",
+        "reqMulti": "支援多個提供者",
+        "reqQuality": "高準確度與同步品質"
+      },
       "preferSyncDataProvider": {
         "label": "優先使用有同步資料的提供者",
         "desc": "如果目前歌曲有同步資料，會在一般提供者順序之前嘗試對應的歌詞提供者。"
@@ -567,6 +611,7 @@ window.LANG_ZH_TW = {
     "exitFullscreen": "離開全螢幕"
   },
   "menu": {
+    "localLyricsApplying": "套用中",
     "translation": "轉換",
     "settings": "設定",
     "syncAdjust": "同步調整",
@@ -1886,6 +1931,18 @@ window.LANG_ZH_TW = {
     },
     "debugTab": {
       "title": "除錯資訊",
+      "apiEmpty": "尚無 API 請求。播放歌曲後會顯示在這裡。",
+      "labelTitle": "標題：",
+      "labelArtist": "藝人：",
+      "labelAlbum": "專輯：",
+      "labelTrackId": "曲目 ID：",
+      "labelProvider": "提供者：",
+      "labelType": "類型：",
+      "labelError": "錯誤：",
+      "labelRequest": "請求：",
+      "labelResponse": "回應：",
+      "apiLogTitle": "API 請求記錄 ({count})",
+      "totalRequests": "共計：{total} 個請求",
       "subtitle": "回報 Bug 時傳送給開發者的資訊",
       "currentTrack": "目前曲目資訊",
       "trackInfo": "曲目資訊",
@@ -1971,7 +2028,17 @@ window.LANG_ZH_TW = {
     "wordSupplements": "單字詳情",
     "wordSupplementsLoading": "正在載入單字發音和釋義..."
   },
+  "videoStats": {
+    "title": "影片統計",
+    "quality": "品質：",
+    "resolution": "解析度：",
+    "buffered": "已緩衝：",
+    "source": "來源：",
+    "helperStatus": "助手狀態：",
+    "videoId": "影片 ID："
+  },
   "videoBackground": {
+    "isrcMissing": "無法確認本歌曲的 ISRC，無法載入影片背景。",
     "loading": "正在載入影片資訊...",
     "notFound": "找不到影片。",
     "error": "發生錯誤。",
@@ -1997,6 +2064,7 @@ window.LANG_ZH_TW = {
     "videoNotDownloaded": "影片尚未下載"
   },
   "translator": {
+    "noProviderConfigured": "尚未設定 AI 提供者。請在設定中選擇 AI 提供者。",
     "missingApiKey": "尚未設定 Gemini API 金鑰。請在設定中輸入 API 金鑰。",
     "invalidApiKeyFormat": "API 金鑰格式不正確。Gemini API 金鑰應以 'AIza' 開頭。",
     "invalidRequestFormat": "請求格式不正確。請檢查 API 金鑰。",
@@ -2011,6 +2079,7 @@ window.LANG_ZH_TW = {
     "failedPrefix": "翻譯失敗"
   },
   "utils": {
+    "unknownErrorShort": "未知錯誤",
     "allUrlsFailed": "無法從所有 URL 取得版本資訊",
     "invalidVersionFormat": "無效的版本格式",
     "unknownError": "未知錯誤",
@@ -2030,6 +2099,7 @@ window.LANG_ZH_TW = {
     "unsynced": "一般歌詞"
   },
   "communityVideo": {
+    "isrcMissing": "無法確認本歌曲的 ISRC，無法註冊社群影片。",
     "loginRequired": "註冊社群影片需要登入 Discord。",
     "title": "社群影片推薦",
     "loading": "正在載入影片列表...",
@@ -2194,6 +2264,14 @@ window.LANG_ZH_TW = {
     "noSelection": "請選擇歌詞"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ 歌詞在這裡",
+      "line1": "第一句歌詞",
+      "line2": "目前播放的歌詞",
+      "line3": "下一句歌詞...",
+      "mainScreen": "主畫面",
+      "nowPlaying": "正在播放"
+    },
     "welcome": {
       "title": "歡迎使用 ivLyrics！",
       "subtitle": "在 Spotify 享受優美的歌詞體驗",
@@ -2643,6 +2721,13 @@ window.LANG_ZH_TW = {
     "dismissAll": "全部關閉"
   },
   "syncCreator": {
+    "isrcMissingUse": "無法確認本歌曲的 ISRC，無法使用同步資料。",
+    "isrcMissingRegister": "無法確認本歌曲的 ISRC，無法註冊同步資料。",
+    "scoreConflict": "與其他編輯工作階段衝突。目前草稿已保留。請關閉其他編輯器並重新開啟此工作。",
+    "lrclibBadgeInstrumental": "演奏曲",
+    "sourcePanel": "來源",
+    "shortcutsTitle": "同步建立器快速鍵",
+    "notAvailable": "SyncDataCreator 無法使用",
     "loginRequired": "建立卡拉 OK 同步需要登入 Discord。",
     "title": "建立卡拉OK同步",
     "syncGranularityLabel": "同步單位",

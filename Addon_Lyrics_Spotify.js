@@ -104,17 +104,25 @@
          */
         getSettingsUI() {
             const React = Spicetify.React;
+            const t = (key, fallback) => {
+                try {
+                    const value = window.I18n?.t?.(key);
+                    return value && value !== key ? value : fallback;
+                } catch (e) {
+                    return fallback;
+                }
+            };
 
             return function SpotifyLyricsSettings() {
                 return React.createElement('div', { className: 'ai-addon-settings spotify-settings' },
                     React.createElement('div', { className: 'ai-addon-setting', style: { marginTop: '20px' } },
                         React.createElement('div', { className: 'ai-addon-info-box' },
-                            React.createElement('p', { style: { fontWeight: 'bold', marginBottom: '8px' } }, 'Spotify Premium Features'),
-                            React.createElement('p', null, 'This addon retrieves lyrics directly from Spotify.'),
+                            React.createElement('p', { style: { fontWeight: 'bold', marginBottom: '8px' } }, t('settings.lyricsProviders.spotify.title', 'Spotify Premium Features')),
+                            React.createElement('p', null, t('settings.lyricsProviders.spotify.desc', 'This addon retrieves lyrics directly from Spotify.')),
                             React.createElement('ul', { style: { paddingLeft: '20px', marginTop: '8px', opacity: 0.8 } },
-                                React.createElement('li', null, 'Requires Spotify Premium'),
-                                React.createElement('li', null, 'Supports multiple providers'),
-                                React.createElement('li', null, 'High accuracy & sync quality')
+                                React.createElement('li', null, t('settings.lyricsProviders.spotify.reqPremium', 'Requires Spotify Premium')),
+                                React.createElement('li', null, t('settings.lyricsProviders.spotify.reqMulti', 'Supports multiple providers')),
+                                React.createElement('li', null, t('settings.lyricsProviders.spotify.reqQuality', 'High accuracy & sync quality'))
                             )
                         )
                     )

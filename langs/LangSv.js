@@ -141,6 +141,14 @@ window.LANG_SV = {
     "downloadDesc": "Ladda ned overlay-appen om den inte är installerad"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "{label}-färg",
+      "hexValue": "{label} HEX-värde"
+    },
+    "videoShowWhenPaused": {
+      "label": "Visa video vid paus",
+      "desc": "Behåll den frysta videorutan synlig medan uppspelningen är pausad."
+    },
     "language": {
       "label": "Språk",
       "desc": "Välj språk för tillägget"
@@ -495,6 +503,35 @@ window.LANG_SV = {
       "selectModel": "Välj från modellistan",
       "loadingModels": "Läser in modeller…",
       "modelsUnavailable": "Det gick inte att läsa in modellistan. Du kan ange ett modell-ID manuellt.",
+      "addonUi": {
+        "keyRotationHint": "Ange en enskild nyckel eller JSON-array för rotation",
+        "getApiKeyFree": "Hämta API-nyckel (gratis)",
+        "enterApiKeyFirst": "Ange API-nyckeln först",
+        "selectModelPlaceholder": "-- Välj en modell --",
+        "customModel": "Anpassad modell",
+        "customModelId": "Anpassat modell-ID",
+        "modelIdPlaceholder": "Ange ett modell-ID",
+        "geminiCompatibleHint": "Ändra för att använda Gemini-kompatibla API:er",
+        "groqFreeHint": "Groq erbjuder gratis, ultrasnabb inferens",
+        "sonarHint": "Sonar-modeller inkluderar webbsökning i realtid",
+        "deeplFreePro": "DeepL API gratis / pro",
+        "advancedParams": "Avancerade API-parametrar",
+        "maxTokens": "Max tokens",
+        "maxOutputTokens": "Max output-tokens",
+        "temperature": "Temperatur",
+        "thinking": "Tänkande",
+        "thinkingBudget": "Tankebudget",
+        "excludeParamHint": "Avmarkera för att exkludera parametern från API-begäran.",
+        "thinkingOffHint": "Avmarkera för att exkludera parametern. Avstängt tänkande aktiverar realtidsströmning.",
+        "mergeJsonHint": "Slås ihop med standardkroppen. max_completion_tokens och temperature fylls i som standard",
+        "refreshModelsHint": "Uppdatera modellistan",
+        "modelsAvailable": "{count} modeller tillgängliga",
+        "testing": "Testar...",
+        "testFailed": "Fel: {error}",
+        "emptyResponse": "Tomt svar",
+        "requestBodyMerge": "Sammanslagnings-JSON för förfrågan",
+        "requestBodyMergeInvalid": "Sammanslagnings-JSON måste vara ett JSON-objekt.",
+      },
       "testingConnection": "Testa anslutningen…",
       "testConnection": "Testa anslutningen",
       "getApiKey": "Hämta nyckel",
@@ -517,6 +554,13 @@ window.LANG_SV = {
     "lyricsProviders": {
       "title": "Textleverantörer",
       "description": "Välj och prioritera textleverantörer. Leverantörer i toppen prövas först.",
+      "spotify": {
+        "title": "Spotify Premium-funktioner",
+        "desc": "Detta tillägg hämtar låttexter direkt från Spotify.",
+        "reqPremium": "Kräver Spotify Premium",
+        "reqMulti": "Stöder flera leverantörer",
+        "reqQuality": "Hög noggrannhet och synkkvalitet"
+      },
       "preferSyncDataProvider": {
         "label": "Prioritera leverantörer med synkdata",
         "desc": "När synkdata finns för det aktuella spåret provas motsvarande textleverantör före den vanliga ordningen."
@@ -567,6 +611,7 @@ window.LANG_SV = {
     "exitFullscreen": "Avsluta helskärm"
   },
   "menu": {
+    "localLyricsApplying": "Tillämpar",
     "translation": "Konvertera",
     "settings": "Inställningar",
     "syncAdjust": "Justera synkronisering",
@@ -1886,6 +1931,18 @@ window.LANG_SV = {
     },
     "debugTab": {
       "title": "Felsökningsinformation",
+      "apiEmpty": "Inga API-begäranden ännu. Spela en låt för att se dem här.",
+      "labelTitle": "Titel: ",
+      "labelArtist": "Artist: ",
+      "labelAlbum": "Album: ",
+      "labelTrackId": "Spår-ID: ",
+      "labelProvider": "Leverantör: ",
+      "labelType": "Typ: ",
+      "labelError": "Fel: ",
+      "labelRequest": "BEGÄRAN:",
+      "labelResponse": "SVAR:",
+      "apiLogTitle": "API-begärandelogg ({count})",
+      "totalRequests": "Totalt: {total} begäranden",
       "subtitle": "Information att skicka till utvecklaren vid felrapportering",
       "currentTrack": "Aktuell spårinformation",
       "trackInfo": "Spårinfo",
@@ -1971,7 +2028,17 @@ window.LANG_SV = {
     "wordSupplements": "Orddetaljer",
     "wordSupplementsLoading": "Läser in uttal och glosor..."
   },
+  "videoStats": {
+    "title": "Videostatistik",
+    "quality": "Kvalitet:",
+    "resolution": "Upplösning:",
+    "buffered": "Buffrat:",
+    "source": "Källa:",
+    "helperStatus": "Hjälparstatus:",
+    "videoId": "Video-ID:"
+  },
   "videoBackground": {
+    "isrcMissing": "Kan inte ladda videobakgrunden eftersom låtens ISRC inte kunde bekräftas.",
     "loading": "Laddar videoinformation...",
     "notFound": "Videon hittades inte.",
     "error": "Ett fel uppstod.",
@@ -1997,6 +2064,7 @@ window.LANG_SV = {
     "videoNotDownloaded": "Videon har inte laddats ner"
   },
   "translator": {
+    "noProviderConfigured": "Ingen AI-leverantör är konfigurerad. Välj en i inställningarna.",
     "missingApiKey": "Gemini API-nyckel är inte inställd. Ange API-nyckel i inställningarna.",
     "invalidApiKeyFormat": "Ogiltigt API-nyckelformat. Gemini API-nyckel måste börja med 'AIza'.",
     "invalidRequestFormat": "Ogiltigt format för begäran. Kontrollera din API-nyckel.",
@@ -2011,6 +2079,7 @@ window.LANG_SV = {
     "failedPrefix": "Översättningen misslyckades"
   },
   "utils": {
+    "unknownErrorShort": "Okänt fel",
     "allUrlsFailed": "Det gick inte att hämta versionsinformation från alla webbadresser",
     "invalidVersionFormat": "Ogiltigt versionsformat",
     "unknownError": "Okänt fel",
@@ -2030,6 +2099,7 @@ window.LANG_SV = {
     "unsynced": "Vanlig text"
   },
   "communityVideo": {
+    "isrcMissing": "Kan inte registrera communityvideon eftersom låtens ISRC inte kunde bekräftas.",
     "loginRequired": "Discord-inloggning krävs för att registrera community-videor.",
     "title": "Rekommendationer för communityvideo",
     "loading": "Laddar videolista...",
@@ -2194,6 +2264,14 @@ window.LANG_SV = {
     "noSelection": "Välj text"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ Låttext här",
+      "line1": "Första raden",
+      "line2": "Raden som spelas",
+      "line3": "Nästa rad...",
+      "mainScreen": "Huvudskärm",
+      "nowPlaying": "Spelas nu"
+    },
     "welcome": {
       "title": "Välkommen till ivLyrics!",
       "subtitle": "Njut av vackra texter på Spotify",
@@ -2643,6 +2721,13 @@ window.LANG_SV = {
     "dismissAll": "Stäng alla"
   },
   "syncCreator": {
+    "isrcMissingUse": "Synkdata är inte tillgängliga eftersom låtens ISRC inte kunde bekräftas.",
+    "isrcMissingRegister": "Kan inte registrera synkdata eftersom låtens ISRC inte kunde bekräftas.",
+    "scoreConflict": "Konflikt med en annan redigeringssession. Utkastet är bevarat. Stäng den andra redigeraren och öppna uppgiften igen.",
+    "lrclibBadgeInstrumental": "Instrumental",
+    "sourcePanel": "Källa",
+    "shortcutsTitle": "Genvägar för synkskaparen",
+    "notAvailable": "SyncDataCreator inte tillgänglig",
     "loginRequired": "Discord-inloggning krävs för att skapa karaokesynkronisering.",
     "title": "Skapa Karaoke Sync",
     "syncGranularityLabel": "Synkenhet",

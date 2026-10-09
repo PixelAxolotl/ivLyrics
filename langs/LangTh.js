@@ -141,6 +141,14 @@ window.LANG_TH = {
     "downloadDesc": "หากยังไม่ได้ติดตั้งแอปโอเวอร์เลย์ โปรดดาวน์โหลด"
   },
   "settings": {
+    "colorPicker": {
+      "choose": "สี {label}",
+      "hexValue": "ค่า HEX {label}"
+    },
+    "videoShowWhenPaused": {
+      "label": "แสดงวิดีโอเมื่อหยุดชั่วคราว",
+      "desc": "แสดงเฟรมวิดีโอที่ค้างไว้ต่อไปขณะหยุดเล่นชั่วคราว"
+    },
     "language": {
       "label": "ภาษา",
       "desc": "เลือกภาษาของส่วนขยาย"
@@ -495,6 +503,35 @@ window.LANG_TH = {
       "selectModel": "เลือกจากรายการโมเดล",
       "loadingModels": "กำลังโหลดโมเดล…",
       "modelsUnavailable": "ไม่สามารถโหลดรายการโมเดลได้ คุณสามารถป้อน ID โมเดลด้วยตนเองได้",
+      "addonUi": {
+        "keyRotationHint": "ป้อนคีย์เดียวหรืออาร์เรย์ JSON เพื่อหมุนเวียน",
+        "getApiKeyFree": "รับคีย์ API (ฟรี)",
+        "enterApiKeyFirst": "ป้อนคีย์ API ก่อน",
+        "selectModelPlaceholder": "-- เลือกโมเดล --",
+        "customModel": "โมเดลกำหนดเอง",
+        "customModelId": "ID โมเดลกำหนดเอง",
+        "modelIdPlaceholder": "ป้อน ID โมเดล",
+        "geminiCompatibleHint": "เปลี่ยนเพื่อใช้ API ที่เข้ากันได้กับ Gemini",
+        "groqFreeHint": "Groq ให้การอนุมานฟรีที่เร็วเป็นพิเศษ",
+        "sonarHint": "โมเดล Sonar มีการค้นเว็บแบบเรียลไทม์",
+        "deeplFreePro": "DeepL API ฟรี / โปร",
+        "advancedParams": "พารามิเตอร์ API ขั้นสูง",
+        "maxTokens": "โทเค็นสูงสุด",
+        "maxOutputTokens": "โทเค็นเอาต์พุตสูงสุด",
+        "temperature": "อุณหภูมิ",
+        "thinking": "การคิด",
+        "thinkingBudget": "งบการคิด",
+        "excludeParamHint": "ยกเลิกการเลือกเพื่อแยกพารามิเตอร์ออกจากคำขอ API",
+        "thinkingOffHint": "ยกเลิกการเลือกเพื่อแยกพารามิเตอร์ การปิดการคิดจะเปิดสตรีมแบบเรียลไทม์",
+        "mergeJsonHint": "รวมเข้ากับเนื้อหาคำขอเริ่มต้น max_completion_tokens และ temperature จะถูกเติมเป็นค่าเริ่มต้น",
+        "refreshModelsHint": "รีเฟรชรายการโมเดล",
+        "modelsAvailable": "มี {count} โมเดล",
+        "testing": "กำลังทดสอบ...",
+        "testFailed": "ข้อผิดพลาด: {error}",
+        "emptyResponse": "การตอบกลับว่างเปล่า",
+        "requestBodyMerge": "JSON ผสานเนื้อหาคำขอ",
+        "requestBodyMergeInvalid": "JSON ผสานเนื้อหาคำขอต้องเป็นอ็อบเจกต์ JSON",
+      },
       "testingConnection": "ทดสอบการเชื่อมต่อ…",
       "testConnection": "ทดสอบการเชื่อมต่อ",
       "getApiKey": "รับคีย์",
@@ -517,6 +554,13 @@ window.LANG_TH = {
     "lyricsProviders": {
       "title": "ผู้ให้บริการเนื้อเพลง",
       "description": "เลือกและลำดับความสำคัญของผู้ให้บริการเนื้อเพลง ผู้ให้บริการที่อยู่ด้านบนสุดจะถูกลองก่อน",
+      "spotify": {
+        "title": "ฟีเจอร์พรีเมียมของ Spotify",
+        "desc": "ส่วนเสริมนี้ดึงเนื้อเพลงจาก Spotify โดยตรง",
+        "reqPremium": "ต้องใช้ Spotify Premium",
+        "reqMulti": "รองรับหลายผู้ให้บริการ",
+        "reqQuality": "ความแม่นยำสูงและคุณภาพการซิงก์"
+      },
       "preferSyncDataProvider": {
         "label": "ให้ความสำคัญกับผู้ให้บริการที่มีข้อมูลซิงค์",
         "desc": "หากเพลงปัจจุบันมีข้อมูลซิงค์ ระบบจะลองผู้ให้บริการเนื้อเพลงที่ตรงกันก่อนลำดับผู้ให้บริการปกติ"
@@ -567,6 +611,7 @@ window.LANG_TH = {
     "exitFullscreen": "ออกจากเต็มหน้าจอ"
   },
   "menu": {
+    "localLyricsApplying": "กำลังใช้",
     "translation": "การแปลง",
     "settings": "การตั้งค่า",
     "syncAdjust": "ปรับซิงค์",
@@ -1886,6 +1931,18 @@ window.LANG_TH = {
     },
     "debugTab": {
       "title": "ข้อมูลดีบัก",
+      "apiEmpty": "ยังไม่มีคำขอ API เล่นเพลงเพื่อดูที่นี่",
+      "labelTitle": "ชื่อ: ",
+      "labelArtist": "ศิลปิน: ",
+      "labelAlbum": "อัลบั้ม: ",
+      "labelTrackId": "ID เพลง: ",
+      "labelProvider": "ผู้ให้บริการ: ",
+      "labelType": "ประเภท: ",
+      "labelError": "ข้อผิดพลาด: ",
+      "labelRequest": "คำขอ:",
+      "labelResponse": "การตอบ:",
+      "apiLogTitle": "บันทึกคำขอ API ({count})",
+      "totalRequests": "ทั้งหมด: {total} คำขอ",
       "subtitle": "ข้อมูลสำหรับส่งให้นักพัฒนาเมื่อแจ้งบั๊ก",
       "currentTrack": "ข้อมูลแทร็กปัจจุบัน",
       "trackInfo": "ข้อมูลแทร็ก",
@@ -1971,7 +2028,17 @@ window.LANG_TH = {
     "wordSupplements": "รายละเอียดคำ",
     "wordSupplementsLoading": "กำลังโหลดคำอ่านและคำแปล..."
   },
+  "videoStats": {
+    "title": "สถิติวิดีโอ",
+    "quality": "คุณภาพ:",
+    "resolution": "ความละเอียด:",
+    "buffered": "บัฟเฟอร์แล้ว:",
+    "source": "แหล่งที่มา:",
+    "helperStatus": "สถานะตัวช่วย:",
+    "videoId": "ID วิดีโอ:"
+  },
   "videoBackground": {
+    "isrcMissing": "ไม่สามารถโหลดพื้นหลังวิดีโอได้เนื่องจากยืนยัน ISRC ของเพลงนี้ไม่ได้",
     "loading": "กำลังโหลดข้อมูลวิดีโอ...",
     "notFound": "ไม่พบวิดีโอ",
     "error": "เกิดข้อผิดพลาด",
@@ -1997,6 +2064,7 @@ window.LANG_TH = {
     "videoNotDownloaded": "วิดีโอยังไม่ได้ดาวน์โหลด"
   },
   "translator": {
+    "noProviderConfigured": "ยังไม่ได้ตั้งค่าผู้ให้บริการ AI โปรดเลือกในตั้งค่า",
     "missingApiKey": "ยังไม่ได้ตั้งค่า Gemini API Key โปรดใส่ API Key ในการตั้งค่า",
     "invalidApiKeyFormat": "รูปแบบ API Key ไม่ถูกต้อง Gemini API Key ต้องขึ้นต้นด้วย 'AIza'",
     "invalidRequestFormat": "รูปแบบคำขอไม่ถูกต้อง โปรดตรวจสอบ API Key",
@@ -2011,6 +2079,7 @@ window.LANG_TH = {
     "failedPrefix": "แปลล้มเหลว"
   },
   "utils": {
+    "unknownErrorShort": "ข้อผิดพลาดที่ไม่รู้จัก",
     "allUrlsFailed": "ไม่สามารถดึงข้อมูลเวอร์ชันจากทุก URL ได้",
     "invalidVersionFormat": "รูปแบบเวอร์ชันไม่ถูกต้อง",
     "unknownError": "ข้อผิดพลาดที่ไม่ทราบสาเหตุ",
@@ -2030,6 +2099,7 @@ window.LANG_TH = {
     "unsynced": "เนื้อเพลงทั่วไป"
   },
   "communityVideo": {
+    "isrcMissing": "ไม่สามารถลงทะเบียนวิดีโอชุมชนได้เนื่องจากยืนยัน ISRC ของเพลงนี้ไม่ได้",
     "loginRequired": "การลงทะเบียนวิดีโอชุมชนต้องเข้าสู่ระบบ Discord",
     "title": "วิดีโอแนะนำจากชุมชน",
     "loading": "กำลังโหลดรายการวิดีโอ...",
@@ -2194,6 +2264,14 @@ window.LANG_TH = {
     "noSelection": "โปรดเลือกเนื้อเพลง"
   },
   "setupWizard": {
+    "mock": {
+      "lyricsHere": "♪ เนื้อเพลงที่นี่",
+      "line1": "บรรทัดแรก",
+      "line2": "บรรทัดที่กำลังเล่น",
+      "line3": "บรรทัดถัดไป...",
+      "mainScreen": "หน้าจอหลัก",
+      "nowPlaying": "กำลังเล่น"
+    },
     "welcome": {
       "title": "ยินดีต้อนรับสู่ ivLyrics!",
       "subtitle": "เพลิดเพลินกับเนื้อเพลงที่สวยงามบน Spotify",
@@ -2643,6 +2721,13 @@ window.LANG_TH = {
     "dismissAll": "ปิดทั้งหมด"
   },
   "syncCreator": {
+    "isrcMissingUse": "ข้อมูลซิงก์ไม่พร้อมใช้งานเนื่องจากยืนยัน ISRC ของเพลงนี้ไม่ได้",
+    "isrcMissingRegister": "ไม่สามารถลงทะเบียนข้อมูลซิงก์ได้เนื่องจากยืนยัน ISRC ของเพลงนี้ไม่ได้",
+    "scoreConflict": "ขัดแย้งกับเซสชันแก้ไขอื่น ฉบับร่างของคุณถูกเก็บไว้ ปิดตัวแก้ไขอื่นแล้วเปิดงานนี้อีกครั้ง",
+    "lrclibBadgeInstrumental": "บรรเลง",
+    "sourcePanel": "แหล่งที่มา",
+    "shortcutsTitle": "ทางลัดตัวสร้างซิงก์",
+    "notAvailable": "SyncDataCreator ไม่พร้อมใช้งาน",
     "loginRequired": "การสร้างซิงก์คาราโอเกะต้องเข้าสู่ระบบ Discord",
     "title": "สร้างซิงค์คาราโอเกะ",
     "syncGranularityLabel": "หน่วยการซิงค์",

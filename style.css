@@ -5285,6 +5285,31 @@ ruby rt {
   white-space: nowrap;
 }
 
+/* Editor-style per-glyph reading, positioned against the glyph's own box
+   (which is position: relative), so it always sits under its character. */
+.lyrics-karaoke-char-reading {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--lyrics-color-active);
+  /* Sung glyphs paint via transparent fill on the wrapper; without this the
+     inherited transparent fill would blank the reading once played. */
+  -webkit-text-fill-color: var(--lyrics-color-active);
+  opacity: 0.76;
+}
+
+/* Reserve room for the readings so stacked vocal rows never overlap them. */
+.lyrics-karaoke-line.has-char-readings {
+  padding-bottom: 14px;
+}
+
 
 /* Furigana (Ruby) Styling */
 .lyrics-lyricsContainer-LyricsLine ruby {
@@ -13164,6 +13189,12 @@ html.is-lp-view-exit::view-transition-new(root) {
 
 .ivlyrics-sync-creator-shell [data-iv-progress-bar]:hover::after {
   transform: translate(-50%, -50%) scale(1);
+}
+
+/* Live preview reuses the outside interlude rows, whose label row is a
+   left-aligned flex container. Center it inside the preview box only. */
+.sync-creator-live-preview-exact p.lyrics-lyricsContainer-LyricsLine-interludeMain {
+  justify-content: center;
 }
 
 .sync-creator-hint::after {

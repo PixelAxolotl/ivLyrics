@@ -3277,11 +3277,10 @@ const Utils = {
       hideDisliked,
     });
 
-    if (decision.dropSavedVideo) {
-      try {
-        await this.removeSelectedVideo(trackUri);
-      } catch (error) { }
-    }
+    // Keep-local: a mismatch means "don't play", never "delete the saved
+    // pick". The IndexedDB record is preserved so moderation, empty lists,
+    // or ISRC mismatches cannot silently destroy a manual selection.
+    // Explicit reset stays in CommunityVideoSelector / index.js.
 
     if (decision.status !== "play") return { status: "none" };
 

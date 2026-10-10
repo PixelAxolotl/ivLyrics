@@ -2775,10 +2775,14 @@ const renderLyricMainContent = ({
 	subText = null,
 	subText2 = null,
 	culturalAnnotations = [],
+	furiganaMapOverride = null,
+	charReadings = null,
 }) => {
 	if (isKara) {
 		return react.createElement(KaraokeLine, {
 			line,
+			...(furiganaMapOverride instanceof Map ? { furiganaMapOverride } : null),
+			...(charReadings instanceof Map ? { charReadings } : null),
 			// Future rows are already pinned to 0 by the playback window. Completed
 			// rows receive one stable position past their final glyph so the painted
 			// progress remains visible without returning to the per-frame update path.
@@ -5617,6 +5621,8 @@ const LyricsLineBlock = react.memo(({
 	culturalNote = null,
 	singleLineScroll = false,
 	hiddenFromAccessibility = false,
+	furiganaMapOverride = null,
+	charReadings = null,
 }) => {
 	const mainLine = useMemo(() => line || (typeof mainText === "object" ? mainText : {
 		text: mainText,
@@ -5717,7 +5723,10 @@ const LyricsLineBlock = react.memo(({
 			subText,
 			subText2,
 			culturalAnnotations: displayedCulturalAnnotations,
+			...(furiganaMapOverride instanceof Map ? { furiganaMapOverride } : null),
+			...(charReadings instanceof Map ? { charReadings } : null),
 		}), [shouldRenderInterlude, shouldShowInterlude, interludeInfo, settingsRevision,
+		furiganaMapOverride, charReadings,
 		isKara, karaokeRenderGranularity, mainText, mainLine, position, isActive,
 		isEffectFocused, isEffectLive, globalCharOffset, activeGlobalCharIndex,
 		subText, subText2, displayedCulturalAnnotations]);
@@ -7914,7 +7923,7 @@ const prefetchWordSupplementsForLyrics = (karaokeLines, { locale = "auto", sourc
 
 window.ivLyricsPrefetchWordSupplements = prefetchWordSupplementsForLyrics;
 
-const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = isActive, isEffectLive = isActive || isEffectFocused, settingsRevision = 0, globalCharOffset = 0, activeGlobalCharIndex = -1, phonetic = null, translation = null, furiganaMapOverride = null, culturalAnnotations = null, renderGranularity = null }) => {
+const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = isActive, isEffectLive = isActive || isEffectFocused, settingsRevision = 0, globalCharOffset = 0, activeGlobalCharIndex = -1, phonetic = null, translation = null, furiganaMapOverride = null, charReadings = null, culturalAnnotations = null, renderGranularity = null }) => {
   if (!line) {
           return "";
   }
@@ -8088,6 +8097,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 
 	const furiganaEnabled = CONFIG?.visual?.["furigana-enabled"] === true;
 	const furiganaReady = window.FuriganaConverter?.isAvailable?.() === true;
+	const hasCharReadings = charReadings instanceof Map && Array.from(charReadings.values()).some((entry) => typeof entry === 'string' ? !!entry : !!(entry && entry.text));
 	const { furiganaMap, timedChars, motionProfiles, endTime, wrapByWord, textDirection, useTextRun, preserveInlineStyles, timedText, wordStartTimes, wordRenderCache, textRunSegments, hasInlinePresentation } = useMemo(() => {
 		const sourceSyllables = Array.isArray(line.syllables) && line.syllables.length > 0
 			? line.syllables
@@ -8203,7 +8213,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 	}, [timedChars, timedText, effectiveUseTextRun, culturalAnnotations, settingsRevision]);
 	// Retain only the latest output per glyph. Timing still runs at the chosen
 	// cadence, while unchanged fill/release values reuse their complete subtree.
-	const glyphElementCache = useMemo(() => [], [timedChars, furiganaMap, culturalMarkersByCharIndex]);
+	const glyphElementCache = useMemo(() => [], [timedChars, furiganaMap, charReadings, culturalMarkersByCharIndex]);
 	const glyphUpdates = useMemo(() => effectiveUseTextRun ? null
 		: prepareKaraokeGlyphUpdates(timedChars, motionProfiles, wordTimed, wordStartTimes),
 		[timedChars, glyphElementCache, effectiveUseTextRun]);
@@ -8242,10 +8252,14 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 			1,
 			motionProfile
 		);
+		const charReadingEntry = (charReadings instanceof Map && charReadings.get(index)) || null;
+		const charReading = typeof charReadingEntry === 'string' ? charReadingEntry : (charReadingEntry?.text || '');
+		const charReadingDx = (charReadingEntry && typeof charReadingEntry === 'object' && Number.isFinite(charReadingEntry.dx)) ? charReadingEntry.dx : 0;
 		const cachedGlyph = glyphElementCache[index];
 		if (cachedGlyph && cachedGlyph.fillRatio === fillRatio && cachedGlyph.isComplete === isComplete
 			&& cachedGlyph.offsetY === bounce.offsetY && cachedGlyph.scale === bounce.scale
-			&& cachedGlyph.glow === bounce.glow && cachedGlyph.bouncing === bounce.active) {
+			&& cachedGlyph.glow === bounce.glow && cachedGlyph.bouncing === bounce.active
+			&& cachedGlyph.reading === charReading && cachedGlyph.readingDx === charReadingDx) {
 			return cachedGlyph.element;
 		}
 		const karaokeStyle = {};
@@ -8267,14 +8281,36 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 			bounce.active,
 			isComplete
 		);
-		const charNode = react.createElement(
+		const charNode = charReading
+		? react.createElement(
 			"span",
 			{
 				className,
 				style: karaokeStyle,
 				"data-outline-text": charInfo.char,
 				key: `karaoke-char-${index}`,
-			},
+				},
+			react.createElement(
+				"span",
+				{ className: "lyrics-karaoke-glyph-fill" },
+				charInfo.char
+			),
+			react.createElement(
+				"span",
+				charReadingDx
+					? { className: "lyrics-karaoke-char-reading", style: { transform: `translateX(calc(-50% + ${charReadingDx}px))` } }
+					: { className: "lyrics-karaoke-char-reading" },
+				charReading
+			)
+		)
+		: react.createElement(
+			"span",
+			{
+				className,
+				style: karaokeStyle,
+				"data-outline-text": charInfo.char,
+				key: `karaoke-char-${index}`,
+				},
 			react.createElement(
 				"span",
 				{ className: "lyrics-karaoke-glyph-fill" },
@@ -8311,7 +8347,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 		);
 		glyphElementCache[index] = {
 			fillRatio, isComplete, offsetY: bounce.offsetY, scale: bounce.scale,
-			glow: bounce.glow, bouncing: bounce.active, element,
+			glow: bounce.glow, bouncing: bounce.active, reading: charReading, readingDx: charReadingDx, element,
 		};
 		return element;
 	};
@@ -8367,7 +8403,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 	return react.createElement(
 		"span",
 		{
-			className: `lyrics-karaoke-line${wrapByWord || wordTimed || effectiveUseTextRun ? " has-word-wrap" : ""}${wordTimed ? " is-word-timed" : ""}${effectiveUseTextRun ? " is-text-run" : ""}${wordStack ? " has-word-stack" : ""}${wordStack?.hasReading ? " has-word-stack-readings" : ""}${textDirection === "rtl" ? " is-rtl" : ""}${isActive ? " is-active" : ""}${isEffectLive ? " is-effect-live" : ""}${isEffectFocused ? " is-effect-focused" : ""}${isComplete ? " is-complete" : ""}`,
+			className: `lyrics-karaoke-line${wrapByWord || wordTimed || effectiveUseTextRun ? " has-word-wrap" : ""}${wordTimed ? " is-word-timed" : ""}${effectiveUseTextRun ? " is-text-run" : ""}${wordStack ? " has-word-stack" : ""}${wordStack?.hasReading ? " has-word-stack-readings" : ""}${textDirection === "rtl" ? " is-rtl" : ""}${isActive ? " is-active" : ""}${isEffectLive ? " is-effect-live" : ""}${isEffectFocused ? " is-effect-focused" : ""}${isComplete ? " is-complete" : ""}${hasCharReadings ? " has-char-readings" : ""}`,
 			dir: effectiveUseTextRun ? (textDirection === "rtl" ? "ltr" : textDirection) : undefined,
 		},
 		lineChildren,

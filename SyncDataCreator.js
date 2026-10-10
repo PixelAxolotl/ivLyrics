@@ -1756,6 +1756,59 @@ const buildSyncCreatorVisualPronunciationUnits = (lineChars, pronunciationMap) =
 	return units.filter(unit => unit.pronunciation);
 };
 
+const SYNC_CREATOR_PREVIEW_FULLWIDTH_CHAR_REGEX = /[\u3000-\u303F\u3040-\u309F\u30A0-\u30FF\u3400-\u4DBF\u4E00-\u9FFF\uAC00-\uD7AF\uF900-\uFAFF\uFF00-\uFF60\uFFDD-\uFFEF]/u;
+
+const buildSyncCreatorPreviewCharReadings = (chars, pronMap, units, glyphPx = 32) => {
+	// index -> { text, dx }, aligned with chars: a word unit's reading sits
+	// mid-group (covered members stay blank, like the editor's grouped
+	// cells). dx shifts even-width units right by half a glyph so the
+	// reading centers over the whole group exactly like the editor.
+	// AI results may carry only word units without a per-char map.
+	if (!Array.isArray(chars) || chars.length === 0) return null;
+	const unit = Math.max(12, Number(glyphPx) || 32);
+	const widthOf = (char) => (SYNC_CREATOR_PREVIEW_FULLWIDTH_CHAR_REGEX.test(char ?? '') ? unit : Math.max(8, Math.round(unit * 0.55)));
+	const hasMap = pronMap instanceof Map && pronMap.size > 0;
+	const unitList = Array.isArray(units) ? units : [];
+	const unitByStart = new Map();
+	const covered = new Set();
+	unitList.forEach((item) => {
+		if (!item || !Number.isInteger(item.start) || !Number.isInteger(item.end) || !item.pronunciation) return;
+		if (!unitByStart.has(item.start)) unitByStart.set(item.start, item);
+		for (let index = item.start + 1; index <= item.end; index++) covered.add(index);
+	});
+	if (!hasMap && unitByStart.size === 0) return null;
+	const map = new Map();
+	for (let index = 0; index < chars.length; index++) {
+		const char = chars[index] ?? '';
+		if (/\s/u.test(char)) continue;
+		const item = unitByStart.get(index);
+		if (item) {
+			const mid = (item.start + item.end) >> 1;
+			const text = String(item.pronunciation).trim();
+			if (mid >= 0 && mid < chars.length && text) {
+				const evenWidth = ((item.end - item.start) % 2) === 1;
+				map.set(mid, { text, dx: evenWidth ? Math.round(widthOf(chars[mid]) / 2) : 0 });
+			}
+			continue;
+		}
+		if (covered.has(index)) continue;
+		const reading = hasMap ? pronMap.get(index) : null;
+		if (reading) map.set(index, { text: String(reading).trim(), dx: 0 });
+	}
+	return map.size > 0 ? map : null;
+};
+
+// WeakMap result cache: the preview rebuilds readings every render, but the
+// inputs are stable component memos, so cache hits keep the karaoke glyph
+// cache (keyed partly on readings identity) effective instead of resetting.
+const previewCharReadingsCache = new WeakMap();
+const getCachedPreviewCharReadings = (chars, pronMap, units, glyphPx) => {
+	const hit = pronMap instanceof Map ? previewCharReadingsCache.get(pronMap) : null;
+	if (hit && hit.chars === chars && hit.units === units && hit.glyphPx === glyphPx) return hit.result;
+	const result = buildSyncCreatorPreviewCharReadings(chars, pronMap, units, glyphPx);
+	if (pronMap instanceof Map) previewCharReadingsCache.set(pronMap, { chars, units, glyphPx, result });
+	return result;
+};
 const hasSyncCreatorCharacterPronunciation = (result) => (
 	Array.isArray(result?.lines) && result.lines.some(line => (
 		(Array.isArray(line?.chars) && line.chars.some(item => item?.pronunciation))
@@ -4712,7 +4765,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				for (let i = unit.start + 1; i <= unit.end; i++) covered.add(i);
 			});
 			maps.set(part.id, {
-				partChars, furiganaMap, pronMap, units, unitByStart, covered,
+				id: part.id, role: part.role || '', partChars, furiganaMap, pronMap, units, unitByStart, covered,
 				hasFurigana: furiganaMap.size > 0,
 				hasPron: pronMap.size > 0 || units.length > 0
 			});
@@ -11897,7 +11950,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		);
 	};
 
-	const renderManualSplitEditor = () => multiVocalMode && currentFullLineChars.length > 1 && react.createElement('div', { style: s.parallelSplitEditor },
+	const renderManualSplitEditor = () => {
+		if (mode === 'preview') return null;
+		return multiVocalMode && currentFullLineChars.length > 1 && react.createElement('div', { style: s.parallelSplitEditor },
 		react.createElement('div', { style: s.parallelSplitHeader },
 			react.createElement('span', { style: s.parallelSplitTitle }, I18n.t('syncCreator.manualSplit') || 'Manual split'),
 			hasManualParallelSplit && react.createElement('span', { style: s.parallelSplitBadge }, `${currentManualSplitPoints.length + 1} parts`),
@@ -11933,6 +11988,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			)
 		)
 	);
+	};
 
 	const renderStyleRangeEditor = () => {
 		if (!currentFullLineChars.length) return null;
@@ -12983,14 +13039,55 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		document.addEventListener('keydown', handlePreviewEscape, true);
 		return () => document.removeEventListener('keydown', handlePreviewEscape, true);
 	}, [showLivePreview]);
+	const previewFuriganaCacheRef = useRef(new Map());
+	const editorGlyphSize = Number.parseInt(s.charSpan?.fontSize, 10) || 32;
+	const previewGlyphSize = editorGlyphSize || 32;
 	const livePreviewLyricVars = useMemo(() => {
 		const visualConfig = window.CONFIG?.visual || {};
-		const editorGlyphSize = Number.parseInt(s.charSpan?.fontSize, 10) || 32;
+		// Same size source as the outside renderer (Pages.js lyric vars):
+		// main defaults to 32, original defaults to 44. The preview previously
+		// forced both to the editor glyph size (32), so originals rendered
+		// smaller than outside and any user font-size setting was ignored.
+		const parseLyricPx = (value, fallback) => {
+			const numeric = Number.parseInt(value, 10);
+			return Number.isFinite(numeric) && numeric > 0 ? numeric : fallback;
+		};
+		const outsideFontSize = parseLyricPx(visualConfig['font-size'], editorGlyphSize || 32);
+		// Full row typography contract from the outside renderer
+		// (Pages.js getLyricsTypographyStyleVariables): every glyph, ruby and
+		// auxiliary-line metric the shared LyricsLineBlock CSS consumes.
+		const num = (value, fallback) => {
+			const parsed = Number(value);
+			return Number.isFinite(parsed) ? parsed : fallback;
+		};
+		const baseFontFamily = visualConfig['font-family'] || 'var(--font-family)';
 		const vars = {
 			'--lyrics-color-active': visualConfig['active-color'] || 'var(--spice-text, #ffffff)',
 			'--lyrics-color-inactive': visualConfig['inactive-color'] || 'var(--spice-subtext, rgba(255, 255, 255, 0.58))',
-			'--lyrics-font-family': visualConfig['font-family'] || 'var(--font-family)',
-			'--lyrics-original-font-family': visualConfig['original-font-family'] || visualConfig['font-family'] || 'var(--font-family)'
+			'--lyrics-font-size': `${outsideFontSize}px`,
+			'--lyrics-font-family': baseFontFamily,
+			'--lyrics-original-font-family': visualConfig['original-font-family'] || baseFontFamily,
+			'--lyrics-original-font-size': `${editorGlyphSize || 32}px`,
+			'--lyrics-original-font-weight': num(visualConfig['original-font-weight'], 600),
+			'--lyrics-original-opacity': num(visualConfig['original-opacity'], 95) / 100,
+			'--lyrics-original-letter-spacing': `${num(visualConfig['original-letter-spacing'], 0)}px`,
+			'--lyrics-phonetic-font-family': visualConfig['phonetic-font-family'] || baseFontFamily,
+			'--lyrics-phonetic-font-size': `${num(visualConfig['phonetic-font-size'], 16)}px`,
+			'--lyrics-phonetic-font-weight': num(visualConfig['phonetic-font-weight'], 100),
+			'--lyrics-phonetic-opacity': num(visualConfig['phonetic-opacity'], 70) / 100,
+			'--lyrics-phonetic-spacing': `${num(visualConfig['phonetic-spacing'], -1)}px`,
+			'--lyrics-phonetic-letter-spacing': `${num(visualConfig['phonetic-letter-spacing'], 0)}px`,
+			'--lyrics-translation-font-family': visualConfig['translation-font-family'] || baseFontFamily,
+			'--lyrics-translation-font-size': `${num(visualConfig['translation-font-size'], 22)}px`,
+			'--lyrics-translation-font-weight': num(visualConfig['translation-font-weight'], 300),
+			'--lyrics-translation-opacity': num(visualConfig['translation-opacity'], 85) / 100,
+			'--lyrics-translation-spacing': `${num(visualConfig['translation-spacing'], 0)}px`,
+			'--lyrics-translation-letter-spacing': `${num(visualConfig['translation-letter-spacing'], 0)}px`,
+			'--lyrics-furigana-font-size': `${num(visualConfig['furigana-font-size'], 14)}px`,
+			'--lyrics-furigana-font-weight': num(visualConfig['furigana-font-weight'], 300),
+			'--lyrics-furigana-opacity': num(visualConfig['furigana-opacity'], 80) / 100,
+			'--lyrics-furigana-spacing': `${num(visualConfig['furigana-spacing'], 2)}px`,
+			'--lyrics-line-spacing': `${num(visualConfig['line-spacing'], 8)}px`
 		};
 		try {
 			const container = document.querySelector('.lyrics-lyricsContainer-LyricsContainer');
@@ -13004,9 +13101,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		} catch (error) {
 			void error;
 		}
-		// Rendered size matches the sync editor's own glyphs.
-		vars['--lyrics-font-size'] = `${editorGlyphSize}px`;
-		vars['--lyrics-original-font-size'] = `${editorGlyphSize}px`;
+		// Preview pin (the container override above would otherwise restore
+		// the outside value): glyph size follows the editor box. Per-glyph
+		// readings carry their own fixed styling, so no phonetic pin needed.
+		vars['--lyrics-original-font-size'] = `${editorGlyphSize || 32}px`;
 		return vars;
 	}, [showLivePreview]);
 	// Error boundary so a failing karaoke preview can never crash the editor.
@@ -13043,7 +13141,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const ActiveRenderer = null;
 		const primitives = window.ivLyricsLyricRendererPrimitives || null;
 		let previewBody = null;
-		const renderPreviewLine = (rowLine, isRowActive, rowKey) => {
+		const renderPreviewLine = (rowLine, isRowActive, rowKey, charReadingsOverride = null) => {
 			if (!rowLine || !primitives?.LyricsLineBlock) return null;
 			try {
 				let mainText = rowLine?.text || '';
@@ -13065,6 +13163,27 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					}
 				} catch (error) {
 					mainText = rowLine?.text || '';
+				}
+				// Editor reading aids: the editor furigana map overrides the
+				// converter result (the outside converter only runs when the global
+				// furigana setting is on, while the editor always shows readings
+				// for Japanese lines). Per-glyph AI pronunciation travels via
+				// the charReadings prop into each karaoke glyph's own box.
+				let furiganaMapOverride = null;
+				try {
+					const rowText = rowLine?.text;
+					if (typeof rowText === 'string' && rowText && typeof getSyncCreatorFuriganaMap === 'function') {
+						if (!previewFuriganaCacheRef.current.has(rowText)) {
+							const built = getSyncCreatorFuriganaMap(rowText);
+							previewFuriganaCacheRef.current.set(rowText, built && built.size > 0 ? built : null);
+							if (previewFuriganaCacheRef.current.size > 40) {
+								previewFuriganaCacheRef.current.delete(previewFuriganaCacheRef.current.keys().next().value);
+							}
+						}
+						furiganaMapOverride = previewFuriganaCacheRef.current.get(rowText) || null;
+					}
+				} catch (error) {
+					furiganaMapOverride = null;
 				}
 				let lineClassName = `lyrics-lyricsContainer-LyricsLine${isRowActive ? ' lyrics-lyricsContainer-LyricsLine-active' : ''}`;
 				try {
@@ -13101,6 +13220,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					isCurrentLine: isRowActive,
 					isEffectFocused: isRowActive,
 					isEffectLive: isRowActive,
+					furiganaMapOverride,
+					charReadings: charReadingsOverride,
 					settingsRevision: 0,
 					globalCharOffset: 0,
 					activeGlobalCharIndex: -1,
@@ -13192,10 +13313,35 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					kind: part.kind || displaySourceLine.kind
 				});
 				const stackRows = [];
+				const previewPronEntries = showCharacterPronunciations
+					? [...currentParallelPartReadingMaps.values()].filter((entry) => entry && entry.hasPron)
+					: [];
+				const findPreviewPronEntry = (part, suffix) => {
+					const direct = currentParallelPartReadingMaps.get(part.id);
+					if (direct) return direct.hasPron ? direct : null;
+					// Fallback when materialized preview ids diverge from draft ids:
+					// same voice by role/order.
+					if (suffix === 'lead') return previewPronEntries.find((entry) => entry.role === 'lead') || previewPronEntries[0] || null;
+					const bgIndex = Number(String(suffix).split('-')[1]);
+					const bgEntries = previewPronEntries.filter((entry) => entry.role !== 'lead');
+					if (Number.isInteger(bgIndex) && bgEntries[bgIndex]) return bgEntries[bgIndex];
+					return null;
+				};
 				const pushPartRow = (part, suffix) => {
 					if (!part || !Array.isArray(part.syllables) || part.syllables.length === 0) return;
 					if (!String(part.text || '').trim()) return;
-					const rowElement = renderPreviewLine(buildVocalRowLine(part), true, `vocal-${suffix}`);
+					let partReadings = null;
+					if (showCharacterPronunciations) {
+						try {
+							const entry = findPreviewPronEntry(part, suffix);
+							if (entry) {
+								partReadings = getCachedPreviewCharReadings(entry.partChars, entry.pronMap, entry.units, previewGlyphSize);
+							}
+						} catch (error) {
+							partReadings = null;
+						}
+					}
+					const rowElement = renderPreviewLine(buildVocalRowLine(part), true, `vocal-${suffix}`, partReadings);
 					if (rowElement) stackRows.push(rowElement);
 				};
 				pushPartRow(vocalLeadPart, 'lead');
@@ -13220,7 +13366,15 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			}
 		}
 		if (!previewBody && displaySourceLine) {
-			const lineElement = renderPreviewLine(displaySourceLine, true, 'main');
+			let previewReadings = null;
+			if (showCharacterPronunciations && displaySourceLine.text === currentLineChars.join('')) {
+				try {
+					previewReadings = getCachedPreviewCharReadings(currentLineChars, currentLineCharacterPronunciationMap, currentLineRenderedPronunciationUnits, previewGlyphSize);
+				} catch (error) {
+					previewReadings = null;
+				}
+			}
+			const lineElement = renderPreviewLine(displaySourceLine, true, 'main', previewReadings);
 			if (lineElement) {
 				previewBody = react.createElement('div', { className: 'sync-creator-live-preview-line' }, lineElement);
 			}
@@ -13229,7 +13383,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			previewBody = react.createElement('div', {
 				className: 'lyrics-lyricsContainer-LyricsLine lyrics-lyricsContainer-LyricsLine-active',
 				dir: 'auto',
-				style: { fontSize: '24px', fontWeight: '700', color: 'var(--spice-text)', textAlign: 'center', lineHeight: 1.5 }
+				style: { fontSize: '32px', fontWeight: '700', color: 'var(--spice-text)', textAlign: 'center', lineHeight: 1.5 }
 			}, String(previewLine?.text || ''));
 		}
 		if (!previewBody) {
@@ -13245,7 +13399,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			style: {
 				position: 'static',
 				margin: '0 0 12px',
-				minHeight: '150px',
+				minHeight: '168px',
 				display: 'flex', flexDirection: 'column', overflow: 'hidden',
 				background: '#0a0e12',
 				border: `1px solid ${TOSS_BORDER}`,
@@ -13267,13 +13421,30 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				}, I18n.t('syncCreator.preview') || 'Preview'),
 				react.createElement('div', {
 					style: { fontSize: '11px', color: 'var(--spice-subtext)', fontVariantNumeric: 'tabular-nums' }
-				}, livePreviewKaraokeLines.length > 0 ? `${previewLineIndex + 1} / ${livePreviewKaraokeLines.length}${previewVocalRowCount > 1 ? ` · ${previewVocalRowCount} vocals` : ''}` : '')
+				}, livePreviewKaraokeLines.length > 0 ? `${previewLineIndex + 1} / ${livePreviewKaraokeLines.length}${previewVocalRowCount > 1 ? ` · ${previewVocalRowCount} vocals` : ''}` : ''),
+		// TEMP-DEBUG-START: build marker, remove after confirm.
+		react.createElement('span', { style: { fontSize: '9px', color: 'var(--spice-subtext)', opacity: 0.7 } }, 'pg2'),
+		// TEMP-DEBUG-END
 			),
 			react.createElement('div', {
 				className: 'sync-creator-live-preview-exact',
-				style: { position: 'relative', zIndex: 1, display: 'block', width: '100%', boxSizing: 'border-box', minHeight: '110px', maxHeight: '320px', overflowY: 'auto', overflowX: 'hidden', textAlign: 'center', padding: '24px 20px', flex: '1 0 auto' }
+				style: { position: 'relative', zIndex: 1, display: 'block', width: '100%', boxSizing: 'border-box', minHeight: '132px', maxHeight: '360px', overflowY: 'auto', overflowX: 'hidden', textAlign: 'center', padding: '28px 20px', flex: '1 0 auto' }
 			},
-				react.createElement('div', { style: { position: 'relative', zIndex: 1, width: '100%', ...livePreviewLyricVars } }, safePreviewBody)
+				react.createElement('div', {
+					style: {
+						position: 'relative', zIndex: 1, width: '100%',
+						// Same row typography as the outside synced view. The
+						// outside row font-size rule lives under
+						// .lyrics-lyricsContainer-SyncedLyrics, which the editor
+						// preview is not inside of, so mirror it here.
+						fontSize: 'var(--lyrics-original-font-size, var(--lyrics-font-size))',
+						fontWeight: 'var(--lyrics-original-font-weight, 700)',
+						fontFamily: 'var(--lyrics-original-font-family, var(--lyrics-font-family, var(--font-family)))',
+						letterSpacing: 'var(--lyrics-original-letter-spacing, 0px)',
+						lineHeight: 1,
+						...livePreviewLyricVars
+					}
+				}, safePreviewBody)
 			)
 		);
 	};

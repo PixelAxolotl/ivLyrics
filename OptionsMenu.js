@@ -5746,6 +5746,9 @@ async function openSyncDataCreator(trackInfo, initialData = null) {
   // Render React component
   const dom = window.Spicetify?.ReactDOM ?? window.ReactDOM ?? null;
   if (!dom?.render) {
+    console.error("[OptionsMenu] ReactDOM.render not available");
+    Toast.error(getOptionsText("syncCreator.notAvailable", "SyncDataCreator not available"));
+    closeModal();
     return;
   }
 
@@ -5791,7 +5794,15 @@ async function openSyncDataCreator(trackInfo, initialData = null) {
     onClose: closeModal
   });
 
-  dom.render(creatorComponent, overlay);
+  // A render throw previously left an empty overlay appended with the main
+  // view stuck minimized and no visible error. Surface it and restore.
+  try {
+    dom.render(creatorComponent, overlay);
+  } catch (renderError) {
+    console.error("[OptionsMenu] SyncDataCreator render failed:", renderError);
+    Toast.error(`Sync editor failed to open: ${renderError?.message || renderError}`);
+    closeModal();
+  }
 }
 
 // Sync Data Creator Button

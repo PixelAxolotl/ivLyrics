@@ -31,7 +31,7 @@ const deferred = () => {
 // React setters and player/storage I/O are controlled here; the already-validated
 // sync fixture passes through the sanitizer boundary without migration.
 const createEditor = ({ progress = 0, playing = true } = {}) => {
-	const calls = { seek: [], play: 0, selections: [], positions: [], toasts: [] };
+	const calls = { seek: [], play: 0, selections: [], positions: [], toasts: [], selectionClears: 0, offsetClears: 0 };
 	const timers = new Map();
 	let timerId = 0;
 	let cleanup;
@@ -59,6 +59,8 @@ const createEditor = ({ progress = 0, playing = true } = {}) => {
 		isLineCoveredByMergedPrevious: () => false,
 		showMissingMetaToast: () => calls.toasts.push('missing metadata'),
 		clearRecordingLock: () => {}, syncSessionUiFromRecord: () => {}, announceHistoryStatus: () => {},
+		clearLyricTextSelection: () => { calls.selectionClears++; },
+		clearOffsetSelection: () => { calls.offsetClears++; },
 		sanitizeSyncCreatorSyncData: data => structuredClone(data),
 		syncCreatorDraftStore: null,
 	});
@@ -302,6 +304,8 @@ test('mode toggles retain paused play, stop and recording metadata checks withou
 	assert.equal(editor.context.mode, 'record');
 	assert.equal(editor.calls.play, 2);
 	assert.deepEqual(editor.calls.seek, []);
+	assert.equal(editor.calls.selectionClears, 4, 'every mode toggle clears the lyric text selection');
+	assert.equal(editor.calls.offsetClears, 4, 'every mode toggle clears the offset selection range');
 });
 
 test('automatic draft recovery aligns to playback while manual and validation-only restores retain their contract', () => {

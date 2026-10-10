@@ -149,13 +149,14 @@
           try {
             result = await options.request(payload);
           } catch (error) {
-            if (error?.status === 400) {
+            if (error?.status === 400 || error?.status === 422) {
               // The server will never accept this snapshot (e.g. negative or
               // non-finite timing). Retrying the same bytes blocks every later
               // valid edit, so discard only this event and continue.
-              state.queue.shift();
+              const discarded = state.queue.shift();
               lastError = error;
               await persist();
+              try { await options.onDiscard?.(error, discarded); } catch (discardError) { }
               continue;
             }
             await resolveScoreConflict(next, error);

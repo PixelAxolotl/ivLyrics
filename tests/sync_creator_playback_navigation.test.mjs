@@ -67,6 +67,7 @@ const createEditor = ({ progress = 0, playing = true } = {}) => {
 	for (const [, name] of callbackSources.matchAll(/\b(\w+Ref)\.current/g)) context[name] ??= { current: null };
 	Object.assign(context, {
 		pendingPlaybackNavigationRef: { current: true },
+		offsetSelectionRangeRef: { current: null },
 		positionUpdateTimerRef: { current: null },
 		lyricsScrollRef: { current: { scrollLeft: 50 } },
 		sessionSourceChangeRequestRef: { current: 0 },
@@ -284,6 +285,23 @@ test('preview follows LRCLIB-only timing without seeking; idle and record retain
 		assert.equal(editor.timers.values().next().value.delay, { idle: 500, record: 50, preview: 100 }[mode]);
 		editor.dispose();
 	}
+});
+
+test('preview auto-follow holds the current line while an offset selection is armed', () => {
+	const editor = createEditor({ progress: 1500 });
+	editor.setLyrics(timedLines(4));
+	editor.context.pendingPlaybackNavigationRef.current = false;
+	editor.render({ mode: 'preview', isLoading: false, currentLineIndex: 0 });
+	editor.context.offsetSelectionRangeRef.current = { start: 0, end: 1 };
+	editor.startPolling();
+	editor.setProgress(3500);
+	editor.poll();
+	assert.equal(editor.context.currentLineIndex, 0, 'armed selection pins line-follow');
+	assert.deepEqual(editor.calls.selections, []);
+	editor.context.offsetSelectionRangeRef.current = null;
+	editor.poll();
+	assert.equal(editor.context.currentLineIndex, 3, 'follow resumes once disarmed');
+	editor.dispose();
 });
 
 test('mode toggles retain paused play, stop and recording metadata checks without seek(0)', () => {

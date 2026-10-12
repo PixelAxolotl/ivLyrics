@@ -246,6 +246,23 @@ const shiftSyncCreatorSelectionTimes = (savedChars, selStart, selEnd, deltaSec, 
 	}
 	return { ok: true, times };
 };
+const boundSyncCreatorLineOffsetDelta = (requestedDelta, currentStart, currentEnd, prevEnd, nextStart, firstTime) => {
+	const delta = Number(requestedDelta);
+	if (!Number.isFinite(delta)) return 0;
+	const next = (nextStart === null || nextStart === undefined) ? NaN : Number(nextStart);
+	const prev = (prevEnd === null || prevEnd === undefined) ? NaN : Number(prevEnd);
+	let bounded = delta;
+	// Never push into the next line's window; an existing overlap may escape back.
+	if (bounded > 0 && Number.isFinite(next)) {
+		bounded = Math.min(bounded, Math.max(0, next - currentEnd));
+	} else if (bounded < 0 && Number.isFinite(prev)) {
+		bounded = Math.max(bounded, Math.min(0, prev - currentStart));
+	}
+	// Never below the track start.
+	const floor = Number(firstTime);
+	if (Number.isFinite(floor)) bounded = Math.max(bounded, -floor);
+	return bounded;
+};
 const getSyncCreatorLockedPlaybackProgressIndex = (previewIndex, lockIndex, recordingIndex) => {
 	const numericLockIndex = Number(lockIndex);
 	const numericRecordingIndex = Number(recordingIndex);
@@ -5415,7 +5432,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				setPosition(pos);
 			}
 
-			if (mode === 'preview') {
+			if (mode === 'preview' && offsetSelectionRangeRef.current === null) {
 				const lineIndex = getSyncCreatorPlaybackLineIndex(playbackTimeline, pos);
 				if (lineIndex >= 0 && lineIndex !== currentLineIndex) {
 					setCurrentLineIndex(lineIndex);
@@ -6678,12 +6695,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const start = Math.max(0, Math.min(downIndex, upIndex));
 		const end = Math.min(currentLineChars.length - 1, Math.max(downIndex, upIndex));
 		if (start > end) return false;
+		// A drag across the full (merged) line selects the whole line so the
+		// highlight matches the offset target. The next line box is the hard
+		// limit: hit-testing only covers current-line characters.
 		if (start <= 0 && end >= currentLineChars.length - 1) {
-			clearOffsetSelection();
-			return true;
+			return setOffsetSelectionRangeValue(0, currentLineChars.length - 1);
 		}
 		return setOffsetSelectionRangeValue(start, end);
-	}, [currentLineChars.length, clearOffsetSelection, setOffsetSelectionRangeValue]);
+	}, [currentLineChars.length, setOffsetSelectionRangeValue]);
 
 	const handleCharacterContextMenu = useCallback((charIndex, e) => {
 		e.preventDefault();
@@ -8423,6 +8442,27 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		setSessionSaveState(sessionAutosaveEnabledRef.current ? 'idle' : 'disabled');
 	};
 
+	// Adjacent vocal windows for the offset clamp and overlap warnings.
+	// Declared up here because adjustCurrentLineOffset below lists it in its
+	// dependency array, which evaluates during render before anything below.
+	// NOTE: builds its own lines-by-start map from syncData instead of the
+	// component-scope syncLinesByStart memo, which is declared further below
+	// and would throw a temporal-dead-zone error here.
+	const getOffsetNeighborWindows = useCallback(() => {
+		const linesByStart = new Map((Array.isArray(syncData?.lines) ? syncData.lines : []).map(line => [line.start, line]));
+		const neighborWindow = (lineIndex) => {
+			if (!Number.isInteger(lineIndex) || lineIndex < 0 || lineIndex >= lyricsLines.length) return null;
+			const neighborData = linesByStart.get(lineCharOffsets[lineIndex]);
+			const neighborTimes = getSyncCreatorLineTimes(neighborData);
+			if (neighborTimes.length === 0) return null;
+			return { start: Math.min(...neighborTimes), end: Math.max(...neighborTimes) };
+		};
+		return {
+			previous: neighborWindow(previousNavigableLineIndex),
+			next: neighborWindow(nextNavigableLineIndex)
+		};
+	}, [syncData, lineCharOffsets, lyricsLines.length, previousNavigableLineIndex, nextNavigableLineIndex]);
+
 	const adjustCurrentLineOffset = useCallback((deltaMs) => {
 		const requestedDeltaSec = deltaMs / 1000;
 		// Right-drag offset ranges only exist outside record mode (entering
@@ -8431,10 +8471,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		// interaction exists on this path by design.
 		const selectionRange = mode !== 'record' ? offsetSelectionRangeRef.current : null;
 		if (selectionRange) {
-			const existing = Array.isArray(syncData?.lines)
-				? syncData.lines.find(line => line.start === currentLineStart)
-				: null;
-			const savedChars = Array.isArray(existing?.chars) ? existing.chars : [];
+			// Same timing source as the lock path: the active parallel part's
+			// chars when a vocal part is targeted, else the main line chars.
+			// Always display-length aligned, so indices match the highlight.
+			const savedChars = getCurrentSyncTargetSavedChars();
 			const shifted = shiftSyncCreatorSelectionTimes(
 				savedChars,
 				selectionRange.start,
@@ -8450,15 +8490,35 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			}
 			claimSessionForLocalEditing();
 			resetCurrentSyncInput();
+			const activePartId = activeParallelPart?.id;
 			setSyncData(prev => {
 				if (!prev || !Array.isArray(prev.lines)) return prev;
 				const targetIndex = prev.lines.findIndex(line => line.start === currentLineStart);
 				if (targetIndex < 0) return prev;
 				return {
 					...prev,
-					lines: prev.lines.map((line, index) => index === targetIndex
-						? { ...line, chars: shifted.times }
-						: line)
+					lines: prev.lines.map((line, index) => {
+						if (index !== targetIndex) return line;
+						if (activePartId && Array.isArray(line.parallel?.parts)) {
+							const partIndex = line.parallel.parts.findIndex(part => part?.id === activePartId);
+							if (partIndex >= 0) {
+								const partChars = line.parallel.parts[partIndex].chars;
+								if (Array.isArray(partChars) && partChars.length === shifted.times.length) {
+									return {
+										...line,
+										parallel: {
+											...line.parallel,
+											parts: line.parallel.parts.map((part, partIdx) => (
+												partIdx === partIndex ? { ...part, chars: [...shifted.times] } : part
+											))
+										}
+									};
+								}
+							}
+							return line;
+						}
+						return { ...line, chars: shifted.times };
+					})
 				};
 			});
 			return;
@@ -8478,8 +8538,17 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			if (targetTimes.length === 0) return prev;
 
 			const firstTime = Math.min(...targetTimes);
-			// Shift every vocal by one delta, bounded only by the start of the track.
-			const boundedDeltaSec = Math.max(deltaMs / 1000, -firstTime);
+			// Clamp so a fresh overlap with the adjacent lines can never be
+			// created; an existing overlap may still escape back out.
+			const { previous: previousWindow, next: nextWindow } = getOffsetNeighborWindows();
+			const boundedDeltaSec = boundSyncCreatorLineOffsetDelta(
+				deltaMs / 1000,
+				Math.min(...targetTimes),
+				Math.max(...targetTimes),
+				previousWindow ? previousWindow.end : null,
+				nextWindow ? nextWindow.start : null,
+				firstTime
+			);
 			if ((deltaMs / 1000 > 0 && boundedDeltaSec <= 0) || (deltaMs / 1000 < 0 && boundedDeltaSec >= 0)) return prev;
 			if (!Number.isFinite(boundedDeltaSec) || Math.abs(boundedDeltaSec) < 0.0005) return prev;
 
@@ -8509,7 +8578,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				lines: prev.lines.map((line, index) => index === targetIndex ? shiftLine(line) : line)
 			};
 		});
-	}, [claimSessionForLocalEditing, currentLineStart, resetCurrentSyncInput, mode, syncData]);
+	}, [claimSessionForLocalEditing, currentLineStart, resetCurrentSyncInput, mode, activeParallelPart, getCurrentSyncTargetSavedChars, getOffsetNeighborWindows]);
 
 	const resetFromStart = useCallback(async () => {
 		const confirmed = window.confirm(
@@ -10249,13 +10318,26 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 	}, [mode, position, currentLineIndex, activeParallelPartId]);
 
-	// Clear offset selection whenever the displayed line changes
-	// (nav buttons, shortcuts, preview auto-follow) so stale selections
-	// never apply to the wrong line.
+	// Clear offset selection whenever the displayed line changes: line
+	// navigation (buttons, shortcuts, preview auto-follow), vocal-part
+	// switches in multiline stack view, and merge/split reshapes. A stale
+	// selection must never apply to the wrong line or part.
+	// Content-keyed (not array identity): setSyncData recreates the merged
+	// memo on every offset press, so identity alone would wipe the selection
+	// you just applied an offset with.
+	const offsetClearKeyRef = useRef(null);
 	useEffect(() => {
-		clearLyricTextSelection();
-		clearOffsetSelection();
-	}, [currentLineIndex, clearLyricTextSelection, clearOffsetSelection]);
+		const key = `${currentLineIndex}:${activeParallelPartId}:${currentMergedLineIndexes.join(',')}`;
+		if (offsetClearKeyRef.current === null) {
+			offsetClearKeyRef.current = key;
+			return;
+		}
+		if (offsetClearKeyRef.current !== key) {
+			offsetClearKeyRef.current = key;
+			clearLyricTextSelection();
+			clearOffsetSelection();
+		}
+	}, [currentLineIndex, activeParallelPartId, currentMergedLineIndexes, clearLyricTextSelection, clearOffsetSelection]);
 
 	useEffect(() => {
 		if (!syncLinesByStart || currentLineIndex >= lyricsLines.length) {
@@ -10578,6 +10660,17 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			borderBottom: `1px solid ${TOSS_BORDER}`
 		},
 		lineOffsetHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' },
+		lineOverlapWarning: {
+			fontSize: '11px',
+			fontWeight: '700',
+			color: '#ffb020',
+			padding: '4px 8px',
+			borderRadius: '6px',
+			background: 'rgba(255, 176, 32, 0.12)',
+			display: 'flex',
+			flexDirection: 'column',
+			gap: '2px'
+		},
 		lineOffsetLabel: { fontSize: '11px', color: 'var(--spice-subtext)', fontWeight: '800', letterSpacing: '0.04em', textTransform: 'uppercase' },
 		lineOffsetValue: {
 			fontSize: '11px',
@@ -11354,6 +11447,22 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const currentLineTimingLabel = hasCurrentLineTiming
 		? `${formatSeconds(Math.min(...currentLineTimes))} - ${formatSeconds(Math.max(...currentLineTimes))}`
 		: (I18n.t('syncCreator.lineOffsetUnavailable') || '싱크 후 조정 가능');
+	// Overlap warnings: current line's vocal window vs. the adjacent lines'
+	// windows (parallel parts included). Empty until the line itself is timed.
+	const lineOverlapWarnings = useMemo(() => {
+		if (!hasCurrentLineTiming) return [];
+		const currentStart = Math.min(...currentLineTimes);
+		const currentEnd = Math.max(...currentLineTimes);
+		const { previous: previousWindow, next: nextWindow } = getOffsetNeighborWindows();
+		const warnings = [];
+		if (previousWindow && currentStart < previousWindow.end) {
+			warnings.push(I18n.t('syncCreator.overlapPrevious') || 'Overlaps previous line');
+		}
+		if (nextWindow && currentEnd > nextWindow.start) {
+			warnings.push(I18n.t('syncCreator.overlapNext') || 'Overlaps next line');
+		}
+		return warnings;
+	}, [hasCurrentLineTiming, currentLineTimes, getOffsetNeighborWindows]);
 	const currentLinePreviewIndex = currentLineText
 		? getPreviewProgressIndex(currentLineIndex)
 		: -1;
@@ -12857,6 +12966,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				react.createElement('span', { style: s.lineOffsetLabel }, I18n.t('syncCreator.lineOffset') || '라인 오프셋'),
 				react.createElement('span', { style: s.lineOffsetValue }, currentLineTimingLabel)
 			),
+			lineOverlapWarnings.length > 0 && react.createElement('div', { style: s.lineOverlapWarning },
+				lineOverlapWarnings.map((warning, index) => react.createElement('div', { key: index }, `⚠ ${warning}`))
+			),
 			react.createElement('div', { style: s.lineOffsetButtonRow },
 				[-100, -10, 10, 100].map(renderOffsetButton)
 			)
@@ -13947,11 +14059,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			style: {
 				position: 'static',
 				margin: '0 0 12px',
-				minHeight: '168px',
-				display: 'flex', flexDirection: 'column', overflow: 'hidden',
+				display: 'flex', flexDirection: 'column', overflow: 'visible',
 				background: '#0a0e12',
 				border: `1px solid ${TOSS_BORDER}`,
-				borderRadius: '12px'
+				borderRadius: '12px',
+				flex: '0 0 auto'
 			},
 			onMouseDown: (event) => event.stopPropagation(),
 			onTouchStart: (event) => event.stopPropagation()
@@ -13976,7 +14088,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			),
 			react.createElement('div', {
 				className: 'sync-creator-live-preview-exact',
-				style: { position: 'relative', zIndex: 1, display: 'block', width: '100%', boxSizing: 'border-box', minHeight: '132px', maxHeight: '360px', overflowY: 'auto', overflowX: 'hidden', textAlign: 'center', padding: '28px 20px', flex: '1 0 auto' }
+				style: { position: 'relative', zIndex: 1, display: 'block', width: '100%', boxSizing: 'border-box', overflow: 'visible', textAlign: 'center', padding: '28px 20px', flex: '0 0 auto' }
 			},
 				react.createElement('div', {
 					style: {

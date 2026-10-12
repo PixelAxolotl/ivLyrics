@@ -2884,6 +2884,8 @@ window.LANG_ZH_CN = {
       "playPause": "播放/暂停",
       "seekBack": "-3秒",
       "seekForward": "+3秒",
+      "seekBack1s": "-1秒",
+      "seekForward1s": "+1秒",
       "syllable": "音节"
     },
     "copyLyrics": "复制歌词",

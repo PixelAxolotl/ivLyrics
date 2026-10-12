@@ -2002,6 +2002,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		wordBack: { primary: 'sync-creator-word-back-key', secondary: 'sync-creator-word-back-alt-key', defaultPrimary: ',' },
 		syllable: { primary: 'sync-creator-syllable-key', secondary: 'sync-creator-syllable-alt-key', defaultPrimary: ';' },
 		drag: { primary: 'sync-creator-drag-key', secondary: 'sync-creator-drag-alt-key', defaultPrimary: '/', defaultSecondary: 'numpaddivide' },
+		seekBack: { primary: 'sync-creator-seek-back-key', secondary: 'sync-creator-seek-back-alt-key', defaultPrimary: 'z' },
+		seekForward: { primary: 'sync-creator-seek-forward-key', secondary: 'sync-creator-seek-forward-alt-key', defaultPrimary: 'x' },
+		seekBack1s: { primary: 'sync-creator-seek-back1s-key', secondary: 'sync-creator-seek-back1s-alt-key', defaultPrimary: 'a' },
+		seekForward1s: { primary: 'sync-creator-seek-forward1s-key', secondary: 'sync-creator-seek-forward1s-alt-key', defaultPrimary: 's' },
 	};
 	const SYNC_CREATOR_AUTO_BOUNDARY_CHARS_KEY = 'sync-creator-auto-boundary-chars';
 	const normalizeHotkeyToken = (value) => {
@@ -6968,7 +6972,12 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				e.stopPropagation();
 				e.stopImmediatePropagation();
 			};
-			const isSeekHotkey = normalizedHotkey === 'z' || normalizedHotkey === 'x';
+			const shortcutBindings = getSyncCreatorShortcutBindings();
+			const isSeekBack = shortcutBindings.seekBack?.includes(normalizedHotkey);
+			const isSeekForward = shortcutBindings.seekForward?.includes(normalizedHotkey);
+			const isSeekBack1s = shortcutBindings.seekBack1s?.includes(normalizedHotkey);
+			const isSeekForward1s = shortcutBindings.seekForward1s?.includes(normalizedHotkey);
+			const isSeekHotkey = isSeekBack || isSeekForward || isSeekBack1s || isSeekForward1s;
 			const handleSeekShortcut = () => {
 				const target = e.target;
 				if (
@@ -6979,11 +6988,15 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 				consumeKeyboardEvent();
 				const currentPos = Spicetify.Player.getProgress();
-				if (normalizedHotkey === 'z') {
+				const duration = Spicetify.Player.getDuration();
+				if (isSeekBack) {
 					Spicetify.Player.seek(Math.max(0, currentPos - 3000));
-				} else {
-					const duration = Spicetify.Player.getDuration();
+				} else if (isSeekForward) {
 					Spicetify.Player.seek(Math.min(duration, currentPos + 3000));
+				} else if (isSeekBack1s) {
+					Spicetify.Player.seek(Math.max(0, currentPos - 1000));
+				} else if (isSeekForward1s) {
+					Spicetify.Player.seek(Math.min(duration, currentPos + 1000));
 				}
 				return;
 			};
@@ -6993,7 +7006,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			}
 
 			const isDragHotkey = isSyncCreatorDragHotkeyEvent(e, normalizedHotkey);
-			const shortcutBindings = getSyncCreatorShortcutBindings();
 			const shortcutAction = Object.entries(shortcutBindings)
 				.find(([, bindings]) => bindings.includes(normalizedHotkey))?.[0] || null;
 			const staticHotkeys = new Set(['enter', 'backspace', 'space']);
@@ -12300,19 +12312,21 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		react.createElement('div', { style: s.panelSubtitle }, syncGranularityRecordingHint),
 		react.createElement('div', { style: { ...s.shortcutsContainer, marginTop: 0, padding: 0, background: 'transparent', border: 'none' } },
 			[
-				[getSyncCreatorShortcutDisplay('charForward'), I18n.t('syncCreator.shortcuts.charForward') || '한 글자'],
-				[getSyncCreatorShortcutDisplay('charBack'), I18n.t('syncCreator.shortcuts.charBack') || '한 글자 취소'],
-				[getSyncCreatorShortcutDisplay('wordForward'), I18n.t('syncCreator.shortcuts.wordForward') || '한 단어'],
-				[getSyncCreatorShortcutDisplay('wordBack'), I18n.t('syncCreator.shortcuts.wordBack') || '한 단어 취소'],
-				[getSyncCreatorShortcutDisplay('syllable'), I18n.t('syncCreator.shortcuts.syllable') || '음절'],
-				[getSyncCreatorShortcutDisplay('drag'), I18n.t('syncCreator.shortcuts.drag') || '누르면 드래그'],
-				[I18n.t('syncCreator.shortcuts.rightClick') || 'Right click', I18n.t('syncCreator.shortcuts.lockToCharacter') || '해당 글자까지 잠금'],
+				[getSyncCreatorShortcutDisplay('charForward'), I18n.t('syncCreator.shortcuts.charForward') || '1 Char'],
+				[getSyncCreatorShortcutDisplay('charBack'), I18n.t('syncCreator.shortcuts.charBack') || 'Undo 1 Char'],
+				[getSyncCreatorShortcutDisplay('wordForward'), I18n.t('syncCreator.shortcuts.wordForward') || '1 Word'],
+				[getSyncCreatorShortcutDisplay('wordBack'), I18n.t('syncCreator.shortcuts.wordBack') || 'Undo 1 Word'],
+				[getSyncCreatorShortcutDisplay('syllable'), I18n.t('syncCreator.shortcuts.syllable') || 'Syllable'],
+				[getSyncCreatorShortcutDisplay('drag'), I18n.t('syncCreator.shortcuts.drag') || 'Hold to Drag'],
+				[I18n.t('syncCreator.shortcuts.rightClick') || 'Right click', I18n.t('syncCreator.shortcuts.lockToCharacter') || 'Lock up to char'],
 				['↑ / ↓', `${I18n.t('syncCreator.prevLine') || 'Previous Line'} / ${I18n.t('syncCreator.nextLineBtn') || 'Next Line'}`],
-				['Enter', I18n.t('syncCreator.shortcuts.finish') || '라인 완료'],
-				['Backspace', I18n.t('syncCreator.shortcuts.cancel') || '취소'],
-				['Space', I18n.t('syncCreator.shortcuts.playPause') || '재생/일시정지'],
-				['Z', I18n.t('syncCreator.shortcuts.seekBack') || '-3초'],
-				['X', I18n.t('syncCreator.shortcuts.seekForward') || '+3초']
+				['Enter', I18n.t('syncCreator.shortcuts.finish') || 'Finish Line'],
+				['Backspace', I18n.t('syncCreator.shortcuts.cancel') || 'Cancel'],
+				['Space', I18n.t('syncCreator.shortcuts.playPause') || 'Play/Pause'],
+				[getSyncCreatorShortcutDisplay('seekBack'), I18n.t('syncCreator.shortcuts.seekBack') || '-3 Sec'],
+				[getSyncCreatorShortcutDisplay('seekForward'), I18n.t('syncCreator.shortcuts.seekForward') || '+3 Sec'],
+				[getSyncCreatorShortcutDisplay('seekBack1s'), I18n.t('syncCreator.shortcuts.seekBack1s') || '-1 Sec'],
+				[getSyncCreatorShortcutDisplay('seekForward1s'), I18n.t('syncCreator.shortcuts.seekForward1s') || '+1 Sec']
 			].map(([key, desc]) => react.createElement('div', { key: `${key}-${desc}`, style: s.shortcutItem },
 				react.createElement('span', { style: s.shortcutKey }, key),
 				react.createElement('span', { style: s.shortcutDesc }, desc)

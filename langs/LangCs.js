@@ -2884,6 +2884,8 @@ window.LANG_CS = {
       "playPause": "Přehrát/Pozastavit",
       "seekBack": "-3 sec",
       "seekForward": "+3 sec",
+      "seekBack1s": "-1 sec",
+      "seekForward1s": "+1 sec",
       "syllable": "Slabika"
     },
     "copyLyrics": "Kopírovat texty",

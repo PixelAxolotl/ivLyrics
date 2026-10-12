@@ -2884,6 +2884,8 @@ window.LANG_TR = {
       "playPause": "Oynat/Duraklat",
       "seekBack": "-3 San",
       "seekForward": "+3 San",
+      "seekBack1s": "-1 San",
+      "seekForward1s": "+1 San",
       "syllable": "Hece"
     },
     "copyLyrics": "Sözleri Kopyala",

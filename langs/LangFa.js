@@ -2884,6 +2884,8 @@ window.LANG_FA = {
       "playPause": "پخش/توقف",
       "seekBack": "-۳ ثانیه",
       "seekForward": "+۳ ثانیه",
+      "seekBack1s": "-۱ ثانیه",
+      "seekForward1s": "+۱ ثانیه",
       "syllable": "هجا"
     },
     "copyLyrics": "کپی متن آهنگ",

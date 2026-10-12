@@ -2884,6 +2884,8 @@ window.LANG_MS = {
       "playPause": "Main/Jeda",
       "seekBack": "-3 saat",
       "seekForward": "+3 saat",
+      "seekBack1s": "-1 saat",
+      "seekForward1s": "+1 saat",
       "syllable": "Suku Kata"
     },
     "copyLyrics": "Salin Lirik",

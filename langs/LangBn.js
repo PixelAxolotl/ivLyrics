@@ -2884,6 +2884,8 @@ window.LANG_BN = {
       "playPause": "চালান/থামান",
       "seekBack": "-৩ সেকেন্ড",
       "seekForward": "+৩ সেকেন্ড",
+      "seekBack1s": "-১ সেকেন্ড",
+      "seekForward1s": "+১ সেকেন্ড",
       "syllable": "Syllable"
     },
     "copyLyrics": "গান কপি করুন",

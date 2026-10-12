@@ -2884,6 +2884,8 @@ window.LANG_FR = {
       "playPause": "Lecture/Pause",
       "seekBack": "-3 Sec",
       "seekForward": "+3 Sec",
+      "seekBack1s": "-1 Sec",
+      "seekForward1s": "+1 Sec",
       "syllable": "Syllabe"
     },
     "copyLyrics": "Copier les paroles",

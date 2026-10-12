@@ -2884,6 +2884,8 @@ window.LANG_VI = {
       "playPause": "Phát/Dừng",
       "seekBack": "-3 giây",
       "seekForward": "+3 giây",
+      "seekBack1s": "-1 giây",
+      "seekForward1s": "+1 giây",
       "syllable": "Âm tiết"
     },
     "copyLyrics": "Sao chép lời bài hát",

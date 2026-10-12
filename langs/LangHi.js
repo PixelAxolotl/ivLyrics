@@ -2884,6 +2884,8 @@ window.LANG_HI = {
       "playPause": "चलाएं/रोकें",
       "seekBack": "-3 सेकंड",
       "seekForward": "+3 सेकंड",
+      "seekBack1s": "-1 सेकंड",
+      "seekForward1s": "+1 सेकंड",
       "syllable": "Syllable"
     },
     "copyLyrics": "गीत कॉपी करें",

@@ -2884,6 +2884,8 @@ window.LANG_RU = {
       "playPause": "Воспроизвести/Пауза",
       "seekBack": "-3 сек",
       "seekForward": "+3 сек",
+      "seekBack1s": "-1 сек",
+      "seekForward1s": "+1 сек",
       "syllable": "Слог"
     },
     "copyLyrics": "Копировать текст",

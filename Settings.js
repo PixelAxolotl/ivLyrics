@@ -9957,16 +9957,64 @@ react.createElement(
                 defaultValue: CONFIG.visual["sync-creator-drag-key"] ?? "/",
               },
               {
-                desc: `${getSettingsText("syncCreator.shortcuts.drag", "Hold to drag")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
-                key: "sync-creator-drag-alt-key",
-                type: ConfigHotkey,
-                defaultValue: CONFIG.visual["sync-creator-drag-alt-key"] ?? "numpaddivide",
-              },
-            ],
-            onChange: handleVisualConfigChange,
-          }),
-    ];
-    const renderLyricsLanguageSection = () => [
+				desc: `${getSettingsText("syncCreator.shortcuts.drag", "Hold to drag")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+				key: "sync-creator-drag-alt-key",
+				type: ConfigHotkey,
+				defaultValue: CONFIG.visual["sync-creator-drag-alt-key"] ?? "numpaddivide",
+			},
+			{
+				desc: `${getSettingsText("syncCreator.shortcuts.seekBack", "Seek back 3 seconds")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
+				key: "sync-creator-seek-back-key",
+				type: ConfigHotkey,
+				defaultValue: CONFIG.visual["sync-creator-seek-back-key"] ?? "z",
+			},
+			{
+				desc: `${getSettingsText("syncCreator.shortcuts.seekBack", "Seek back 3 seconds")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+				key: "sync-creator-seek-back-alt-key",
+				type: ConfigHotkey,
+				defaultValue: CONFIG.visual["sync-creator-seek-back-alt-key"] ?? "",
+			},
+			{
+				desc: `${getSettingsText("syncCreator.shortcuts.seekForward", "Seek forward 3 seconds")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
+				key: "sync-creator-seek-forward-key",
+				type: ConfigHotkey,
+				defaultValue: CONFIG.visual["sync-creator-seek-forward-key"] ?? "x",
+			},
+			{
+				desc: `${getSettingsText("syncCreator.shortcuts.seekForward", "Seek forward 3 seconds")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+				key: "sync-creator-seek-forward-alt-key",
+				type: ConfigHotkey,
+				defaultValue: CONFIG.visual["sync-creator-seek-forward-alt-key"] ?? "",
+			},
+			{
+				desc: `${getSettingsText("syncCreator.shortcuts.seekBack1s", "Seek back 1 second")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
+				key: "sync-creator-seek-back1s-key",
+				type: ConfigHotkey,
+				defaultValue: CONFIG.visual["sync-creator-seek-back1s-key"] ?? "a",
+			},
+			{
+				desc: `${getSettingsText("syncCreator.shortcuts.seekBack1s", "Seek back 1 second")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+				key: "sync-creator-seek-back1s-alt-key",
+				type: ConfigHotkey,
+				defaultValue: CONFIG.visual["sync-creator-seek-back1s-alt-key"] ?? "",
+			},
+			{
+				desc: `${getSettingsText("syncCreator.shortcuts.seekForward1s", "Seek forward 1 second")} (${getSettingsText("settings.shortcuts.primary", "Primary")})`,
+				key: "sync-creator-seek-forward1s-key",
+				type: ConfigHotkey,
+				defaultValue: CONFIG.visual["sync-creator-seek-forward1s-key"] ?? "s",
+			},
+			{
+				desc: `${getSettingsText("syncCreator.shortcuts.seekForward1s", "Seek forward 1 second")} (${getSettingsText("settings.shortcuts.secondary", "Secondary")})`,
+				key: "sync-creator-seek-forward1s-alt-key",
+				type: ConfigHotkey,
+				defaultValue: CONFIG.visual["sync-creator-seek-forward1s-alt-key"] ?? "",
+			},
+		],
+		onChange: handleVisualConfigChange,
+	}),
+	];
+	const renderLyricsLanguageSection = () => [
           react.createElement(SettingsSectionTitle, {
             title: I18n.t("settingsAdvanced.karaokeMode.title"),
             subtitle: I18n.t("settingsAdvanced.karaokeMode.subtitle"),

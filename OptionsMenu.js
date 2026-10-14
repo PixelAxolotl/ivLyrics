@@ -2207,6 +2207,7 @@ const ICONS = {
   localLyrics: `<path d="M3 1.5h6.5L13 5v9.5H3v-13Zm1 1v11h8V5.5H9V2.5H4Zm6 .7V4.5h1.3L10 3.2ZM5.25 7.5h5.5v1h-5.5v-1Zm0 2h5.5v1h-5.5v-1Zm0 2h3.5v1h-3.5v-1Z"/>`,
   search: `<path d="M6.75 1.75a4.75 4.75 0 0 1 3.8 7.6l3.2 3.2-.7.7-3.2-3.2a4.75 4.75 0 1 1-3.1-8.3Zm0 1a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Z"/>`,
   file: `<path d="M3 1.5h6.5L13 5v9.5H3v-13Zm1 1v11h8V5.5H9V2.5H4Zm6 .7V4.5h1.3L10 3.2ZM5 7.5h6v1H5v-1Zm0 2h6v1H5v-1Zm0 2h4v1H5v-1Z"/>`,
+  trash: `<path d="M6.25 1.5h3.5l.5 1H14v1H2v-1h3.75l.5-1ZM3.5 4.5h9l-.75 10h-7.5l-.75-10Zm1.08 1 .6 8h5.64l.6-8H4.58ZM6.5 6.5h1v5h-1v-5Zm2 0h1v5h-1v-5Z"/>`,
 };
 
 // Toolbar icons use one optical grid so every action stays distinct at compact sizes.
@@ -3406,6 +3407,8 @@ const LyricsProviderSelectButton = react.memo(
     trackInfo = null,
     onImportLocalLyricsFile,
     onApplyLocalLyrics,
+    getHasLocalLyrics,
+    onDeleteLocalLyrics,
   }) => {
     const open = () => {
       const providers = window.LyricsAddonManager?.getEnabledProviders?.() || [];
@@ -3443,6 +3446,7 @@ const LyricsProviderSelectButton = react.memo(
       let closeModal = null;
       const items = [];
       if (isLocalTrack) {
+        const hasLocalLyrics = !!getHasLocalLyrics?.();
         items.push({
           section: getOptionsText("menu.localLyricsTools", "로컬 가사"),
           subtitle: getOptionsText(
@@ -3488,7 +3492,22 @@ const LyricsProviderSelectButton = react.memo(
                 });
               },
             },
-          ],
+            // 가져온 로컬 가사는 곡 캐시가 아니라 이 기기에 저장된 사용자 데이터라서,
+            // 캐시 삭제로는 지워지지 않는다. 저장된 가사가 있을 때 여기서 직접 지운다.
+            hasLocalLyrics && {
+              desc: react.createElement(SettingRowDescription, {
+                icon: ICONS.trash,
+                text: getOptionsText("menu.localLyricsDelete", "로컬 가사 삭제"),
+              }),
+              key: "local-lyrics-delete",
+              type: IvConfigButton,
+              text: getOptionsText("buttons.delete", "삭제"),
+              onChange: () => {
+                closeModal?.();
+                onDeleteLocalLyrics?.();
+              },
+            },
+          ].filter(Boolean),
         });
       } else {
         items.push({

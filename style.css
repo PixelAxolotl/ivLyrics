@@ -2010,6 +2010,11 @@ body.ivlyrics-page-active .main-topBar-container {
 
 .lyrics-lyricsContainer-SyncedLyrics>.lyrics-lyricsContainer-LyricsLine-paddingLine {
   opacity: 0 !important;
+  /* Stop painting rows outside the visible window once their fade-out ends.
+     Hidden rows keep the same layout, so measured offsets do not change, but
+     their glyphs no longer add paint chunks to every frame. Rows entering the
+     window become visible immediately (their transitions omit visibility). */
+  visibility: hidden;
   pointer-events: none;
 }
 
@@ -2256,6 +2261,22 @@ body.ivlyrics-page-active .main-topBar-container {
   }
 }
 
+/* The scripted compact travel reads its delay and duration back from each row,
+   so the commit that changes a row's class also fixes when it moves. Color,
+   opacity, blur and the detail fades keep the timing above: running them on
+   the travel's longer, staggered clock kept the GPU saturated through every
+   line change and dropped frames. Registered without inheritance, so a
+   changing delay restyles the row only, never its glyphs. */
+@property --line-motion-delay {
+  syntax: "*";
+  inherits: false;
+}
+
+@property --line-motion-duration {
+  syntax: "*";
+  inherits: false;
+}
+
 /* Phonetic text style for Synced lyrics */
 .lyrics-lyricsContainer-SyncedLyrics .lyrics-lyricsContainer-LyricsLine-phonetic,
 .lyrics-lyricsContainer-SyncedScrollView .lyrics-lyricsContainer-LyricsLine-phonetic {
@@ -2483,19 +2504,22 @@ div.lyrics-tabBar-headerItemLink {
 .lyrics-lyricsContainer-SyncedLyricsPage
   .lyrics-lyricsContainer-SyncedLyrics
   > .lyrics-lyricsContainer-LyricsLine-paddingLine {
-  transition-property: transform, color, opacity !important;
+  transition-property: transform, color, opacity, visibility !important;
   transition-duration:
     var(--line-shift-duration, var(--iv-lyrics-centering-duration, 300ms)),
     300ms,
-    420ms !important;
+    420ms,
+    0s !important;
   transition-timing-function:
     var(--iv-lyrics-centering-ease, cubic-bezier(0.42, 0, 0.58, 1)),
     cubic-bezier(0.16, 1, 0.3, 1),
-    cubic-bezier(0.16, 1, 0.3, 1) !important;
+    cubic-bezier(0.16, 1, 0.3, 1),
+    linear !important;
   transition-delay:
     var(--line-shift-delay, 0s),
     0s,
-    0s !important;
+    0s,
+    420ms !important;
 }
 
 .lyrics-karaoke-part {
@@ -3180,6 +3204,35 @@ div.lyrics-tabBar-headerItemLink {
   transform-origin: center bottom;
   transform: translateY(var(--karaoke-bounce-y, 0)) scale(var(--karaoke-bounce-scale, 1));
   transition: transform 75ms linear;
+}
+
+/* The lyric pages render thousands of glyphs. An identity transform still
+   gives every idle glyph its own paint-property node, which split each row
+   into thousands of paint chunks that Chromium re-layerized on every frame, so
+   idle glyphs there drop it. Moving glyphs keep their bounce transform. With
+   an outline (has-glyph-outline), every glyph keeps its own stacking context
+   so each outline copy stays directly under its own glyph, exactly as before.
+   The LP view and Sync Creator keep the base rules. */
+.lyrics-lyricsContainer-SyncedLyrics .lyrics-karaoke-line:not(.has-glyph-outline) .lyrics-karaoke-char:not(.is-bouncing),
+.lyrics-lyricsContainer-SyncedLyrics .lyrics-karaoke-line:not(.has-glyph-outline) .lyrics-karaoke-text-run-segment:not(.is-bouncing),
+.lyrics-lyricsContainer-SyncedLyrics .lyrics-karaoke-line:not(.has-glyph-outline) .lyrics-karaoke-word.is-word-timed:not(.is-bouncing),
+.lyrics-lyricsContainer-UnsyncedLyricsPage .lyrics-karaoke-line:not(.has-glyph-outline) .lyrics-karaoke-char:not(.is-bouncing),
+.lyrics-lyricsContainer-UnsyncedLyricsPage .lyrics-karaoke-line:not(.has-glyph-outline) .lyrics-karaoke-text-run-segment:not(.is-bouncing),
+.lyrics-lyricsContainer-UnsyncedLyricsPage .lyrics-karaoke-line:not(.has-glyph-outline) .lyrics-karaoke-word.is-word-timed:not(.is-bouncing) {
+  transform: none;
+}
+
+/* Live rows receive their bounce values on every display frame from
+   KaraokeLivePainter, so the 75 ms smoothing transition would only trail the
+   painted motion and restart a transition per frame. */
+.lyrics-karaoke-char[data-karaoke-live],
+.lyrics-karaoke-text-run-segment[data-karaoke-live],
+.lyrics-karaoke-word.is-word-timed[data-karaoke-live] {
+  transition: none;
+}
+
+.lyrics-karaoke-char.is-bouncing[data-karaoke-live] {
+  will-change: transform;
 }
 
 /* As with text runs, the wrapper stays transparent and the nested glyph-fill
@@ -18323,6 +18376,13 @@ html.is-lp-view-exit::view-transition-new(root) {
   opacity: calc(var(--karaoke-motion-glow, 0) * var(--lyrics-shadow-enabled, 0));
   transition: opacity 75ms linear;
   pointer-events: none;
+}
+
+/* Live rows paint the glow on every display frame (KaraokeLivePainter). */
+.lyrics-karaoke-char.is-bouncing[data-karaoke-live]::after,
+.lyrics-karaoke-text-run-segment.is-bouncing[data-karaoke-live]::after,
+.lyrics-karaoke-word.is-word-timed.is-bouncing[data-karaoke-live] .lyrics-karaoke-char::after {
+  transition: none;
 }
 
 .lyrics-karaoke-glyph-fill {

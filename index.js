@@ -5078,6 +5078,8 @@ class LyricsContainer extends react.Component {
     this.importLocalLyricsFile = this.importLocalLyricsFile.bind(this);
     this.applyLocalLyrics = this.applyLocalLyrics.bind(this);
     this.applyLocalLyricsFromLrclibCandidate = this.applyLocalLyricsFromLrclibCandidate.bind(this);
+    this.hasLocalLyricsForCurrentTrack = this.hasLocalLyricsForCurrentTrack.bind(this);
+    this.removeLocalLyricsForCurrentTrack = this.removeLocalLyricsForCurrentTrack.bind(this);
     this.handleLyricsProviderAttempt = this.handleLyricsProviderAttempt.bind(this);
     this.handleVideoBackgroundLoadingChange = this.handleVideoBackgroundLoadingChange.bind(this);
   }
@@ -8996,6 +8998,49 @@ class LyricsContainer extends react.Component {
     return !!this.getSavedLocalLyrics(uri);
   }
 
+  getCurrentLyricsTrackUri() {
+    return this.currentTrackUri || this.state.uri || Spicetify.Player?.data?.item?.uri || null;
+  }
+
+  hasLocalLyricsForCurrentTrack() {
+    return this.lyricsSaved(this.getCurrentLyricsTrackUri());
+  }
+
+  // 로컬 곡에 가져온 LRC/LRCLIB 가사는 캐시가 아니라 local-lyrics 저장소에 남아서,
+  // 곡 캐시를 지워도 다시 불러올 때 그대로 복원됐다. 저장된 가사를 지우고 이 곡의
+  // 캐시(local-uri 키 포함)를 비운 뒤 다시 불러온다.
+  async removeLocalLyricsForCurrentTrack({ confirm = true } = {}) {
+    const currentUri = this.getCurrentLyricsTrackUri();
+    if (!currentUri) {
+      Toast.error(this.getText("notifications.noTrackPlaying", "No track playing"));
+      return false;
+    }
+    if (!this.lyricsSaved(currentUri)) {
+      Toast.error(this.getText("notifications.noLocalLyricsToDelete", "No local lyrics are saved for this track"));
+      return false;
+    }
+    if (confirm && !window.confirm(this.getText(
+      "menu.localLyricsDeleteConfirm",
+      "Delete the local lyrics saved for this track? This can't be undone."
+    ))) {
+      return false;
+    }
+
+    this.deleteLocalLyrics(currentUri);
+    window.LyricsService?.clearLyricsSnapshot?.(currentUri);
+    if (typeof this.reloadLyrics === "function") {
+      await this.reloadLyrics(true);
+    } else {
+      delete CACHE[currentUri];
+      CacheManager.clearByUri(currentUri);
+    }
+    window.dispatchEvent(new CustomEvent("ivLyrics:local-lyrics-updated", {
+      detail: { trackUri: currentUri, deleted: true },
+    }));
+    Toast.success(this.getText("notifications.localLyricsDeleted", "Local lyrics deleted"));
+    return true;
+  }
+
   resetTranslationCache(uri) {
     // Clear translation cache for this URI
     const clearedCount = CacheManager.clearByUri(uri);
@@ -11004,6 +11049,8 @@ class LyricsContainer extends react.Component {
                 trackInfo: currentTrackInfo,
                 onImportLocalLyricsFile: this.importLocalLyricsFile,
                 onApplyLocalLyrics: this.applyLocalLyricsFromLrclibCandidate,
+                getHasLocalLyrics: this.hasLocalLyricsForCurrentTrack,
+                onDeleteLocalLyrics: this.removeLocalLyricsForCurrentTrack,
               }),
               react.createElement(TrackBackgroundButton, {
                 trackUri: this.currentTrackUri,
@@ -11193,6 +11240,14 @@ class LyricsContainer extends react.Component {
         className: `lyrics-lyricsContainer-LyricsContainer${CONFIG.visual["fade-blur"] ? " blur-enabled" : ""
           }${CONFIG.visual["highlight-mode"] ? " highlight-mode-enabled" : ""}${fadLyricsContainer ? " fad-enabled" : ""}${fullscreenClasses}${shouldReduceMotion ? " motion-reduced" : ""}${this.state.isPlaybackPaused ? " playback-paused" : ""}${isSyncCreatorActive ? " sync-creator-minimal" : ""}`,
         style: this.styleVariables,
+        // Spotify's OverlayScrollbars wrapper skips mutations inside elements
+        // marked scroll-size contained. Without it, every lyric DOM change
+        // (glyph states, live karaoke paint, line motion) made the main view
+        // re-measure its scroll size in a microtask, forcing a synchronous
+        // style and layout pass. This page is absolutely positioned with
+        // hidden overflow and layout containment, so its content can never
+        // change the main view's scroll size.
+        "data-scroll-size-contained": "",
         ref: (el) => {
           if (!el) return;
           this.containerRef.current = el;

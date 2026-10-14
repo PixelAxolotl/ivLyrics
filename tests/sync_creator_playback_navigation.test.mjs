@@ -226,6 +226,30 @@ test('stale source completions cannot overwrite the newer lyric source or initia
 	assert.deepEqual(editor.calls.selections, [2]);
 });
 
+test('loading a different LRCLIB source clears incompatible saved and previously selected timings', async () => {
+	const editor = createEditor();
+	const oldBody = { version: 2, lines: [{ start: 0, end: 7, chars: [1, 2, 3, 4, 5, 6, 7, 8] }] };
+	editor.context.setSyncData(oldBody);
+	editor.context.window.SyncDataService = { getSyncData: async () => ({ syncData: oldBody }) };
+	const request = editor.context.beginSyncCreatorSourceChange();
+	await editor.context.applyLoadedLyricsResult({ provider: 'lrclib', synced: [{ text: 'New', startTime: 0 }, { text: 'Text', startTime: 2000 }] }, 'lrclib', request);
+	assert.equal(editor.context.syncData, null);
+	assert.equal(editor.context.hasPublishedSync, false);
+	assert.equal(editor.context.serverBaselineSyncDataRef.current, null);
+	assert.equal(editor.context.lyricsText, 'New\nText');
+});
+
+test('matching legacy sync still loads as the published editor baseline', async () => {
+	const editor = createEditor();
+	const body = { version: 2, lines: [{ start: 0, end: 2, chars: [1, 2, 3] }, { start: 3, end: 6, chars: [4, 5, 6, 7] }] };
+	editor.context.window.SyncDataService = { getSyncData: async () => ({ syncData: body }) };
+	const request = editor.context.beginSyncCreatorSourceChange();
+	await editor.context.applyLoadedLyricsResult({ provider: 'lrclib', synced: [{ text: 'New', startTime: 0 }, { text: 'Text', startTime: 2000 }] }, 'lrclib', request);
+	assert.deepEqual(plain(editor.context.syncData), body);
+	assert.equal(editor.context.hasPublishedSync, true);
+	assert.deepEqual(plain(editor.context.serverBaselineSyncDataRef.current), body);
+});
+
 test('pending vocal choice defers initialization and uses progress when the choice is resolved', async () => {
 	const editor = createEditor({ progress: 500 });
 	const request = editor.context.beginSyncCreatorSourceChange();

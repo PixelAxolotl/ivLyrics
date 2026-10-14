@@ -1413,11 +1413,24 @@
     }
 
     function getSyncDataLineCharCounts(syncData) {
-        if (!Array.isArray(syncData?.syncData?.lines) || syncData.syncData.lines.length === 0) {
-            return null;
+        const body = syncData?.syncData;
+        const sourceCounts = body?.source?.lineCharCounts;
+        if (Array.isArray(sourceCounts) && sourceCounts.length > 0
+            && sourceCounts.every(count => Number.isSafeInteger(count) && count > 0)) {
+            return sourceCounts;
         }
-
-        return syncData.syncData.lines.map(line => Array.isArray(line?.chars) ? line.chars.length : -1);
+        if (!Array.isArray(body?.lines) || body.lines.length === 0) return null;
+        // A compact timing payload may have no chars array. Only infer source
+        // rows from complete, contiguous legacy ranges; partial ranges are unknown.
+        const counts = [];
+        let nextStart = 0;
+        for (const line of body.lines) {
+            if (!Number.isSafeInteger(line?.start) || !Number.isSafeInteger(line?.end)
+                || line.start !== nextStart || line.end < line.start) return null;
+            counts.push(line.end - line.start + 1);
+            nextStart = line.end + 1;
+        }
+        return counts;
     }
 
     function hasExactLineCharCountMatch(expectedCounts, actualCounts) {

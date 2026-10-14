@@ -81,3 +81,39 @@ test("character and shaped-run wrappers retain their original layout and 75ms mo
 			`${wrapper} keeps its shaping, dimensions, clipping and bounce transform`);
 	}
 });
+
+test("idle lyric-page glyphs drop only their identity transform", () => {
+	const selectorsWith = (property, value) => currentRules
+		.filter(rule => rule.declarations.some(([name, declared]) => name === property && declared === value))
+		.flatMap(rule => rule.selector.split(",").map(normalize));
+	// An identity transform split every row into per-glyph paint chunks. Idle
+	// glyphs on the lyric pages drop it, while moving glyphs and rows with an
+	// outline (whose per-glyph stacking contexts order the outline copies) keep
+	// the base rule. Other renderers are not matched at all.
+	const idle = selectorsWith("transform", "none");
+	for (const page of [".lyrics-lyricsContainer-SyncedLyrics", ".lyrics-lyricsContainer-UnsyncedLyricsPage"]) {
+		for (const wrapper of [...wrappers, ".lyrics-karaoke-word.is-word-timed"]) {
+			assert.ok(idle.includes(`${page} .lyrics-karaoke-line:not(.has-glyph-outline) ${wrapper}:not(.is-bouncing)`),
+				`${page} ${wrapper}`);
+		}
+	}
+	const glyphSelector = /\.lyrics-karaoke-(char|text-run-segment|word)\b[^ ]*$/;
+	assert.deepEqual(idle.filter(selector => glyphSelector.test(selector) && !selector.includes(":not(.has-glyph-outline)")),
+		[".lyrics-karaoke-word.is-word-timed .lyrics-karaoke-char"],
+		"only the word-mode glyph override applies outside the lyric pages");
+	// Live rows are painted on every display frame; non-live renderers keep
+	// their 75 ms smoothing on the transform and the glow.
+	const untransitioned = selectorsWith("transition", "none");
+	for (const wrapper of [...wrappers, ".lyrics-karaoke-word.is-word-timed"]) {
+		assert.ok(untransitioned.includes(`${wrapper}[data-karaoke-live]`), wrapper);
+	}
+	const glyphTransitions = untransitioned.filter(selector => /\.lyrics-karaoke-(char|text-run-segment|word)\b/.test(selector));
+	assert.ok(glyphTransitions.every(selector => selector.includes("[data-karaoke-live]")), glyphTransitions.join("\n"));
+	const glow = rulesFor(currentRules, [
+		".lyrics-karaoke-char.is-bouncing::after",
+		".lyrics-karaoke-text-run-segment.is-bouncing::after",
+		".lyrics-karaoke-word.is-word-timed.is-bouncing .lyrics-karaoke-char::after",
+	].join(", "));
+	assert.equal(glow.length, 1);
+	assert.ok(glow[0].declarations.some(([name, value]) => name === "transition" && value === "opacity 75ms linear"));
+});

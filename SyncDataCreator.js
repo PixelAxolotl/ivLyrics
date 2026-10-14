@@ -332,6 +332,71 @@ const getSyncCreatorPlaybackLineIndex = (timeline, positionMs) => {
 	}
 	return low > 0 ? timeline[low - 1].lineIndex : 0;
 };
+// The live preview follows playback on its own clock. Only this subtree
+// re-renders for glyph states (about every 16 ms while playing), and the
+// shared KaraokeLivePainter paints fill and bounce on every display frame.
+// The editor keeps its coarser position updates; the preview no longer waits
+// for them (100 ms polling with an 80 ms commit threshold). Both read the raw
+// player progress that recording uses, with no lyric offsets.
+const SYNC_CREATOR_PREVIEW_STATE_INTERVAL_MS = 15;
+const SYNC_CREATOR_PREVIEW_PAUSED_POLL_MS = 120;
+// Raw player progress at the start of the display frame `frameTime` (a
+// requestAnimationFrame timestamp), so each painted frame advances by exactly
+// its own interval.
+const getSyncCreatorFrameAlignedProgress = (frameTime = NaN) => {
+	const progress = Number(Spicetify.Player?.getProgress?.());
+	if (!Number.isFinite(progress)) return NaN;
+	if (!Number.isFinite(frameTime) || Spicetify.Player?.isPlaying?.() !== true) return progress;
+	return progress - Math.max(0, performance.now() - frameTime);
+};
+const syncCreatorPreviewLiveClock = { getPosition: getSyncCreatorFrameAlignedProgress };
+const syncCreatorPreviewUsesLiveClock = () => typeof requestAnimationFrame === 'function'
+	&& window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches !== true;
+// Reduced motion keeps the editor's position, exactly as before.
+const SyncCreatorLivePreviewClock = ({ fallbackPosition, render }) => {
+	const live = syncCreatorPreviewUsesLiveClock();
+	const [position, setPosition] = react.useState(() => Number(fallbackPosition) || 0);
+	react.useEffect(() => {
+		if (!live) return undefined;
+		let frameId = null;
+		let timerId = null;
+		let lastCommit = -Infinity;
+		let disposed = false;
+		const commit = (frameTime) => {
+			const next = Math.round(getSyncCreatorFrameAlignedProgress(frameTime));
+			if (Number.isFinite(next)) setPosition((previous) => (previous === next ? previous : next));
+		};
+		const schedule = () => {
+			if (disposed) return;
+			// Paused playback only needs to notice seeks.
+			if (Spicetify.Player?.isPlaying?.() === false) {
+				timerId = setTimeout(() => {
+					timerId = null;
+					commit(NaN);
+					schedule();
+				}, SYNC_CREATOR_PREVIEW_PAUSED_POLL_MS);
+				return;
+			}
+			frameId = requestAnimationFrame((frameTime) => {
+				frameId = null;
+				if (disposed) return;
+				if (frameTime - lastCommit >= SYNC_CREATOR_PREVIEW_STATE_INTERVAL_MS) {
+					lastCommit = frameTime;
+					commit(frameTime);
+				}
+				schedule();
+			});
+		};
+		commit(NaN);
+		schedule();
+		return () => {
+			disposed = true;
+			if (frameId !== null) cancelAnimationFrame(frameId);
+			if (timerId !== null) clearTimeout(timerId);
+		};
+	}, [live]);
+	return render(live ? position : fallbackPosition);
+};
 const countSyncCreatorRangeChars = (ranges) => (Array.isArray(ranges) ? ranges : []).reduce((sum, range) => {
 	const start = Number(range?.start);
 	const end = Number(range?.end);
@@ -1155,8 +1220,22 @@ const normalizeLoadedSyncCreatorBodyForLyrics = (syncBody, lyricsText) => {
 	const sourceLineCounts = Array.isArray(syncBody?.source?.lineCharCounts)
 		? syncBody.source.lineCharCounts
 		: null;
-	if (!sourceLineCounts) return syncBody;
 	const currentLineCounts = getSyncCreatorLineCharCountsFromText(lyricsText);
+	if (!sourceLineCounts) {
+		// Older submissions have no source ID/fingerprint. Do not attach their
+		// absolute indexes to a different LRCLIB text when loading the editor.
+		const lineEndsByStart = new Map();
+		let start = 0;
+		for (const count of currentLineCounts) {
+			lineEndsByStart.set(start, start + count - 1);
+			start += count;
+		}
+		const compatible = currentLineCounts.length > 0 && syncBody.lines.every(line => (
+			Number.isSafeInteger(line?.start) && Number.isSafeInteger(line?.end)
+			&& lineEndsByStart.get(line.start) === line.end
+		));
+		return compatible ? syncBody : null;
+	}
 	const prefix = findSyncCreatorSourceLinePrefix(sourceLineCounts, currentLineCounts);
 	if (prefix < 0) return null;
 	if (prefix === 0 && syncBody?.source?.lyricsFingerprint) {
@@ -3782,7 +3861,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 		if (loadedSyncBody) {
 			const normalizedLoadedSyncBody = normalizeLoadedSyncCreatorBodyForLyrics(loadedSyncBody, text);
-			if (normalizedLoadedSyncBody !== loadedSyncBody) {
+			if (!normalizedLoadedSyncBody) {
+				window.__ivLyricsDebugLog?.('[SyncDataCreator] Existing sync source does not match the selected lyrics; starting without its timings');
+			} else if (normalizedLoadedSyncBody !== loadedSyncBody) {
 				window.__ivLyricsDebugLog?.('[SyncDataCreator] Trimmed leading sync-data source lines for current lyrics');
 			}
 			loadedSyncBody = sanitizeSyncCreatorSyncData(
@@ -3801,6 +3882,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			serverBaselineSyncDataRef.current = null;
 			setHasPublishedSync(false);
 		}
+		if (!loadedSyncBody && !restoredUnsubmittedDraft) setSyncData(null);
 		if (text.trim().length > 0) {
 			const effectiveSyncBody = restoredUnsubmittedDraft?.draft?.syncData || loadedSyncBody;
 			const existingHasParallel = Array.isArray(effectiveSyncBody?.lines)
@@ -13795,11 +13877,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			}
 		}
 	), []);
-	const renderLivePreviewOverlay = () => {
-		if (!showLivePreview) return null;
+	const renderLivePreviewOverlay = () => (showLivePreview
+		? react.createElement(SyncCreatorLivePreviewClock, { fallbackPosition: position, render: renderLivePreviewOverlayAt })
+		: null);
+	const renderLivePreviewOverlayAt = (position) => {
 		const PageRenderer = null;
 		const ActiveRenderer = null;
 		const primitives = window.ivLyricsLyricRendererPrimitives || null;
+		const previewLiveClock = syncCreatorPreviewUsesLiveClock() ? syncCreatorPreviewLiveClock : null;
 		let previewBody = null;
 		const renderPreviewLine = (rowLine, isRowActive, rowKey, charReadingsOverride = null) => {
 			if (!rowLine || !primitives?.LyricsLineBlock) return null;
@@ -13876,6 +13961,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					isKara: true,
 					line: rowLine,
 					position,
+					...(isRowActive && previewLiveClock ? { liveClock: previewLiveClock } : {}),
 					isActive: isRowActive,
 					isCurrentLine: isRowActive,
 					isEffectFocused: isRowActive,
@@ -13896,7 +13982,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		// Marker rows become break indicators, long trailing gaps become
 		// virtual break rows, playback before the first line shows the
 		// leading prelude (interlude system, same source as outside).
-		const previewLineIndex = Math.max(0, Math.min(currentLineIndex, livePreviewKaraokeLines.length - 1));
+		// The previewed line follows the same clock as its glyphs.
+		const playbackLineIndex = getSyncCreatorPlaybackLineIndex(playbackTimeline, position);
+		const previewLineIndex = Math.max(0, Math.min(playbackLineIndex >= 0 ? playbackLineIndex : currentLineIndex,
+			livePreviewKaraokeLines.length - 1));
 		const previewLine = livePreviewKaraokeLines[previewLineIndex] || null;
 		let interludeDisplayLine = null;
 		let isLeadingPrelude = false;

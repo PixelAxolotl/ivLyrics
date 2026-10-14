@@ -112,7 +112,8 @@ test('panel clock only publishes active row changes at vocal boundaries, includi
     getPanelTrailingInterludeState: () => ({activeKey: null, visualKey: null}),
     setSingingLineIndices: indices => activeChanges.push(plain(indices)),
     setCurrentIndex() {}, setVisualIndex() {}, setActiveTrailingInterludeKey() {}, setVisualTrailingInterludeKey() {},
-    setInterval: callback => {tick = callback; return 1;}, clearInterval() {},
+    document: {hidden: false, addEventListener() {}, removeEventListener() {}},
+    setTimeout: callback => {tick = callback; return 1;}, clearTimeout() {},
   });
   const effect = slice(panelSource, '        // 현재 재생 위치 추적 및 노래방 가사 타이밍 업데이트', '        }, [lyrics, isEnabled, trackOffset');
   const body = effect.slice(effect.indexOf('useEffect(() => {') + 'useEffect(() => {'.length);

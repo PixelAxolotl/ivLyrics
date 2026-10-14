@@ -62,7 +62,10 @@ const normalizePresentation = (value) => JSON.parse(JSON.stringify(value, functi
 	// Anchor ownership now follows the visual handoff instead of assigning the
 	// same ref to both the prelude and first lyric. Its lifecycle is tested below.
 	if (key === "lineRef" && Object.hasOwn(this, "delay")) return undefined;
-	if (key === "detailClassName" || key === "--lyrics-interlude-fade-duration") return undefined;
+	// Scripted rows also carry their travel clock (--line-motion-*); its
+	// routing is verified in the scripted presentation test below.
+	if (key === "detailClassName" || key === "--lyrics-interlude-fade-duration"
+		|| key.startsWith("--line-motion-")) return undefined;
 	if (key === "className" && typeof entry === "string") return entry.split(" ")
 		.filter(name => !/^lyrics-line-detail(?:-(?:current|past|future))?$/.test(name)
 			&& name !== "lyrics-interlude-departing").join(" ");
@@ -704,6 +707,42 @@ test("virtual interlude caches invalidate on motion controls, settings and lyric
  assert.equal(replacement.props.line.endTime, 78000);
  assert.equal(replacement.props.style["--lyrics-interlude-fade-duration"], undefined);
  assert.doesNotMatch(replacement.props.className, /lyrics-interlude-departing/);
+});
+
+test("scripted compact rows carry their travel timing only while row travel is scripted", () => {
+ const lyrics = makeLyrics();
+ const motionKeys = ["--line-motion-delay", "--line-motion-duration", "--line-motion-ease"];
+ const rowStyles = (engine, position, options) => engine.render(lyrics, position, options, true).elements
+  .map(element => element.props.style)
+  .filter(style => style && Object.hasOwn(style, "--position-index"));
+ for (const isKara of [true, false]) {
+  const engine = createEngine(currentSource);
+  const styles = rowStyles(engine, 2700, { isKara });
+  assert.ok(styles.length > 3);
+  const [first] = styles;
+  assert.match(first["--line-motion-duration"], /^\d+(?:\.\d+)?ms$/);
+  // Presentation keeps its own transitions; rows carry no easing for it.
+  assert.equal(Object.hasOwn(first, "--line-motion-ease"), false);
+  for (const style of styles) {
+   assert.equal(style["--line-motion-duration"], first["--line-motion-duration"], "one travel budget per transition");
+   // No layout effect has recorded a previous scripted line, so nothing cascades.
+   assert.equal(style["--line-motion-delay"], "0ms");
+  }
+ }
+ for (const [label, setup, options] of [
+  ["expanded view", () => {}, { compact: false }],
+  ["manual browsing", engine => engine.setScrolling(true), {}],
+  ["reduced motion", engine => { engine.motionPreference.matches = true; }, {}],
+  ["karaoke line transition disabled", engine => { engine.CONFIG.visual["karaoke-line-transition"] = false; }, {}],
+ ]) {
+  const engine = createEngine(currentSource);
+  setup(engine);
+  const styles = rowStyles(engine, 2700, options);
+  assert.ok(styles.length > 3, label);
+  for (const style of styles) {
+   for (const key of motionKeys) assert.equal(Object.hasOwn(style, key), false, `${label}: ${key}`);
+  }
+ }
 });
 
 test("cached postlude updates track duration and remains visible at the end", () => {

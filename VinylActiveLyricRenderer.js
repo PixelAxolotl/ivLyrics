@@ -42,15 +42,25 @@ const VinylActiveLyricRenderer = (() => {
         motionEnabled,
         position,
         lineStartTime,
-        lineEndTime
+        lineEndTime,
+        liveClock = null
     ) => {
         const scrollEntriesRef = useRef(new Map());
         const progressRef = useRef(0);
         const appliedProgressRef = useRef(null);
+        const wakeLiveScrollRef = useRef(null);
         const hasScrollTiming = Number.isFinite(lineStartTime)
             && Number.isFinite(lineEndTime)
             && lineEndTime > lineStartTime;
         progressRef.current = getLineScrollProgress(position, lineStartTime, lineEndTime);
+
+        const applyScrollProgress = (progress) => {
+            if (appliedProgressRef.current === progress) return;
+            appliedProgressRef.current = progress;
+            scrollEntriesRef.current.forEach(({ travel, direction }, content) => {
+                content.style.transform = getScrollTransform(travel, direction, progress);
+            });
+        };
 
         useLayoutEffect(() => {
             const root = rootRef.current;
@@ -138,6 +148,7 @@ const VinylActiveLyricRenderer = (() => {
                     );
                 });
                 appliedProgressRef.current = progressRef.current;
+                wakeLiveScrollRef.current?.();
             };
 
             const scheduleMeasure = () => {
@@ -175,18 +186,54 @@ const VinylActiveLyricRenderer = (() => {
             };
         }, [rootRef, resetKey, motionEnabled, hasScrollTiming]);
 
+        // The traverse is a continuous slide, so it follows the playback clock
+        // on every display frame instead of the state cadence. The loop rests
+        // during both holds and while paused; the next commit wakes it.
         useLayoutEffect(() => {
+            if (!liveClock || !motionEnabled || !hasScrollTiming) {
+                wakeLiveScrollRef.current = null;
+                return undefined;
+            }
+            let frameId = null;
+            let quietFrames = 0;
+            let disposed = false;
+            const tick = (frameTime) => {
+                frameId = null;
+                if (disposed) return;
+                const progress = getLineScrollProgress(liveClock.getPosition(frameTime), lineStartTime, lineEndTime);
+                if (scrollEntriesRef.current.size > 0 && appliedProgressRef.current !== progress) {
+                    applyScrollProgress(progress);
+                    quietFrames = 0;
+                } else {
+                    quietFrames++;
+                }
+                if (quietFrames < 30) frameId = window.requestAnimationFrame(tick);
+            };
+            const wake = () => {
+                quietFrames = 0;
+                // Rows that fit have nothing to slide; measurement wakes the
+                // loop again once a row overflows.
+                if (!disposed && frameId === null && scrollEntriesRef.current.size > 0) {
+                    frameId = window.requestAnimationFrame(tick);
+                }
+            };
+            wakeLiveScrollRef.current = wake;
+            wake();
+            return () => {
+                disposed = true;
+                if (wakeLiveScrollRef.current === wake) wakeLiveScrollRef.current = null;
+                if (frameId !== null) window.cancelAnimationFrame(frameId);
+            };
+        }, [liveClock, motionEnabled, hasScrollTiming, lineStartTime, lineEndTime, resetKey]);
+
+        useLayoutEffect(() => {
+            if (wakeLiveScrollRef.current) {
+                wakeLiveScrollRef.current();
+                return;
+            }
             // The start/end holds occupy most of a line's lifetime. Geometry
             // measurements apply their own current transform after a resize.
-            if (appliedProgressRef.current === progressRef.current) return;
-            appliedProgressRef.current = progressRef.current;
-            scrollEntriesRef.current.forEach(({ travel, direction }, content) => {
-                content.style.transform = getScrollTransform(
-                    travel,
-                    direction,
-                    progressRef.current
-                );
-            });
+            applyScrollProgress(progressRef.current);
         }, [position, lineStartTime, lineEndTime, motionEnabled]);
     };
 
@@ -199,6 +246,7 @@ const VinylActiveLyricRenderer = (() => {
         LyricsLineBlock,
         IdlingIndicator,
         useLyricsPlaybackPosition,
+        useKaraokeLiveClock = () => null,
         getPseudoKaraokeRenderAdvance,
         prepareGlobalCharTimeline,
         queryGlobalCharTimeline,
@@ -225,14 +273,23 @@ const VinylActiveLyricRenderer = (() => {
         const rootRef = useRef(null);
         const playbackPosition = useLyricsPlaybackPosition();
         const numericPositionOverride = Number(positionOverride);
-        const position = positionOverride !== null
+        const hasPositionOverride = positionOverride !== null
             && positionOverride !== undefined
-            && Number.isFinite(numericPositionOverride)
-            ? numericPositionOverride
-            : playbackPosition;
-        const renderPosition = isKara
-            ? position + getPseudoKaraokeRenderAdvance(karaokeSource)
-            : position;
+            && Number.isFinite(numericPositionOverride);
+        const position = hasPositionOverride ? numericPositionOverride : playbackPosition;
+        const renderAdvance = isKara ? getPseudoKaraokeRenderAdvance(karaokeSource) : 0;
+        const renderPosition = position + renderAdvance;
+        // Glyph fill and bounce follow the playback clock on every display
+        // frame, exactly as on the lyrics page. A fixed position override
+        // renders statically.
+        const liveClock = useKaraokeLiveClock(isKara && !hasPositionOverride, renderAdvance);
+        const playbackPositionRef = useRef(playbackPosition);
+        playbackPositionRef.current = playbackPosition;
+        // The overflow slide uses the line's own clock (no render advance).
+        const scrollClock = useMemo(() => hasPositionOverride ? null : {
+            getPosition: (frameTime) => window.ivLyricsLyricRendererPrimitives?.getFrameAlignedLyricsPlaybackPosition?.(frameTime)
+                ?? playbackPositionRef.current,
+        }, [hasPositionOverride]);
         const safeLineIndex = Math.min(
             Math.max(Number(activeLineIndex) || 0, 0),
             Math.max(lyrics.length - 1, 0)
@@ -256,7 +313,8 @@ const VinylActiveLyricRenderer = (() => {
             motionEnabled && singleLineScroll,
             position,
             lineStartTime,
-            lineEndTime
+            lineEndTime,
+            scrollClock
         );
         const globalCharTimeline = useMemo(
             () => isKara && Array.isArray(lyrics) ? prepareGlobalCharTimeline(lyrics) : null,
@@ -348,6 +406,7 @@ const VinylActiveLyricRenderer = (() => {
                 isKara,
                 line: displayLine,
                 position: trailingInterludeLine || !isKara ? 0 : renderPosition,
+                ...(liveClock && !trailingInterludeLine ? { liveClock } : {}),
                 isActive: isKara && !trailingInterludeLine,
                 isCurrentLine: true,
                 settingsRevision,

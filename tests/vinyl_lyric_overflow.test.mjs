@@ -69,7 +69,7 @@ const createRow = ({ width = 300, naturalWidth = 600, direction = "ltr" } = {}, 
   return { viewport, content };
 };
 
-const createHarness = ({ rows = [{}], reducedMotion = false, layoutAudit, ...initialProps } = {}) => {
+const createHarness = ({ rows = [{}], reducedMotion = false, layoutAudit, liveClock = null, ...initialProps } = {}) => {
   const slots = [];
   const frames = new Map();
   const mediaListeners = new Set();
@@ -128,7 +128,7 @@ const createHarness = ({ rows = [{}], reducedMotion = false, layoutAudit, ...ini
       ivLyricsLyricRendererPrimitives: {
         LyricsLineBlock,
         IdlingIndicator: () => null,
-        useLyricsPlaybackPosition: () => 6000,
+        useLyricsPlaybackPosition: () => liveClock ? liveClock.position : 6000,
         getPseudoKaraokeRenderAdvance: () => 0,
         prepareGlobalCharTimeline: () => null,
         EMPTY_GLOBAL_CHAR_STATE: { globalCharOffsets: [], activeGlobalCharIndex: -1 },
@@ -138,6 +138,7 @@ const createHarness = ({ rows = [{}], reducedMotion = false, layoutAudit, ...ini
         buildLyricDisplayState: (_isKara, line) => ({ mainText: line.text }),
         getKaraokeLineMetaClass: () => "",
         getKaraokeSpeakerStyle: () => ({}),
+        ...(liveClock ? { getFrameAlignedLyricsPlaybackPosition: () => liveClock.position } : {}),
       },
       matchMedia: () => media,
       getComputedStyle: element => ({ direction: element.direction }),
@@ -150,16 +151,18 @@ const createHarness = ({ rows = [{}], reducedMotion = false, layoutAudit, ...ini
     console,
   });
   vm.runInContext(source, context);
+  // A live clock keeps one frame loop running until playback rests.
+  const maxPasses = liveClock ? 40 : 10;
   const flushFrames = () => {
     let passes = 0;
     while (frames.size) {
-      assert.ok(++passes < 10, "overflow measurement must settle");
+      assert.ok(++passes < maxPasses, "overflow measurement must settle");
       const scheduled = [...frames.values()];
       frames.clear();
       scheduled.forEach(callback => callback());
     }
   };
-  const render = nextProps => {
+  const render = (nextProps, flush = true) => {
     props = { ...props, ...nextProps };
     cursor = 0;
     effects = [];
@@ -168,7 +171,7 @@ const createHarness = ({ rows = [{}], reducedMotion = false, layoutAudit, ...ini
     const line = tree?.props.children.find(child => child?.type === LyricsLineBlock);
     root.viewports = line?.props.singleLineScroll ? lyricRows.map(row => row.viewport) : [];
     effects.forEach(effect => effect());
-    flushFrames();
+    if (flush) flushFrames();
     return tree;
   };
   render({});
@@ -176,6 +179,13 @@ const createHarness = ({ rows = [{}], reducedMotion = false, layoutAudit, ...ini
     rows: lyricRows,
     scrollArea: root.parentElement,
     render,
+    pendingFrames: () => frames.size,
+    runFrame() {
+      const scheduled = [...frames.values()];
+      frames.clear();
+      scheduled.forEach(callback => callback());
+    },
+    flushFrames,
     setReducedMotion(matches) {
       media.matches = matches;
       [...mediaListeners].forEach(callback => callback({ matches }));
@@ -353,5 +363,48 @@ test("overflow holds skip repeated transforms while resize and seek still apply 
   assertScrolling(row, -540);
   h.render({ positionOverride: 2000 });
   assertScrolling(row, 0);
+  h.unmount();
+});
+
+test("live LP playback slides overflowing rows on every display frame and rests during holds", () => {
+  const clock = { position: 1000 };
+  const h = createHarness({ positionOverride: null, liveClock: clock });
+  assertScrolling(h.rows[0], 0);
+  assert.equal(h.pendingFrames(), 0, "the start hold does not keep a frame loop alive");
+  // The slide runs from 30% to 70% of the 10 s line (4 s to 8 s): 340 px.
+  // A playback commit wakes the frame loop; each display frame then samples the clock.
+  clock.position = 4000;
+  h.render({}, false);
+  const offsets = [];
+  for (let frame = 1; frame <= 12; frame++) {
+    clock.position = 4000 + frame * 1000 / 120;
+    h.runFrame();
+    offsets.push(h.rows[0].content.style.transform);
+  }
+  assert.equal(new Set(offsets).size, offsets.length, "each 120 Hz frame advances the slide");
+  assertScrolling(h.rows[0], -340 * (12 * 1000 / 120) / 4000);
+  // Paused playback: the clock stops, the loop rests after its quiet frames.
+  h.flushFrames();
+  assert.equal(h.pendingFrames(), 0);
+  const writes = h.rows[0].content.transformWriteCount();
+  h.render({});
+  h.flushFrames();
+  assert.equal(h.rows[0].content.transformWriteCount(), writes, "a resting clock writes nothing");
+  // A seek wakes the loop and applies the new position.
+  clock.position = 9000;
+  h.render({});
+  assertScrolling(h.rows[0], -340);
+  h.unmount();
+});
+
+test("live LP playback runs no frame loop for rows that fit", () => {
+  const clock = { position: 4000 };
+  const h = createHarness({ rows: [{ naturalWidth: 200 }], positionOverride: null, liveClock: clock });
+  for (const position of [4000, 5000, 6000, 9000]) {
+    clock.position = position;
+    h.render({}, false);
+    assert.equal(h.pendingFrames(), 0);
+  }
+  assert.equal(h.rows[0].content.transformWriteCount(), 0);
   h.unmount();
 });

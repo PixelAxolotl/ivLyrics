@@ -59,6 +59,7 @@ test("active ivLyrics page skips panel searches while still removing stale panel
   let container = null;
   let panelSearches = 0;
   let removals = 0;
+  let placementChecks = 0;
   const insertDelays = [];
   const observerContext = vm.createContext({
     moduleState: {},
@@ -69,6 +70,7 @@ test("active ivLyrics page skips panel searches while still removing stale panel
     findNowPlayingPanel: () => { panelSearches += 1; return { contains: () => true }; },
     removePanelLyrics: () => { removals += 1; },
     scheduleInsertPanelLyrics: (delay) => insertDelays.push(delay),
+    ensurePanelContainerPlacement: () => { placementChecks += 1; },
     document: { body: {}, querySelector: (selector) => selector === ".panel" ? container : null },
     MutationObserver: class {
       constructor(handler) { callback = handler; }
@@ -86,8 +88,10 @@ test("active ivLyrics page skips panel searches while still removing stale panel
   callback([]);
   assert.equal(panelSearches, 1);
   assert.deepEqual(insertDelays, []);
+  assert.equal(placementChecks, 1, "a rendered panel card is checked for misplacement");
   container = null;
   callback([]);
   assert.equal(panelSearches, 2);
   assert.deepEqual(insertDelays, [100]);
+  assert.equal(placementChecks, 1);
 });

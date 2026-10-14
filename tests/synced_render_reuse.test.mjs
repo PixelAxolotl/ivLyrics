@@ -14,8 +14,10 @@ let harness = helper.slice(helper.indexOf('const repoRoot'), helper.indexOf('tes
   .replace('6bb234835b0f5762876bbe521ddf665c8f952dfa', '3353a5d')
   // The first-line fix intentionally transfers the prelude ref before its
   // unmount. Compare every visual prop; anchor ownership has its own regression.
+  // The scripted travel clock (--line-motion-*) postdates the frozen pass and
+  // is verified by the scripted presentation tests.
   .replace('const comparable = normalizePresentation(output);', `const comparable = JSON.parse(JSON.stringify(output, function(key, value) {
-    return key === 'lineRef' && Object.hasOwn(this, 'delay') ? undefined : value;
+    return (key === 'lineRef' && Object.hasOwn(this, 'delay')) || key.startsWith('--line-motion-') ? undefined : value;
   }));`)
   .replace('if (props.compact && !props.isKara && !scrolling && !motionPreference.matches)', 'if (false)')
   .replace('const hooks = [];', 'const hooks = [];\nconst cache = { elementsByItem: new WeakMap() };\nlet creates = 0;')

@@ -188,6 +188,22 @@
             value === undefined || value === null ? '' : String(value).trim()
         );
 
+        const hasCompatibleLegacyLineRanges = (lines, lineCharCounts) => {
+            if (!Array.isArray(lines) || !Array.isArray(lineCharCounts) || !lineCharCounts.length) return false;
+            const lineEndsByStart = new Map();
+            let start = 0;
+            for (const count of lineCharCounts) {
+                if (!Number.isSafeInteger(count) || count <= 0) return false;
+                lineEndsByStart.set(start, start + count - 1);
+                start += count;
+            }
+            // Without a source fingerprint, only whole matching source rows
+            // can safely inherit legacy timings, including partial submissions.
+            return lines.every(line => Number.isSafeInteger(line?.start)
+                && Number.isSafeInteger(line?.end)
+                && lineEndsByStart.get(line.start) === line.end);
+        };
+
         const canApplyLrclibFingerprintFallback = ({
             syncSource,
             currentProvider,
@@ -204,7 +220,8 @@
         };
 
         return Object.freeze({
-            canApplyLrclibFingerprintFallback
+            canApplyLrclibFingerprintFallback,
+            hasCompatibleLegacyLineRanges
         });
     })();
 
@@ -5095,6 +5112,12 @@
                 let sourceLinePrefix = 0;
                 let hasExactSourceLineShape = false;
                 const sourceLineCharCounts = hasNormalizedSourceLineShape ? syncSource.lineCharCounts : null;
+                const currentProvider = syncData.provider || options?.result?.provider || options?.provider || syncSource?.provider;
+                if (!sourceLineCharCounts && String(currentProvider || '').toLowerCase() === 'lrclib'
+                    && !SyncDataSourceCompatibility.hasCompatibleLegacyLineRanges(syncLines, getSyncDataLineCharCounts(baseLyricsLines))) {
+                    window.__ivLyricsDebugLog?.('[SyncDataService] Legacy LRCLIB sync ranges do not match the current source rows; skipping karaoke render');
+                    return null;
+                }
                 if (sourceLineCharCounts) {
                     const baseLineCharCounts = getSyncDataLineCharCounts(baseLyricsLines);
                     hasExactSourceLineShape = hasExactSyncDataLineShape(sourceLineCharCounts, baseLineCharCounts);

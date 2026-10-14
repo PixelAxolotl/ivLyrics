@@ -2277,9 +2277,12 @@ const useGlobalSyncOffsetState = () => {
 	return globalOffset;
 };
 
-// Quantize playback position so identical values within a step don't trigger
-// setState. Karaoke fill and active-line calculations consume `position`, so
-// updates beyond the configured display rate only create redundant React work.
+// React consumes the playback position for discrete states (active rows, glyph
+// states). Continuous karaoke values are painted per display frame by
+// KaraokeLivePainter. The animation manager already limits this state to the
+// configured rate; snapping it to a 1000/fps grid as well aliased with the real
+// frame interval (17 ms grid vs 16.67 ms frames) and periodically skipped a
+// whole update, so only whole milliseconds are kept here.
 const DEFAULT_TRACK_POSITION_FPS = 60;
 const MIN_TRACK_POSITION_FPS = 10;
 const MAX_TRACK_POSITION_FPS = 240;
@@ -2293,19 +2296,42 @@ const getTrackPositionFPS = () => {
 	);
 };
 
-const getPositionQuantizeMs = () => Math.max(1, Math.round(1000 / getTrackPositionFPS()));
-
 const getCurrentLyricsPlaybackPosition = (trackOffset = 0, globalOffset = getGlobalSyncOffsetValue()) => {
 	const newPos = window.Utils?.getSafePlayerProgress?.()
 		?? (Spicetify.Player?.getProgress?.() || 0);
 	const delay = CONFIG.visual.delay + trackOffset + globalOffset;
-	const quantizeMs = getPositionQuantizeMs();
-	return Math.round((newPos + delay) / quantizeMs) * quantizeMs;
+	return Math.round(newPos + delay);
 };
+
+// Latest sync offsets of the mounted lyric page, published by
+// useLyricsPlaybackPosition for the frame-aligned live painter clock.
+const lyricsPlaybackOffsets = { trackOffset: 0, globalOffset: 0 };
+
+// Sample the player clock for the display frame that starts at `frameTime`
+// (a requestAnimationFrame timestamp). Every painted frame then advances by
+// exactly its own interval, independent of when the callback happened to run.
+const getFrameAlignedPlayerPosition = (frameTime = NaN) => {
+	const snapshot = window.Utils?.getPlayerPlaybackSnapshot?.();
+	const position = Number(snapshot?.position);
+	if (!Number.isFinite(position)) {
+		return Number(window.Utils?.getSafePlayerProgress?.() ?? Spicetify.Player?.getProgress?.()) || 0;
+	}
+	if (snapshot.isPlaying && Number.isFinite(frameTime) && Number.isFinite(snapshot.sampledAt)) {
+		return position - Math.max(0, snapshot.sampledAt - frameTime);
+	}
+	return position;
+};
+
+// The same frame-aligned clock in lyric time: the configured delay plus the
+// mounted page's track and global sync offsets.
+const getFrameAlignedLyricsPlaybackPosition = (frameTime = NaN) => getFrameAlignedPlayerPosition(frameTime)
+	+ CONFIG.visual.delay + lyricsPlaybackOffsets.trackOffset + lyricsPlaybackOffsets.globalOffset;
 
 const useLyricsPlaybackPosition = () => {
 	const trackOffset = useTrackOffsetState();
 	const globalOffset = useGlobalSyncOffsetState();
+	lyricsPlaybackOffsets.trackOffset = trackOffset;
+	lyricsPlaybackOffsets.globalOffset = globalOffset;
 	const [position, setPosition] = useState(() => getCurrentLyricsPlaybackPosition(0, getGlobalSyncOffsetValue()));
 
 	useEffect(() => {
@@ -2766,6 +2792,7 @@ const renderLyricMainContent = ({
 	mainText,
 	line,
 	position,
+	liveClock = null,
 	isActive,
 	isEffectFocused = isActive,
 	isEffectLive = isActive || isEffectFocused,
@@ -2787,6 +2814,7 @@ const renderLyricMainContent = ({
 			// rows receive one stable position past their final glyph so the painted
 			// progress remains visible without returning to the per-frame update path.
 			position,
+			...(liveClock ? { liveClock } : {}),
 			isActive,
 			isEffectFocused,
 			isEffectLive,
@@ -4004,8 +4032,16 @@ const getElementOffsetTopWithin = (element, container) => {
 
 const LYRICS_CENTERING_DURATION_MS = 420;
 const LYRICS_CENTERING_LEAD_MS = 300;
-const LYRICS_CENTERING_STAGGER_MS = 38;
-const LYRICS_CENTERING_MAX_STAGGER_MS = 180;
+// Compact rows travel on a critically damped spring; its stiffness is
+// omega * duration. Less than 1% of the travel remains after 470ms.
+const LYRICS_LINE_MOTION_DURATION_MS = 560;
+const LYRICS_LINE_MOTION_STIFFNESS = 7.5;
+const LYRICS_LINE_MOTION_MAX_SLOPE = LYRICS_LINE_MOTION_STIFFNESS
+	/ (1 - Math.exp(-LYRICS_LINE_MOTION_STIFFNESS));
+const LYRICS_LINE_MOTION_SEGMENTS = 40;
+const LYRICS_CENTERING_STAGGER_MS = 50;
+const LYRICS_CENTERING_STAGGER_DECAY = 1 / 1.05;
+const LYRICS_CENTERING_MAX_STAGGER_MS = 260;
 const LYRICS_CENTERING_SETTLE_RESERVE_MS = 24;
 const LYRICS_CENTERING_MIN_TOTAL_MS = 80;
 const LYRICS_CENTERING_BEZIER = [0.22, 1, 0.36, 1];
@@ -4058,10 +4094,10 @@ const getMedian = (values) => {
 };
 
 const getAdaptiveLyricsCenteringTiming = (transitionWindowMs) => {
-	const defaultTotalMs = LYRICS_CENTERING_DURATION_MS + LYRICS_CENTERING_MAX_STAGGER_MS;
+	const defaultTotalMs = LYRICS_LINE_MOTION_DURATION_MS + LYRICS_CENTERING_MAX_STAGGER_MS;
 	if (!Number.isFinite(transitionWindowMs) || transitionWindowMs <= 0) {
 		return {
-			durationMs: LYRICS_CENTERING_DURATION_MS,
+			durationMs: LYRICS_LINE_MOTION_DURATION_MS,
 			staggerMs: LYRICS_CENTERING_STAGGER_MS,
 			maxStaggerMs: LYRICS_CENTERING_MAX_STAGGER_MS,
 		};
@@ -4075,89 +4111,169 @@ const getAdaptiveLyricsCenteringTiming = (transitionWindowMs) => {
 		transitionWindowMs - LYRICS_CENTERING_SETTLE_RESERVE_MS
 	);
 	const timingScale = Math.min(1, availableMs / defaultTotalMs);
+	const durationMs = Math.max(1, Math.round(LYRICS_LINE_MOTION_DURATION_MS * timingScale));
 	return {
-		durationMs: Math.max(1, Math.round(LYRICS_CENTERING_DURATION_MS * timingScale)),
-		staggerMs: Math.max(0, Math.round(LYRICS_CENTERING_STAGGER_MS * timingScale)),
-		maxStaggerMs: Math.max(0, Math.round(LYRICS_CENTERING_MAX_STAGGER_MS * timingScale)),
+		durationMs,
+		staggerMs: LYRICS_CENTERING_STAGGER_MS * timingScale,
+		// Rounding the travel must not push the last row past the window.
+		maxStaggerMs: Math.max(0, Math.min(
+			LYRICS_CENTERING_MAX_STAGGER_MS * timingScale,
+			Math.floor(availableMs) - durationMs
+		)),
 	};
 };
 
-// Distribute the delay across all visible rows. Clamping each row separately
-// makes the last rows start together when the configured window is large.
-const getLyricsLineStaggerDelay = (index, count, timing) => {
-	if (count <= 1) return 0;
-	const step = Math.min(timing.staggerMs, timing.maxStaggerMs / (count - 1));
-	return Math.max(0, index) * step;
+// Rows at or above the anchor start together. Each row below trails the one
+// above it by a slightly shorter step, capped so deep rows still settle
+// inside the window.
+const getLyricsLineStaggerDelay = (animationIndex, timing) => {
+	if (!(animationIndex > 0) || !(timing.staggerMs > 0)) return 0;
+	const decay = LYRICS_CENTERING_STAGGER_DECAY;
+	return Math.min(timing.maxStaggerMs,
+		timing.staggerMs * (1 - decay ** animationIndex) / (1 - decay));
 };
 
-const getLyricsLineMotionProgress = (progress, initialSlope = 2.2) => {
+// Planned once per line transition. Its timing reaches the CSS presentation in
+// the commit that changes each row's class and blur index; the WAAPI shift
+// reads the same values back from the row. Only a one-line advance from the
+// previous scripted line cascades. Seeks, jumps, settings changes and manual
+// scroll returns start every row together, as their travel does.
+const getLyricsLineMotionPlan = ({
+	previousContext = null,
+	visualLineIndex,
+	settingsRevision,
+	nextLineStart,
+	leadMs = 0,
+	position,
+	manualReturn = null,
+	now = Date.now(),
+}) => ({
+	...getAdaptiveLyricsCenteringTiming(Number.isFinite(nextLineStart) ? nextLineStart - leadMs - position : null),
+	cascade: !(manualReturn && now < manualReturn.expiresAt)
+		&& !!previousContext
+		&& previousContext.settingsRevision === settingsRevision
+		&& previousContext.visualLineIndex === visualLineIndex - 1,
+});
+
+const getLyricsLineMotionStyle = (animationIndex, plan) => ({
+	"--line-motion-delay": `${plan.cascade ? getLyricsLineStaggerDelay(animationIndex, plan) : 0}ms`,
+	"--line-motion-duration": `${plan.durationMs}ms`,
+});
+
+// A shorter vocal window compresses the rendered delay and duration together
+// so the travel still settles in time. It never lengthens either value.
+const getLyricsLineRenderedMotionTiming = (element, timing) => {
+	const style = element?.style;
+	const durationMs = Number.parseFloat(style?.getPropertyValue?.("--line-motion-duration"));
+	if (!(durationMs > 0)) return { durationMs: timing.durationMs, delayMs: 0 };
+	const delayMs = Number.parseFloat(style.getPropertyValue("--line-motion-delay"));
+	const scale = Math.min(1, timing.durationMs / durationMs);
+	return { durationMs: durationMs * scale, delayMs: delayMs > 0 ? delayMs * scale : 0 };
+};
+
+// Critically damped spring, normalized to land exactly at u = 1:
+// p(u) = (1 - (1 + (k - s)u)e^(-ku)) / (1 - (1 + k - s)e^(-k)).
+// s is solved from the requested dp/du at u = 0 so a retargeted row keeps its
+// velocity; clamping it to [0, k] keeps the curve monotonic without overshoot.
+const getLyricsLineMotionProgress = (progress, initialSlope = 0) => {
 	const t = Math.max(0, Math.min(1, progress));
-	const slope = Math.max(0, Math.min(2.5, initialSlope));
-	// Monotonic quintic: retain incoming velocity, settle with zero velocity
-	// and acceleration, and never overshoot the measured lyric anchor.
-	return (6 - 3 * slope) * t ** 5 + (8 * slope - 15) * t ** 4
-		+ (10 - 6 * slope) * t ** 3 + slope * t;
+	const k = LYRICS_LINE_MOTION_STIFFNESS;
+	const tail = Math.exp(-k);
+	const slope = Math.max(0, Number(initialSlope) || 0);
+	const s = Math.min(k, slope * (1 - (1 + k) * tail) / Math.max(Number.EPSILON, 1 - slope * tail));
+	const settle = k - s;
+	return (1 - (1 + settle * t) * Math.exp(-k * t)) / (1 - (1 + settle) * tail);
 };
 
-const lyricsLineMotionEasings = new Map();
+// Quadratic spacing keeps eight stops inside the first 24th of the travel, so
+// the sampled path leaves rest as softly as the spring instead of on a chord.
+const LYRICS_LINE_MOTION_STOP_PERCENTS = Array.from(
+	{ length: LYRICS_LINE_MOTION_SEGMENTS + 1 },
+	(_, index) => index * index * 100 / LYRICS_LINE_MOTION_SEGMENTS ** 2
+);
+const lyricsLineMotionCurves = new Map();
+const getLyricsLineMotionCurve = (initialSlope) => {
+	let curve = lyricsLineMotionCurves.get(initialSlope);
+	if (!curve) {
+		// Bound the cache because interrupted rows have varying slopes.
+		if (lyricsLineMotionCurves.size >= 32) lyricsLineMotionCurves.clear();
+		const stops = LYRICS_LINE_MOTION_STOP_PERCENTS.map((percent) => [
+			percent / 100,
+			Math.round(getLyricsLineMotionProgress(percent / 100, initialSlope) * 1e6) / 1e6,
+		]);
+		curve = {
+			stops,
+			easing: `linear(${stops.map(([, value], index) => `${value} ${LYRICS_LINE_MOTION_STOP_PERCENTS[index]}%`).join(", ")})`,
+		};
+		lyricsLineMotionCurves.set(initialSlope, curve);
+	}
+	return curve;
+};
+
 const getLyricsLineMotionEasing = (initialSlope) => {
 	if (typeof CSS === "undefined" || !CSS.supports?.("animation-timing-function", "linear(0, 1)")) {
 		return null;
 	}
-	if (!lyricsLineMotionEasings.has(initialSlope)) {
-		// Keep the same sampled curve while handing only two transforms to the
-		// compositor. Bound the cache because interrupted rows have varying slopes.
-		if (lyricsLineMotionEasings.size >= 32) lyricsLineMotionEasings.clear();
-		lyricsLineMotionEasings.set(initialSlope, `linear(${Array.from({ length: 25 }, (_, index) =>
-			getLyricsLineMotionProgress(index / 24, initialSlope)).join(",")})`);
-	}
-	return lyricsLineMotionEasings.get(initialSlope);
+	// Keep the same sampled curve while handing only two transforms to the compositor.
+	return getLyricsLineMotionCurve(initialSlope).easing;
 };
 
 const createLyricsLineShiftMotion = (targetTransform, deltaY, durationMs, velocityY = null) => {
 	if (Number.isFinite(velocityY) && velocityY * deltaY < 0) {
 		// A small anchor correction needs less time, not an abrupt loss of
 		// velocity caused by forcing another full-duration monotonic curve.
-		durationMs = Math.min(durationMs, Math.abs(deltaY / velocityY) * 2.5);
+		durationMs = Math.min(durationMs, Math.abs(deltaY / velocityY) * LYRICS_LINE_MOTION_STIFFNESS);
 	}
 	durationMs = Math.max(1, durationMs);
+	// Rows at rest leave with zero velocity; moving rows hand theirs over.
 	const initialSlope = Number.isFinite(velocityY) && Math.abs(deltaY) > 0.01
-		? Math.max(0, Math.min(2.5, -velocityY * durationMs / deltaY))
-		: 2.2;
+		? Math.max(0, Math.min(LYRICS_LINE_MOTION_MAX_SLOPE, -velocityY * durationMs / deltaY))
+		: 0;
+	const { stops } = getLyricsLineMotionCurve(initialSlope);
 	const easing = getLyricsLineMotionEasing(initialSlope);
 	const keyframes = easing ? [
 		{ offset: 0, transform: offsetTransformVertically(targetTransform, deltaY) },
 		{ offset: 1, transform: targetTransform },
-	] : Array.from({ length: 25 }, (_, index) => {
-		const progress = index / 24;
-		return {
-			offset: progress,
-			transform: offsetTransformVertically(targetTransform,
-				deltaY * (1 - getLyricsLineMotionProgress(progress, initialSlope))),
-		};
-	});
-	return { targetTransform, deltaY, durationMs, initialSlope, keyframes, easing: easing || "linear" };
+	] : stops.map(([offset, value]) => ({
+		offset,
+		transform: offsetTransformVertically(targetTransform, deltaY * (1 - value)),
+	}));
+	return { targetTransform, deltaY, durationMs, initialSlope, stops, keyframes, easing: easing || "linear" };
+};
+
+// WAAPI interpolates these same stops linearly, whether as linear() easing or
+// as fallback keyframes. Retargeting reads position and velocity from them.
+const getLyricsLineMotionSegment = (stops, progress) => {
+	let low = 0;
+	let high = stops.length - 2;
+	while (low < high) {
+		const middle = (low + high + 1) >>> 1;
+		if (stops[middle][0] <= progress) low = middle;
+		else high = middle - 1;
+	}
+	return low;
 };
 
 const getLyricsLineShiftOffset = (motion, currentTime) => {
-	const progress = Math.max(0, Math.min(1, (currentTime - motion.delay) / motion.durationMs));
-	const step = progress * 24;
-	const segment = Math.min(23, Math.floor(step));
-	const from = getLyricsLineMotionProgress(segment / 24, motion.initialSlope);
-	const to = getLyricsLineMotionProgress((segment + 1) / 24, motion.initialSlope);
-	const eased = from + (to - from) * (step - segment);
+	const progress = Math.max(0, Math.min(1, (currentTime - (motion.delay || 0)) / motion.durationMs));
+	const stops = motion.stops || getLyricsLineMotionCurve(motion.initialSlope).stops;
+	const segment = getLyricsLineMotionSegment(stops, progress);
+	const [fromTime, from] = stops[segment];
+	const [toTime, to] = stops[segment + 1];
+	const eased = from + (to - from) * (progress - fromTime) / (toTime - fromTime);
 	return motion.deltaY * (1 - eased);
 };
 
 const getLyricsLineShiftVelocity = (motion, currentTime, delay = 0) => {
 	const progress = (currentTime - delay) / motion.durationMs;
 	if (progress < 0 || progress >= 1) return 0;
-	// WAAPI interpolates these keyframes linearly. Read that same segment's
-	// velocity when retargeting, rather than restarting from a resting curve.
-	const segment = Math.min(23, Math.floor(progress * 24));
-	const from = getLyricsLineMotionProgress(segment / 24, motion.initialSlope);
-	const to = getLyricsLineMotionProgress((segment + 1) / 24, motion.initialSlope);
-	return -motion.deltaY * (to - from) * 24 / motion.durationMs;
+	// Read the segment the browser is interpolating when retargeting, rather
+	// than restarting from a resting curve.
+	const stops = motion.stops || getLyricsLineMotionCurve(motion.initialSlope).stops;
+	const segment = getLyricsLineMotionSegment(stops, progress);
+	const [fromTime, from] = stops[segment];
+	const [toTime, to] = stops[segment + 1];
+	return -motion.deltaY * (to - from) / ((toTime - fromTime) * motion.durationMs);
 };
 
 const cubicBezierCoordinate = (t, first, second) => {
@@ -4947,7 +5063,7 @@ const wrapKaraokeInlineStyleRuns = (
 const buildKaraokeWordElements = (
 	timedChars,
 	charElements,
-	{ position = 0, isActive = false, isComplete = false, globalCharOffset = 0, activeGlobalCharIndex = -1, wordTimed = false, wordRenderCache = null, presentationCache = null, elementCache = null, wordSupplementByKey = null } = {}
+	{ position = 0, isActive = false, isComplete = false, globalCharOffset = 0, activeGlobalCharIndex = -1, wordTimed = false, wordRenderCache = null, presentationCache = null, elementCache = null, wordSupplementByKey = null, livePaint = false } = {}
 ) => {
 	if (!Array.isArray(timedChars) || !Array.isArray(charElements) || timedChars.length !== charElements.length) {
 		return charElements;
@@ -5004,10 +5120,14 @@ const buildKaraokeWordElements = (
 				getKaraokeMotionProfile(timedChars, currentWordStart, currentWord.length))
 			: { active: false };
 		const cachedWord = wordData.output;
-		if (cachedWord && cachedWord.wordTimed === wordTimed && cachedWord.isComplete === isComplete
+		// Live rows receive bounce values from KaraokeLivePainter; only the
+		// discrete bouncing state belongs to the element here.
+		const livePaintWord = livePaint && wordTimed;
+		if (cachedWord && cachedWord.live === livePaintWord
+			&& cachedWord.wordTimed === wordTimed && cachedWord.isComplete === isComplete
 			&& cachedWord.presentationCache === presentationCache
-			&& cachedWord.offsetY === bounce.offsetY && cachedWord.scale === bounce.scale
-			&& cachedWord.glow === bounce.glow && cachedWord.bouncing === bounce.active
+			&& (livePaintWord || (cachedWord.offsetY === bounce.offsetY && cachedWord.scale === bounce.scale
+				&& cachedWord.glow === bounce.glow)) && cachedWord.bouncing === bounce.active
 			&& cachedWord.stacked === wantStack
 			&& cachedWord.gloss === (supplement?.gloss || "") && cachedWord.reading === (supplement?.reading || "")
 			&& cachedWord.children.length === currentWord.length
@@ -5017,7 +5137,7 @@ const buildKaraokeWordElements = (
 			currentWordUnit = null;
 			return;
 		}
-		const style = bounce.active ? {
+		const style = bounce.active && !livePaintWord ? {
 			"--karaoke-bounce-y": `${bounce.offsetY}px`,
 			"--karaoke-bounce-scale": bounce.scale,
 			"--karaoke-motion-glow": bounce.glow,
@@ -5034,6 +5154,7 @@ const buildKaraokeWordElements = (
 				className: `lyrics-karaoke-word${wordTimed ? " is-word-timed" : ""}${bounce.active ? " is-bouncing" : ""}${isComplete ? " is-complete" : ""}`,
 				style,
 				key: `karaoke-word-${currentWordStart}`,
+				...(livePaintWord ? { "data-karaoke-live": `w:${currentWordStart}:${currentWord.length}` } : {}),
 			},
 			styledWordElements
 		);
@@ -5076,7 +5197,7 @@ const buildKaraokeWordElements = (
 			);
 		}
 		wordData.output = {
-			wordTimed, isComplete, presentationCache, offsetY: bounce.offsetY, scale: bounce.scale,
+			live: livePaintWord, wordTimed, isComplete, presentationCache, offsetY: bounce.offsetY, scale: bounce.scale,
 			glow: bounce.glow, bouncing: bounce.active, children: currentWord, element,
 			stacked: wantStack,
 			gloss: supplement?.gloss || "", reading: supplement?.reading || "",
@@ -5159,6 +5280,15 @@ const getKaraokeInstantWordFill = (segment, position, isActive, isComplete) => {
 	if (!segment) return 0;
 	const startTime = Number.isFinite(segment.startTime) ? segment.startTime : 0;
 	return position >= startTime ? 100 : 0;
+};
+
+// Discrete fill state for live-painted rows. The continuous fill itself is
+// written by KaraokeLivePainter, so the state follows the source timing exactly
+// instead of the first or last rounded fill step.
+const getKaraokeLiveState = (position, startTime, endTime, isComplete) => {
+	if (isComplete) return "done";
+	if (!Number.isFinite(position) || position <= startTime) return "pending";
+	return position >= endTime ? "done" : "active";
 };
 
 const buildKaraokeTextRunSegments = (timedChars, wordTimed = false, preserveInlineStyles = true) => {
@@ -5270,7 +5400,8 @@ const buildKaraokeTextRunElements = (
 	preserveInlineStyles = true,
 	preparedSegments = null,
 	presentationCache = null,
-	elementCache = null
+	elementCache = null,
+	livePaint = false
 ) => {
 	const segments = preparedSegments || buildKaraokeTextRunSegments(timedChars, wordTimed, preserveInlineStyles);
 	const renderSegments = textDirection === "rtl" ? [...segments].reverse() : segments;
@@ -5291,34 +5422,45 @@ const buildKaraokeTextRunElements = (
 			return element;
 		}
 
+		// Live rows paint the continuous fill and bounce per display frame.
+		const liveFill = livePaint && !wordTimed;
 		const fillValue = wordTimed
 			? getKaraokeInstantWordFill(segment, position, isActive, isComplete)
-			: getKaraokeSegmentFill(segment, position, isActive, isComplete);
+			: liveFill ? NaN : getKaraokeSegmentFill(segment, position, isActive, isComplete);
 		const segmentDirection = segment.textDirection || getKaraokeTextDirection(segment.text) || textDirection;
 		const gradientDirection = segmentDirection === "rtl" ? "to left" : "to right";
-		const segmentState = fillValue <= 0 ? "pending" : fillValue >= 100 ? "done" : "active";
+		const segmentState = liveFill
+			? getKaraokeLiveState(position,
+				Number.isFinite(segment.startTime) ? segment.startTime : 0,
+				Number.isFinite(segment.endTime) ? segment.endTime : (Number.isFinite(segment.startTime) ? segment.startTime : 0),
+				isComplete)
+			: fillValue <= 0 ? "pending" : fillValue >= 100 ? "done" : "active";
 		const segmentCharCount = Number.isFinite(segment.charCount)
 			? segment.charCount
 			: splitKaraokeGraphemes(segment.text).length;
 		const bounce = getKaraokeBounceValues(position, isActive, segment.startTime, segment.endTime, 1,
 			getKaraokeMotionProfile(timedChars, segment.startIndex, segmentCharCount));
 		const cached = elementCache?.get(segment);
-		if (cached && cached.fillValue === fillValue && cached.isComplete === isComplete
+		if (cached && cached.live === livePaint
+			&& (livePaint ? cached.segmentState === segmentState : cached.fillValue === fillValue)
+			&& cached.isComplete === isComplete
 			&& cached.gradientDirection === gradientDirection && cached.wordTimed === wordTimed
 			&& cached.presentationCache === presentationCache
-			&& cached.offsetY === bounce.offsetY && cached.scale === bounce.scale
-			&& cached.glow === bounce.glow && cached.bouncing === bounce.active) {
+			&& (livePaint || (cached.offsetY === bounce.offsetY && cached.scale === bounce.scale
+				&& cached.glow === bounce.glow)) && cached.bouncing === bounce.active) {
 			return cached.element;
 		}
 		const segmentStyle = {};
-		if (segmentState === "active") {
+		if (livePaint) {
+			segmentStyle["--karaoke-gradient-direction"] = gradientDirection;
+		} else if (segmentState === "active") {
 			const softEdge = getKaraokeFillSoftEdge(fillValue, 10);
 			segmentStyle["--karaoke-gradient-direction"] = gradientDirection;
 			segmentStyle["--karaoke-char-fill"] = `${fillValue}%`;
 			segmentStyle["--karaoke-char-fill-soft-start"] = `${Math.max(0, fillValue - softEdge)}%`;
 			segmentStyle["--karaoke-char-fill-soft-end"] = `${Math.min(100, fillValue + softEdge)}%`;
 		}
-		if (bounce.active) {
+		if (bounce.active && !livePaint) {
 			segmentStyle["--karaoke-bounce-y"] = `${bounce.offsetY}px`;
 			segmentStyle["--karaoke-bounce-scale"] = bounce.scale;
 			segmentStyle["--karaoke-motion-glow"] = bounce.glow;
@@ -5350,6 +5492,7 @@ const buildKaraokeTextRunElements = (
 				style: segmentStyle,
 				"data-outline-text": segment.text,
 				key: `karaoke-text-run-segment-${segment.startIndex}`,
+				...(livePaint ? { "data-karaoke-live": `s:${segment.startIndex}` } : {}),
 			},
 			react.createElement(
 				"span",
@@ -5358,7 +5501,7 @@ const buildKaraokeTextRunElements = (
 			)
 		);
 		elementCache?.set(segment, {
-			fillValue, isComplete, gradientDirection, wordTimed, presentationCache,
+			live: livePaint, segmentState, fillValue, isComplete, gradientDirection, wordTimed, presentationCache,
 			offsetY: bounce.offsetY, scale: bounce.scale, glow: bounce.glow, bouncing: bounce.active, element,
 		});
 		return element;
@@ -5602,6 +5745,7 @@ const LyricsLineBlock = react.memo(({
 	karaokeRenderGranularity = null,
 	line = null,
 	position = 0,
+	liveClock = null,
 	isActive = false,
 	isCurrentLine = isActive,
 	isEffectFocused = isCurrentLine,
@@ -5714,6 +5858,7 @@ const LyricsLineBlock = react.memo(({
 			mainText,
 			line: mainLine,
 			position: isKara ? position : 0,
+			...(isKara && liveClock ? { liveClock } : {}),
 			isActive,
 			isEffectFocused,
 			isEffectLive,
@@ -5727,7 +5872,7 @@ const LyricsLineBlock = react.memo(({
 			...(charReadings instanceof Map ? { charReadings } : null),
 		}), [shouldRenderInterlude, shouldShowInterlude, interludeInfo, settingsRevision,
 		furiganaMapOverride, charReadings,
-		isKara, karaokeRenderGranularity, mainText, mainLine, position, isActive,
+		isKara, karaokeRenderGranularity, mainText, mainLine, position, liveClock, isActive,
 		isEffectFocused, isEffectLive, globalCharOffset, activeGlobalCharIndex,
 		subText, subText2, displayedCulturalAnnotations]);
 	const renderedMainContent = useMemo(() => singleLineScroll && !shouldRenderInterlude
@@ -5788,10 +5933,11 @@ const LyricsLineBlock = react.memo(({
 	);
 });
 
-const renderLyricsItems = ({ items, isKara, karaokeRenderGranularity = null, position = 0, activeLineRef = null, settingsRevision = 0, cache = null }) => {
+const renderLyricsItems = ({ items, isKara, karaokeRenderGranularity = null, position = 0, liveClock = null, activeLineRef = null, settingsRevision = 0, cache = null }) => {
 	const karaokePosition = isKara ? position : 0;
 	if (cache && (cache.isKara !== isKara || cache.granularity !== karaokeRenderGranularity
-		|| cache.activeLineRef !== activeLineRef || cache.settingsRevision !== settingsRevision)) {
+		|| cache.activeLineRef !== activeLineRef || cache.settingsRevision !== settingsRevision
+		|| cache.liveClock !== liveClock)) {
 		cache.elementsByItem = new WeakMap();
 		cache.update = null;
 		cache.items = null;
@@ -5799,10 +5945,15 @@ const renderLyricsItems = ({ items, isKara, karaokeRenderGranularity = null, pos
 		cache.granularity = karaokeRenderGranularity;
 		cache.activeLineRef = activeLineRef;
 		cache.settingsRevision = settingsRevision;
+		cache.liveClock = liveClock;
 	}
 	const renderItem = (item) => {
 		const renderPosition = Number.isFinite(item.karaokePosition)
 			? item.karaokePosition : (item.karaokeActive ? karaokePosition : 0);
+		// Only rows that follow the live clock get continuous painting. Pinned
+		// completed or future rows keep their static React output.
+		const itemLiveClock = liveClock && isKara && item.karaokeActive && renderPosition === karaokePosition
+			? liveClock : null;
 		const previous = cache?.elementsByItem?.get(item);
 		if (previous && previous.position === renderPosition) return previous.element;
 		const element = item.type === "indicator"
@@ -5833,6 +5984,7 @@ const renderLyricsItems = ({ items, isKara, karaokeRenderGranularity = null, pos
 			// beyond their final glyph so their fill does not snap back while the parent
 			// line is easing out; future rows remain pinned to zero.
 			position: renderPosition,
+			...(itemLiveClock ? { liveClock: itemLiveClock } : {}),
 			isActive: item.karaokeActive,
 			isCurrentLine: item.isActiveLine,
 			isEffectFocused: item.effectFocused,
@@ -6234,6 +6386,23 @@ const useSyncedLyricsEngine = ({
 	const compactLineMotionContextRef = useRef(null);
 	const compactLinePlaybackPositionRef = useRef(position);
 	compactLinePlaybackPositionRef.current = position;
+	// Rows receive their travel timing in the commit that changes their class
+	// and blur index; the scheduled WAAPI shift reads it back from each row.
+	// Color, opacity and blur keep their own CSS transitions.
+	// Keyed by the transition, not the clock: the window is measured once, when
+	// the line changes, so row styles stay stable between boundaries.
+	const lineMotionPlan = useMemo(() => usesScriptedCompactLineShift ? getLyricsLineMotionPlan({
+		previousContext: compactLineMotionContextRef.current,
+		visualLineIndex,
+		settingsRevision,
+		nextLineStart: paddedLyrics[visualLineIndex + 1]?.startTime,
+		leadMs: shouldPrecenterKaraokeTransitions ? LYRICS_CENTERING_LEAD_MS : 0,
+		position,
+		manualReturn: syncedManualScrollReturns.get(containerRef.current),
+	}) : null, [usesScriptedCompactLineShift, visualLineIndex, settingsRevision, lyricsId]);
+	const trailingInterludeLineStyle = useMemo(() => trailingInterludeStyle && lineMotionPlan
+		? { ...trailingInterludeStyle, ...getLyricsLineMotionStyle(trailingInterludeStyle["--position-index"], lineMotionPlan) }
+		: trailingInterludeStyle, [trailingInterludeStyle, lineMotionPlan]);
 	const previousPreparedLyricsRef = useRef(preparedLyrics);
 	const layoutShiftAnimationFramesRef = useRef({ first: null, second: null });
 	const layoutObserverRef = useRef(null);
@@ -6401,6 +6570,7 @@ const useSyncedLyricsEngine = ({
 					: "var(--iv-lyrics-centering-duration, 300ms)",
 				"--line-shift-delay": "0s",
 				"--blur-index": Math.min(Math.abs(animationIndex), 3),
+				...(lineMotionPlan ? getLyricsLineMotionStyle(animationIndex, lineMotionPlan) : null),
 			};
 		});
 	}, [
@@ -6417,6 +6587,7 @@ const useSyncedLyricsEngine = ({
 		settingsRevision,
 		getLinePresentation,
 		linesBefore,
+		lineMotionPlan,
 	]);
 
 	useEffect(() => {
@@ -6528,10 +6699,6 @@ const useSyncedLyricsEngine = ({
 			if (!returningFromScroll && (jump || !previousContext)) return;
 			const sharedDelta = getMedian(lineStates.flatMap(({ deltaY }) => Number.isFinite(deltaY) ? [deltaY] : []));
 			if (!Number.isFinite(sharedDelta)) return;
-			const orderedStates = [...lineStates].sort((a, b) => sharedDelta >= 0 ? a.targetY - b.targetY : b.targetY - a.targetY);
-			// Padding participates in the geometry but must not consume a delay
-			// slot ahead of the first visible lyric.
-			const orderedLyrics = orderedStates.filter(({ element }) => !boundaryPadding.has(element));
 			const activeVocalStack = activeLineRef.current?.querySelector?.(".lyrics-karaoke-stack[data-karaoke-vocal-anchor-window-ms]");
 			const vocalWindow = Number(activeVocalStack?.getAttribute("data-karaoke-vocal-anchor-window-ms"));
 			const nextLineStart = paddedLyrics[visualLineIndex + 1]?.startTime;
@@ -6542,9 +6709,6 @@ const useSyncedLyricsEngine = ({
 			const transitionWindow = windows.length ? Math.min(...windows) : null;
 			const skipNewMotion = !returningFromScroll && transitionWindow !== null && transitionWindow < LYRICS_CENTERING_MIN_TOTAL_MS;
 			const timing = getAdaptiveLyricsCenteringTiming(transitionWindow);
-			const delayByElement = new Map(orderedLyrics.map(({ element }, index) => [
-				element, getLyricsLineStaggerDelay(index, orderedLyrics.length, timing),
-			]));
 			const sharedStartTime = document.timeline?.currentTime;
 			for (const { element, previous, targetTransform, deltaY } of lineStates) {
 				// Anchor notifications can arrive during an existing stagger. Keep
@@ -6559,16 +6723,19 @@ const useSyncedLyricsEngine = ({
 				if (skipNewMotion) continue;
 				const distance = Number.isFinite(deltaY) ? deltaY : sharedDelta;
 				if (Math.abs(distance) < 0.25) continue;
+				// The row's commit fixed this delay and duration; the travel reads
+				// them back from its style.
+				const rendered = getLyricsLineRenderedMotionTiming(element, timing);
 				const wasMoving = previous.motion && previous.currentTime >= previous.motion.delay
 					&& previous.currentTime < previous.motion.delay + previous.motion.durationMs;
 				const velocity = wasMoving ? getLyricsLineShiftVelocity(previous.motion, previous.currentTime, previous.motion.delay) : null;
 				// A row already in motion must not freeze for a second stagger.
 				const delay = wasMoving || returningFromScroll ? 0 : !sourceChanged && previous.motion
 					? Math.max(0, previous.motion.delay - previous.currentTime)
-					: delayByElement.get(element) || 0;
+					: rendered.delayMs;
 				const duration = wasMoving
-					? Math.min(timing.durationMs, Math.max(1, previous.motion.durationMs - previous.currentTime + previous.motion.delay))
-					: timing.durationMs;
+					? Math.min(rendered.durationMs, Math.max(1, previous.motion.durationMs - previous.currentTime + previous.motion.delay))
+					: rendered.durationMs;
 				const motion = createLyricsLineShiftMotion(targetTransform, distance, duration, velocity);
 				motion.delay = delay;
 				const animation = element.animate(motion.keyframes, {
@@ -6732,7 +6899,7 @@ const useSyncedLyricsEngine = ({
 					key: `trailing-interlude-${lineNumber}-${trailingInterludeLine.startTime}`,
 					className: `lyrics-lyricsContainer-LyricsLine${isTrailingInterludeActive ? " lyrics-lyricsContainer-LyricsLine-active" : ""}`
 						+ getLyricsLineDetailClass(lyricMotionDetailsEnabled, isTrailingInterludeActive, false, isInterludeHandoff),
-					style: trailingInterludeStyle,
+					style: trailingInterludeLineStyle,
 					line: trailingInterludeLine,
 					startTime: trailingInterludeLine.startTime,
 					originalText: "",
@@ -6775,7 +6942,7 @@ const useSyncedLyricsEngine = ({
 		visualAnchorLineNumber,
 		visualAnchorUsesTrailingInterlude,
 		trailingInterludeKey,
-		trailingInterludeStyle,
+		trailingInterludeLineStyle,
 		isTrailingInterludeActive,
 		globalCharOffsets,
 		stableLineStyles,
@@ -7606,13 +7773,8 @@ const getKaraokeCharFill = (position, isActive, startTime, endTime, isComplete =
 	return Math.round(corrected * steps) / steps;
 };
 
-const getKaraokeBounceValues = (position, isActive, startTime, endTime, attenuation = 1, motionProfile = null) => {
-	if (!CONFIG.visual["karaoke-bounce"] || !Number.isFinite(position)) return KARAOKE_BOUNCE_IDLE;
-	const profile = motionProfile || createKaraokeMotionProfile(startTime, endTime, endTime - startTime);
-	if (!Number.isFinite(profile.startTime) || !Number.isFinite(profile.endTime)
-		|| position < profile.startTime || position >= profile.endTime + profile.releaseDuration
-		|| prefersReducedLyricsMotion()) return KARAOKE_BOUNCE_IDLE;
-
+// Shared by the rounded React values and the per-frame live painter.
+const getKaraokeBounceStrengths = (position, profile) => {
 	// A completed syllable can still settle after the next row takes the scroll
 	// anchor. Its own playback window, not global character distance, owns motion.
 	let strength;
@@ -7637,6 +7799,16 @@ const getKaraokeBounceValues = (position, isActive, startTime, endTime, attenuat
 		scaleStrength = 1 - smoothKaraokeRelease(phase + phaseSpread, smoothing);
 		glowStrength = 1 - smoothKaraokeRelease(phase - phaseSpread, smoothing);
 	}
+	return [strength, scaleStrength, glowStrength];
+};
+
+const getKaraokeBounceValues = (position, isActive, startTime, endTime, attenuation = 1, motionProfile = null) => {
+	if (!CONFIG.visual["karaoke-bounce"] || !Number.isFinite(position)) return KARAOKE_BOUNCE_IDLE;
+	const profile = motionProfile || createKaraokeMotionProfile(startTime, endTime, endTime - startTime);
+	if (!Number.isFinite(profile.startTime) || !Number.isFinite(profile.endTime)
+		|| position < profile.startTime || position >= profile.endTime + profile.releaseDuration
+		|| prefersReducedLyricsMotion()) return KARAOKE_BOUNCE_IDLE;
+	const [strength, scaleStrength, glowStrength] = getKaraokeBounceStrengths(position, profile);
 	const offsetY = Math.round(-profile.amplitude * strength * 4) / 4;
 	const scale = Math.round((1 + profile.scaleAmount * scaleStrength) * 500) / 500;
 	const glow = CONFIG.visual["karaoke-text-effects"] === false ? 0
@@ -7923,7 +8095,7 @@ const prefetchWordSupplementsForLyrics = (karaokeLines, { locale = "auto", sourc
 
 window.ivLyricsPrefetchWordSupplements = prefetchWordSupplementsForLyrics;
 
-const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = isActive, isEffectLive = isActive || isEffectFocused, settingsRevision = 0, globalCharOffset = 0, activeGlobalCharIndex = -1, phonetic = null, translation = null, furiganaMapOverride = null, charReadings = null, culturalAnnotations = null, renderGranularity = null }) => {
+const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = isActive, isEffectLive = isActive || isEffectFocused, settingsRevision = 0, globalCharOffset = 0, activeGlobalCharIndex = -1, phonetic = null, translation = null, furiganaMapOverride = null, charReadings = null, culturalAnnotations = null, renderGranularity = null, liveClock = null, livePositionMap = null }) => {
   if (!line) {
           return "";
   }
@@ -7931,6 +8103,13 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
   const wordTimed = renderGranularity
 	? renderGranularity === "word"
 	: line.karaokeGranularity === "word";
+	// Rows that follow the live playback clock leave continuous glyph values to
+	// KaraokeLivePainter; every other row renders exactly as before.
+	const livePaint = !!liveClock;
+	const liveRootRef = useRef(null);
+	const liveDataRef = useRef(null);
+	liveDataRef.current = null;
+	useKaraokeLivePainting(liveClock, livePositionMap, liveRootRef, liveDataRef);
 
 	const lyricsLocale = String(window.Utils?.getDetectedLanguage?.() || "auto");
 	const speakerColors = window.ivLyricsSpeakerColors;
@@ -7964,6 +8143,11 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 	const vocalActiveCharIndexes = useMemo(() => vocalRowRenderData
 		? vocalRowRenderData.map(({ timedChars }) => getActiveKaraokeTimedCharIndex(timedChars, position))
 		: null, [vocalRowRenderData, position]);
+	// Each voice row clamps the shared clock to its own render window.
+	const vocalRowLivePositionMaps = useMemo(() => livePaint && Array.isArray(vocalRowRenderData)
+		? vocalRowRenderData.map((rowData) => (value) => getKaraokeVocalRowRenderPosition(rowData,
+			livePositionMap ? livePositionMap(value) : value))
+		: null, [livePaint, vocalRowRenderData, livePositionMap]);
   const vocalAnchorStateRef = useRef({ lineKey: null, anchorPosition: -1, lastPlaybackPosition: NaN });
   let nextVocalAnchorPosition = shouldUseVocalRowAnchor
           ? getKaraokeVocalAnchorPosition(vocalRowRenderData, position, vocalActiveCharIndexes)
@@ -8048,6 +8232,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 					activeGlobalCharIndex: rowActiveGlobalCharIndex,
 					culturalAnnotations: culturalAnnotationsByRow[rowIndex],
 					renderGranularity,
+					...(vocalRowLivePositionMaps ? { liveClock, livePositionMap: vocalRowLivePositionMaps[rowIndex] } : {}),
 					})),
 				rowPhonetic && react.createElement(
 					"span",
@@ -8178,6 +8363,16 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 	// Word stacks need per-word DOM nodes; the string-based text-run fast path
 	// cannot host them, so stacked lines use the glyph/word path instead.
 	const effectiveUseTextRun = useTextRun && !wordStack;
+	const liveLineData = useMemo(() => livePaint ? {
+		timedChars,
+		motionProfiles,
+		wordTimed,
+		segmentsByStart: effectiveUseTextRun && Array.isArray(textRunSegments)
+			? new Map(textRunSegments.filter((segment) => segment.type !== "space")
+				.map((segment) => [segment.startIndex, segment]))
+			: null,
+	} : null, [livePaint, timedChars, motionProfiles, wordTimed, effectiveUseTextRun, textRunSegments]);
+	liveDataRef.current = liveLineData;
 	const { culturalMarkersByCharIndex, fallbackCulturalAnnotations } = useMemo(() => {
 		const culturalMarkersByCharIndex = new Map();
 		const fallbackCulturalAnnotations = [];
@@ -8225,6 +8420,10 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 			? charInfo.karaokeWordIndex
 			: null;
 		const wordStartTime = wordIndex === null ? null : wordStartTimes.get(wordIndex);
+		const fillStartTime = Number.isFinite(charInfo?.karaokeFillStartTime) ? charInfo.karaokeFillStartTime : charInfo.startTime;
+		const fillEndTime = Number.isFinite(charInfo?.karaokeFillEndTime) ? charInfo.karaokeFillEndTime : charInfo.endTime;
+		// Live glyphs get their fill per display frame; React only keeps the state.
+		const liveFill = livePaint && !wordTimed;
 		const fillRatio = wordTimed
 			? getKaraokeInstantWordFill(
 				{ startTime: Number.isFinite(wordStartTime) ? wordStartTime : charInfo?.startTime },
@@ -8232,14 +8431,10 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 				isActive,
 				isComplete
 			) / 100
-			: getKaraokeCharFill(
-				position,
-				isActive,
-				Number.isFinite(charInfo?.karaokeFillStartTime) ? charInfo.karaokeFillStartTime : charInfo.startTime,
-				Number.isFinite(charInfo?.karaokeFillEndTime) ? charInfo.karaokeFillEndTime : charInfo.endTime,
-				isComplete
-			);
-		const charState = fillRatio <= 0 ? "pending" : fillRatio >= 1 ? "done" : "active";
+			: liveFill ? NaN : getKaraokeCharFill(position, isActive, fillStartTime, fillEndTime, isComplete);
+		const charState = liveFill
+			? getKaraokeLiveState(position, fillStartTime, fillEndTime, isComplete)
+			: fillRatio <= 0 ? "pending" : fillRatio >= 1 ? "done" : "active";
 		const motionProfile = motionProfiles[index];
 		const bounce = !glyphBounceEnabled || !motionProfile
 			|| position < motionProfile.startTime
@@ -8247,8 +8442,8 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 			? KARAOKE_BOUNCE_IDLE : getKaraokeBounceValues(
 			position,
 			isActive,
-			Number.isFinite(charInfo?.karaokeFillStartTime) ? charInfo.karaokeFillStartTime : charInfo.startTime,
-			Number.isFinite(charInfo?.karaokeFillEndTime) ? charInfo.karaokeFillEndTime : charInfo.endTime,
+			fillStartTime,
+			fillEndTime,
 			1,
 			motionProfile
 		);
@@ -8256,25 +8451,28 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 		const charReading = typeof charReadingEntry === 'string' ? charReadingEntry : (charReadingEntry?.text || '');
 		const charReadingDx = (charReadingEntry && typeof charReadingEntry === 'object' && Number.isFinite(charReadingEntry.dx)) ? charReadingEntry.dx : 0;
 		const cachedGlyph = glyphElementCache[index];
-		if (cachedGlyph && cachedGlyph.fillRatio === fillRatio && cachedGlyph.isComplete === isComplete
-			&& cachedGlyph.offsetY === bounce.offsetY && cachedGlyph.scale === bounce.scale
-			&& cachedGlyph.glow === bounce.glow && cachedGlyph.bouncing === bounce.active
-			&& cachedGlyph.reading === charReading && cachedGlyph.readingDx === charReadingDx) {
+		if (cachedGlyph && cachedGlyph.live === livePaint && cachedGlyph.isComplete === isComplete
+			&& cachedGlyph.bouncing === bounce.active
+			&& cachedGlyph.reading === charReading && cachedGlyph.readingDx === charReadingDx
+			&& (livePaint ? cachedGlyph.charState === charState
+				: cachedGlyph.fillRatio === fillRatio && cachedGlyph.offsetY === bounce.offsetY
+					&& cachedGlyph.scale === bounce.scale && cachedGlyph.glow === bounce.glow)) {
 			return cachedGlyph.element;
 		}
 		const karaokeStyle = {};
-		if (charState === "active") {
+		if (charState === "active" && !livePaint) {
 			const fillValue = Math.max(0, Math.min(100, fillRatio * 100));
 			const softEdge = getKaraokeFillSoftEdge(fillValue, 16);
 			karaokeStyle["--karaoke-char-fill"] = `${fillValue}%`;
 			karaokeStyle["--karaoke-char-fill-soft-start"] = `${Math.max(0, fillValue - softEdge)}%`;
 			karaokeStyle["--karaoke-char-fill-soft-end"] = `${Math.min(100, fillValue + softEdge)}%`;
 		}
-		if (bounce.active) {
+		if (bounce.active && !livePaint) {
 			karaokeStyle["--karaoke-bounce-y"] = `${bounce.offsetY}px`;
 			karaokeStyle["--karaoke-bounce-scale"] = bounce.scale;
 			karaokeStyle["--karaoke-motion-glow"] = bounce.glow;
 		}
+		const liveKey = liveFill ? { [KARAOKE_LIVE_ATTRIBUTE]: `g:${index}` } : null;
 		const className = getCachedKaraokeStateClassName(
 			KARAOKE_CHAR_STATE_CLASS_NAMES,
 			charState,
@@ -8289,6 +8487,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 				style: karaokeStyle,
 				"data-outline-text": charInfo.char,
 				key: `karaoke-char-${index}`,
+				...liveKey,
 				},
 			react.createElement(
 				"span",
@@ -8310,6 +8509,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 				style: karaokeStyle,
 				"data-outline-text": charInfo.char,
 				key: `karaoke-char-${index}`,
+				...liveKey,
 				},
 			react.createElement(
 				"span",
@@ -8326,6 +8526,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 					className: `lyrics-karaoke-ruby lyrics-karaoke-ruby--${charState}`,
 					style: karaokeStyle,
 					key: `karaoke-ruby-${index}`,
+					...liveKey,
 				},
 				charNode,
 				react.createElement("rt", null, reading)
@@ -8346,7 +8547,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 			))
 		);
 		glyphElementCache[index] = {
-			fillRatio, isComplete, offsetY: bounce.offsetY, scale: bounce.scale,
+			live: livePaint, charState, fillRatio, isComplete, offsetY: bounce.offsetY, scale: bounce.scale,
 			glow: bounce.glow, bouncing: bounce.active, reading: charReading, readingDx: charReadingDx, element,
 		};
 		return element;
@@ -8380,7 +8581,8 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 			preserveInlineStyles,
 			textRunSegments,
 			presentationCaches.textRuns,
-			wrapperElementCache
+			wrapperElementCache,
+			livePaint
 		)
 		: (wrapByWord || wordTimed)
 		? buildKaraokeWordElements(timedChars, charElements, {
@@ -8394,6 +8596,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 			presentationCache: presentationCaches.characters,
 			elementCache: wrapperElementCache,
 			wordSupplementByKey: wordStack?.supplementByKey || null,
+			livePaint,
 		})
 		: wrapKaraokeInlineStyleRuns(timedChars, charElements, {
 			presentationCache: presentationCaches.characters,
@@ -8403,8 +8606,9 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 	return react.createElement(
 		"span",
 		{
-			className: `lyrics-karaoke-line${wrapByWord || wordTimed || effectiveUseTextRun ? " has-word-wrap" : ""}${wordTimed ? " is-word-timed" : ""}${effectiveUseTextRun ? " is-text-run" : ""}${wordStack ? " has-word-stack" : ""}${wordStack?.hasReading ? " has-word-stack-readings" : ""}${textDirection === "rtl" ? " is-rtl" : ""}${isActive ? " is-active" : ""}${isEffectLive ? " is-effect-live" : ""}${isEffectFocused ? " is-effect-focused" : ""}${isComplete ? " is-complete" : ""}${hasCharReadings ? " has-char-readings" : ""}`,
+			className: `lyrics-karaoke-line${wrapByWord || wordTimed || effectiveUseTextRun ? " has-word-wrap" : ""}${wordTimed ? " is-word-timed" : ""}${effectiveUseTextRun ? " is-text-run" : ""}${wordStack ? " has-word-stack" : ""}${wordStack?.hasReading ? " has-word-stack-readings" : ""}${textDirection === "rtl" ? " is-rtl" : ""}${isActive ? " is-active" : ""}${isEffectLive ? " is-effect-live" : ""}${isEffectFocused ? " is-effect-focused" : ""}${isComplete ? " is-complete" : ""}${hasCharReadings ? " has-char-readings" : ""}${Number(CONFIG?.visual?.["original-outline-width"]) > 0 ? " has-glyph-outline" : ""}`,
 			dir: effectiveUseTextRun ? (textDirection === "rtl" ? "ltr" : textDirection) : undefined,
+			...(livePaint ? { ref: liveRootRef } : {}),
 		},
 		lineChildren,
 		fallbackCulturalAnnotations.map((annotation) => react.createElement(
@@ -8417,6 +8621,227 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 			))
 	);
 });
+
+// Live karaoke painting.
+// React owns every discrete glyph state (pending, active, done, bouncing). The
+// values that change continuously while a glyph is sung (fill edge, bounce
+// offset and scale, glow) are written here once per display frame, from the
+// playback clock sampled at that frame's timestamp. Rendering them through React
+// tied them to the 60 fps state cadence and to rounded fill/motion steps, so a
+// 120 Hz display showed every fill step for two (sometimes four) frames while
+// each step rebuilt and restyled the glyph's React element.
+const KARAOKE_LIVE_ATTRIBUTE = "data-karaoke-live";
+const KARAOKE_LIVE_QUIET_FRAMES = 30;
+const KARAOKE_LIVE_BOUNCE_PROPERTIES = ["--karaoke-bounce-y", "--karaoke-bounce-scale", "--karaoke-motion-glow"];
+
+const getKaraokeLiveFill = (position, startTime, endTime) => {
+	if (!Number.isFinite(position) || !(position > startTime) || !(position < endTime)) return null;
+	return applyKaraokeFillCorrectionCurve((position - startTime) / Math.max(1, endTime - startTime)) * 100;
+};
+
+const getKaraokeLiveBounce = (position, profile) => {
+	if (!profile || !CONFIG.visual["karaoke-bounce"] || !Number.isFinite(position)
+		|| !Number.isFinite(profile.startTime) || !Number.isFinite(profile.endTime)
+		|| position < profile.startTime || position >= profile.endTime + profile.releaseDuration) return null;
+	const [strength, scaleStrength, glowStrength] = getKaraokeBounceStrengths(position, profile);
+	return {
+		offsetY: -profile.amplitude * strength,
+		scale: 1 + profile.scaleAmount * scaleStrength,
+		glow: CONFIG.visual["karaoke-text-effects"] === false ? 0 : profile.glow * glowStrength,
+	};
+};
+
+const getKaraokeLiveTimes = (charInfo) => ({
+	startTime: Number.isFinite(charInfo?.karaokeFillStartTime) ? charInfo.karaokeFillStartTime : charInfo?.startTime,
+	endTime: Number.isFinite(charInfo?.karaokeFillEndTime) ? charInfo.karaokeFillEndTime : charInfo?.endTime,
+});
+
+// Units mirror the React builders: a glyph (character mode), a word (word mode
+// bounce) or a shaped text-run segment. Each keeps its element(s) and the last
+// values written to them, so an unchanged value is never written twice.
+const createKaraokeLiveUnit = (key, data) => {
+	const [kind, first, second] = String(key).split(":");
+	const startIndex = Number(first);
+	if (!Number.isInteger(startIndex) || startIndex < 0) return null;
+	const unit = { key, elements: [], values: new Map(), fill: null, profile: null };
+	if (kind === "g") {
+		const charInfo = data.timedChars?.[startIndex];
+		if (!charInfo || data.wordTimed) return null;
+		const { startTime, endTime } = getKaraokeLiveTimes(charInfo);
+		if (Number.isFinite(startTime) && Number.isFinite(endTime)) unit.fill = { startTime, endTime, softEdge: 16 };
+		unit.profile = data.motionProfiles?.[startIndex] || null;
+		return unit;
+	}
+	if (kind === "w") {
+		const count = Number(second);
+		if (!Number.isInteger(count) || count < 1 || !data.wordTimed) return null;
+		let startTime = Infinity;
+		let endTime = -Infinity;
+		for (const charInfo of (data.timedChars || []).slice(startIndex, startIndex + count)) {
+			const times = getKaraokeLiveTimes(charInfo);
+			if (Number.isFinite(times.startTime)) startTime = Math.min(startTime, times.startTime);
+			if (Number.isFinite(times.endTime)) endTime = Math.max(endTime, times.endTime);
+		}
+		if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) return null;
+		unit.profile = getKaraokeMotionProfile(data.timedChars, startIndex, count)
+			|| createKaraokeMotionProfile(startTime, endTime, endTime - startTime);
+		return unit;
+	}
+	if (kind === "s") {
+		const segment = data.segmentsByStart?.get(startIndex);
+		if (!segment) return null;
+		const startTime = Number.isFinite(segment.startTime) ? segment.startTime : 0;
+		const endTime = Number.isFinite(segment.endTime) ? segment.endTime : startTime;
+		if (!data.wordTimed) unit.fill = { startTime, endTime, softEdge: 10 };
+		const charCount = Number.isFinite(segment.charCount) ? segment.charCount : splitKaraokeGraphemes(segment.text).length;
+		unit.profile = getKaraokeMotionProfile(data.timedChars, segment.startIndex, charCount)
+			|| createKaraokeMotionProfile(segment.startTime, segment.endTime, segment.endTime - segment.startTime);
+		return unit;
+	}
+	return null;
+};
+
+const setKaraokeLiveValue = (unit, name, value) => {
+	if (unit.values.get(name) === value) return;
+	unit.values.set(name, value);
+	for (const element of unit.elements) {
+		if (value === null) element.style.removeProperty(name);
+		else element.style.setProperty(name, value);
+	}
+};
+
+const resetKaraokeLiveUnit = (unit) => {
+	for (const name of KARAOKE_LIVE_BOUNCE_PROPERTIES) setKaraokeLiveValue(unit, name, null);
+};
+
+const paintKaraokeLiveUnit = (unit, position) => {
+	if (unit.fill) {
+		const fill = getKaraokeLiveFill(position, unit.fill.startTime, unit.fill.endTime);
+		if (fill !== null) {
+			const softEdge = getKaraokeFillSoftEdge(fill, unit.fill.softEdge);
+			setKaraokeLiveValue(unit, "--karaoke-char-fill", `${fill.toFixed(2)}%`);
+			setKaraokeLiveValue(unit, "--karaoke-char-fill-soft-start", `${Math.max(0, fill - softEdge).toFixed(2)}%`);
+			setKaraokeLiveValue(unit, "--karaoke-char-fill-soft-end", `${Math.min(100, fill + softEdge).toFixed(2)}%`);
+		}
+	}
+	if (unit.profile) {
+		const bounce = getKaraokeLiveBounce(position, unit.profile);
+		setKaraokeLiveValue(unit, "--karaoke-bounce-y", bounce ? `${bounce.offsetY.toFixed(3)}px` : null);
+		setKaraokeLiveValue(unit, "--karaoke-bounce-scale", bounce ? bounce.scale.toFixed(4) : null);
+		setKaraokeLiveValue(unit, "--karaoke-motion-glow", bounce ? bounce.glow.toFixed(3) : null);
+	}
+};
+
+// Re-read the row's live elements after every commit. Units survive commits
+// while their element identities do, keeping their last written values.
+const syncKaraokeLiveEntry = (entry, root, clock, mapPosition, data) => {
+	entry.clock = clock;
+	entry.mapPosition = mapPosition;
+	if (entry.data !== data) {
+		for (const unit of entry.units.values()) resetKaraokeLiveUnit(unit);
+		entry.units.clear();
+		entry.data = data;
+	}
+	const elementsByKey = new Map();
+	for (const element of root.querySelectorAll(`[${KARAOKE_LIVE_ATTRIBUTE}]`)) {
+		const key = element.getAttribute(KARAOKE_LIVE_ATTRIBUTE);
+		const elements = elementsByKey.get(key);
+		if (elements) elements.push(element);
+		else elementsByKey.set(key, [element]);
+	}
+	for (const [key, unit] of entry.units) {
+		const elements = elementsByKey.get(key);
+		if (elements && elements.length === unit.elements.length
+			&& elements.every((element, index) => element === unit.elements[index])) continue;
+		resetKaraokeLiveUnit(unit);
+		entry.units.delete(key);
+	}
+	for (const [key, elements] of elementsByKey) {
+		if (entry.units.has(key)) continue;
+		const unit = createKaraokeLiveUnit(key, data);
+		if (!unit) continue;
+		unit.elements = elements;
+		entry.units.set(key, unit);
+	}
+	entry.lastPosition = NaN;
+};
+
+const paintKaraokeLiveEntry = (entry, frameTime) => {
+	const clockPosition = entry.clock?.getPosition?.(frameTime);
+	if (!Number.isFinite(clockPosition)) return false;
+	const position = entry.mapPosition ? entry.mapPosition(clockPosition) : clockPosition;
+	if (Object.is(position, entry.lastPosition)) return false;
+	entry.lastPosition = position;
+	for (const unit of entry.units.values()) paintKaraokeLiveUnit(unit, position);
+	return true;
+};
+
+const KaraokeLivePainter = {
+	entries: new Set(),
+	frameId: null,
+	lastFrameTime: 0,
+	quietFrames: 0,
+	boundTick: null,
+
+	attach(entry) {
+		this.entries.add(entry);
+		this.quietFrames = 0;
+		this.schedule();
+	},
+
+	release(entry) {
+		if (!this.entries.delete(entry)) return;
+		for (const unit of entry.units.values()) resetKaraokeLiveUnit(unit);
+	},
+
+	schedule() {
+		if (this.frameId !== null || this.entries.size === 0 || typeof requestAnimationFrame !== "function") return;
+		this.boundTick ??= (timestamp) => this.tick(timestamp);
+		this.frameId = requestAnimationFrame(this.boundTick);
+	},
+
+	tick(timestamp) {
+		this.frameId = null;
+		if (this.entries.size === 0) return;
+		const settingsOpen = document.documentElement.classList.contains("ivlyrics-settings-open")
+			|| document.body?.classList.contains("ivlyrics-settings-open");
+		// 60 fps or more follows the display refresh rate; an explicit lower
+		// performance setting keeps its power-saving cap.
+		const fps = getTrackPositionFPS();
+		const minimumInterval = fps < 60 ? 1000 / fps - 1 : 0;
+		let moved = false;
+		if (!settingsOpen && !(timestamp - this.lastFrameTime < minimumInterval)) {
+			this.lastFrameTime = timestamp;
+			for (const entry of this.entries) moved = paintKaraokeLiveEntry(entry, timestamp) || moved;
+		}
+		this.quietFrames = moved ? 0 : this.quietFrames + 1;
+		// Paused playback stops moving every value. The next React commit of a
+		// live row re-attaches its entry and resumes the loop.
+		if (this.quietFrames < KARAOKE_LIVE_QUIET_FRAMES) this.schedule();
+	},
+};
+
+const useKaraokeLivePainting = (liveClock, livePositionMap, rootRef, dataRef) => {
+	const entryRef = useRef(null);
+	(react.useLayoutEffect || useEffect)(() => {
+		const data = liveClock ? dataRef.current : null;
+		const root = rootRef.current;
+		if (!data || !root) {
+			if (entryRef.current) KaraokeLivePainter.release(entryRef.current);
+			entryRef.current = null;
+			return;
+		}
+		const entry = entryRef.current ??= { units: new Map(), data: null, lastPosition: NaN };
+		syncKaraokeLiveEntry(entry, root, liveClock, livePositionMap, data);
+		KaraokeLivePainter.attach(entry);
+		// Paint the committed structure before the browser draws it.
+		paintKaraokeLiveEntry(entry, performance.now());
+	});
+	useEffect(() => () => {
+		if (entryRef.current) KaraokeLivePainter.release(entryRef.current);
+		entryRef.current = null;
+	}, []);
+};
 
 // Reveal is a bounded visual effect on existing rows. Never remount the page
 // to restart it: the engine's refs, measured offset and scroll state must keep
@@ -8499,7 +8924,9 @@ const useLyricsTrackReveal = (pageRef, trackRevealKey, hasLyrics) => {
 
 const SyncedLyricsPage = react.memo(({ lyrics = [], provider, contributors, copyright, isKara, karaokeSource = null, karaokeRenderGranularity = null, reRenderLyricsPage = null, trackRevealKey = null }) => {
 	const position = useLyricsPlaybackPosition();
-	const karaokePosition = isKara ? position + getPseudoKaraokeRenderAdvance(karaokeSource) : position;
+	const karaokeRenderAdvance = isKara ? getPseudoKaraokeRenderAdvance(karaokeSource) : 0;
+	const karaokePosition = isKara ? position + karaokeRenderAdvance : position;
+	const liveClock = useKaraokeLiveClock(isKara, karaokeRenderAdvance);
 	const karaokeLineTransitionClass = isKara && CONFIG.visual["karaoke-line-transition"]
 		? " karaoke-line-transition-enabled"
 		: "";
@@ -8550,10 +8977,11 @@ const SyncedLyricsPage = react.memo(({ lyrics = [], provider, contributors, copy
 		isKara,
 		karaokeRenderGranularity,
 		position: itemPosition,
+		liveClock,
 		activeLineRef: setCompactActiveLineAnchor,
 		settingsRevision: reRenderLyricsPage,
 		cache: renderCache,
-	}), [renderItems, isKara, karaokeRenderGranularity, itemPosition, setCompactActiveLineAnchor, reRenderLyricsPage, renderCache]);
+	}), [renderItems, isKara, karaokeRenderGranularity, itemPosition, liveClock, setCompactActiveLineAnchor, reRenderLyricsPage, renderCache]);
 
 	useLyricsTrackReveal(lyricContainerEle, trackRevealKey, Array.isArray(lyrics) && lyrics.length > 0);
 
@@ -8584,6 +9012,18 @@ const SyncedLyricsPage = react.memo(({ lyrics = [], provider, contributors, copy
           )
 	);
 });
+
+// One stable clock per page for KaraokeLivePainter. It reads the latest sync
+// offsets and render advance at frame time, so passing it down never
+// invalidates memoized rows.
+const useKaraokeLiveClock = (isKara, renderAdvance) => {
+	const advanceRef = useRef(0);
+	advanceRef.current = renderAdvance;
+	const enabled = isKara && !prefersReducedLyricsMotion();
+	return useMemo(() => enabled ? {
+		getPosition: (frameTime) => getFrameAlignedLyricsPlaybackPosition(frameTime) + advanceRef.current,
+	} : null, [enabled]);
+};
 
 // Global SearchBar manager to prevent duplicate instances
 const SearchBarManager = {
@@ -8814,7 +9254,9 @@ function isInViewport(element) {
 
 const SyncedExpandedLyricsPage = react.memo(({ lyrics = [], provider, contributors, copyright, isKara, karaokeSource = null, reRenderLyricsPage = null, trackRevealKey = null }) => {
 	const position = useLyricsPlaybackPosition();
-	const karaokePosition = isKara ? position + getPseudoKaraokeRenderAdvance(karaokeSource) : position;
+	const karaokeRenderAdvance = isKara ? getPseudoKaraokeRenderAdvance(karaokeSource) : 0;
+	const karaokePosition = isKara ? position + karaokeRenderAdvance : position;
+	const liveClock = useKaraokeLiveClock(isKara, karaokeRenderAdvance);
 	const karaokeLineTransitionClass = isKara && CONFIG.visual["karaoke-line-transition"]
 		? " karaoke-line-transition-enabled"
 		: "";
@@ -8840,10 +9282,11 @@ const SyncedExpandedLyricsPage = react.memo(({ lyrics = [], provider, contributo
 		items: renderItems,
 		isKara,
 		position: itemPosition,
+		liveClock,
 		activeLineRef,
 		settingsRevision: reRenderLyricsPage,
 		cache: renderCache,
-	}), [renderItems, isKara, itemPosition, activeLineRef, reRenderLyricsPage, renderCache]);
+	}), [renderItems, isKara, itemPosition, liveClock, activeLineRef, reRenderLyricsPage, renderCache]);
 
 	useLyricsTrackReveal(pageRef, trackRevealKey, Array.isArray(lyrics) && lyrics.length > 0);
 
@@ -9236,6 +9679,8 @@ window.ivLyricsLyricRendererPrimitives = Object.freeze({
 	LyricsLineBlock,
 	IdlingIndicator,
 	useLyricsPlaybackPosition,
+	useKaraokeLiveClock,
+	getFrameAlignedLyricsPlaybackPosition,
 	getPseudoKaraokeRenderAdvance,
 	prepareGlobalCharTimeline,
 	queryGlobalCharTimeline,

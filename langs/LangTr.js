@@ -209,6 +209,10 @@ window.LANG_TR = {
       "label": "Düz Arka Plan Rengi",
       "desc": "Düz arka plan için renk seçin"
     },
+    "videoFallback": {
+      "label": "Video yokken arka plan",
+      "desc": "Video bulunamadığında veya oynatılamadığında gösterilecek arka planı seçin."
+    },
     "videoBackground": {
       "label": "Video Arka Planı",
       "desc": "YouTube videosunu arka plan olarak kullan (Beta)"
@@ -471,6 +475,7 @@ window.LANG_TR = {
       "moveDown": "Aşağı Taşı",
       "supports": {
         "translate": "Çeviri",
+        "pronunciation": "Telaffuz",
         "metadata": "Meta Veri",
         "tmi": "Bilgi (TMI)",
         "researchWebSearch": "Araştırma için web araması",
@@ -480,6 +485,38 @@ window.LANG_TR = {
         "wordSupplements": "Kelime ayrıntıları"
       },
       "noEnabledProviders": "Etkin YZ sağlayıcısı yok. Lütfen ayarlardan en az bir sağlayıcıyı etkinleştirin.",
+      "noPronunciationProviders": "Etkin hiçbir YZ sağlayıcısı telaffuz oluşturamıyor. Yapay Zeka Sağlayıcıları ayarlarından bir sağlayıcı için “Telaffuz” seçeneğini açın.",
+      "localModel": {
+        "quality": "Çeviri kalitesi",
+        "tierLight": "Yerel Hafif",
+        "tierMedium": "Yerel Orta",
+        "tierHigh": "Yerel Yüksek",
+        "tierHint": "Daha yüksek kalite daha doğru çevirir, ancak daha fazla depolama alanı ve bellek kullanır.",
+        "tierDownloaded": "İndirildi",
+        "device": "İşlemci",
+        "deviceAuto": "Otomatik (önce WebGPU)",
+        "deviceCpu": "Yalnızca CPU (daha yavaş)",
+        "idleUnload": "Boştayken belleği boşalt",
+        "idleAfter": "{minutes} dk sonra",
+        "idleAfterHours": "{hours} sa sonra",
+        "idleNever": "Asla",
+        "statusNotDownloaded": "Henüz indirilmedi. Bu cihazda çeviri yapmak için modeli bir kez indirin.",
+        "statusDownloading": "İndiriliyor %{percent} · {loaded} / {total} MB",
+        "statusDownloaded": "İndirildi · Çeviri sırasında belleğe yüklenir",
+        "statusLoading": "Belleğe yükleniyor…",
+        "statusReady": "Hazır · {device}",
+        "statusError": "Hata: {error}",
+        "download": "Modeli indir ({size})",
+        "cancel": "İptal",
+        "unload": "Belleği boşalt",
+        "remove": "Modeli sil",
+        "confirmRemove": "Silmek için tekrar tıklayın",
+        "test": "Çeviriyi test et",
+        "privacy": "Şarkı sözleri bu cihazda çevrilir ve hiçbir yere gönderilmez. Motor (jsDelivr) ve model (Hugging Face) yalnızca bir kez indirilir.",
+        "notReady": "Yerel model henüz hazır değil. Önce Ayarlar > Yapay Zeka Sağlayıcıları > Local AI bölümünden indirin.",
+        "unsupportedLanguage": "Yerel model {language} diline çeviri yapamaz.",
+        "downloadBusy": "Model indirmesinin bitmesini bekleyin, ardından tekrar deneyin."
+      },
       "allProvidersFailed": "Tüm YZ sağlayıcıları isteği işlemekte başarısız oldu.",
       "enabledCapabilities": "Etkin Yetenekler",
       "capabilitiesDesc": "Bu sağlayıcının hangi özellikleri yöneteceğini seçin",
@@ -2412,6 +2449,10 @@ window.LANG_TR = {
       "animationsLabel": "Plak animasyonları",
       "animationsDesc": "Oynatma, duraklatma, dönme, giriş ve parça geçişi animasyonlarını kullanır.",
       "centerRotationLabel": "Plak merkezini döndür",
+      "trackChangeAnimationLabel": "Parça geçişi animasyonu",
+      "trackChangeAnimationDesc": "Parça değişirken kılıf ve plağın değişimini canlandırır. Bu seçenek kapalıyken plak animasyonları açıksa plak dönmeye devam eder.",
+      "rotationSpeedLabel": "Plak dönüş hızı",
+      "rotationSpeedDesc": "%25–200 arasında ayarlayın. %100'de plak her 6 saniyede bir tur döner. Müzik oynatma hızı değişmez.",
       "centerRotationDesc": "Oynatma sırasında merkez etiketini plakla birlikte döndürür.",
       "lyricsLabel": "Plak modu sözlerini göster",
       "lyricsDesc": "Plak modunda geçerli söz satırını plağın altında gösterir.",

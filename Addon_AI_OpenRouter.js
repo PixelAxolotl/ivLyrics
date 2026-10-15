@@ -36,6 +36,7 @@
         apiKeyUrl: 'https://openrouter.ai/keys',
         supports: {
             translate: true,
+            pronunciation: true,
             metadata: true,
             tmi: true,
             researchWebSearch: true,

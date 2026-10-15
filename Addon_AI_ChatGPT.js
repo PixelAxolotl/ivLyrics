@@ -28,7 +28,8 @@
         apiKeyUrl: 'https://platform.openai.com/api-keys',
         // 지원 기능
         supports: {
-            translate: true,    // 가사 번역/발음
+            translate: true,    // 가사 번역
+            pronunciation: true, // 가사 발음
             metadata: true,     // 메타데이터 번역
             tmi: true,          // TMI 생성
             researchWebSearch: true,
@@ -243,8 +244,9 @@
      * support flag: endpoints without web search serve Research through
      * plain chat completions instead of the Responses API.
      */
-    const ENDPOINT_CAPABILITIES = ['translate', 'metadata', 'tmi', 'researchWebSearch', 'lyricsStudy', 'characterPronunciation', 'culturalAnnotations', 'wordSupplements'];
+    const ENDPOINT_CAPABILITIES = ['pronunciation', 'translate', 'metadata', 'tmi', 'researchWebSearch', 'lyricsStudy', 'characterPronunciation', 'culturalAnnotations', 'wordSupplements'];
     const ENDPOINT_CAPABILITY_FALLBACKS = {
+        pronunciation: 'Pronunciation',
         translate: 'Translation',
         metadata: 'Metadata',
         tmi: 'TMI',
@@ -258,7 +260,23 @@
     function isEndpointCapabilityEnabled(capabilities, capability) {
         if (!capabilities || typeof capabilities !== 'object' || Array.isArray(capabilities)) return true;
         const value = capabilities[capability];
-        return value === undefined || value === null ? true : value === true || value === 'true';
+        if (value === undefined || value === null) {
+            // Endpoints saved before pronunciation had its own chip keep
+            // following their translation choice until it is set separately.
+            return capability === 'pronunciation' ? isEndpointCapabilityEnabled(capabilities, 'translate') : true;
+        }
+        return value === true || value === 'true';
+    }
+
+    function toggleEndpointCapability(capabilities, capability) {
+        const current = capabilities && typeof capabilities === 'object' && !Array.isArray(capabilities) ? capabilities : {};
+        const next = { ...current };
+        if (capability === 'translate' && (next.pronunciation === undefined || next.pronunciation === null)) {
+            // Pin the inherited value so turning translation off leaves pronunciation as it was.
+            next.pronunciation = isEndpointCapabilityEnabled(current, 'pronunciation');
+        }
+        next[capability] = !isEndpointCapabilityEnabled(current, capability);
+        return next;
     }
 
     function getPrimaryCapabilities() {
@@ -1491,8 +1509,7 @@
 
                 const togglePrimaryCapability = useCallback((cap) => {
                     setPrimaryCapabilitiesState((prev) => {
-                        const next = { ...(prev || {}) };
-                        next[cap] = !isEndpointCapabilityEnabled(next, cap);
+                        const next = toggleEndpointCapability(prev, cap);
                         setPrimaryCapabilities(next);
                         return next;
                     });
@@ -1698,10 +1715,9 @@
                     ),
                     React.createElement(CapabilityControls, {
                         capabilities: connection.capabilities,
-                        onToggle: capability => onChange({ capabilities: {
-                            ...(connection.capabilities || {}),
-                            [capability]: !isEndpointCapabilityEnabled(connection.capabilities, capability)
-                        } })
+                        onToggle: capability => onChange({
+                            capabilities: toggleEndpointCapability(connection.capabilities, capability)
+                        })
                     }),
                     React.createElement('div', { className: 'ai-addon-connection-footer' },
                         React.createElement('button', {
@@ -1786,8 +1802,9 @@
             }
             const parseLines = rawResponse => parseTextLines(rawResponse, sourceLines);
             // Word-level gloss/pronunciation reuse this entry point with an
-            // endpointCapability override so per-endpoint chips can gate them.
-            const targetCapability = endpointCapability || 'translate';
+            // endpointCapability override so per-endpoint chips can gate them;
+            // line pronunciation and translation each follow their own chip.
+            const targetCapability = endpointCapability || (wantSmartPhonetic ? 'pronunciation' : 'translate');
 
             // Validate inside the provider retry loop so partial/blocked output can retry safely.
             const lines = onLine

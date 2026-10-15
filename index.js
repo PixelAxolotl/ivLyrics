@@ -2503,10 +2503,12 @@ const CONFIG = {
     ),
     "video-scale":
       StorageManager.getItem("ivLyrics:visual:video-scale") || "105",
-    "video-show-when-paused": StorageManager.get(
+"video-show-when-paused": StorageManager.get(
       "ivLyrics:visual:video-show-when-paused",
       StorageManager.get("ivLyrics:visual:reduce-motion", false) !== true
     ),
+    "video-fallback-background":
+      StorageManager.getItem("ivLyrics:visual:video-fallback-background") || "album-cover",
     "solid-background-color":
       StorageManager.getItem("ivLyrics:visual:solid-background-color") ||
       "#1e3a8a",
@@ -2926,6 +2928,15 @@ const CONFIG = {
       "ivLyrics:visual:fullscreen-vinyl-animations",
       true
     ),
+    "fullscreen-vinyl-track-change-animation": StorageManager.get(
+      "ivLyrics:visual:fullscreen-vinyl-track-change-animation",
+      true
+    ),
+    "fullscreen-vinyl-rotation-speed": (() => {
+      const stored = StorageManager.getItem("ivLyrics:visual:fullscreen-vinyl-rotation-speed");
+      const speed = Number(stored ?? 100);
+      return Number.isFinite(speed) ? Math.min(200, Math.max(25, speed)) : 100;
+    })(),
     "fullscreen-vinyl-center-rotation": StorageManager.get(
       "ivLyrics:visual:fullscreen-vinyl-center-rotation",
       true
@@ -7242,7 +7253,9 @@ class LyricsContainer extends react.Component {
       vibrant = 8747370;
     }
 
-    if (this.getEffectiveBackgroundMode() === "blur-gradient-background") {
+    if (this.getEffectiveBackgroundMode() === "blur-gradient-background"
+      || (this.getEffectiveBackgroundMode() === "video-background"
+        && CONFIG.visual["video-fallback-background"] === "blur-gradient")) {
       try {
         const coverUrl =
           Spicetify.Player.data?.item?.metadata?.image_xlarge_url ||
@@ -10937,6 +10950,15 @@ class LyricsContainer extends react.Component {
             : CONFIG.visual["video-blur"],
           coverMode: CONFIG.visual["video-cover"],
           videoScale: CONFIG.visual["video-scale"],
+          fallbackBackground: CONFIG.visual["video-fallback-background"],
+          fallbackSolidColor: CONFIG.visual["solid-background-color"],
+          fallbackGradientStyle: CONFIG.visual["video-fallback-background"] === "blur-gradient"
+            ? computeLyricsBackgroundStyle({
+              isSyncCreatorActive: false, isFADMode: false,
+              effectiveBackgroundMode: "blur-gradient-background",
+              dynamicColors: this.state.dynamicColors, colors: this.state.colors,
+            })
+            : null,
           externalVideoInfo: this.state.videoInfo,
           onLoadingChange: this.handleVideoBackgroundLoadingChange
         })

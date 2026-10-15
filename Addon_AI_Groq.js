@@ -36,6 +36,7 @@
         apiKeyUrl: 'https://console.groq.com/keys',
         supports: {
             translate: true,
+            pronunciation: true,
             metadata: true,
             tmi: true,
             researchWebSearch: true,

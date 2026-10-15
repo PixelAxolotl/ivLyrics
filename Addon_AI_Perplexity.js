@@ -36,6 +36,7 @@
         apiKeyUrl: 'https://www.perplexity.ai/settings/api',
         supports: {
             translate: true,
+            pronunciation: true,
             metadata: true,
             tmi: true,
             researchWebSearch: true,

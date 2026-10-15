@@ -20,7 +20,7 @@
                     en: 'Translation, pronunciation and lyrics study using NVIDIA NIM models'
                 },
                 supports: {
-                    translate: true, metadata: true, tmi: true,
+                    translate: true, pronunciation: true, metadata: true, tmi: true,
                     researchWebSearch: false, lyricsStudy: true,
                     characterPronunciation: true, culturalAnnotations: true
                 },

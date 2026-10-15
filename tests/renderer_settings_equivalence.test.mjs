@@ -64,7 +64,7 @@ const normalizePresentation = (value) => JSON.parse(JSON.stringify(value, functi
 	if (key === "lineRef" && Object.hasOwn(this, "delay")) return undefined;
 	// Scripted rows also carry their travel clock (--line-motion-*); its
 	// routing is verified in the scripted presentation test below.
-	if (key === "detailClassName" || key === "--lyrics-interlude-fade-duration"
+	if (key === "detailClassName" || key === "fadeDurationMs" || key === "--lyrics-interlude-fade-duration"
 		|| key.startsWith("--line-motion-")) return undefined;
 	if (key === "className" && typeof entry === "string") return entry.split(" ")
 		.filter(name => !/^lyrics-line-detail(?:-(?:current|past|future))?$/.test(name)
@@ -592,7 +592,7 @@ test("explicit and detected instrumental endings fade before the next lyric with
   const handoff = render(11800);
   const marker = sourceElement(handoff, "♪");
   assert.match(marker.props.className, /lyrics-interlude-departing/);
-  assert.equal(marker.props.style["--lyrics-interlude-fade-duration"], "220ms");
+  assert.equal(marker.props.style["--lyrics-interlude-fade-duration"], "184ms", "late entry must finish before the next lyric starts");
   const next = sourceElement(handoff, "Final vocal");
   assert.match(next.props.className, /lyrics-line-detail-current/);
   assert.equal(next.props.isActive, false);
@@ -606,7 +606,7 @@ test("explicit and detected instrumental endings fade before the next lyric with
  const virtual = handoff.elements.find(item => String(item.props.key).startsWith("trailing-interlude-"));
  assert.ok(virtual);
  assert.match(virtual.props.className, /lyrics-interlude-departing/);
- assert.equal(virtual.props.style["--lyrics-interlude-fade-duration"], "220ms");
+ assert.equal(virtual.props.style["--lyrics-interlude-fade-duration"], "184ms");
  assert.match(sourceElement(handoff, "日本語の声").props.className, /lyrics-line-detail-current/);
 });
 

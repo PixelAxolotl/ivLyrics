@@ -110,7 +110,10 @@ const normalize = (value) => {
   if (typeof value === "string") {
     return value.replace(/\/\* OpenAI-compatible connections share one editor and the settings controls\. \*\/[\s\S]*$/, "");
   }
-  if (Array.isArray(value)) return Array.from(value, normalize);
+  // The two requested LP controls are verified separately below. Keep the
+  // released oracle for every existing setting and all typography behavior.
+  if (Array.isArray(value)) return Array.from(value, normalize).filter(item =>
+    !["fullscreen-vinyl-track-change-animation", "fullscreen-vinyl-rotation-speed"].includes(item?.key));
   if (value && typeof value === "object") {
     return Object.fromEntries(Object.entries(value).map(([key, item]) => [
       key, key.startsWith("on") && typeof item === "function" ? "[handler]" : normalize(item),
@@ -187,6 +190,28 @@ const typographyControls = (tree) => elements(tree).flatMap((element) => {
     return [{ key: "font-row", onChange: element.props.onChange, item: element.props }];
   }
   return [];
+});
+
+test("LP transition and speed controls persist and notify the active renderer", () => {
+  const h = createHarness(currentSource);
+  const controls = elements(h.render("fullscreen"))
+    .filter(node => node.type.name === "OptionList")
+    .flatMap(node => (node.props.items || []).map(item => ({ item, save: node.props.onChange })));
+  const transition = controls.find(({ item }) => item.key === "fullscreen-vinyl-track-change-animation");
+  const speed = controls.find(({ item }) => item.key === "fullscreen-vinyl-rotation-speed");
+  assert.equal(transition.item.defaultValue, true);
+  assert.equal(speed.item.defaultValue, 100);
+  assert.deepEqual([speed.item.min, speed.item.max, speed.item.step, speed.item.unit], [25, 200, 5, "%"]);
+  for (const [control, value] of [[transition, false], [speed, 175]]) {
+    h.calls.length = 0;
+    control.save(control.item.key, value);
+    assert.equal(h.context.CONFIG.visual[control.item.key], value);
+    assert.deepEqual(normalize(h.calls), [
+      ["saveConfig", control.item.key, value],
+      ["lyrics"],
+      ["event", "ivLyrics", { type: "config", name: control.item.key, value }],
+    ]);
+  }
 });
 
 for (const tab of ["appearance", "fullscreen"]) {

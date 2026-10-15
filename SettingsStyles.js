@@ -7355,4 +7355,9 @@ const SETTINGS_MODAL_CSS = `
     margin: 0;
     overflow-wrap: anywhere;
 }
+
+/* Pronunciation has its own capability chip and shares the translation accent. */
+#${APP_NAME}-config-container .ai-addon-cap-chip.cap-pronunciation.active {
+    color: var(--accent-primary);
+}
 `;

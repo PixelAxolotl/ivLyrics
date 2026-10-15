@@ -27,7 +27,8 @@
         apiKeyUrl: 'https://enter.pollinations.ai',
         // 지원 기능
         supports: {
-            translate: true,    // 가사 번역/발음
+            translate: true,    // 가사 번역
+            pronunciation: true, // 가사 발음
             metadata: true,     // 메타데이터 번역
             tmi: true,
             researchWebSearch: true,

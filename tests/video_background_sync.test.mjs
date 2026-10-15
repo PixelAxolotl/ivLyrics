@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 
-const source = readFileSync(new URL("../VideoBackground.js", import.meta.url), "utf8");
+const source = readFileSync(new URL("../VideoBackground.js", import.meta.url), "utf8").replace(/\r\n/g, "\n");
 const helperBoundary = source.indexOf("const disableYouTubeCaptions");
 assert.ok(helperBoundary > 0, "VideoBackground sync helpers must remain before the component helpers");
 

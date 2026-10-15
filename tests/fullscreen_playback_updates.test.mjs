@@ -134,6 +134,54 @@ const elements = (node) => {
 const byClass = (tree, className) => elements(tree).find((node) => node.props.className?.split(" ").includes(className));
 const text = (node) => Array.isArray(node) ? node.map(text).join("") : node && typeof node === "object" ? text(node.props.children) : typeof node === "string" ? node : "";
 
+test("LP labels follow existing metadata modes, simplification and track ownership", () => {
+  const translatedMetadata = {
+    translated: { title: "번역 제목 (리마스터)", artist: "번역 가수 [피처링]" },
+    romanized: { title: "Beonyeok jemok - Live", artist: "Beonyeok gasu" },
+  };
+  for (const mode of ["vinyl", "compact-vinyl"]) {
+    const h = createHarness({ mode, visual: {
+      "translate-metadata": true, "fullscreen-trim-title": true,
+      "fullscreen-vinyl-track-change-animation": false,
+      "fullscreen-vinyl-rotation-speed": 175,
+      "reduce-motion": true,
+    } });
+    h.player.data.item.metadata.title = "Song (Remastered)";
+    h.player.data.item.metadata.artist_name = "Artist [feat. Guest]";
+    const track = () => elements(h.tree).find(node =>
+      node.type === (mode === "vinyl" ? h.vinyl : h.vinyl.CompactAlbumVinyl)).props.track;
+    const expected = {
+      translated: ["번역 제목", "번역 가수"],
+      romanized: ["Beonyeok jemok", "Beonyeok gasu"],
+      "original-translated": ["Song / 번역 제목", "Artist / 번역 가수"],
+      "original-romanized": ["Song / Beonyeok jemok", "Artist / Beonyeok gasu"],
+      all: ["Song / 번역 제목 / Beonyeok jemok", "Artist / 번역 가수 / Beonyeok gasu"],
+    };
+    for (const [displayMode, labels] of Object.entries(expected)) {
+      h.config.visual["translate-metadata-mode"] = displayMode;
+      h.update({ trackUri: "spotify:track:one", translatedMetadata });
+      assert.deepEqual([track().title, track().artist], labels);
+    }
+    h.config.visual["translate-metadata"] = false;
+    h.update();
+    assert.deepEqual([track().title, track().artist], ["Song", "Artist"]);
+    h.config.visual["translate-metadata"] = true;
+    h.config.visual["translate-metadata-mode"] = "translated";
+    h.update({ translatedMetadata: null });
+    assert.equal(track().title, "Song", "missing translation falls back to original");
+    h.update({ trackUri: "spotify:track:previous", translatedMetadata });
+    assert.equal(track().title, "Song", "previous-track translation must not enter the LP label");
+    h.config.visual["fullscreen-trim-title"] = false;
+    h.update({ trackUri: "spotify:track:one" });
+    assert.equal(track().title, "번역 제목 (리마스터)");
+    const stage = elements(h.tree).find(node => node.type === h.vinyl || node.type === h.vinyl.CompactAlbumVinyl);
+    assert.equal(mode === "vinyl" ? stage.props.vinylSettings.rotationSpeed : stage.props.rotationSpeed, 175);
+    assert.equal(mode === "vinyl" ? stage.props.vinylSettings.reducedMotion : stage.props.reducedMotion, true);
+    if (mode === "vinyl") assert.equal(stage.props.vinylSettings.trackChangeAnimation, false);
+    h.unmount();
+  }
+});
+
 for (const mode of ["standard", "compact-vinyl"]) {
   test(`${mode} avoids root progress renders while preserving track metadata and playback state`, () => {
     const h = createHarness({ mode });

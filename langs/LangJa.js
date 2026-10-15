@@ -209,6 +209,10 @@ window.LANG_JA = {
       "label": "単色背景の色",
       "desc": "単色背景に使用する色を選択してください"
     },
+    "videoFallback": {
+      "label": "動画がない場合の背景",
+      "desc": "動画が見つからない場合や再生できない場合に表示する背景を選びます。"
+    },
     "videoBackground": {
       "label": "動画背景",
       "desc": "YouTube動画を背景として使用します（ベータ版）"
@@ -471,6 +475,7 @@ window.LANG_JA = {
       "moveDown": "下に移動",
       "supports": {
         "translate": "翻訳",
+        "pronunciation": "発音",
         "metadata": "メタデータ",
         "tmi": "TMI",
         "researchWebSearch": "リサーチのウェブ検索",
@@ -480,6 +485,38 @@ window.LANG_JA = {
         "wordSupplements": "単語詳細"
       },
       "noEnabledProviders": "有効なAIプロバイダーがありません。設定で少なくとも1つのプロバイダーを有効にしてください。",
+      "noPronunciationProviders": "発音を生成できるAIプロバイダーが有効になっていません。AIプロバイダー設定で、プロバイダーの「発音」をオンにしてください。",
+      "localModel": {
+        "quality": "翻訳品質",
+        "tierLight": "ローカル ライト",
+        "tierMedium": "ローカル ミディアム",
+        "tierHigh": "ローカル ハイ",
+        "tierHint": "品質が高いほど翻訳が正確になりますが、ストレージとメモリの使用量が増えます。",
+        "tierDownloaded": "ダウンロード済み",
+        "device": "プロセッサー",
+        "deviceAuto": "自動（WebGPU優先）",
+        "deviceCpu": "CPUのみ（低速）",
+        "idleUnload": "未使用時にメモリを解放",
+        "idleAfter": "{minutes}分後",
+        "idleAfterHours": "{hours}時間後",
+        "idleNever": "解放しない",
+        "statusNotDownloaded": "まだダウンロードされていません。モデルを一度ダウンロードすると、このデバイスで翻訳できます。",
+        "statusDownloading": "ダウンロード中 {percent}% · {loaded} / {total} MB",
+        "statusDownloaded": "ダウンロード済み · 翻訳時にメモリへ読み込みます",
+        "statusLoading": "メモリに読み込み中…",
+        "statusReady": "準備完了 · {device}",
+        "statusError": "エラー: {error}",
+        "download": "モデルをダウンロード ({size})",
+        "cancel": "キャンセル",
+        "unload": "メモリを解放",
+        "remove": "モデルを削除",
+        "confirmRemove": "もう一度クリックすると削除します",
+        "test": "翻訳をテスト",
+        "privacy": "歌詞はこのデバイス上で翻訳され、外部に送信されることはありません。実行エンジン (jsDelivr) とモデル (Hugging Face) のダウンロードは最初の一度だけです。",
+        "notReady": "ローカルモデルの準備がまだできていません。設定 > AIプロバイダー > Local AI で先にモデルをダウンロードしてください。",
+        "unsupportedLanguage": "ローカルモデルは{language}への翻訳に対応していません。",
+        "downloadBusy": "モデルのダウンロードが完了してから、もう一度お試しください。"
+      },
       "allProvidersFailed": "すべてのAIプロバイダーの要求に失败しました。",
       "enabledCapabilities": "有効な機能",
       "capabilitiesDesc": "このプロバイダーが処理する機能を選択してください",
@@ -2412,6 +2449,10 @@ window.LANG_JA = {
       "animationsLabel": "LP アニメーション",
       "animationsDesc": "再生・一時停止、回転、登場、曲変更のアニメーションを使用します。",
       "centerRotationLabel": "LP中央を回転",
+      "trackChangeAnimationLabel": "曲変更アニメーション",
+      "trackChangeAnimationDesc": "曲が変わるときにジャケットとレコードを入れ替えるアニメーションを使います。オフにしても、LPアニメーションがオンならレコードは回転し続けます。",
+      "rotationSpeedLabel": "レコードの回転速度",
+      "rotationSpeedDesc": "25–200%で調整できます。100%では6秒で1回転します。音楽の再生速度には影響しません。",
       "centerRotationDesc": "再生中に中央ラベルをレコードと一緒に回転させます。",
       "lyricsLabel": "LP歌詞を表示",
       "lyricsDesc": "LPモードでレコードの下に現在の歌詞を表示します。",

@@ -86,6 +86,37 @@ const publishActiveCommunityVideoInfo = (trackUri, videoInfo, videoDurationSecon
 // moment to produce its first frame.
 const FALLBACK_CROSSFADE_MS = 420;
 
+const normalizeVideoFallbackBackground = (value) =>
+    ["album-cover", "blur-gradient", "solid"].includes(value) ? value : "album-cover";
+
+// A single overlay dims both the fallback and video. Dimming artwork here too
+// would square the slider value (50% became 25%).
+const getVideoFallbackStyle = ({ mode, albumArtUrl, blurAmount = 0, solidColor, gradientStyle = {} }) => {
+    const selected = normalizeVideoFallbackBackground(mode);
+    const base = {
+        position: "absolute", inset: 0, width: "100%", height: "100%",
+        backgroundColor: "var(--spice-main, #121212)", zIndex: 0, pointerEvents: "none",
+    };
+    if (selected === "solid") {
+        return { ...base, backgroundColor: solidColor || "var(--spice-main, #121212)" };
+    }
+    if (selected === "blur-gradient") {
+        return {
+            ...base, ...gradientStyle,
+            backgroundColor: "rgb(var(--ivLyrics-c1, 30, 30, 40))",
+            filter: "saturate(2.5)",
+        };
+    }
+    const blur = Math.min(Math.max(Number(blurAmount) || 0, 0), 80);
+    return {
+        ...base,
+        backgroundImage: albumArtUrl ? `url(${albumArtUrl})` : "none",
+        backgroundSize: "cover", backgroundPosition: "center",
+        filter: blur ? `blur(${blur}px)` : "none",
+        transform: "translateZ(0) scale(1.1)",
+    };
+};
+
 const resolveVideoSyncState = ({
     spotifyTime,
     lyricsStartTime,
@@ -187,6 +218,13 @@ const syncYouTubePlayerTimeline = ({
     holdState,
 }) => {
     if (!player || !holdState) return;
+    if (globalThis.VideoBackgroundDepend?.isAdPlayback?.(player)) {
+        // The public iframe timeline describes the music video during ads. Keep
+        // ads muted/hidden, let them finish, then sync against Spotify again.
+        if (shouldPlay) player.playVideo();
+        else player.pauseVideo();
+        return;
+    }
 
     const wasHoldingAtStart = holdState.isHolding === true;
     holdState.isHolding = shouldHoldAtStart === true;
@@ -245,6 +283,7 @@ const syncYouTubePlayerTimeline = ({
 const settleYouTubeHoldPrime = ({ player, playerState, holdState }) => {
     if (
         !player ||
+        globalThis.VideoBackgroundDepend?.isAdPlayback?.(player) ||
         playerState !== 1 ||
         holdState?.primePending !== true ||
         holdState?.isHolding !== true
@@ -316,7 +355,7 @@ const isSpotifyPlaybackActive = (playerState = Spicetify.Player?.data) => {
     }
 };
 
-const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, coverMode, videoScale, externalVideoInfo, onLoadingChange }) => {
+const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, coverMode, videoScale, fallbackBackground, fallbackSolidColor, fallbackGradientStyle, externalVideoInfo, onLoadingChange }) => {
     const { useState, useEffect, useRef, useCallback } = react;
     const useIsoLayoutEffect = react.useLayoutEffect || useEffect;
     const VIDEO_BACKGROUND_DEBUG = false;
@@ -1658,23 +1697,16 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
     // Render Album Art Background (Fallback).  Keep an outgoing image layer
     // around for one short crossfade so a track change never exposes an empty
     // or black frame while the new video is loading.
-    const fallbackStyle = {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        filter: `brightness(${brightnessRatio}) blur(${blurValue}px)`,
-        transform: "translateZ(0) scale(1.1)",
-        ...blurCompositeStyle,
-        pointerEvents: "none",
-    };
+    const fallbackMode = normalizeVideoFallbackBackground(fallbackBackground);
+    const fallbackStyle = getVideoFallbackStyle({
+        mode: fallbackMode, albumArtUrl, blurAmount: blurValue,
+        solidColor: fallbackSolidColor, gradientStyle: fallbackGradientStyle,
+    });
+    const hasOutgoingArtwork = fallbackMode === "album-cover" && previousFallbackUrl && previousFallbackUrl !== albumArtUrl;
     const renderFallback = () => react.createElement(
         react.Fragment,
         null,
-        previousFallbackUrl && previousFallbackUrl !== albumArtUrl && react.createElement("div", {
+        hasOutgoingArtwork && react.createElement("div", {
             className: "ivlyrics-video-background-fallback ivlyrics-video-background-fallback-outgoing",
             style: {
                 ...fallbackStyle,
@@ -1683,14 +1715,14 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
             },
         }),
         react.createElement("div", {
-            className: `ivlyrics-video-background-fallback${previousFallbackUrl && previousFallbackUrl !== albumArtUrl ? " ivlyrics-video-background-fallback-incoming" : ""}`,
+            className: `ivlyrics-video-background-fallback${hasOutgoingArtwork ? " ivlyrics-video-background-fallback-incoming" : ""}${fallbackMode === "blur-gradient" ? " color-gradient-bg" : ""}`,
+            "data-fallback-background": fallbackMode,
             style: {
                 ...fallbackStyle,
-                backgroundImage: albumArtUrl ? `url(${albumArtUrl})` : "none",
-                backgroundColor: "var(--spice-main, #121212)",
                 zIndex: 0,
             },
-        })
+        }, fallbackMode === "blur-gradient" && [1, 2, 3, 4, 5, 6].map((index) =>
+            react.createElement("div", { key: index, className: `gradient-blob blob-${index}` })))
     );
 
     // 헬퍼 모드용 video 태그 스타일

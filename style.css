@@ -5052,7 +5052,7 @@ body:has(#lyrics-fullscreen-container) [data-tippy-root] {
 }
 
 /* Color Gradient Background */
-#ivLyrics-gradient-background.color-gradient-bg {
+:is(#ivLyrics-gradient-background, .ivlyrics-video-background-fallback).color-gradient-bg {
   --c1: var(--ivLyrics-c1, 30, 30, 40);
   --c2: var(--ivLyrics-c2, 60, 40, 70);
   --c3: var(--ivLyrics-c3, 20, 50, 60);
@@ -9641,6 +9641,21 @@ html.is-lp-view-exit::view-transition-new(root) {
   opacity: var(--iv-vinyl-original-opacity, 0.95) !important;
 }
 
+/* The LP/presentation surface overrides paragraph opacity above. Its
+   instrumental exit must win that override, not vanish when the row remounts. */
+.fullscreen-vinyl-active-lyric .ivlyrics-active-lyric-renderer
+  > .lyrics-interlude-departing > p.lyrics-lyricsContainer-LyricsLine-interludeMain:first-child {
+  opacity: 0 !important;
+  transition: opacity var(--lyrics-interlude-fade-duration, 220ms) ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fullscreen-vinyl-active-lyric .ivlyrics-active-lyric-renderer
+    > .lyrics-interlude-departing > p.lyrics-lyricsContainer-LyricsLine-interludeMain:first-child {
+    transition: none;
+  }
+}
+
 .fullscreen-vinyl-active-lyric .ivlyrics-vinyl-lyric-scroll-viewport {
   --iv-vinyl-lyric-edge-fade: clamp(14px, 1.8vw, 22px);
   position: relative;
@@ -10175,6 +10190,7 @@ html.is-lp-view-exit::view-transition-new(root) {
 }
 
 .ivlyrics-vinyl-label {
+  container-type: inline-size;
   position: absolute;
   z-index: 4;
   top: 50%;
@@ -10214,10 +10230,12 @@ html.is-lp-view-exit::view-transition-new(root) {
   position: absolute;
   left: 50%;
   display: block;
-  max-width: 78%;
+  width: 64%;
+  max-width: 64%;
   overflow: hidden;
   transform: translateX(-50%);
   text-overflow: ellipsis;
+  text-align: center;
   white-space: nowrap;
   font-family: 'Pretendard Variable', Pretendard, sans-serif;
   line-height: 1;
@@ -10244,14 +10262,16 @@ html.is-lp-view-exit::view-transition-new(root) {
 
 .ivlyrics-vinyl-label-title {
   top: 37%;
-  font-size: clamp(7px, 2.5cqi, 24px);
+  font-size: clamp(3px, 10.2cqi, 24px);
   font-weight: 800;
   letter-spacing: -0.025em;
 }
 
 .ivlyrics-vinyl-label-artist {
   top: 65%;
-  font-size: clamp(6px, 1.35cqi, 15px);
+  width: 48%;
+  max-width: 48%;
+  font-size: clamp(2px, 5.5cqi, 15px);
   font-weight: 500;
   opacity: 0.86;
 }
@@ -10912,8 +10932,7 @@ html.is-lp-view-exit::view-transition-new(root) {
 }
 
 .ivlyrics-compact-album-vinyl.is-motion-disabled .ivlyrics-compact-album-record {
-  --iv-vinyl-spin-angle: 0turn;
-  animation: none !important;
+  animation-play-state: paused !important;
 }
 
 .fullscreen-vinyl-overlay.is-presentation-video .fullscreen-vinyl-lyric-stage {
@@ -11205,8 +11224,7 @@ html.is-lp-view-exit::view-transition-new(root) {
 }
 
 .fullscreen-vinyl-overlay.is-motion-disabled .ivlyrics-vinyl-visual-group {
-  --iv-vinyl-spin-angle: 0turn;
-  animation: none !important;
+  animation-play-state: paused !important;
 }
 
 .fullscreen-vinyl-overlay.is-motion-disabled .ivlyrics-vinyl-motion {
@@ -11218,8 +11236,8 @@ html.is-lp-view-exit::view-transition-new(root) {
 }
 
 .fullscreen-vinyl-overlay.is-motion-disabled > .ivlyrics-compact-vinyl-stage {
-  --iv-vinyl-spin-angle: 0turn;
-  animation: none !important;
+  animation-duration: 1ms, 6s !important;
+  animation-play-state: running, paused !important;
 }
 
 @keyframes fullscreen-vinyl-cover-arrive-portrait {
@@ -11330,12 +11348,16 @@ html.is-lp-view-exit::view-transition-new(root) {
   }
 
   .ivlyrics-vinyl-visual-group {
-    animation-duration: 12s;
+    animation-play-state: paused !important;
   }
 
-  .ivlyrics-compact-vinyl-stage {
-    --iv-vinyl-spin-angle: 0turn;
-    animation: none !important;
+  .fullscreen-vinyl-overlay > .ivlyrics-compact-vinyl-stage {
+    animation-duration: 1ms, 6s !important;
+    animation-play-state: running, paused !important;
+  }
+
+  .ivlyrics-compact-album-record {
+    animation-play-state: paused !important;
   }
 }
 
@@ -14435,7 +14457,8 @@ html.is-lp-view-exit::view-transition-new(root) {
   opacity: 0.9;
 }
 
-/* Translate - Green */
+/* Pronunciation / Translate - Green */
+.ai-addon-cap-chip.active.cap-pronunciation,
 .ai-addon-cap-chip.active.cap-translate {
   background: rgba(34, 197, 94, 0.15);
   border-color: rgba(34, 197, 94, 0.5);

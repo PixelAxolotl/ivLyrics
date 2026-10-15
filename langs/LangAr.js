@@ -209,6 +209,10 @@ window.LANG_AR = {
       "label": "لون الخلفية الثابتة",
       "desc": "اختر اللون لاستخدامه كخلفية ثابتة"
     },
+    "videoFallback": {
+      "label": "الخلفية عند عدم توفر الفيديو",
+      "desc": "اختر الخلفية التي تظهر إذا لم يُعثر على الفيديو أو تعذّر تشغيله."
+    },
     "videoBackground": {
       "label": "خلفية الفيديو",
       "desc": "استخدام فيديو YouTube كخلفية (تجريبي)"
@@ -471,6 +475,7 @@ window.LANG_AR = {
       "moveDown": "تحريك للأسفل",
       "supports": {
         "translate": "الترجمة",
+        "pronunciation": "النطق",
         "metadata": "البيانات الوصفية",
         "tmi": "TMI",
         "researchWebSearch": "بحث الويب للأبحاث",
@@ -480,6 +485,38 @@ window.LANG_AR = {
         "wordSupplements": "تفاصيل الكلمات"
       },
       "noEnabledProviders": "لم يتم تفعيل أي موفر AI. يرجى تفعيل موفر واحد على الأقل في الإعدادات.",
+      "noPronunciationProviders": "لا يوجد موفر ذكاء اصطناعي مفعّل يمكنه إنشاء النطق. فعّل «النطق» لأحد الموفرين من إعدادات موفري الذكاء الاصطناعي.",
+      "localModel": {
+        "quality": "جودة الترجمة",
+        "tierLight": "محلي خفيف",
+        "tierMedium": "محلي متوسط",
+        "tierHigh": "محلي عالٍ",
+        "tierHint": "كلما ارتفعت الجودة كانت الترجمة أدق، لكن استهلاك مساحة التخزين والذاكرة يزداد.",
+        "tierDownloaded": "تم التنزيل",
+        "device": "المعالج",
+        "deviceAuto": "تلقائي (WebGPU أولًا)",
+        "deviceCpu": "CPU فقط (أبطأ)",
+        "idleUnload": "تحرير الذاكرة عند عدم الاستخدام",
+        "idleAfter": "بعد {minutes} دقيقة",
+        "idleAfterHours": "بعد {hours} ساعة",
+        "idleNever": "أبدًا",
+        "statusNotDownloaded": "لم يتم التنزيل بعد. نزّل النموذج مرة واحدة للترجمة على هذا الجهاز.",
+        "statusDownloading": "جارٍ التنزيل {percent}% · {loaded} / {total} MB",
+        "statusDownloaded": "تم التنزيل · يُحمَّل في الذاكرة عند الترجمة",
+        "statusLoading": "جارٍ التحميل في الذاكرة…",
+        "statusReady": "جاهز · {device}",
+        "statusError": "خطأ: {error}",
+        "download": "تنزيل النموذج ({size})",
+        "cancel": "إلغاء",
+        "unload": "تحرير الذاكرة",
+        "remove": "حذف النموذج",
+        "confirmRemove": "انقر مرة أخرى للحذف",
+        "test": "اختبار الترجمة",
+        "privacy": "تُترجَم كلمات الأغاني على هذا الجهاز ولا تُرسَل إلى أي مكان. يتم تنزيل المحرك (jsDelivr) والنموذج (Hugging Face) مرة واحدة فقط.",
+        "notReady": "النموذج المحلي غير جاهز بعد. نزّله أولًا من الإعدادات > موفرو الذكاء الاصطناعي > Local AI.",
+        "unsupportedLanguage": "لا يمكن للنموذج المحلي الترجمة إلى {language}.",
+        "downloadBusy": "انتظر حتى يكتمل تنزيل النموذج، ثم حاول مرة أخرى."
+      },
       "allProvidersFailed": "فشل جميع موفري AI في معالجة الطلب.",
       "enabledCapabilities": "القدرات المفعلة",
       "capabilitiesDesc": "حدد الميزات التي يتعامل معها هذا المزود",
@@ -2412,6 +2449,10 @@ window.LANG_AR = {
       "animationsLabel": "حركات الأسطوانة",
       "animationsDesc": "استخدم حركات التشغيل والإيقاف والدوران والظهور وتغيير الأغنية.",
       "centerRotationLabel": "تدوير مركز الأسطوانة",
+      "trackChangeAnimationLabel": "حركة تغيير الأغنية",
+      "trackChangeAnimationDesc": "تحريك الغلاف والأسطوانة عند تغيير الأغنية. عند إيقاف هذا الخيار، تستمر الأسطوانة في الدوران إذا كانت حركات الأسطوانة مفعّلة.",
+      "rotationSpeedLabel": "سرعة دوران الأسطوانة",
+      "rotationSpeedDesc": "يمكن ضبطها بين 25–200%. عند 100% تدور الأسطوانة دورة كاملة كل 6 ثوانٍ، دون تغيير سرعة تشغيل الموسيقى.",
       "centerRotationDesc": "يدوّر الملصق الأوسط مع الأسطوانة أثناء التشغيل.",
       "lyricsLabel": "إظهار كلمات وضع الأسطوانة",
       "lyricsDesc": "يعرض سطر الكلمات الحالي أسفل الأسطوانة في وضع الأسطوانة.",

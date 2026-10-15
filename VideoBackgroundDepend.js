@@ -49,7 +49,8 @@
         restore: restoreAll
     };
 
-    // Blocks YouTube iframe ads loaded inside Spicetify by sanitizing requests and patching the player API.
+    // Request muted playback through the iframe API so the server omits ad slots.
+    // Parent-window request hooks cannot filter a cross-origin iframe response.
     const waitForSpicetify = () => {
         if (!window.Spicetify || !Spicetify.Player || !document.body) {
             if (!moduleState.waitTimer) {
@@ -138,7 +139,7 @@
             const target = typeof resource === "string" ? resource : resource?.url;
             if (matchesAdUrl(target)) {
                 blockRequest("fetch", target);
-                return Promise.resolve(new Response("", { status: 204, statusText: "No Content" }));
+                return Promise.resolve(new Response(null, { status: 204, statusText: "No Content" }));
             }
             return originalFetch.call(this, resource, init);
         };
@@ -613,63 +614,36 @@
         });
     };
 
+    // The iframe API reports content time/duration even while an ad is playing.
+    // Use forwarded ad events; seeking to getDuration() would skip the music video.
     const AD_STATE_CODES = new Set([105, 106, 107, 108, 109, 110, 111]);
-    // Inspired by https://github.com/MartinBraquet/youtube-adblock: mute + fast-forward to neutralize stubborn ad slots.
-    const MAX_AD_PLAYBACK_RATE = 16;
-    const AD_SEEK_COOLDOWN_MS = 600;
-    const RELOAD_COOLDOWN_MS = 1500;
-
-    const normalizeVideoDescriptor = (value, fallbackStartSeconds = 0) => {
-        if (!value) return null;
-        if (typeof value === "string") {
-            return { videoId: value, startSeconds: fallbackStartSeconds };
-        }
-        if (typeof value === "object") {
-            const videoId = value.videoId || value.video_id;
-            if (!videoId) return null;
-            const startSeconds = value.startSeconds ?? value.start ?? value.t ?? fallbackStartSeconds;
-            return {
-                videoId,
-                startSeconds: typeof startSeconds === "number" ? startSeconds : fallbackStartSeconds,
-                endSeconds: value.endSeconds ?? value.end,
-                suggestedQuality: value.suggestedQuality || value.quality || "default"
-            };
-        }
-        return null;
-    };
-
-    const setDesiredVideoDescriptor = (player, descriptor) => {
-        if (!player || !descriptor || !descriptor.videoId) return;
-        player.__ytDesiredVideo = {
-            videoId: descriptor.videoId,
-            startSeconds: typeof descriptor.startSeconds === "number" ? descriptor.startSeconds : 0,
-            endSeconds: typeof descriptor.endSeconds === "number" ? descriptor.endSeconds : undefined,
-            suggestedQuality: descriptor.suggestedQuality || "default"
-        };
-    };
-
-    const refreshDesiredVideoFromPlayer = (player) => {
-        if (!player || typeof player.getVideoData !== "function") return;
-        try {
-            const data = player.getVideoData();
-            if (data && data.video_id && !isAdPlayback(player)) {
-                setDesiredVideoDescriptor(player, {
-                    videoId: data.video_id,
-                    startSeconds: typeof player.getCurrentTime === "function" ? player.getCurrentTime() : 0
-                });
-            }
-        } catch (err) {
-            // Ignore read errors
-        }
-    };
-
+    const ACTIVE_AD_STATES = new Set([1, 2, 3, 5]);
     const getPlayerControlState = (player) => {
         if (!player.__ytAdControlState) {
             player.__ytAdControlState = {
-                previousRate: null,
+                adActive: false,
+                adEventsInConfig: false,
+                adCpn: null,
+                mutedPlayback: false,
+                mutedLoadOptions: null,
+                mutedPlaybackIntent: null,
+                cuePlayRequested: false,
+                mutedLoadKind: "ById",
+                pendingMutedSeek: null,
+                requestedEndSeconds: 0,
+                previewLimitTimers: new Set(),
+                previewLimitGeneration: 0,
                 previousMuted: null,
-                lastSeekTimestamp: 0,
-                restoreTimer: null
+                hiddenIframe: null,
+                previousOpacity: "",
+                previousOpacityPriority: "",
+                pendingSeek: null,
+                restoreTimer: null,
+                captionTimers: new Set(),
+                wrappedMethods: new Map(),
+                listeners: new Map(),
+                disposed: false,
+                cleanup: null,
             };
         }
         return player.__ytAdControlState;
@@ -677,232 +651,305 @@
 
     const isAdPlayback = (player) => {
         if (!player) return false;
+        if (player.__ytAdControlState?.adActive) return true;
         try {
-            if (typeof player.getAdState === "function" && player.getAdState() === 1) {
-                return true;
-            }
-        } catch (err) {
-            // Ignore
-        }
-        try {
-            const state = typeof player.getPlayerState === "function" ? player.getPlayerState() : null;
-            return AD_STATE_CODES.has(state);
+            if (typeof player.getAdState === "function" && player.getAdState() === 1) return true;
+            return AD_STATE_CODES.has(player.getPlayerState?.());
         } catch (err) {
             return false;
         }
+    };
+    window.VideoBackgroundDepend.isAdPlayback = isAdPlayback;
+
+    const restoreIframeOpacity = (state) => {
+        const iframe = state.hiddenIframe;
+        if (!iframe) return;
+        // Leave a newer owner's style alone.
+        if (iframe.style.getPropertyValue("opacity") === "0" &&
+            iframe.style.getPropertyPriority("opacity") === "important") {
+            if (state.previousOpacity) {
+                iframe.style.setProperty("opacity", state.previousOpacity, state.previousOpacityPriority);
+            } else {
+                iframe.style.removeProperty("opacity");
+            }
+        }
+        state.hiddenIframe = null;
+    };
+
+    const restoreMutedState = (player, state) => {
+        if (state.previousMuted === false) {
+            try { player.unMute?.(); } catch (err) { }
+        }
+        state.previousMuted = null;
     };
 
     const suppressAdPlayback = (player) => {
-        const controlState = getPlayerControlState(player);
-        if (controlState.previousRate === null && typeof player.getPlaybackRate === "function") {
-            try {
-                controlState.previousRate = player.getPlaybackRate();
-            } catch (err) {
-                controlState.previousRate = null;
-            }
+        const state = getPlayerControlState(player);
+        if (state.disposed) return;
+        if (state.restoreTimer !== null) {
+            clearTimeout(state.restoreTimer);
+            state.restoreTimer = null;
         }
-        if (controlState.previousMuted === null && typeof player.isMuted === "function") {
-            try {
-                controlState.previousMuted = player.isMuted();
-            } catch (err) {
-                controlState.previousMuted = null;
-            }
+        if (state.previousMuted === null) {
+            try { state.previousMuted = player.isMuted?.() ?? null; } catch (err) { }
         }
-
-        if (typeof player.setPlaybackRate === "function") {
-            try {
-                player.setPlaybackRate(MAX_AD_PLAYBACK_RATE);
-            } catch (err) {
-                // Ignore
-            }
+        try { player.mute?.(); } catch (err) { }
+        const iframe = player.getIframe?.();
+        if (iframe?.style && state.hiddenIframe !== iframe) {
+            restoreIframeOpacity(state);
+            state.hiddenIframe = iframe;
+            state.previousOpacity = iframe.style.getPropertyValue("opacity");
+            state.previousOpacityPriority = iframe.style.getPropertyPriority("opacity");
         }
-        if (typeof player.mute === "function") {
-            try {
-                player.mute();
-            } catch (err) {
-                // Ignore
-            }
-        }
+        // Opacity leaves the embed running so unskippable ads can finish. The
+        // background's existing artwork/gradient layer stays visible underneath.
+        if (state.hiddenIframe) state.hiddenIframe.style.setProperty("opacity", "0", "important");
+        // Only use a real skip API when supplied by the player. The public iframe
+        // API has no such method, nor does its seekTo() address the ad timeline.
+        try { player.skipAd?.(); } catch (err) { }
     };
 
     const restoreNormalPlayback = (player) => {
-        const controlState = getPlayerControlState(player);
-        if (controlState.previousRate === null
-            && controlState.previousMuted === null
-            && !controlState.restoreTimer) {
-            return;
+        const state = getPlayerControlState(player);
+        if (state.disposed || isAdPlayback(player)) return;
+        const pendingSeek = state.pendingSeek;
+        state.pendingSeek = null;
+        if (pendingSeek) {
+            try { player.seekTo?.(...pendingSeek); } catch (err) { }
         }
-        if (controlState.restoreTimer) {
-            clearTimeout(controlState.restoreTimer);
-        }
-        controlState.restoreTimer = setTimeout(() => {
-            if (controlState.previousRate !== null && typeof player.setPlaybackRate === "function") {
-                try {
-                    player.setPlaybackRate(controlState.previousRate);
-                } catch (err) {
-                    // Ignore
-                }
-            }
-            if (controlState.previousMuted === false) {
-                if (typeof player.unMute === "function") {
-                    try {
-                        player.unMute();
-                    } catch (err) {
-                        // Ignore
-                    }
-                } else if (typeof player.setVolume === "function") {
-                    try {
-                        player.setVolume(100);
-                    } catch (err) {
-                        // Ignore
-                    }
-                }
-            }
-            controlState.previousRate = null;
-            controlState.previousMuted = null;
-            controlState.restoreTimer = null;
+        if (!state.hiddenIframe && state.previousMuted === null) return;
+        if (state.restoreTimer !== null) return;
+        state.restoreTimer = setTimeout(() => {
+            state.restoreTimer = null;
+            if (state.disposed || isAdPlayback(player)) return;
+            restoreMutedState(player, state);
+            restoreIframeOpacity(state);
         }, 250);
     };
 
-    const tryReloadVideo = (player) => {
-        if (!player || !player.__ytDesiredVideo) return false;
-        const lastReload = player.__ytLastReloadTimestamp || 0;
-        const now = performance.now();
-        if (now - lastReload < RELOAD_COOLDOWN_MS) {
-            return false;
-        }
-
-        const descriptor = player.__ytDesiredVideo;
-        const payload = {
-            videoId: descriptor.videoId,
-            startSeconds: descriptor.startSeconds || 0,
-            endSeconds: descriptor.endSeconds,
-            suggestedQuality: descriptor.suggestedQuality || "default"
-        };
-        try {
-            player.__ytLastReloadTimestamp = now;
-            if (typeof player.loadVideoById === "function") {
-                player.loadVideoById(payload);
-                return true;
-            }
-        } catch (err) {
-            // Continue to other fallbacks
-        }
-        return false;
-    };
-
-    const attemptAdSkip = (player) => {
-        suppressAdPlayback(player);
-        if (typeof player.skipAd === "function") {
-            try {
-                player.skipAd();
-                return;
-            } catch (err) {
-                // Continue to fallback logic
-            }
-        }
-
-        const duration = typeof player.getDuration === "function" ? player.getDuration() : null;
-        const current = typeof player.getCurrentTime === "function" ? player.getCurrentTime() : null;
-        const controlState = getPlayerControlState(player);
-        const now = performance.now();
-
-        if (duration && current !== null && duration > 0 && now - controlState.lastSeekTimestamp > AD_SEEK_COOLDOWN_MS) {
-            controlState.lastSeekTimestamp = now;
-            try {
-                player.seekTo(Math.max(duration - 0.1, 0), true);
-                return;
-            } catch (err) {
-                // Ignore and try next fallback
-            }
-        }
-
-        if (typeof player.nextVideo === "function") {
-            try {
-                player.nextVideo();
-                return;
-            } catch (err) {
-                // Ignore
-            }
-        }
-
-        tryReloadVideo(player);
-    };
-
-    const attachAdSkipper = (player) => {
-        if (!player || player.__ytAdSkipperAttached) return;
-        player.__ytAdSkipperAttached = true;
-
-        const syncAdState = () => {
-            if (!player) return;
-            if (isAdPlayback(player)) {
-                attemptAdSkip(player);
-            } else {
-                restoreNormalPlayback(player);
-                refreshDesiredVideoFromPlayer(player);
-            }
-        };
-
-        if (typeof player.addEventListener === "function") {
-            player.addEventListener("onStateChange", syncAdState);
-            player.addEventListener("onAdStart", () => attemptAdSkip(player));
-            player.addEventListener("onAdEnd", () => {
-                restoreNormalPlayback(player);
-                refreshDesiredVideoFromPlayer(player);
-            });
-            player.addEventListener("onError", () => {
-                if (!tryReloadVideo(player)) {
-                    attemptAdSkip(player);
-                }
-            });
-            player.addEventListener("onApiChange", () => refreshDesiredVideoFromPlayer(player));
-            player.addEventListener("onPlaybackQualityChange", () => refreshDesiredVideoFromPlayer(player));
-            player.addEventListener("onPlaybackRateChange", () => refreshDesiredVideoFromPlayer(player));
-        }
-
-        const pollTimer = setInterval(() => {
-            const iframe = typeof player.getIframe === "function" ? player.getIframe() : null;
-            if (!iframe || !document.body.contains(iframe)) {
-                clearInterval(pollTimer);
-                return;
-            }
-            syncAdState();
-        }, 400);
-
-        const originalDestroy = player.destroy;
-        if (typeof originalDestroy === "function") {
-            player.destroy = function patchedDestroy() {
-                clearInterval(pollTimer);
-                return originalDestroy.apply(this, arguments);
-            };
+    const handleAdEvent = (player, name, event) => {
+        if (!player) return;
+        const state = getPlayerControlState(player);
+        if (state.disposed) return;
+        if (name === "onAdStart" ||
+            (name === "onAdStateChange" && ACTIVE_AD_STATES.has(event?.data))) {
+            state.adActive = true;
+            if (name === "onAdStart") state.adCpn = typeof event?.data === "string" ? event.data : null;
+            suppressAdPlayback(player);
+        } else if (name === "onAdEnd" || name === "onAdStateChange" && event?.data === -1) {
+            if (name === "onAdEnd" && state.adCpn && typeof event?.data === "string" &&
+                state.adCpn !== event.data) return;
+            state.adActive = false;
+            state.adCpn = null;
+            restoreNormalPlayback(player);
         }
     };
 
-    const trackVideoRequests = (player, config = {}) => {
-        const initialDescriptor = normalizeVideoDescriptor(
-            config.videoId ||
-            config.video_id ||
-            config.playerVars?.videoId ||
-            config.playerVars?.video_id ||
-            config.video
-        );
-        if (initialDescriptor) {
-            setDesiredVideoDescriptor(player, initialDescriptor);
-        }
+    const mutedVideoArgs = (method, args) => {
+        const value = args[0];
+        const key = method.endsWith("ByUrl") ? "mediaContentUrl" : "videoId";
+        if (!value || typeof value !== "string" && typeof value !== "object") return null;
+        const options = typeof value === "string"
+            ? { [key]: value, startSeconds: args[1], suggestedQuality: args[2] }
+            : { ...value };
+        if (!options[key]) return null;
+        options.playmuted = true;
+        return options;
+    };
 
-        const wrap = (method) => {
+    const seekMutedVideo = (player, state, target) => {
+        const time = Number(target);
+        if (!state.mutedLoadOptions || !Number.isFinite(time) || time < 0) return false;
+        const now = Date.now();
+        const pending = state.pendingMutedSeek;
+        if (pending && now - pending.requestedAt < 5000) {
+            const expected = pending.target + (pending.playing ? (now - pending.requestedAt) / 1000 : 0);
+            if (Math.abs(time - expected) < 0.75) return true;
+        }
+        // Muted-autoplay embeds ignore seekTo. A positioned muted load preserves
+        // the ad-free response. Coalesce sync ticks while that load is buffering.
+        const playing = state.mutedPlaybackIntent ?? ![2, 5].includes(player.getPlayerState?.());
+        const method = (playing ? "loadVideo" : "cueVideo") + state.mutedLoadKind;
+        if (typeof player[method] !== "function") return false;
+        const options = { ...state.mutedLoadOptions, startSeconds: time, playmuted: true };
+        player[method](options);
+        state.pendingMutedSeek = { target: time, requestedAt: now, playing };
+        return true;
+    };
+
+    const applyMutedPlaybackIntent = (player, playerState) => {
+        if (!player) return;
+        const state = getPlayerControlState(player);
+        if (state.disposed || !state.mutedPlayback || isAdPlayback(player)) return;
+        // A play/pause sent during an asynchronous positioned cue can be ignored.
+        // Reapply it once the new cue has actually arrived, without another load.
+        if (state.mutedPlaybackIntent === true && playerState === 5 && !state.cuePlayRequested) {
+            state.cuePlayRequested = true;
+            player.playVideo?.();
+        } else if (state.mutedPlaybackIntent === false && playerState === 1) {
+            player.pauseVideo?.();
+        }
+    };
+
+    const clearMutedPreviewTimers = (state) => {
+        state.previewLimitGeneration++;
+        state.previewLimitTimers.forEach(clearTimeout);
+        state.previewLimitTimers.clear();
+    };
+
+    const scheduleMutedPreviewLimitRemoval = (player) => {
+        if (!player) return;
+        const state = getPlayerControlState(player);
+        clearMutedPreviewTimers(state);
+        if (state.disposed || !state.mutedPlayback || state.requestedEndSeconds > 0 ||
+            isAdPlayback(player) || player.getPlayerState?.() !== 1 || typeof player.removeCueRange !== "function") return;
+        const generation = state.previewLimitGeneration;
+        // The embed does not consistently forward cue metadata. After PLAYING,
+        // its unnamed muted-preview stop cue exists; removing it leaves the video
+        // stream and named chapter/user cues unchanged. Never seek or reload here.
+        for (const delay of [100, 500]) {
+            const timer = setTimeout(() => {
+                state.previewLimitTimers.delete(timer);
+                if (state.disposed || generation !== state.previewLimitGeneration || !state.mutedPlayback ||
+                    state.requestedEndSeconds > 0 || isAdPlayback(player) || player.getPlayerState?.() !== 1) return;
+                try { player.removeCueRange(""); } catch (err) { }
+            }, delay);
+            state.previewLimitTimers.add(timer);
+        }
+    };
+
+    const removeMutedPreviewLimit = (player, event) => {
+        if (!player) return;
+        const state = getPlayerControlState(player);
+        if (state.disposed || !state.mutedPlayback || state.requestedEndSeconds > 0 || isAdPlayback(player)) return;
+        // Muted autoplay carries an unnamed end cue (usually at 30 seconds).
+        // Remove only this open-ended stop cue, preserving chapters and user cues.
+        for (const range of Array.isArray(event?.data) ? event.data : []) {
+            if (range?.id === "" && Number.isFinite(range.start) && range.start >= 0 && range.end === 0x7ffffffffffff) {
+                try { player.removeCueRange?.(range.id); } catch (err) { }
+            }
+        }
+    };
+
+    const attachAdSkipper = (player, adEventsInConfig = false) => {
+        if (!player) return;
+        const state = getPlayerControlState(player);
+        if (state.disposed) return;
+        state.adEventsInConfig ||= adEventsInConfig;
+        // Methods arrive with initialDelivery, after YT.Player returns. Revisit
+        // them onReady instead of marking an incomplete instance as fully wrapped.
+        for (const method of ["seekTo", "loadVideoById", "cueVideoById", "loadVideoByUrl", "cueVideoByUrl", "loadPlaylist", "cuePlaylist", "playVideo", "pauseVideo"]) {
             const original = player[method];
-            if (typeof original !== "function") return;
-            player[method] = function wrappedVideoCommand(...args) {
-                const descriptor = normalizeVideoDescriptor(args[0], typeof args[1] === "number" ? args[1] : 0);
-                if (descriptor) {
-                    setDesiredVideoDescriptor(player, descriptor);
+            if (typeof original !== "function" || state.wrappedMethods.has(method)) continue;
+            const wrapped = function (...args) {
+                if (method === "playVideo" || method === "pauseVideo") {
+                    state.mutedPlaybackIntent = method === "playVideo";
+                    if (method === "pauseVideo") state.cuePlayRequested = false;
+                    return original.apply(this, args);
+                }
+                if (method === "seekTo" && isAdPlayback(player)) {
+                    state.pendingSeek = args;
+                    return undefined;
+                }
+                if (method === "seekTo" && state.mutedPlayback && seekMutedVideo(player, state, args[0])) return undefined;
+                if (method !== "seekTo") {
+                    clearMutedPreviewTimers(state);
+                    state.pendingMutedSeek = null;
+                    state.adActive = false;
+                    state.adCpn = null;
+                    state.pendingSeek = null;
+                    if (state.restoreTimer !== null) clearTimeout(state.restoreTimer);
+                    state.restoreTimer = null;
+                    restoreMutedState(player, state);
+                    restoreIframeOpacity(state);
+                    const options = method.endsWith("ById") || method.endsWith("ByUrl") ? mutedVideoArgs(method, args) : null;
+                    state.mutedPlayback = Boolean(options);
+                    state.mutedLoadOptions = options;
+                    state.mutedPlaybackIntent = options ? method.startsWith("load") : null;
+                    state.cuePlayRequested = false;
+                    state.mutedLoadKind = method.endsWith("ByUrl") ? "ByUrl" : "ById";
+                    state.requestedEndSeconds = Number(options?.endSeconds) || 0;
+                    if (options) {
+                        player.mute?.();
+                        return original.call(this, options);
+                    }
                 }
                 return original.apply(this, args);
             };
+            state.wrappedMethods.set(method, { original, wrapped });
+            player[method] = wrapped;
+        }
+        if (player.__ytAdSkipperAttached) return;
+        player.__ytAdSkipperAttached = true;
+        const listen = (name, callback) => {
+            if (typeof player.addEventListener !== "function") return;
+            player.addEventListener(name, callback);
+            state.listeners.set(name, callback);
         };
-
-        ["loadVideoById", "cueVideoById", "loadPlaylist", "cuePlaylist"].forEach(wrap);
+        // Cover players constructed before our API patch (the iframe API ready
+        // callback can create a background before our retry timer runs).
+        if (!state.adEventsInConfig) {
+            listen("onCueRangesAdded", event => removeMutedPreviewLimit(player, event));
+            for (const name of ["onAdStart", "onAdEnd", "onAdStateChange"]) {
+                listen(name, event => handleAdEvent(player, name, event));
+            }
+        }
+        listen("onStateChange", event => {
+            if (state.disposed) return;
+            applyMutedPlaybackIntent(player, event?.data);
+            scheduleMutedPreviewLimitRemoval(player);
+            if (isAdPlayback(player)) suppressAdPlayback(player);
+            else restoreNormalPlayback(player);
+        });
+        listen("onError", () => {
+            state.adActive = false;
+            state.adCpn = null;
+            state.pendingSeek = null;
+            restoreNormalPlayback(player);
+        });
+        const pollTimer = setInterval(() => {
+            if (state.disposed) return;
+            const iframe = player.getIframe?.();
+            if (!iframe || !document.body.contains(iframe)) {
+                state.cleanup();
+                return;
+            }
+            attachAdSkipper(player);
+            if (isAdPlayback(player)) suppressAdPlayback(player);
+            else restoreNormalPlayback(player);
+        }, 400);
+        const originalDestroy = player.destroy;
+        const cleanup = (destroying = false) => {
+            if (state.disposed) return;
+            state.disposed = true;
+            clearInterval(pollTimer);
+            if (state.restoreTimer !== null) clearTimeout(state.restoreTimer);
+            clearMutedPreviewTimers(state);
+            state.captionTimers.forEach(clearTimeout);
+            state.captionTimers.clear();
+            state.listeners.forEach((callback, name) => {
+                try { player.removeEventListener?.(name, callback); } catch (err) { }
+            });
+            state.wrappedMethods.forEach(({ original, wrapped }, method) => {
+                if (player[method] === wrapped) player[method] = original;
+            });
+            if (player.destroy === patchedDestroy) player.destroy = originalDestroy;
+            if (!destroying) restoreMutedState(player, state);
+            restoreIframeOpacity(state);
+            state.adActive = false;
+            state.pendingSeek = null;
+            state.pendingMutedSeek = null;
+            state.mutedLoadOptions = null;
+            delete player.__ytAdSkipperAttached;
+            moduleState.restoreCallbacks.delete(player);
+        };
+        function patchedDestroy(...args) {
+            cleanup(true);
+            return originalDestroy.apply(this, args);
+        }
+        state.cleanup = cleanup;
+        if (typeof originalDestroy === "function") player.destroy = patchedDestroy;
+        registerRestore(player, cleanup);
     };
 
     const disableYouTubeCaptions = (player) => {
@@ -924,14 +971,49 @@
     };
 
     const scheduleCaptionDisable = (player) => {
+        if (!player) return;
+        const state = getPlayerControlState(player);
+        if (state.disposed) return;
         disableYouTubeCaptions(player);
         [250, 1000, 2500].forEach((delay) => {
-            setTimeout(() => disableYouTubeCaptions(player), delay);
+            const timer = setTimeout(() => {
+                state.captionTimers.delete(timer);
+                if (!state.disposed) disableYouTubeCaptions(player);
+            }, delay);
+            state.captionTimers.add(timer);
+        });
+    };
+
+    const patchYouTubeApiReady = () => {
+        const key = "onYouTubeIframeAPIReady";
+        const descriptor = Object.getOwnPropertyDescriptor(window, key);
+        if (descriptor && (!descriptor.configurable || !("value" in descriptor))) return;
+        let callback = window[key];
+        const wrap = original => function (...args) {
+            if (moduleState.initialized) patchYouTubePlayer();
+            if (typeof original === "function") return original.apply(this, args);
+        };
+        let handler = wrap(callback);
+        const get = () => handler;
+        const set = next => { callback = next; handler = wrap(next); };
+        Object.defineProperty(window, key, { configurable: true, enumerable: descriptor?.enumerable ?? true, get, set });
+        registerRestore("youtube-api-ready", () => {
+            if (Object.getOwnPropertyDescriptor(window, key)?.get !== get) return;
+            if (descriptor) Object.defineProperty(window, key, { ...descriptor, value: callback });
+            else {
+                delete window[key];
+                if (callback !== undefined) window[key] = callback;
+            }
         });
     };
 
     const patchYouTubePlayer = () => {
-        if (!window.YT || !window.YT.Player || window.YT.Player.__ytAdBlockWrapped) {
+        if (window.YT?.Player?.__ytAdBlockWrapped) {
+            if (moduleState.playerPatchTimer) clearTimeout(moduleState.playerPatchTimer);
+            moduleState.playerPatchTimer = null;
+            return;
+        }
+        if (!window.YT || !window.YT.Player) {
             if (!moduleState.playerPatchTimer) {
                 moduleState.playerPatchTimer = setTimeout(() => {
                     moduleState.playerPatchTimer = null;
@@ -941,11 +1023,17 @@
             return;
         }
 
+        if (moduleState.playerPatchTimer) clearTimeout(moduleState.playerPatchTimer);
         moduleState.playerPatchTimer = null;
         const OriginalPlayer = window.YT.Player;
         const PatchedPlayer = function patchedPlayer(element, config = {}) {
             const mergedConfig = { ...config };
             mergedConfig.host = "https://www.youtube-nocookie.com";
+            // Bootstrap an empty embed. The first real video request is made with
+            // playmuted onReady, before an ordinary load can acquire pre-roll ads.
+            const initialVideoId = config.videoId;
+            const hasInitialVideo = typeof initialVideoId === "string" && initialVideoId.length > 0;
+            if (hasInitialVideo) mergedConfig.videoId = "";
             const forcedPlayerVars = {
                 rel: 0,
                 iv_load_policy: 3,
@@ -966,7 +1054,9 @@
             mergedConfig.playerVars = {
                 ...forcedPlayerVars,
                 ...config.playerVars,
-                cc_load_policy: 0
+                cc_load_policy: 0,
+                playmuted: 1,
+                mute: 1
             };
             const forcedFeatureFlags = [
                 "disable_persistent_ads=true",
@@ -981,31 +1071,58 @@
                 "html5_player_enable_ads_client=false"
             ];
             mergedConfig.playerVars.fflags = mergeFeatureFlags(mergedConfig.playerVars.fflags, forcedFeatureFlags);
-            mergedConfig.events = mergedConfig.events || {};
+            mergedConfig.events = { ...config.events };
+            for (const name of ["onAdStart", "onAdEnd", "onAdStateChange"]) {
+                const original = mergedConfig.events[name];
+                mergedConfig.events[name] = function (event) {
+                    attachAdSkipper(event?.target, true);
+                    handleAdEvent(event?.target, name, event);
+                    if (typeof original === "function") return original.call(this, event);
+                };
+            }
+            const originalOnCueRangesAdded = mergedConfig.events.onCueRangesAdded;
+            mergedConfig.events.onCueRangesAdded = function (event) {
+                removeMutedPreviewLimit(event?.target, event);
+                if (typeof originalOnCueRangesAdded === "function") return originalOnCueRangesAdded.call(this, event);
+            };
+            let initialVideoLoaded = false;
             const originalOnReady = mergedConfig.events.onReady;
-            mergedConfig.events.onReady = (event) => {
+            mergedConfig.events.onReady = function (event) {
+                attachAdSkipper(event?.target, true);
                 scheduleCaptionDisable(event?.target);
-                attachAdSkipper(event?.target);
+                const player = event?.target;
+                if (player && hasInitialVideo && !initialVideoLoaded && !getPlayerControlState(player).disposed) {
+                    initialVideoLoaded = true;
+                    const options = {
+                        videoId: initialVideoId,
+                        startSeconds: Number(config.playerVars?.start) || 0,
+                        endSeconds: Number(config.playerVars?.end) || undefined,
+                        playmuted: true,
+                    };
+                    const method = Number(config.playerVars?.autoplay) === 1 ? "loadVideoById" : "cueVideoById";
+                    player[method]?.(options);
+                }
                 if (typeof originalOnReady === "function") {
-                    originalOnReady(event);
+                    originalOnReady.call(this, event);
                 }
             };
             const originalOnStateChange = mergedConfig.events.onStateChange;
-            mergedConfig.events.onStateChange = (event) => {
+            mergedConfig.events.onStateChange = function (event) {
                 const state = event?.data;
                 if (state === window.YT?.PlayerState?.PLAYING || state === window.YT?.PlayerState?.CUED) {
                     disableYouTubeCaptions(event?.target);
                 }
-                attachAdSkipper(event?.target);
+                attachAdSkipper(event?.target, true);
+                applyMutedPlaybackIntent(event?.target, state);
+                scheduleMutedPreviewLimitRemoval(event?.target);
                 if (typeof originalOnStateChange === "function") {
-                    return originalOnStateChange(event);
+                    return originalOnStateChange.call(this, event);
                 }
                 return undefined;
             };
 
             const instance = new OriginalPlayer(element, mergedConfig);
-            trackVideoRequests(instance, mergedConfig);
-            attachAdSkipper(instance);
+            attachAdSkipper(instance, true);
             scheduleCaptionDisable(instance);
             return instance;
         };
@@ -1018,6 +1135,13 @@
             if (window.YT?.Player === PatchedPlayer) {
                 window.YT.Player = OriginalPlayer;
             }
+        });
+        document.querySelectorAll("iframe").forEach(iframe => {
+            try {
+                const url = new URL(iframe.getAttribute("src"), window.location.origin);
+                if (!/(^|\.)youtube(?:-nocookie)?\.com$/.test(url.hostname)) return;
+                attachAdSkipper(window.YT.get?.(iframe.id));
+            } catch (err) { }
         });
     };
 
@@ -1041,6 +1165,7 @@
         patchServiceWorkers();
         patchWindowOpen();
         observeIframes();
+        patchYouTubeApiReady();
         patchYouTubePlayer();
         window.__ivLyricsDebugLog?.(`${logPrefix} initialized`);
     };

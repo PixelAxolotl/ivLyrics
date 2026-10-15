@@ -257,6 +257,8 @@ const VinylActiveLyricRenderer = (() => {
         buildLyricDisplayState,
         getKaraokeLineMetaClass,
         getKaraokeSpeakerStyle,
+        getInterludeHandoffState = () => ({ isDeparting: false, fadeDurationMs: null }),
+        isInterludeMotionEnabled = () => true,
     } = primitives;
 
     return react.memo(({
@@ -329,6 +331,39 @@ const VinylActiveLyricRenderer = (() => {
 
         const firstLyricStartTime = Number(lyrics?.[0]?.startTime) || 1;
         const isLeadingPrelude = renderPosition < firstLyricStartTime;
+        const sourceInterludeInfo = useMemo(() => sourceLine ? getInterludeInfo(
+            sourceLine,
+            lyrics[safeLineIndex + 1],
+            safeLineIndex,
+            lyrics.length
+        ) : { isInterlude: false }, [sourceLine, lyrics, safeLineIndex, settingsRevision, durationMs]);
+        const preparedSourceLine = useMemo(() => sourceInterludeInfo.isInterlude
+            ? { ...sourceLine, interludeInfo: sourceInterludeInfo }
+            : sourceLine, [sourceLine, sourceInterludeInfo]);
+        const trailingInterludeLine = isKara && sourceLine && !isLeadingPrelude
+            ? createActiveTrailingKaraokeInterludeLine({
+                line: preparedSourceLine,
+                nextLine: lyrics[safeLineIndex + 1],
+                lineIndex: safeLineIndex,
+                lineCount: lyrics.length,
+                position: renderPosition,
+                isActiveLine: true,
+                isKara,
+            })
+            : null;
+        const displayLine = trailingInterludeLine || preparedSourceLine;
+        const isInstrumental = isLeadingPrelude || !!displayLine?.interludeInfo?.isInterlude;
+        const handoffNextStart = isLeadingPrelude ? firstLyricStartTime
+            : (isInstrumental && displayLine?.interludeInfo?.kind !== "postlude" ? nextLineStartTime : null);
+        const handoffStart = isLeadingPrelude ? 0 : displayLine?.startTime;
+        const handoff = getInterludeHandoffState({
+            position: renderPosition, startTime: handoffStart,
+            nextStartTime: handoffNextStart,
+            enabled: isInstrumental && motionEnabled && isInterludeMotionEnabled(isKara),
+        });
+        const fadeDurationMs = useMemo(() => handoff.fadeDurationMs,
+            [handoff.isDeparting, handoffStart, handoffNextStart, settingsRevision]);
+        const handoffClass = handoff.isDeparting ? " lyrics-interlude-departing" : "";
 
         if (isLeadingPrelude) {
             return react.createElement(
@@ -342,33 +377,13 @@ const VinylActiveLyricRenderer = (() => {
                     delay: firstLyricStartTime / 3,
                     durationMs: firstLyricStartTime,
                     settingsRevision,
+                    detailClassName: handoffClass,
+                    fadeDurationMs,
                 })
             );
         }
 
         if (!sourceLine) return null;
-
-        const sourceInterludeInfo = getInterludeInfo(
-            sourceLine,
-            lyrics[safeLineIndex + 1],
-            safeLineIndex,
-            lyrics.length
-        );
-        const preparedSourceLine = sourceInterludeInfo.isInterlude
-            ? { ...sourceLine, interludeInfo: sourceInterludeInfo }
-            : sourceLine;
-        const trailingInterludeLine = isKara
-            ? createActiveTrailingKaraokeInterludeLine({
-                line: preparedSourceLine,
-                nextLine: lyrics[safeLineIndex + 1],
-                lineIndex: safeLineIndex,
-                lineCount: lyrics.length,
-                position: renderPosition,
-                isActiveLine: true,
-                isKara,
-            })
-            : null;
-        const displayLine = trailingInterludeLine || preparedSourceLine;
         const { text, originalText, text2 } = getEmbeddedAuxiliaryDisplayValues(displayLine);
         const { mainText, subText, subText2, hasSubLine } = buildLyricDisplayState(
             isKara,
@@ -392,12 +407,12 @@ const VinylActiveLyricRenderer = (() => {
             },
             react.createElement(LyricsLineBlock, {
                 key: `active-lyric-${safeLineIndex}-${displayLine?.startTime || 0}`,
-                className: lineClassName,
-                style: getKaraokeSpeakerStyle(
+                className: lineClassName + handoffClass,
+                style: { ...getKaraokeSpeakerStyle(
                     displayLine?.speaker,
                     displayLine?.["speaker-color"],
                     displayLine?.["speaker-fallback"]
-                ),
+                ), ...(handoff.isDeparting ? { "--lyrics-interlude-fade-duration": `${fadeDurationMs}ms` } : {}) },
                 dir: "auto",
                 mainText,
                 subText,

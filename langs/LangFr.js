@@ -209,6 +209,10 @@ window.LANG_FR = {
       "label": "Couleur du fond uni",
       "desc": "Choisissez la couleur pour l'arrière-plan uni"
     },
+    "videoFallback": {
+      "label": "Fond si la vidéo est indisponible",
+      "desc": "Choisissez le fond affiché si la vidéo est absente ou ne peut pas être lue."
+    },
     "videoBackground": {
       "label": "Arrière-plan vidéo",
       "desc": "Utilise une vidéo YouTube comme arrière-plan (Bêta)"
@@ -471,6 +475,7 @@ window.LANG_FR = {
       "moveDown": "Déplacer vers le bas",
       "supports": {
         "translate": "Traduction",
+        "pronunciation": "Prononciation",
         "metadata": "Métadonnées",
         "tmi": "TMI",
         "researchWebSearch": "Recherche web pour les analyses",
@@ -480,6 +485,38 @@ window.LANG_FR = {
         "wordSupplements": "Détails des mots"
       },
       "noEnabledProviders": "Aucun fournisseur d'IA activé. Veuillez en activer au moins un dans les paramètres.",
+      "noPronunciationProviders": "Aucun fournisseur d'IA activé ne peut générer la prononciation. Activez « Prononciation » pour un fournisseur dans les paramètres Fournisseurs d'IA.",
+      "localModel": {
+        "quality": "Qualité de traduction",
+        "tierLight": "Locale Légère",
+        "tierMedium": "Locale Moyenne",
+        "tierHigh": "Locale Élevée",
+        "tierHint": "Une qualité supérieure traduit plus précisément, mais utilise plus d'espace de stockage et de mémoire.",
+        "tierDownloaded": "Téléchargé",
+        "device": "Processeur",
+        "deviceAuto": "Auto (WebGPU en priorité)",
+        "deviceCpu": "CPU uniquement (plus lent)",
+        "idleUnload": "Libérer la mémoire en cas d'inactivité",
+        "idleAfter": "Après {minutes} min",
+        "idleAfterHours": "Après {hours} h",
+        "idleNever": "Jamais",
+        "statusNotDownloaded": "Pas encore téléchargé. Téléchargez le modèle une fois pour traduire sur cet appareil.",
+        "statusDownloading": "Téléchargement {percent}% · {loaded} / {total} MB",
+        "statusDownloaded": "Téléchargé · Chargé en mémoire lors de la traduction",
+        "statusLoading": "Chargement en mémoire…",
+        "statusReady": "Prêt · {device}",
+        "statusError": "Erreur : {error}",
+        "download": "Télécharger le modèle ({size})",
+        "cancel": "Annuler",
+        "unload": "Libérer la mémoire",
+        "remove": "Supprimer le modèle",
+        "confirmRemove": "Cliquez à nouveau pour supprimer",
+        "test": "Tester la traduction",
+        "privacy": "Les paroles sont traduites sur cet appareil et ne sont jamais envoyées ailleurs. Le moteur (jsDelivr) et le modèle (Hugging Face) ne sont téléchargés qu'une seule fois.",
+        "notReady": "Le modèle local n'est pas encore prêt. Téléchargez-le d'abord dans Paramètres > Fournisseurs d'IA > Local AI.",
+        "unsupportedLanguage": "Le modèle local ne peut pas traduire en {language}.",
+        "downloadBusy": "Attendez la fin du téléchargement du modèle, puis réessayez."
+      },
       "allProvidersFailed": "Tous les fournisseurs d'IA ont échoué à traiter la demande.",
       "enabledCapabilities": "Fonctionnalités activées",
       "capabilitiesDesc": "Sélectionnez les fonctionnalités gérées par ce fournisseur",
@@ -2412,6 +2449,10 @@ window.LANG_FR = {
       "animationsLabel": "Animations du vinyle",
       "animationsDesc": "Active les animations de lecture, pause, rotation, entrée et changement de morceau.",
       "centerRotationLabel": "Faire tourner le centre du vinyle",
+      "trackChangeAnimationLabel": "Animation au changement de morceau",
+      "trackChangeAnimationDesc": "Anime le remplacement de la pochette et du disque au changement de morceau. Si cette option est désactivée, le disque continue de tourner lorsque les animations du vinyle sont activées.",
+      "rotationSpeedLabel": "Vitesse de rotation du disque",
+      "rotationSpeedDesc": "Réglable de 25 à 200 %. À 100 %, le disque fait un tour toutes les 6 secondes. La vitesse de lecture ne change pas.",
       "centerRotationDesc": "Fait tourner l’étiquette centrale avec le disque pendant la lecture.",
       "lyricsLabel": "Afficher les paroles en mode vinyle",
       "lyricsDesc": "Affiche la ligne actuelle sous le disque en mode vinyle.",

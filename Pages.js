@@ -2048,7 +2048,7 @@ const CreditFooter = react.memo(({ provider, contributors }) => {
 });
 window.CreditFooter = CreditFooter;
 
-const IdlingIndicator = react.memo(({ isActive = false, delay = 0, durationMs = 0, settingsRevision = 0, lineRef = null, detailClassName = "" }) => {
+const IdlingIndicator = react.memo(({ isActive = false, delay = 0, durationMs = 0, settingsRevision = 0, lineRef = null, detailClassName = "", fadeDurationMs = null }) => {
 	const className = useMemo(() =>
 		`lyrics-idling-indicator ${!isActive ? "lyrics-idling-indicator-hidden" : ""} lyrics-lyricsContainer-LyricsLine ${isActive ? "lyrics-lyricsContainer-LyricsLine-active" : ""} lyrics-lyricsContainer-LyricsLine-interlude${detailClassName}`,
 		[isActive, detailClassName]
@@ -2058,7 +2058,8 @@ const IdlingIndicator = react.memo(({ isActive = false, delay = 0, durationMs = 
 		"--position-index": 0,
 		"--animation-index": 1,
 		"--indicator-delay": `${delay}ms`,
-	}), [delay]);
+		...(Number.isFinite(fadeDurationMs) ? { "--lyrics-interlude-fade-duration": `${fadeDurationMs}ms` } : {}),
+	}), [delay, fadeDurationMs]);
 
 	if (durationMs <= INTERLUDE_MIN_DURATION_MS) {
 		return null;
@@ -2066,7 +2067,7 @@ const IdlingIndicator = react.memo(({ isActive = false, delay = 0, durationMs = 
 
 	return react.createElement(
 		"div",
-		{ className, style, ref: lineRef },
+		{ className, style, ref: lineRef, "aria-hidden": !isActive ? true : undefined },
 		react.createElement(
 			"p",
 			{ className: "lyrics-lyricsContainer-LyricsLine-interludeMain" },
@@ -5693,6 +5694,23 @@ const shouldHideSyncedLine = ({ compact, isScrolling, animationIndex }) => {
 	);
 };
 
+// Start the exit before the source changes, rather than removing a visible
+// indicator at the lyric boundary. A coarse clock/seek may first enter this
+// window late: cap the fade to the time actually left so it still completes.
+const getInterludeHandoffState = ({ position, startTime = 0, nextStartTime, enabled = true }) => {
+	const valid = enabled && Number.isFinite(position) && Number.isFinite(startTime)
+		&& Number.isFinite(nextStartTime) && nextStartTime > startTime;
+	const leadMs = valid ? Math.min(LYRICS_CENTERING_LEAD_MS, (nextStartTime - startTime) / 2) : 0;
+	const isDeparting = leadMs > 0 && position >= nextStartTime - leadMs && position < nextStartTime;
+	return {
+		isDeparting,
+		fadeDurationMs: isDeparting ? Math.max(0, Math.min(220, leadMs * 0.8, nextStartTime - position - 16)) : null,
+	};
+};
+
+const isInterludeMotionEnabled = (isKara = false) =>
+	!prefersReducedLyricsMotion() && (!isKara || CONFIG.visual["karaoke-line-transition"] !== false);
+
 const getLyricsLineDetailClass = (enabled, focused, past, departingInterlude = false) => {
 	if (!enabled) return "";
 	return ` lyrics-line-detail lyrics-line-detail-${focused ? "current" : past ? "past" : "future"}`
@@ -5965,6 +5983,7 @@ const renderLyricsItems = ({ items, isKara, karaokeRenderGranularity = null, pos
 				settingsRevision,
 				lineRef: (item.trackLineRef ?? item.isActive) ? activeLineRef : null,
 				detailClassName: item.detailClassName,
+				...(Number.isFinite(item.fadeDurationMs) ? { fadeDurationMs: item.fadeDurationMs } : {}),
 			})
 			: react.createElement(LyricsLineBlock, {
 			key: item.key,
@@ -6365,6 +6384,12 @@ const useSyncedLyricsEngine = ({
 	// near an instrumental hand-off; the continuous clock is not a dependency.
 	const isInterludeHandoff = lyricMotionDetailsEnabled && interludeHandoffLead > 0
 		&& layoutPosition >= interludeNextStart - interludeHandoffLead && layoutPosition < interludeNextStart;
+	// Freeze the duration on entry; continuous playback must not recreate static
+	// row props or restart CSS transitions on every clock update.
+	const interludeFadeDurationMs = useMemo(() => getInterludeHandoffState({
+		position: layoutPosition, startTime: activeInterlude?.startTime,
+		nextStartTime: interludeNextStart, enabled: isInterludeHandoff,
+	}).fadeDurationMs, [isInterludeHandoff, activeInterlude?.startTime, interludeNextStart]);
 	const trailingInterludeStyle = useMemo(() => {
 		if (!trailingInterludeLine) return null;
 		const animationIndex = visualAnchorUsesTrailingInterlude ? 0 : -1;
@@ -6377,9 +6402,9 @@ const useSyncedLyricsEngine = ({
 				: "var(--iv-lyrics-centering-duration, 300ms)",
 			"--line-shift-delay": "0s",
 			"--blur-index": 0,
-			...(isInterludeHandoff ? { "--lyrics-interlude-fade-duration": `${Math.min(220, interludeHandoffLead * 0.8)}ms` } : {}),
+			...(isInterludeHandoff ? { "--lyrics-interlude-fade-duration": `${interludeFadeDurationMs}ms` } : {}),
 		};
-	}, [trailingInterludeLine, visualAnchorUsesTrailingInterlude, isScrolling, suppressLayoutShiftAnimation, usesScriptedCompactLineShift, isInterludeHandoff, interludeHandoffLead]);
+	}, [trailingInterludeLine, visualAnchorUsesTrailingInterlude, isScrolling, suppressLayoutShiftAnimation, usesScriptedCompactLineShift, isInterludeHandoff, interludeFadeDurationMs]);
 	const compactLineShiftAnimationsRef = useRef(new Map());
 	const compactLineTransformSnapshotsRef = useRef(new WeakMap());
 	const compactLineMotionDataRef = useRef(new WeakMap());
@@ -6770,6 +6795,9 @@ const useSyncedLyricsEngine = ({
 	const isBeforeFirstLyric = layoutPosition < firstLyricStartTime;
 	const isPreludeHandoff = lyricMotionDetailsEnabled && isBeforeFirstLyric
 		&& layoutPosition >= firstLyricStartTime - Math.min(LYRICS_CENTERING_LEAD_MS, firstLyricStartTime / 2);
+	const preludeFadeDurationMs = useMemo(() => getInterludeHandoffState({
+		position: layoutPosition, nextStartTime: firstLyricStartTime, enabled: isPreludeHandoff,
+	}).fadeDurationMs, [isPreludeHandoff, firstLyricStartTime]);
 	const preparedRenderItems = useMemo(() => {
 
 		return linesToRender.flatMap((line, visibleIndex) => {
@@ -6793,6 +6821,7 @@ const useSyncedLyricsEngine = ({
 						isActive: true,
 						trackLineRef: lineNumber === visualAnchorLineNumber,
 						detailClassName: getLyricsLineDetailClass(lyricMotionDetailsEnabled, true, false, isPreludeHandoff),
+						...(isPreludeHandoff ? { fadeDurationMs: preludeFadeDurationMs } : {}),
 					};
 				}
 			}
@@ -6807,6 +6836,7 @@ const useSyncedLyricsEngine = ({
 					isActive: layoutActiveLineIndex === 0,
 					trackLineRef: lineNumber === visualAnchorLineNumber,
 					detailClassName: getLyricsLineDetailClass(lyricMotionDetailsEnabled && layoutActiveLineIndex === 0, true, false, isPreludeHandoff),
+					...(isPreludeHandoff ? { fadeDurationMs: preludeFadeDurationMs } : {}),
 				};
 			}
 
@@ -6857,7 +6887,7 @@ const useSyncedLyricsEngine = ({
 				key: lineNumber,
 				className,
 				style: isInterludeHandoff && isAnchorLine && line.interludeInfo?.isInterlude
-					? { ...stableLineStyles[visibleIndex], "--lyrics-interlude-fade-duration": `${Math.min(220, interludeHandoffLead * 0.8)}ms` }
+					? { ...stableLineStyles[visibleIndex], "--lyrics-interlude-fade-duration": `${interludeFadeDurationMs}ms` }
 					: stableLineStyles[visibleIndex],
 				line,
 				startTime,
@@ -6955,7 +6985,8 @@ const useSyncedLyricsEngine = ({
 		lyricMotionDetailsEnabled,
 		isInterludeHandoff,
 		isPreludeHandoff,
-		interludeHandoffLead,
+		interludeFadeDurationMs,
+		preludeFadeDurationMs,
 	]);
 	// The full row structure changes at playback boundaries or settings/data
 	// changes. Between them, preserve every static item and update live rows only.
@@ -9691,4 +9722,6 @@ window.ivLyricsLyricRendererPrimitives = Object.freeze({
 	buildLyricDisplayState,
 	getKaraokeLineMetaClass,
 	getKaraokeSpeakerStyle,
+	getInterludeHandoffState,
+	isInterludeMotionEnabled,
 });

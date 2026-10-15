@@ -209,6 +209,10 @@ window.LANG_MS = {
       "label": "Warna Latar Belakang Pepejal",
       "desc": "Pilih warna untuk digunakan sebagai latar belakang warna pepejal"
     },
+    "videoFallback": {
+      "label": "Latar apabila video tiada",
+      "desc": "Pilih latar yang dipaparkan apabila video tidak dijumpai atau tidak dapat dimainkan."
+    },
     "videoBackground": {
       "label": "Latar Belakang Video",
       "desc": "Gunakan video YouTube sebagai latar belakang (Beta)"
@@ -471,6 +475,7 @@ window.LANG_MS = {
       "moveDown": "Alih ke bawah",
       "supports": {
         "translate": "Terjemahan",
+        "pronunciation": "Sebutan",
         "metadata": "Metadata",
         "tmi": "TMI",
         "researchWebSearch": "Carian web untuk penyelidikan",
@@ -480,6 +485,38 @@ window.LANG_MS = {
         "wordSupplements": "Perincian perkataan"
       },
       "noEnabledProviders": "Tiada penyedia AI yang aktif. Sila aktifkan sekurang-kurangnya satu penyedia dalam tetapan.",
+      "noPronunciationProviders": "Tiada penyedia AI aktif yang boleh menjana sebutan. Hidupkan “Sebutan” untuk salah satu penyedia dalam tetapan Penyedia AI.",
+      "localModel": {
+        "quality": "Kualiti terjemahan",
+        "tierLight": "Setempat Ringan",
+        "tierMedium": "Setempat Sederhana",
+        "tierHigh": "Setempat Tinggi",
+        "tierHint": "Kualiti lebih tinggi menterjemah dengan lebih tepat, tetapi menggunakan lebih banyak storan dan memori.",
+        "tierDownloaded": "Dimuat turun",
+        "device": "Pemproses",
+        "deviceAuto": "Automatik (utamakan WebGPU)",
+        "deviceCpu": "CPU sahaja (lebih perlahan)",
+        "idleUnload": "Bebaskan memori apabila tidak digunakan",
+        "idleAfter": "Selepas {minutes} minit",
+        "idleAfterHours": "Selepas {hours} jam",
+        "idleNever": "Tidak pernah",
+        "statusNotDownloaded": "Belum dimuat turun. Muat turun model sekali untuk menterjemah pada peranti ini.",
+        "statusDownloading": "Memuat turun {percent}% · {loaded} / {total} MB",
+        "statusDownloaded": "Telah dimuat turun · Dimuatkan ke memori semasa menterjemah",
+        "statusLoading": "Memuatkan ke memori…",
+        "statusReady": "Sedia · {device}",
+        "statusError": "Ralat: {error}",
+        "download": "Muat turun model ({size})",
+        "cancel": "Batal",
+        "unload": "Bebaskan memori",
+        "remove": "Padam model",
+        "confirmRemove": "Klik sekali lagi untuk memadam",
+        "test": "Uji terjemahan",
+        "privacy": "Lirik diterjemah pada peranti ini dan tidak pernah dihantar ke mana-mana. Enjin (jsDelivr) dan model (Hugging Face) hanya dimuat turun sekali.",
+        "notReady": "Model setempat belum sedia. Muat turun model dahulu dalam Tetapan > Penyedia AI > Local AI.",
+        "unsupportedLanguage": "Model setempat tidak dapat menterjemah ke bahasa {language}.",
+        "downloadBusy": "Tunggu sehingga muat turun model selesai, kemudian cuba lagi."
+      },
       "allProvidersFailed": "Semua penyedia AI gagal memproses permintaan.",
       "enabledCapabilities": "Fungsi Diaktifkan",
       "capabilitiesDesc": "Pilih fungsi yang akan dikendalikan oleh penyedia ini",
@@ -2412,6 +2449,10 @@ window.LANG_MS = {
       "animationsLabel": "Animasi vinil",
       "animationsDesc": "Gunakan animasi main, jeda, putaran, kemunculan dan pertukaran lagu.",
       "centerRotationLabel": "Putar bahagian tengah vinil",
+      "trackChangeAnimationLabel": "Animasi pertukaran lagu",
+      "trackChangeAnimationDesc": "Animasikan pertukaran kulit album dan piring hitam apabila lagu bertukar. Jika pilihan ini dimatikan, piring hitam terus berputar selagi animasi piring hitam dihidupkan.",
+      "rotationSpeedLabel": "Kelajuan putaran piring hitam",
+      "rotationSpeedDesc": "Laraskan antara 25–200%. Pada 100%, piring hitam berputar sekali setiap 6 saat. Kelajuan main balik muzik tidak berubah.",
       "centerRotationDesc": "Memutar label tengah bersama piring hitam semasa dimainkan.",
       "lyricsLabel": "Tunjukkan lirik mod vinil",
       "lyricsDesc": "Memaparkan baris lirik semasa di bawah piring hitam dalam mod vinil.",

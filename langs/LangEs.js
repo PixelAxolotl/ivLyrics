@@ -209,6 +209,10 @@ window.LANG_ES = {
       "label": "Color de fondo sólido",
       "desc": "Selecciona el color para el fondo sólido"
     },
+    "videoFallback": {
+      "label": "Fondo si el vídeo no está disponible",
+      "desc": "Elige el fondo que se muestra si no hay vídeo o no se puede reproducir."
+    },
     "videoBackground": {
       "label": "Fondo de video",
       "desc": "Usa videos de YouTube como fondo (Beta)"
@@ -471,6 +475,7 @@ window.LANG_ES = {
       "moveDown": "Mover abajo",
       "supports": {
         "translate": "Traducción",
+        "pronunciation": "Pronunciación",
         "metadata": "Metadatos",
         "tmi": "TMI",
         "researchWebSearch": "Búsqueda web para investigación",
@@ -480,6 +485,38 @@ window.LANG_ES = {
         "wordSupplements": "Detalles de palabras"
       },
       "noEnabledProviders": "No hay proveedores de IA habilitados. Por favor, habilite al menos uno en la configuración.",
+      "noPronunciationProviders": "Ningún proveedor de IA habilitado puede generar la pronunciación. Activa «Pronunciación» en un proveedor desde los ajustes de Proveedores de IA.",
+      "localModel": {
+        "quality": "Calidad de traducción",
+        "tierLight": "Local Ligera",
+        "tierMedium": "Local Media",
+        "tierHigh": "Local Alta",
+        "tierHint": "Una calidad más alta traduce con más precisión, pero usa más almacenamiento y memoria.",
+        "tierDownloaded": "Descargado",
+        "device": "Procesador",
+        "deviceAuto": "Automático (WebGPU primero)",
+        "deviceCpu": "Solo CPU (más lento)",
+        "idleUnload": "Liberar memoria tras inactividad",
+        "idleAfter": "Después de {minutes} min",
+        "idleAfterHours": "Después de {hours} h",
+        "idleNever": "Nunca",
+        "statusNotDownloaded": "Aún no se ha descargado. Descarga el modelo una vez para traducir en este dispositivo.",
+        "statusDownloading": "Descargando {percent}% · {loaded} / {total} MB",
+        "statusDownloaded": "Descargado · Se carga en memoria al traducir",
+        "statusLoading": "Cargando en memoria…",
+        "statusReady": "Listo · {device}",
+        "statusError": "Error: {error}",
+        "download": "Descargar modelo ({size})",
+        "cancel": "Cancelar",
+        "unload": "Liberar memoria",
+        "remove": "Eliminar modelo",
+        "confirmRemove": "Haz clic de nuevo para eliminar",
+        "test": "Probar traducción",
+        "privacy": "Las letras se traducen en este dispositivo y nunca se envían a ningún sitio. El motor (jsDelivr) y el modelo (Hugging Face) se descargan una sola vez.",
+        "notReady": "El modelo local aún no está listo. Descárgalo primero en Ajustes > Proveedores de IA > Local AI.",
+        "unsupportedLanguage": "El modelo local no puede traducir al {language}.",
+        "downloadBusy": "Espera a que termine la descarga del modelo y vuelve a intentarlo."
+      },
       "allProvidersFailed": "Todos los proveedores de IA fallaron al procesar la solicitud.",
       "enabledCapabilities": "Funciones habilitadas",
       "capabilitiesDesc": "Seleccione qué funciones maneja este proveedor",
@@ -2412,6 +2449,10 @@ window.LANG_ES = {
       "animationsLabel": "Animaciones del vinilo",
       "animationsDesc": "Usa animaciones de reproducción, pausa, giro, entrada y cambio de canción.",
       "centerRotationLabel": "Girar el centro del vinilo",
+      "trackChangeAnimationLabel": "Animación al cambiar de canción",
+      "trackChangeAnimationDesc": "Anima el cambio de funda y disco al cambiar de canción. Al desactivar esta opción, el disco sigue girando si las animaciones del vinilo están activadas.",
+      "rotationSpeedLabel": "Velocidad de giro del disco",
+      "rotationSpeedDesc": "Ajusta entre el 25–200%. Al 100%, el disco da una vuelta cada 6 segundos. No cambia la velocidad de reproducción.",
       "centerRotationDesc": "Gira la etiqueta central junto con el disco durante la reproducción.",
       "lyricsLabel": "Mostrar letra en modo LP",
       "lyricsDesc": "Muestra la línea actual debajo del disco en el modo LP.",

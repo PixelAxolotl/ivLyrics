@@ -209,6 +209,10 @@ window.LANG_KO = {
       "label": "단색 배경 색상",
       "desc": "단색 배경에 사용할 색상을 선택하세요"
     },
+    "videoFallback": {
+      "label": "동영상이 없을 때 배경",
+      "desc": "동영상을 찾지 못하거나 재생할 수 없을 때 표시할 배경을 선택합니다."
+    },
     "videoBackground": {
       "label": "동영상 배경",
       "desc": "YouTube 동영상을 배경으로 사용합니다 (베타)"
@@ -475,6 +479,7 @@ window.LANG_KO = {
       "moveDown": "아래로 이동",
       "supports": {
         "translate": "번역",
+        "pronunciation": "발음",
         "metadata": "메타데이터",
         "tmi": "TMI",
         "researchWebSearch": "리서치 웹 검색",
@@ -484,6 +489,38 @@ window.LANG_KO = {
         "wordSupplements": "단어 상세"
       },
       "noEnabledProviders": "활성화된 AI 제공자가 없습니다. 설정에서 최소 하나 이상의 제공자를 활성화해주세요.",
+      "noPronunciationProviders": "발음을 생성할 수 있는 AI 제공자가 켜져 있지 않습니다. AI 제공자 설정에서 제공자의 '발음' 기능을 켜 주세요.",
+      "localModel": {
+        "quality": "번역 품질",
+        "tierLight": "로컬 라이트",
+        "tierMedium": "로컬 미디엄",
+        "tierHigh": "로컬 하이",
+        "tierHint": "품질이 높을수록 번역이 정확하지만 저장 공간과 메모리를 더 씁니다.",
+        "tierDownloaded": "받음",
+        "device": "실행 장치",
+        "deviceAuto": "자동 (WebGPU 우선)",
+        "deviceCpu": "CPU만 (느림)",
+        "idleUnload": "사용하지 않을 때 메모리 해제",
+        "idleAfter": "{minutes}분 후",
+        "idleAfterHours": "{hours}시간 후",
+        "idleNever": "해제하지 않음",
+        "statusNotDownloaded": "모델이 아직 없습니다. 한 번 내려받으면 이 기기에서 바로 번역합니다.",
+        "statusDownloading": "다운로드 중 {percent}% · {loaded} / {total}MB",
+        "statusDownloaded": "다운로드됨 · 번역할 때 메모리에 올립니다",
+        "statusLoading": "메모리에 올리는 중…",
+        "statusReady": "준비됨 · {device}",
+        "statusError": "오류: {error}",
+        "download": "모델 받기 ({size})",
+        "cancel": "중단",
+        "unload": "메모리 해제",
+        "remove": "모델 삭제",
+        "confirmRemove": "한 번 더 누르면 삭제됩니다",
+        "test": "번역 테스트",
+        "privacy": "가사는 이 기기에서만 번역되며 외부로 전송되지 않습니다. 실행 엔진(jsDelivr)과 모델(Hugging Face)은 처음 한 번만 내려받습니다.",
+        "notReady": "로컬 모델이 아직 준비되지 않았습니다. 설정 > AI 제공자 > Local AI에서 모델을 먼저 받아 주세요.",
+        "unsupportedLanguage": "로컬 모델은 {language}(으)로 번역할 수 없습니다.",
+        "downloadBusy": "모델 다운로드가 끝난 뒤 다시 시도해 주세요."
+      },
       "allProvidersFailed": "모든 AI 제공자가 요청에 실패했습니다.",
       "enabledCapabilities": "활성화된 기능",
       "capabilitiesDesc": "이 제공자가 처리할 기능을 선택하세요",
@@ -2412,6 +2449,10 @@ window.LANG_KO = {
       "animationsLabel": "LP 애니메이션",
       "animationsDesc": "재생·정지, 회전, 등장 및 곡 전환 애니메이션을 사용합니다.",
       "centerRotationLabel": "LP 중앙 회전",
+      "trackChangeAnimationLabel": "곡 변경 애니메이션",
+      "trackChangeAnimationDesc": "곡이 바뀔 때 커버와 레코드가 교체되는 애니메이션을 사용합니다. 이 옵션을 꺼도 LP 애니메이션이 켜져 있으면 레코드는 계속 회전합니다.",
+      "rotationSpeedLabel": "레코드 회전 속도",
+      "rotationSpeedDesc": "25–200% 범위에서 조절합니다. 100%에서는 6초에 한 바퀴 회전하며, 음악 재생 속도에는 영향을 주지 않습니다.",
       "centerRotationDesc": "재생 중 LP 중앙 라벨을 LP 판과 함께 회전합니다.",
       "lyricsLabel": "LP 가사 표시",
       "lyricsDesc": "LP 모드에서 LP 아래에 현재 가사를 표시합니다.",

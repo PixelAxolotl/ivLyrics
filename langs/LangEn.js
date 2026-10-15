@@ -209,6 +209,10 @@ window.LANG_EN = {
       "label": "Solid Background Color",
       "desc": "Select the color for the solid background"
     },
+    "videoFallback": {
+      "label": "Background when video is unavailable",
+      "desc": "Choose the background shown when a video is missing or cannot play."
+    },
     "videoBackground": {
       "label": "Video Background",
       "desc": "Use a YouTube video as the background (Beta)"
@@ -475,6 +479,7 @@ window.LANG_EN = {
       "moveDown": "Move Down",
       "supports": {
         "translate": "Translation",
+        "pronunciation": "Pronunciation",
         "metadata": "Metadata",
         "tmi": "TMI",
         "researchWebSearch": "Research web search",
@@ -484,6 +489,38 @@ window.LANG_EN = {
         "wordSupplements": "Word details"
       },
       "noEnabledProviders": "No AI providers enabled. Please enable at least one provider in settings.",
+      "noPronunciationProviders": "No enabled AI provider can generate pronunciation. Turn on Pronunciation for an AI provider in AI Providers settings.",
+      "localModel": {
+        "quality": "Translation quality",
+        "tierLight": "Local Light",
+        "tierMedium": "Local Medium",
+        "tierHigh": "Local High",
+        "tierHint": "Higher quality translates more accurately but uses more storage and memory.",
+        "tierDownloaded": "Downloaded",
+        "device": "Processor",
+        "deviceAuto": "Auto (WebGPU first)",
+        "deviceCpu": "CPU only (slower)",
+        "idleUnload": "Free memory when idle",
+        "idleAfter": "After {minutes} min",
+        "idleAfterHours": "After {hours} hr",
+        "idleNever": "Never",
+        "statusNotDownloaded": "Not downloaded yet. Download the model once to translate on this device.",
+        "statusDownloading": "Downloading {percent}% · {loaded} / {total} MB",
+        "statusDownloaded": "Downloaded · Loads into memory when it translates",
+        "statusLoading": "Loading into memory…",
+        "statusReady": "Ready · {device}",
+        "statusError": "Error: {error}",
+        "download": "Download model ({size})",
+        "cancel": "Cancel",
+        "unload": "Free memory",
+        "remove": "Delete model",
+        "confirmRemove": "Click again to delete",
+        "test": "Test translation",
+        "privacy": "Lyrics are translated on this device and are never sent anywhere. The engine (jsDelivr) and the model (Hugging Face) are downloaded only once.",
+        "notReady": "The local model is not ready yet. Download it first in Settings > AI Providers > Local AI.",
+        "unsupportedLanguage": "The local model cannot translate into {language}.",
+        "downloadBusy": "Wait for the model download to finish, then try again."
+      },
       "allProvidersFailed": "All AI providers failed to process the request.",
       "enabledCapabilities": "Enabled Capabilities",
       "capabilitiesDesc": "Select which features this provider handles",
@@ -2412,6 +2449,10 @@ window.LANG_EN = {
       "animationsLabel": "LP animations",
       "animationsDesc": "Use play/pause, record spin, entrance, and track-change animations.",
       "centerRotationLabel": "Rotate LP center",
+      "trackChangeAnimationLabel": "Track-change animation",
+      "trackChangeAnimationDesc": "Animate the sleeve and record when changing tracks. Turn this off to keep spinning without the transition while LP animations are enabled.",
+      "rotationSpeedLabel": "Record rotation speed",
+      "rotationSpeedDesc": "25–200%. At 100%, the record turns once every 6 seconds. This does not change playback speed.",
       "centerRotationDesc": "Rotate the center label together with the record during playback.",
       "lyricsLabel": "Show LP lyrics",
       "lyricsDesc": "Show the current lyric below the record in LP mode.",

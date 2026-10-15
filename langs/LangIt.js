@@ -209,6 +209,10 @@ window.LANG_IT = {
       "label": "Colore sfondo tinta unita",
       "desc": "Seleziona il colore da usare per lo sfondo a tinta unita"
     },
+    "videoFallback": {
+      "label": "Sfondo quando il video non è disponibile",
+      "desc": "Scegli lo sfondo da mostrare se il video manca o non può essere riprodotto."
+    },
     "videoBackground": {
       "label": "Sfondo video",
       "desc": "Usa un video YouTube come sfondo (Beta)"
@@ -471,6 +475,7 @@ window.LANG_IT = {
       "moveDown": "Sposta giù",
       "supports": {
         "translate": "Traduzione",
+        "pronunciation": "Pronuncia",
         "metadata": "Metadati",
         "tmi": "TMI",
         "researchWebSearch": "Ricerca web per approfondimenti",
@@ -480,6 +485,38 @@ window.LANG_IT = {
         "wordSupplements": "Dettagli parole"
       },
       "noEnabledProviders": "Nessun fornitore AI abilitato. Abilita almeno un fornitore nelle impostazioni.",
+      "noPronunciationProviders": "Nessun provider AI attivo può generare la pronuncia. Attiva «Pronuncia» per un provider nelle impostazioni Provider AI.",
+      "localModel": {
+        "quality": "Qualità della traduzione",
+        "tierLight": "Locale Leggera",
+        "tierMedium": "Locale Media",
+        "tierHigh": "Locale Alta",
+        "tierHint": "Una qualità più alta traduce con più precisione, ma usa più spazio di archiviazione e memoria.",
+        "tierDownloaded": "Scaricato",
+        "device": "Processore",
+        "deviceAuto": "Automatico (prima WebGPU)",
+        "deviceCpu": "Solo CPU (più lento)",
+        "idleUnload": "Libera memoria quando inattivo",
+        "idleAfter": "Dopo {minutes} min",
+        "idleAfterHours": "Dopo {hours} h",
+        "idleNever": "Mai",
+        "statusNotDownloaded": "Non ancora scaricato. Scarica il modello una volta per tradurre su questo dispositivo.",
+        "statusDownloading": "Scaricamento {percent}% · {loaded} / {total} MB",
+        "statusDownloaded": "Scaricato · Viene caricato in memoria durante la traduzione",
+        "statusLoading": "Caricamento in memoria…",
+        "statusReady": "Pronto · {device}",
+        "statusError": "Errore: {error}",
+        "download": "Scarica modello ({size})",
+        "cancel": "Annulla",
+        "unload": "Libera memoria",
+        "remove": "Elimina modello",
+        "confirmRemove": "Fai clic di nuovo per eliminare",
+        "test": "Prova traduzione",
+        "privacy": "I testi vengono tradotti su questo dispositivo e non vengono mai inviati altrove. Il motore (jsDelivr) e il modello (Hugging Face) vengono scaricati una sola volta.",
+        "notReady": "Il modello locale non è ancora pronto. Scaricalo prima in Impostazioni > Provider AI > Local AI.",
+        "unsupportedLanguage": "Il modello locale non può tradurre in {language}.",
+        "downloadBusy": "Attendi il termine del download del modello, poi riprova."
+      },
       "allProvidersFailed": "Tutti i fornitori AI hanno fallito nell'elaborazione della richiesta.",
       "enabledCapabilities": "Funzionalità abilitate",
       "capabilitiesDesc": "Seleziona quali funzionalità gestisce questo fornitore",
@@ -2412,6 +2449,10 @@ window.LANG_IT = {
       "animationsLabel": "Animazioni vinile",
       "animationsDesc": "Usa le animazioni di riproduzione, pausa, rotazione, ingresso e cambio brano.",
       "centerRotationLabel": "Ruota il centro del vinile",
+      "trackChangeAnimationLabel": "Animazione al cambio brano",
+      "trackChangeAnimationDesc": "Anima il cambio di copertina e disco quando cambia il brano. Disattivando questa opzione, il disco continua a girare se le animazioni vinile sono attive.",
+      "rotationSpeedLabel": "Velocità di rotazione del disco",
+      "rotationSpeedDesc": "Regolabile dal 25 al 200%. Al 100%, il disco compie un giro ogni 6 secondi. La velocità di riproduzione non cambia.",
       "centerRotationDesc": "Ruota l’etichetta centrale insieme al disco durante la riproduzione.",
       "lyricsLabel": "Mostra testo in modalità vinile",
       "lyricsDesc": "Mostra la riga corrente sotto il disco nella modalità vinile.",

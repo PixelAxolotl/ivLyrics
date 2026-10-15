@@ -16,8 +16,11 @@ let harness = helper.slice(helper.indexOf('const repoRoot'), helper.indexOf('tes
   // unmount. Compare every visual prop; anchor ownership has its own regression.
   // The scripted travel clock (--line-motion-*) postdates the frozen pass and
   // is verified by the scripted presentation tests.
+  // Fade duration now fits late handoffs; interlude_handoff.test.mjs verifies
+  // the intentional change while this suite still compares all source timing.
   .replace('const comparable = normalizePresentation(output);', `const comparable = JSON.parse(JSON.stringify(output, function(key, value) {
-    return (key === 'lineRef' && Object.hasOwn(this, 'delay')) || key.startsWith('--line-motion-') ? undefined : value;
+    return (key === 'lineRef' && Object.hasOwn(this, 'delay')) || key === 'fadeDurationMs'
+      || key === '--lyrics-interlude-fade-duration' || key.startsWith('--line-motion-') ? undefined : value;
   }));`)
   .replace('if (props.compact && !props.isKara && !scrolling && !motionPreference.matches)', 'if (false)')
   .replace('const hooks = [];', 'const hooks = [];\nconst cache = { elementsByItem: new WeakMap() };\nlet creates = 0;')

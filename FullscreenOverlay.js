@@ -34,6 +34,26 @@ const FullscreenOverlay = (() => {
         return trimmed || title;
     };
 
+    const resolveVinylMetadataLabel = (original, metadata, field, mode, trimEnabled) => {
+        const values = {
+            original,
+            translated: metadata?.translated?.[field],
+            romanized: metadata?.romanized?.[field]
+        };
+        const kinds = {
+            translated: [values.translated ? "translated" : "original"],
+            romanized: [values.romanized ? "romanized" : "original"],
+            "original-translated": ["original", "translated"],
+            "original-romanized": ["original", "romanized"],
+            all: ["original", "translated", "romanized"]
+        }[mode] || ["original"];
+        const labels = kinds.map((kind) => {
+            const text = values[kind] || "";
+            return trimEnabled ? trimTitle(text) : text;
+        }).filter(Boolean);
+        return [...new Set(labels)].join(" / ");
+    };
+
     const isUnknownTrackMetadata = (meta) => {
         if (!meta) return true;
         const title = meta.title || '';
@@ -2773,11 +2793,15 @@ const FullscreenOverlay = (() => {
             const currentVinylTitle = currentPlayerMetadata?.title || title || "LP";
             const currentVinylArtist = currentPlayerMetadata?.artist_name || artist || "";
             const currentVinylAlbum = currentPlayerMetadata?.album_title || currentVinylTitle;
+            const vinylMetadataMode = CONFIG?.visual?.["translate-metadata"] === true
+                ? CONFIG.visual["translate-metadata-mode"] || "translated"
+                : "original";
+            const vinylMetadata = currentTrackUri === trackUri ? translatedMetadata : null;
             const liveVinylTrack = {
                 uri: currentTrackUri || `${currentVinylTitle}\u0000${currentVinylArtist}`,
                 coverUrl: currentCoverUrl,
-                title: currentVinylTitle,
-                artist: currentVinylArtist,
+                title: resolveVinylMetadataLabel(currentVinylTitle, vinylMetadata, "title", vinylMetadataMode, trimTitleEnabled),
+                artist: resolveVinylMetadataLabel(currentVinylArtist, vinylMetadata, "artist", vinylMetadataMode, trimTitleEnabled),
                 album: currentVinylAlbum,
                 accent: currentTrackUri && currentTrackUri === trackAccentUri
                     ? String(trackAccent || "").trim()
@@ -2880,6 +2904,9 @@ const FullscreenOverlay = (() => {
                     recordSize: CONFIG?.visual?.["fullscreen-vinyl-record-size"] ?? 100,
                     backgroundBlur: CONFIG?.visual?.["fullscreen-vinyl-background-blur"] ?? 0,
                     animations: CONFIG?.visual?.["fullscreen-vinyl-animations"] !== false,
+                    reducedMotion: CONFIG?.visual?.["reduce-motion"] === true,
+                    trackChangeAnimation: CONFIG?.visual?.["fullscreen-vinyl-track-change-animation"] !== false,
+                    rotationSpeed: CONFIG?.visual?.["fullscreen-vinyl-rotation-speed"] ?? 100,
                     centerRotation: CONFIG?.visual?.["fullscreen-vinyl-center-rotation"] !== false,
                     lyricsEnabled: CONFIG?.visual?.["fullscreen-vinyl-lyrics-enabled"] !== false,
                     tonearmStyle: CONFIG?.visual?.["fullscreen-vinyl-tonearm-style"] || "s",
@@ -2977,6 +3004,8 @@ const FullscreenOverlay = (() => {
                     track: liveVinylTrack,
                     isPlaying,
                     animationsEnabled: vinylAnimationsEnabled,
+                    reducedMotion: CONFIG?.visual?.["reduce-motion"] === true,
+                    rotationSpeed: CONFIG?.visual?.["fullscreen-vinyl-rotation-speed"] ?? 100,
                     centerRotationEnabled:
                         CONFIG?.visual?.["fullscreen-vinyl-center-rotation"] !== false,
                     albumRadius,

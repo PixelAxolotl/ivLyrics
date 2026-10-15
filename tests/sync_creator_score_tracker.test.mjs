@@ -12,7 +12,7 @@ const snapshot = (count, granularity = 'character') => ({
   source: { provider: 'lrclib', lrclibId: '1', lyricsFingerprint: 'lrclib-abc-123', lineCharCounts: Array(50).fill(2) },
   lines: Array.from({ length: count }, (_, index) => ({ start: index * 2, end: index * 2 + 1, granularity, chars: [index + 1, index + 1.5] }))
 });
-function fixture({ initial = snapshot(0), saved = null, request, load } = {}) {
+function fixture({ initial = snapshot(0), saved = null, request, load, save, repairSnapshot } = {}) {
   let clock = 0;
   let active = true;
   let authorized = true;
@@ -21,10 +21,14 @@ function fixture({ initial = snapshot(0), saved = null, request, load } = {}) {
   const tracker = create({
     accountId: 'account-A', isrc: 'USAAA2600001', initialSyncData: initial,
     now: () => clock, setInterval: false,
+    repairSnapshot,
     isActive: () => active, isAuthorized: () => authorized,
     storage: {
       getScoreWork: async () => load ? load() : copy(stored),
-      saveScoreWork: async (_, value) => { stored = copy(value); }
+      saveScoreWork: async (_, value) => {
+        if (save) await save(copy(value));
+        stored = copy(value);
+      }
     },
     request: async event => {
       sent.push(copy(event));
@@ -106,6 +110,236 @@ test('failed network response retries the same event ID and sequence after crash
   first.tracker.stop();
   restored.tracker.stop();
 });
+
+const backwardsSnapshot = () => {
+  const data = snapshot(1);
+  data.lines[0].chars = [2, 1];
+  return data;
+};
+const backwardsSnapshotError = () => Object.assign(
+  new Error('Invalid work snapshot: Line 1, char 1: time goes backwards'), { status: 400 }
+);
+const legacyWork = (queue) => ({
+  version: 1, scope: 'account-A:USAAA2600001:lrclib', sessionId: 'server-session', sequence: 2,
+  lastSnapshot: snapshot(0), queue
+});
+const legacyEvent = (action = 'record') => ({
+  eventId: 'legacy-invalid-event', action, syncData: backwardsSnapshot(), activeSeconds: 40,
+  target: { start: 0, end: 1, partId: 'b', granularity: 'character', inputCount: 2,
+    inputIndexes: [0, 1], ranges: [{ start: 0, end: 1 }] }
+});
+
+test('a rejected historical snapshot repairs in FIFO order before a valid checkpoint', async () => {
+  const original = legacyEvent();
+  const checkpoint = { eventId: 'later-valid-checkpoint', action: 'checkpoint', syncData: snapshot(2), activeSeconds: 0 };
+  const repaired = snapshot(1);
+  repaired.source = { ...original.syncData.source, lrclibId: 'historical-source' };
+  original.syncData.source = copy(repaired.source);
+  let repairCalls = 0;
+  const value = fixture({ saved: legacyWork([original, checkpoint]), initial: snapshot(3),
+    repairSnapshot: data => {
+      repairCalls++;
+      assert.deepEqual(data, original.syncData);
+      return repaired;
+    },
+    request: event => {
+      if (event.action === 'record') throw backwardsSnapshotError();
+      if (event.action === 'import') {
+        const durable = value.stored().queue[0];
+        assert.equal(durable.snapshotRepaired, true);
+        assert.equal(durable.action, 'import');
+        assert.deepEqual(durable.syncData, repaired);
+        assert.equal(durable.target, undefined);
+        assert.equal(durable.activeSeconds, 0);
+      }
+      return { success: true, sessionId: 'server-session', sequence: event.sequence };
+    }
+  });
+  await value.tracker.flush();
+  assert.equal(repairCalls, 1);
+  assert.deepEqual(value.sent.map(event => event.action), ['record', 'import', 'checkpoint']);
+  assert.deepEqual(value.sent.map(event => event.eventId), [original.eventId, original.eventId, checkpoint.eventId]);
+  assert.deepEqual(value.sent.map(event => event.sequence), [3, 3, 4]);
+  assert.deepEqual(value.sent[1].syncData, repaired);
+  assert.deepEqual(value.sent[2].syncData, checkpoint.syncData);
+  assert.equal(value.sent[1].target, undefined);
+  assert.equal(value.sent[1].activeSeconds, 0);
+  assert.equal(value.sent.every(event => event.snapshotRepaired === undefined), true);
+  assert.equal(value.tracker.__test.getState().sequence, 4);
+  assert.equal(value.tracker.__test.getState().queue.length, 0);
+  value.tracker.stop();
+});
+
+test('repaired start stays a baseline start with the same ID and zero sequence', async () => {
+  const original = legacyEvent('start');
+  let repairCalls = 0;
+  const value = fixture({ saved: { ...legacyWork([original]), sessionId: '', sequence: 0 },
+    repairSnapshot: () => { repairCalls++; return snapshot(1); },
+    request: event => {
+      if (event.syncData.lines[0].chars[1] === 1) throw backwardsSnapshotError();
+      return { success: true, sessionId: 'server-session', sequence: event.sequence };
+    }
+  });
+  const receipt = await value.tracker.submission(snapshot(2));
+  assert.equal(repairCalls, 1);
+  assert.deepEqual(value.sent.map(event => event.action), ['start', 'start', 'checkpoint']);
+  assert.deepEqual(value.sent.map(event => event.sequence), [0, 0, 1]);
+  assert.equal(value.sent[0].eventId, value.sent[1].eventId);
+  assert.equal(value.sent[1].target, undefined);
+  assert.equal(value.sent[1].activeSeconds, 0);
+  assert.deepEqual(receipt, { workSessionId: 'server-session', workSequence: 1 });
+  value.tracker.stop();
+});
+
+for (const action of ['record', 'effect', 'checkpoint', 'heartbeat', 'import']) {
+  test(`repaired legacy ${action} carries only import provenance, preserving later manual evidence`, async () => {
+    const original = legacyEvent(action);
+    const later = { ...legacyEvent('record'), eventId: 'later-manual-event', syncData: snapshot(2), activeSeconds: 10 };
+    const value = fixture({ saved: legacyWork([original, later]), repairSnapshot: () => snapshot(1),
+      request: event => {
+        if (event.syncData.lines[0].chars[1] === 1) throw backwardsSnapshotError();
+        return { success: true, sessionId: 'server-session', sequence: event.sequence };
+      }
+    });
+    await value.tracker.flush();
+    assert.equal(value.sent[1].action, 'import');
+    assert.equal(value.sent[1].target, undefined);
+    assert.equal(value.sent[1].activeSeconds, 0);
+    assert.equal(value.sent[1].eventId, original.eventId);
+    assert.deepEqual(value.sent[2].target, later.target);
+    assert.equal(value.sent[2].action, 'record');
+    assert.equal(value.sent[2].activeSeconds, 10);
+    assert.equal(value.sent[2].sequence, 4);
+    value.tracker.stop();
+  });
+}
+
+test('a lost repaired acknowledgement reloads the identical durable request without repairing again', async () => {
+  const original = legacyEvent();
+  const checkpoint = { eventId: 'later-valid-checkpoint', action: 'checkpoint', syncData: snapshot(2), activeSeconds: 0 };
+  let acceptedPayload;
+  let repairCalls = 0;
+  const first = fixture({ saved: legacyWork([original, checkpoint]),
+    repairSnapshot: () => { repairCalls++; return snapshot(1); },
+    request: event => {
+      if (event.action === 'record') throw backwardsSnapshotError();
+      acceptedPayload = copy(event);
+      assert.equal(first.stored().queue[0].snapshotRepaired, true);
+      throw new Error('lost acknowledgement');
+    }
+  });
+  await assert.rejects(first.tracker.flush(), /lost acknowledgement/);
+  const saved = first.stored();
+  assert.equal(saved.sequence, 2);
+  assert.equal(saved.queue[0].eventId, original.eventId);
+  assert.equal(saved.queue[0].action, 'import');
+  assert.equal(saved.queue[0].target, undefined);
+  first.setAuthorized(false);
+  first.tracker.stop();
+  const restored = fixture({ saved, repairSnapshot: () => { repairCalls++; throw new Error('must not repair twice'); },
+    request: event => {
+      if (event.eventId === original.eventId) assert.deepEqual(event, acceptedPayload);
+      return { success: true, sessionId: 'server-session', sequence: event.sequence };
+    }
+  });
+  await restored.tracker.flush();
+  assert.equal(repairCalls, 1);
+  assert.deepEqual(restored.sent.map(event => event.action), ['import', 'checkpoint']);
+  assert.deepEqual(restored.sent.map(event => event.sequence), [3, 4]);
+  assert.equal(restored.tracker.__test.getState().queue.length, 0);
+  restored.tracker.stop();
+});
+
+test('repair can happen only once per event, including after a storage reload', async () => {
+  let repairCalls = 0;
+  const repairSnapshot = () => { repairCalls++; return snapshot(repairCalls + 1); };
+  const first = fixture({ saved: legacyWork([legacyEvent()]), repairSnapshot,
+    request: () => { throw backwardsSnapshotError(); }
+  });
+  await assert.rejects(first.tracker.flush(), /time goes backwards/);
+  await assert.rejects(first.tracker.flush(), /time goes backwards/);
+  assert.equal(repairCalls, 1);
+  assert.equal(first.tracker.__test.getState().queue[0].action, 'import');
+  const saved = first.stored();
+  first.setAuthorized(false);
+  first.tracker.stop();
+  const restored = fixture({ saved, repairSnapshot, request: () => { throw backwardsSnapshotError(); } });
+  await assert.rejects(restored.tracker.flush(), /time goes backwards/);
+  assert.equal(repairCalls, 1);
+  assert.deepEqual(restored.tracker.__test.getState().queue, saved.queue);
+  restored.setAuthorized(false);
+  restored.tracker.stop();
+});
+
+test('failed repair persistence prevents retrying until the repaired event is durably saved', async () => {
+  let blockSave = false;
+  const value = fixture({ saved: legacyWork([legacyEvent()]),
+    repairSnapshot: () => { blockSave = true; return snapshot(1); },
+    save: () => { if (blockSave) throw new Error('storage unavailable'); },
+    request: event => {
+      if (event.action === 'record') throw backwardsSnapshotError();
+      return { success: true, sessionId: 'server-session', sequence: event.sequence };
+    }
+  });
+  await assert.rejects(value.tracker.flush(), /storage unavailable/);
+  assert.deepEqual(value.sent.map(event => event.action), ['record']);
+  assert.equal(value.stored().queue[0].action, 'record');
+  assert.equal(value.tracker.__test.getState().queue[0].action, 'import');
+  blockSave = false;
+  await value.tracker.flush();
+  assert.equal(value.sent[1].action, 'import');
+  assert.equal(value.sent[1].eventId, value.sent[0].eventId);
+  assert.equal(value.sent[1].sequence, value.sent[0].sequence);
+  value.tracker.stop();
+});
+
+for (const [label, error] of [
+  ['network failure', new Error('Invalid work snapshot: Line 1, char 1: time goes backwards')],
+  ['another validation error', Object.assign(new Error('Invalid work snapshot: Line 1, char 1: invalid time value'), { status: 400 })],
+  ['another endpoint', Object.assign(new Error('Invalid sync data: Line 1, char 1: time goes backwards'), { status: 400 })],
+  ['server failure', Object.assign(backwardsSnapshotError(), { status: 500 })],
+  ['session conflict', Object.assign(backwardsSnapshotError(), { status: 409 })],
+  ['untyped status', Object.assign(backwardsSnapshotError(), { status: '400' })]
+]) {
+  test(`snapshot recovery refuses ${label} and preserves the original queue`, async () => {
+    const saved = legacyWork([legacyEvent()]);
+    let repairCalls = 0;
+    const value = fixture({ saved, repairSnapshot: () => { repairCalls++; return snapshot(1); },
+      request: () => { throw error; }
+    });
+    await assert.rejects(value.tracker.flush());
+    assert.equal(repairCalls, 0);
+    assert.deepEqual(value.tracker.__test.getState().queue, saved.queue);
+    assert.equal(value.tracker.__test.getState().sequence, saved.sequence);
+    value.setAuthorized(false);
+    value.tracker.stop();
+  });
+}
+
+for (const [label, repair] of [
+  ['missing callback', null],
+  ['null result', () => null],
+  ['identical result', data => data],
+  ['only transient source changes', data => ({ ...data, source: { ...data.source, searchSource: 'changed' } })],
+  ['invalid result shape', () => ({})],
+  ['throwing callback', data => { data.lines[0].chars[1] = 3; throw new Error('cannot repair'); }]
+]) {
+  test(`snapshot recovery refuses ${label} without changing rejected evidence`, async () => {
+    const saved = legacyWork([legacyEvent()]);
+    let repairCalls = 0;
+    const value = fixture({ saved,
+      repairSnapshot: repair && (data => { repairCalls++; return repair(data); }),
+      request: () => { throw backwardsSnapshotError(); }
+    });
+    await assert.rejects(value.tracker.flush(), /time goes backwards/);
+    await assert.rejects(value.tracker.flush(), /time goes backwards/);
+    assert.equal(repairCalls, repair ? 1 : 0);
+    assert.deepEqual(value.tracker.__test.getState().queue, saved.queue);
+    assert.equal(value.tracker.__test.getState().sequence, saved.sequence);
+    value.setAuthorized(false);
+    value.tracker.stop();
+  });
+}
 
 test('submission fails closed when pending work cannot be acknowledged', async () => {
   const { tracker } = fixture({ request: () => { throw new Error('offline'); } });

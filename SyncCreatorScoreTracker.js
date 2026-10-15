@@ -35,6 +35,7 @@
     let pendingSeconds = 0;
     let lastError = null;
     let conflictError = null;
+    const attemptedSnapshotRepairs = new Set();
     const isAuthorized = () => options.isAuthorized?.() !== false;
     const persist = () => {
       const snapshot = clone(state);
@@ -90,6 +91,29 @@
       }
       processing = (async () => {
         const recoveredEvents = new Set();
+        const repairInvalidSnapshot = async (next, error) => {
+          if (error?.status !== 400 || typeof error.message !== 'string'
+            || !/^Invalid work snapshot: .+: time goes backwards$/.test(error.message)
+            || typeof options.repairSnapshot !== 'function' || next.snapshotRepaired
+            || attemptedSnapshotRepairs.has(next.eventId)) return false;
+          attemptedSnapshotRepairs.add(next.eventId);
+          let repaired;
+          try {
+            repaired = await options.repairSnapshot(clone(next.syncData));
+            if (!repaired || typeof repaired !== 'object' || !Array.isArray(repaired.lines)
+              || sameSnapshot(next.syncData, repaired)) return false;
+            repaired = clone(repaired);
+          } catch { return false; }
+          if (!isAuthorized()) throw new Error('Sync scoring account changed.');
+          // Validation rejected this event before hashing or saving it. Repair
+          // its own snapshot in place, without claiming unverified manual work.
+          const replacement = { ...next, syncData: repaired,
+            action: next.action === 'start' ? 'start' : 'import', activeSeconds: 0, snapshotRepaired: true };
+          delete replacement.target;
+          state.queue[0] = replacement;
+          await persist();
+          return true;
+        };
         // Recover from a 409 conflict: resume the server session, discard only
         // acknowledged events, then let the caller retry the current event.
         const resolveScoreConflict = async (next, error) => {
@@ -143,12 +167,17 @@
             ...(state.sessionId ? { sessionId: state.sessionId } : {}),
             sequence: next.action === 'start' ? 0 : state.sequence + 1
           };
+          // The durable repair marker is local, never part of a request hash.
+          delete payload.snapshotRepaired;
           // Persist before sending. Retried requests retain the same event ID.
           await persist();
           let result;
           try {
             result = await options.request(payload);
           } catch (error) {
+            // Repair the offending event in place when the host supplies a
+            // repairer; otherwise fall through and discard it.
+            if (await repairInvalidSnapshot(next, error)) continue;
             if (error?.status === 400 || error?.status === 422) {
               // The server will never accept this snapshot (e.g. negative or
               // non-finite timing). Retrying the same bytes blocks every later

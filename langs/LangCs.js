@@ -209,6 +209,10 @@ window.LANG_CS = {
       "label": "Pevná barva pozadí",
       "desc": "Vyberte barvu plného pozadí"
     },
+    "videoFallback": {
+      "label": "Pozadí při nedostupném videu",
+      "desc": "Vyberte pozadí, které se zobrazí, pokud video chybí nebo jej nelze přehrát."
+    },
     "videoBackground": {
       "label": "Video pozadí",
       "desc": "Použití videa YouTube jako pozadí (Beta)"
@@ -471,6 +475,7 @@ window.LANG_CS = {
       "moveDown": "Přesunout dolů",
       "supports": {
         "translate": "Překlad",
+        "pronunciation": "Výslovnost",
         "metadata": "Metadata",
         "tmi": "TMI",
         "researchWebSearch": "Vyhledávání na webu pro rešerši",
@@ -480,6 +485,38 @@ window.LANG_CS = {
         "wordSupplements": "Podrobnosti slov"
       },
       "noEnabledProviders": "Nejsou povoleni žádní poskytovatelé AI. Povolte v nastavení alespoň jednoho poskytovatele.",
+      "noPronunciationProviders": "Žádný zapnutý poskytovatel AI neumí vytvořit výslovnost. V nastavení Poskytovatelé AI zapněte u některého poskytovatele „Výslovnost“.",
+      "localModel": {
+        "quality": "Kvalita překladu",
+        "tierLight": "Místní lehká",
+        "tierMedium": "Místní střední",
+        "tierHigh": "Místní vysoká",
+        "tierHint": "Vyšší kvalita znamená přesnější překlad, ale i větší nároky na úložiště a paměť.",
+        "tierDownloaded": "Staženo",
+        "device": "Procesor",
+        "deviceAuto": "Automaticky (přednostně WebGPU)",
+        "deviceCpu": "Pouze CPU (pomalejší)",
+        "idleUnload": "Uvolnit paměť při nečinnosti",
+        "idleAfter": "Po {minutes} min",
+        "idleAfterHours": "Po {hours} h",
+        "idleNever": "Nikdy",
+        "statusNotDownloaded": "Zatím nestaženo. Stáhněte model jednou, abyste mohli překládat v tomto zařízení.",
+        "statusDownloading": "Stahování {percent}% · {loaded} / {total} MB",
+        "statusDownloaded": "Staženo · Do paměti se načte při překladu",
+        "statusLoading": "Načítání do paměti…",
+        "statusReady": "Připraveno · {device}",
+        "statusError": "Chyba: {error}",
+        "download": "Stáhnout model ({size})",
+        "cancel": "Zrušit",
+        "unload": "Uvolnit paměť",
+        "remove": "Smazat model",
+        "confirmRemove": "Klikněte znovu pro smazání",
+        "test": "Otestovat překlad",
+        "privacy": "Texty písní se překládají v tomto zařízení a nikam se neodesílají. Engine (jsDelivr) a model (Hugging Face) se stahují jen jednou.",
+        "notReady": "Místní model ještě není připraven. Nejprve ho stáhněte v Nastavení > Poskytovatelé AI > Local AI.",
+        "unsupportedLanguage": "Místní model neumí překládat do jazyka {language}.",
+        "downloadBusy": "Počkejte na dokončení stahování modelu a zkuste to znovu."
+      },
       "allProvidersFailed": "Všem poskytovatelům AI se nepodařilo požadavek zpracovat.",
       "enabledCapabilities": "Povolené schopnosti",
       "capabilitiesDesc": "Vyberte funkce, které tento poskytovatel zpracovává",
@@ -2412,6 +2449,10 @@ window.LANG_CS = {
       "animationsLabel": "Animace vinylu",
       "animationsDesc": "Použije animace přehrávání, pauzy, otáčení, příchodu a změny skladby.",
       "centerRotationLabel": "Otáčet střed desky",
+      "trackChangeAnimationLabel": "Animace změny skladby",
+      "trackChangeAnimationDesc": "Animuje výměnu obalu a desky při změně skladby. Po vypnutí se deska dál otáčí, pokud jsou zapnuté animace vinylu.",
+      "rotationSpeedLabel": "Rychlost otáčení desky",
+      "rotationSpeedDesc": "Nastavte 25–200 %. Při 100 % se deska otočí jednou za 6 sekund. Rychlost přehrávání hudby se nemění.",
       "centerRotationDesc": "Během přehrávání otáčí středovým štítkem společně s deskou.",
       "lyricsLabel": "Zobrazit text v režimu vinylu",
       "lyricsDesc": "V režimu vinylu zobrazí aktuální řádek textu pod deskou.",

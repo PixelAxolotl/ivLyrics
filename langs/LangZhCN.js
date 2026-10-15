@@ -209,6 +209,10 @@ window.LANG_ZH_CN = {
       "label": "纯色背景颜色",
       "desc": "选择用于纯色背景的颜色"
     },
+    "videoFallback": {
+      "label": "视频不可用时的背景",
+      "desc": "选择在找不到视频或无法播放时显示的背景。"
+    },
     "videoBackground": {
       "label": "视频背景",
       "desc": "使用 YouTube 视频作为背景（Beta）"
@@ -471,6 +475,7 @@ window.LANG_ZH_CN = {
       "moveDown": "下移",
       "supports": {
         "translate": "翻译",
+        "pronunciation": "发音",
         "metadata": "元数据",
         "tmi": "TMI",
         "researchWebSearch": "研究网页搜索",
@@ -480,6 +485,38 @@ window.LANG_ZH_CN = {
         "wordSupplements": "单词详情"
       },
       "noEnabledProviders": "未启用 AI 提供商。请在设置中至少启用一个提供商。",
+      "noPronunciationProviders": "没有已启用的 AI 提供商可以生成发音。请在 AI 提供商设置中为某个提供商开启“发音”。",
+      "localModel": {
+        "quality": "翻译质量",
+        "tierLight": "本地轻量",
+        "tierMedium": "本地中等",
+        "tierHigh": "本地高质量",
+        "tierHint": "质量越高，翻译越准确，但会占用更多存储空间和内存。",
+        "tierDownloaded": "已下载",
+        "device": "处理器",
+        "deviceAuto": "自动（优先 WebGPU）",
+        "deviceCpu": "仅 CPU（较慢）",
+        "idleUnload": "闲置时释放内存",
+        "idleAfter": "{minutes} 分钟后",
+        "idleAfterHours": "{hours} 小时后",
+        "idleNever": "从不",
+        "statusNotDownloaded": "尚未下载。下载一次模型，即可在此设备上翻译。",
+        "statusDownloading": "正在下载 {percent}% · {loaded} / {total} MB",
+        "statusDownloaded": "已下载 · 翻译时加载到内存",
+        "statusLoading": "正在加载到内存…",
+        "statusReady": "就绪 · {device}",
+        "statusError": "错误：{error}",
+        "download": "下载模型 ({size})",
+        "cancel": "取消",
+        "unload": "释放内存",
+        "remove": "删除模型",
+        "confirmRemove": "再次点击即可删除",
+        "test": "测试翻译",
+        "privacy": "歌词仅在此设备上翻译，绝不会发送到任何地方。运行引擎 (jsDelivr) 和模型 (Hugging Face) 只需下载一次。",
+        "notReady": "本地模型尚未就绪。请先在 设置 > AI 提供商 > Local AI 中下载模型。",
+        "unsupportedLanguage": "本地模型无法翻译成{language}。",
+        "downloadBusy": "请等待模型下载完成后再试。"
+      },
       "allProvidersFailed": "所有 AI 提供商都无法处理该请求。",
       "enabledCapabilities": "启用的功能",
       "capabilitiesDesc": "选择该供应商处理的功能",
@@ -2412,6 +2449,10 @@ window.LANG_ZH_CN = {
       "animationsLabel": "黑胶动画",
       "animationsDesc": "启用播放/暂停、唱片旋转、入场和切歌动画。",
       "centerRotationLabel": "旋转唱片中心",
+      "trackChangeAnimationLabel": "切歌动画",
+      "trackChangeAnimationDesc": "切换歌曲时播放封套和唱片的更换动画。关闭此选项后，只要 LP 动画已启用，唱片仍会继续旋转。",
+      "rotationSpeedLabel": "唱片旋转速度",
+      "rotationSpeedDesc": "可在 25–200% 之间调节。100% 时每 6 秒旋转一圈，不会改变音乐播放速度。",
       "centerRotationDesc": "播放时让唱片中心标签随唱片一起旋转。",
       "lyricsLabel": "显示黑胶歌词",
       "lyricsDesc": "在黑胶模式的唱片下方显示当前歌词。",

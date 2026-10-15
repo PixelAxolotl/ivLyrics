@@ -54,6 +54,41 @@ const VinylPlayerMode = (() => {
         return PRESENTATION_MODES.includes(normalized) ? normalized : "vinyl";
     };
 
+    const normalizeRotationSpeed = (value) => {
+        const speed = Number(value ?? 100);
+        return Number.isFinite(speed) ? Math.min(200, Math.max(25, speed)) : 100;
+    };
+
+    const useReducedMotion = () => {
+        const [reducedMotion, setReducedMotion] = useState(() =>
+            !!window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches
+        );
+        useEffect(() => {
+            const media = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+            if (!media) return undefined;
+            const update = () => setReducedMotion(media.matches);
+            update();
+            media.addEventListener?.("change", update);
+            return () => media.removeEventListener?.("change", update);
+        }, []);
+        return reducedMotion;
+    };
+
+    const useRotationSpeed = (rotationSpeed) => {
+        const clockRef = useRef(null);
+        const rate = normalizeRotationSpeed(rotationSpeed) / 100;
+        (react.useLayoutEffect || useEffect)(() => {
+            // Keep the CSS clock and its current time. Changing animation-duration
+            // would reinterpret elapsed time and visibly jump the record's angle.
+            for (const animation of clockRef.current?.getAnimations?.() || []) {
+                if (animation.animationName === "ivlyrics-vinyl-spin-clock") {
+                    animation.updatePlaybackRate(rate);
+                }
+            }
+        }, [rate]);
+        return clockRef;
+    };
+
     const clampVinylProgress = (value) => Math.min(Math.max(value, 0), 1);
     const clampVinylSeekPosition = (value, duration) => {
         const safeDuration = Math.max(Number(duration) || 0, 0);
@@ -171,8 +206,18 @@ const VinylPlayerMode = (() => {
                         }, albumCopy)
                     )
                 ),
-                react.createElement("span", { className: "ivlyrics-vinyl-label-title" }, title || "LP"),
-                react.createElement("span", { className: "ivlyrics-vinyl-label-artist" }, artist || ""),
+                react.createElement("span", {
+                    id: `${idPrefix}-title`,
+                    className: "ivlyrics-vinyl-label-title",
+                    title: title || "LP",
+                    dir: "auto"
+                }, title || "LP"),
+                react.createElement("span", {
+                    id: `${idPrefix}-artist`,
+                    className: "ivlyrics-vinyl-label-artist",
+                    title: artist || "",
+                    dir: "auto"
+                }, artist || ""),
                 react.createElement("span", { className: "ivlyrics-vinyl-label-spindle" })
             )
         );
@@ -426,12 +471,15 @@ const VinylPlayerMode = (() => {
         track,
         isPlaying,
         centerRotationEnabled,
+        rotationSpeed = 100,
         recordScale = 1,
         interactionProps = {}
     }) => {
+        const clockRef = useRotationSpeed(rotationSpeed);
         const label = I18n.t("vinyl.closeHint") || "Return to standard view";
         return react.createElement("button", {
             ...interactionProps,
+            ref: clockRef,
             type: "button",
             className: [
                 "ivlyrics-compact-vinyl-stage",
@@ -443,6 +491,7 @@ const VinylPlayerMode = (() => {
                 "--iv-vinyl-compact-scale": recordScale
             },
             "aria-label": label,
+            "aria-describedby": "ivlyrics-vinyl-compact-title ivlyrics-vinyl-compact-artist",
             title: label
         },
             react.createElement(VinylDisc, {
@@ -459,15 +508,20 @@ const VinylPlayerMode = (() => {
         isPlaying,
         animationsEnabled = true,
         centerRotationEnabled = true,
+        rotationSpeed = 100,
+        reducedMotion: appReducedMotion = false,
         albumRadius = 12,
         coverClassName = "",
         coverStyle = {}
     }) => {
+        const systemReducedMotion = useReducedMotion();
+        const reducedMotion = appReducedMotion || systemReducedMotion;
+        const clockRef = useRotationSpeed(rotationSpeed);
         return react.createElement("div", {
             className: [
                 "ivlyrics-compact-album-vinyl",
                 isPlaying ? "is-playing" : "is-paused",
-                animationsEnabled ? "" : "is-motion-disabled",
+                animationsEnabled && !reducedMotion ? "" : "is-motion-disabled",
                 centerRotationEnabled ? "is-center-rotation-enabled" : ""
             ].filter(Boolean).join(" "),
             style: {
@@ -477,6 +531,7 @@ const VinylPlayerMode = (() => {
             "aria-hidden": "true"
         },
             react.createElement("span", {
+                ref: clockRef,
                 className: "ivlyrics-compact-album-record"
             },
                 react.createElement(VinylDisc, {
@@ -514,6 +569,8 @@ const VinylPlayerMode = (() => {
         onStopPlayback,
         onTogglePlayback,
         animationsEnabled = true,
+        reducedMotion = false,
+        rotationSpeed = 100,
         tonearmStyle: tonearmStyleValue = "s",
         tonearmFinish: tonearmFinishValue = "white",
         tonearmSize = 100,
@@ -521,6 +578,7 @@ const VinylPlayerMode = (() => {
         className = "",
         style = {}
     }) => {
+        const clockRef = useRotationSpeed(rotationSpeed);
         const [phase, setPhase] = useState("paused");
         const [scrubPosition, setScrubPosition] = useState(null);
         const [dragTonearmAngle, setDragTonearmAngle] = useState(null);
@@ -600,7 +658,6 @@ const VinylPlayerMode = (() => {
         cancelTonearmInteractionRef.current = cancelTonearmInteraction;
 
         useEffect(() => {
-            const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
             const finalPhase = isPlaying ? "playing" : "paused";
 
             if (!animationsEnabled || reducedMotion) {
@@ -627,7 +684,7 @@ const VinylPlayerMode = (() => {
                 window.cancelAnimationFrame(frameId);
                 timers.forEach((timer) => window.clearTimeout(timer));
             };
-        }, [animationsEnabled, isPlaying, setVisualPhase]);
+        }, [animationsEnabled, reducedMotion, isPlaying, setVisualPhase]);
 
         useEffect(() => {
             if (!isPlaying) {
@@ -997,12 +1054,13 @@ const VinylPlayerMode = (() => {
         const { playLabel, vinylModeLabel, albumLabel, tonearmLabel, isDraggingTonearm, isCueingTonearm, isEjectingTonearm, rootClassName } = computeVinylPlayerPresentation();
 
         const renderVinylVisualGroup = () => (
-            react.createElement("div", { className: "ivlyrics-vinyl-visual-group" },
+            react.createElement("div", { ref: clockRef, className: "ivlyrics-vinyl-visual-group" },
                 react.createElement("div", { className: "ivlyrics-vinyl-outgoing-pair" },
                     react.createElement("button", {
                         type: "button",
                         className: "ivlyrics-vinyl-record-shell",
                         "aria-label": playLabel,
+                        "aria-describedby": "ivlyrics-vinyl-current-title ivlyrics-vinyl-current-artist",
                         onPointerDown: (event) => event.stopPropagation(),
                         onClick: (event) => {
                             event.preventDefault();
@@ -1199,6 +1257,10 @@ const VinylPlayerMode = (() => {
         const isVideoPresentation =
             normalizedPresentationMode === "video";
         const animationsEnabled = vinylSettings.animations !== false;
+        const trackChangeEnabled = vinylSettings.trackChangeAnimation !== false;
+        const rotationSpeed = normalizeRotationSpeed(vinylSettings.rotationSpeed);
+        const systemReducedMotion = useReducedMotion();
+        const reducedMotion = vinylSettings.reducedMotion === true || systemReducedMotion;
         const centerRotationEnabled = vinylSettings.centerRotation !== false;
         const lyricsEnabled = vinylSettings.lyricsEnabled !== false;
         const albumScale = Math.min(1.4, Math.max(0.7, (Number(vinylSettings.albumSize) || 100) / 100));
@@ -1263,11 +1325,18 @@ const VinylPlayerMode = (() => {
 
         useEffect(() => {
             const shownTrack = displayedTrackRef.current;
-            if (!isFullVinylPresentation) {
+            if (
+                !isFullVinylPresentation
+                || !animationsEnabled
+                || !trackChangeEnabled
+                || reducedMotion
+                || shownTrack?.uri === liveTrack.uri
+                || areSameTrackVisuals(shownTrack, liveTrack)
+            ) {
                 trackTransitionRevisionRef.current += 1;
                 requestedTrackKeyRef.current = "";
                 clearTrackTimers();
-                if (!areSameTrackVisuals(shownTrack, liveTrack)) {
+                if (shownTrack?.uri !== liveTrack.uri || !areSameTrackVisuals(shownTrack, liveTrack)) {
                     displayedTrackRef.current = liveTrack;
                     setDisplayedTrack(liveTrack);
                 }
@@ -1277,20 +1346,24 @@ const VinylPlayerMode = (() => {
                 return;
             }
 
-            if (areSameTrackVisuals(shownTrack, liveTrack)) {
+            if (incomingTrackRef.current?.uri === liveTrack.uri) {
+                // Translation/settings updates belong to the incoming record;
+                // they must not restart an already running track handoff.
+                const updatedTrack = { ...liveTrack, accent: incomingTrackRef.current.accent };
+                incomingTrackRef.current = updatedTrack;
+                setIncomingTrack(updatedTrack);
                 return;
             }
 
             const nextTrackKey = getTrackVisualKey(liveTrack);
             if (requestedTrackKeyRef.current === nextTrackKey) return;
 
-            const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
             const revision = trackTransitionRevisionRef.current + 1;
             trackTransitionRevisionRef.current = revision;
             requestedTrackKeyRef.current = nextTrackKey;
             clearTrackTimers();
 
-            if (!shownTrack?.uri || !animationsEnabled || reducedMotion) {
+            if (!shownTrack?.uri) {
                 displayedTrackRef.current = liveTrack;
                 setDisplayedTrack(liveTrack);
                 incomingTrackRef.current = null;
@@ -1408,6 +1481,8 @@ const VinylPlayerMode = (() => {
             liveTrack.artist,
             liveTrack.album,
             animationsEnabled,
+            trackChangeEnabled,
+            reducedMotion,
             clearTrackTimers,
             isFullVinylPresentation
         ]);
@@ -1517,7 +1592,7 @@ const VinylPlayerMode = (() => {
                     karaokeSource: snapshot.karaokeSource,
                     settingsRevision: snapshot.settingsRevision,
                     positionOverride: null,
-                    motionEnabled: animationsEnabled,
+                    motionEnabled: animationsEnabled && !reducedMotion,
                     durationMs: duration,
                     singleLineScroll: !isVideoPresentation && renderableLyrics === snapshot.lyrics
                 })
@@ -1581,7 +1656,7 @@ const VinylPlayerMode = (() => {
                 isFullVinylPresentation ? "has-full-vinyl-stage" : "",
                 isCompactVinylPresentation ? "has-compact-vinyl-stage" : "",
                 isVideoPresentation ? "has-video-stage" : "",
-                animationsEnabled ? "" : "is-motion-disabled",
+                animationsEnabled && !reducedMotion ? "" : "is-motion-disabled",
                 transitionClass,
                 lyricsEnabled ? "has-lyric-slot" : "",
                 hasVisibleLyric ? "has-active-lyric" : "",
@@ -1642,6 +1717,8 @@ const VinylPlayerMode = (() => {
                 position,
                 duration,
                 animationsEnabled,
+                reducedMotion,
+                rotationSpeed,
                 tonearmStyle: vinylSettings.tonearmStyle,
                 tonearmFinish: vinylSettings.tonearmFinish,
                 tonearmSize: vinylSettings.tonearmSize,
@@ -1654,6 +1731,7 @@ const VinylPlayerMode = (() => {
                 track: liveTrack,
                 isPlaying,
                 centerRotationEnabled,
+                rotationSpeed,
                 recordScale,
                 interactionProps
             }) : null,

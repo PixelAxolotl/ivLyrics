@@ -36,6 +36,7 @@
         apiKeyUrl: 'https://api.paxsenix.org/dashboard',
         supports: {
             translate: true,
+            pronunciation: true,
             metadata: true,
             tmi: true,
             researchWebSearch: true,

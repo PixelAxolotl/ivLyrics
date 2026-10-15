@@ -209,6 +209,10 @@ window.LANG_ID = {
       "label": "Warna Latar Belakang Solid",
       "desc": "Pilih warna untuk latar belakang solid"
     },
+    "videoFallback": {
+      "label": "Latar saat video tidak tersedia",
+      "desc": "Pilih latar yang ditampilkan saat video tidak ditemukan atau tidak dapat diputar."
+    },
     "videoBackground": {
       "label": "Latar Belakang Video",
       "desc": "Gunakan video YouTube sebagai latar belakang (Beta)"
@@ -471,6 +475,7 @@ window.LANG_ID = {
       "moveDown": "Pindahkan ke Bawah",
       "supports": {
         "translate": "Terjemahan",
+        "pronunciation": "Pelafalan",
         "metadata": "Metadata",
         "tmi": "TMI",
         "researchWebSearch": "Pencarian web untuk riset",
@@ -480,6 +485,38 @@ window.LANG_ID = {
         "wordSupplements": "Detail kata"
       },
       "noEnabledProviders": "Tidak ada penyedia AI yang diaktifkan. Harap aktifkan setidaknya satu penyedia di pengaturan.",
+      "noPronunciationProviders": "Tidak ada penyedia AI aktif yang dapat membuat pelafalan. Aktifkan “Pelafalan” untuk salah satu penyedia di pengaturan Penyedia AI.",
+      "localModel": {
+        "quality": "Kualitas terjemahan",
+        "tierLight": "Lokal Ringan",
+        "tierMedium": "Lokal Sedang",
+        "tierHigh": "Lokal Tinggi",
+        "tierHint": "Kualitas lebih tinggi menghasilkan terjemahan lebih akurat, tetapi memakai lebih banyak penyimpanan dan memori.",
+        "tierDownloaded": "Diunduh",
+        "device": "Prosesor",
+        "deviceAuto": "Otomatis (utamakan WebGPU)",
+        "deviceCpu": "Hanya CPU (lebih lambat)",
+        "idleUnload": "Bebaskan memori saat tidak digunakan",
+        "idleAfter": "Setelah {minutes} menit",
+        "idleAfterHours": "Setelah {hours} jam",
+        "idleNever": "Tidak pernah",
+        "statusNotDownloaded": "Belum diunduh. Unduh model sekali untuk menerjemahkan di perangkat ini.",
+        "statusDownloading": "Mengunduh {percent}% · {loaded} / {total} MB",
+        "statusDownloaded": "Sudah diunduh · Dimuat ke memori saat menerjemahkan",
+        "statusLoading": "Memuat ke memori…",
+        "statusReady": "Siap · {device}",
+        "statusError": "Kesalahan: {error}",
+        "download": "Unduh model ({size})",
+        "cancel": "Batal",
+        "unload": "Bebaskan memori",
+        "remove": "Hapus model",
+        "confirmRemove": "Klik lagi untuk menghapus",
+        "test": "Uji terjemahan",
+        "privacy": "Lirik diterjemahkan di perangkat ini dan tidak pernah dikirim ke mana pun. Mesin (jsDelivr) dan model (Hugging Face) hanya diunduh sekali.",
+        "notReady": "Model lokal belum siap. Unduh terlebih dahulu di Pengaturan > Penyedia AI > Local AI.",
+        "unsupportedLanguage": "Model lokal tidak dapat menerjemahkan ke bahasa {language}.",
+        "downloadBusy": "Tunggu hingga unduhan model selesai, lalu coba lagi."
+      },
       "allProvidersFailed": "Semua penyedia AI gagal memproses permintaan.",
       "enabledCapabilities": "Kemampuan yang Diaktifkan",
       "capabilitiesDesc": "Pilih fitur mana yang ditangani penyedia ini",
@@ -2412,6 +2449,10 @@ window.LANG_ID = {
       "animationsLabel": "Animasi vinil",
       "animationsDesc": "Gunakan animasi putar, jeda, rotasi, masuk, dan pergantian lagu.",
       "centerRotationLabel": "Putar bagian tengah vinil",
+      "trackChangeAnimationLabel": "Animasi pergantian lagu",
+      "trackChangeAnimationDesc": "Animasikan pergantian sampul dan piringan saat lagu berubah. Jika opsi ini dimatikan, piringan tetap berputar selama animasi vinil diaktifkan.",
+      "rotationSpeedLabel": "Kecepatan putaran piringan",
+      "rotationSpeedDesc": "Atur antara 25–200%. Pada 100%, piringan berputar sekali setiap 6 detik. Kecepatan pemutaran musik tidak berubah.",
       "centerRotationDesc": "Memutar label tengah bersama piringan saat diputar.",
       "lyricsLabel": "Tampilkan lirik mode vinil",
       "lyricsDesc": "Menampilkan baris lirik saat ini di bawah piringan dalam mode vinil.",

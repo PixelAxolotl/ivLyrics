@@ -209,6 +209,10 @@ window.LANG_VI = {
       "label": "Màu nền đơn sắc",
       "desc": "Chọn màu để sử dụng cho nền đơn sắc"
     },
+    "videoFallback": {
+      "label": "Nền khi video không khả dụng",
+      "desc": "Chọn nền hiển thị khi không tìm thấy video hoặc không thể phát."
+    },
     "videoBackground": {
       "label": "Nền Video",
       "desc": "Sử dụng video YouTube làm nền (Beta)"
@@ -471,6 +475,7 @@ window.LANG_VI = {
       "moveDown": "Di chuyển xuống",
       "supports": {
         "translate": "Dịch thuật",
+        "pronunciation": "Phát âm",
         "metadata": "Siêu dữ liệu",
         "tmi": "TMI",
         "researchWebSearch": "Tìm kiếm web để nghiên cứu",
@@ -480,6 +485,38 @@ window.LANG_VI = {
         "wordSupplements": "Chi tiết từ"
       },
       "noEnabledProviders": "Không có nhà cung cấp AI nào được bật. Vui lòng bật ít nhất một nhà cung cấp trong cài đặt.",
+      "noPronunciationProviders": "Không có nhà cung cấp AI nào đang bật có thể tạo phát âm. Hãy bật “Phát âm” cho một nhà cung cấp trong cài đặt Nhà cung cấp AI.",
+      "localModel": {
+        "quality": "Chất lượng dịch",
+        "tierLight": "Cục bộ Nhẹ",
+        "tierMedium": "Cục bộ Trung bình",
+        "tierHigh": "Cục bộ Cao",
+        "tierHint": "Chất lượng càng cao thì dịch càng chính xác, nhưng tốn thêm dung lượng lưu trữ và bộ nhớ.",
+        "tierDownloaded": "Đã tải xuống",
+        "device": "Bộ xử lý",
+        "deviceAuto": "Tự động (ưu tiên WebGPU)",
+        "deviceCpu": "Chỉ CPU (chậm hơn)",
+        "idleUnload": "Giải phóng bộ nhớ khi không dùng",
+        "idleAfter": "Sau {minutes} phút",
+        "idleAfterHours": "Sau {hours} giờ",
+        "idleNever": "Không bao giờ",
+        "statusNotDownloaded": "Chưa tải xuống. Hãy tải mô hình xuống một lần để dịch trên thiết bị này.",
+        "statusDownloading": "Đang tải xuống {percent}% · {loaded} / {total} MB",
+        "statusDownloaded": "Đã tải xuống · Nạp vào bộ nhớ khi dịch",
+        "statusLoading": "Đang nạp vào bộ nhớ…",
+        "statusReady": "Sẵn sàng · {device}",
+        "statusError": "Lỗi: {error}",
+        "download": "Tải xuống mô hình ({size})",
+        "cancel": "Hủy",
+        "unload": "Giải phóng bộ nhớ",
+        "remove": "Xóa mô hình",
+        "confirmRemove": "Nhấp lại để xóa",
+        "test": "Dịch thử",
+        "privacy": "Lời bài hát được dịch trên thiết bị này và không bao giờ được gửi đi đâu. Công cụ thực thi (jsDelivr) và mô hình (Hugging Face) chỉ cần tải xuống một lần.",
+        "notReady": "Mô hình cục bộ chưa sẵn sàng. Hãy tải xuống trước trong Cài đặt > Nhà cung cấp AI > Local AI.",
+        "unsupportedLanguage": "Mô hình cục bộ không thể dịch sang {language}.",
+        "downloadBusy": "Vui lòng đợi tải mô hình xong rồi thử lại."
+      },
       "allProvidersFailed": "Tất cả các nhà cung cấp AI đã thất bại khi xử lý yêu cầu.",
       "enabledCapabilities": "Khả năng đã kích hoạt",
       "capabilitiesDesc": "Chọn các tính năng mà nhà cung cấp này xử lý",
@@ -2412,6 +2449,10 @@ window.LANG_VI = {
       "animationsLabel": "Hoạt ảnh đĩa than",
       "animationsDesc": "Dùng hoạt ảnh phát, tạm dừng, xoay, xuất hiện và chuyển bài.",
       "centerRotationLabel": "Xoay tâm đĩa than",
+      "trackChangeAnimationLabel": "Hoạt ảnh chuyển bài",
+      "trackChangeAnimationDesc": "Hiển thị hoạt ảnh thay bìa và đĩa khi chuyển bài. Khi tắt tùy chọn này, đĩa vẫn xoay nếu hoạt ảnh đĩa than được bật.",
+      "rotationSpeedLabel": "Tốc độ xoay đĩa",
+      "rotationSpeedDesc": "Điều chỉnh từ 25–200%. Ở mức 100%, đĩa xoay một vòng mỗi 6 giây. Tốc độ phát nhạc không thay đổi.",
       "centerRotationDesc": "Xoay nhãn ở giữa cùng với đĩa trong khi phát.",
       "lyricsLabel": "Hiện lời ở chế độ đĩa than",
       "lyricsDesc": "Hiển thị câu hát hiện tại bên dưới đĩa trong chế độ đĩa than.",

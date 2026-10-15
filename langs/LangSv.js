@@ -209,6 +209,10 @@ window.LANG_SV = {
       "label": "Solid bakgrundsfärg",
       "desc": "Välj färg för den solida bakgrunden"
     },
+    "videoFallback": {
+      "label": "Bakgrund när video saknas",
+      "desc": "Välj bakgrunden som visas när en video saknas eller inte kan spelas upp."
+    },
     "videoBackground": {
       "label": "Video bakgrund",
       "desc": "Använd en YouTube-video som bakgrund (beta)"
@@ -471,6 +475,7 @@ window.LANG_SV = {
       "moveDown": "Flytta ner",
       "supports": {
         "translate": "Översättning",
+        "pronunciation": "Uttal",
         "metadata": "Metadata",
         "tmi": "TMI",
         "researchWebSearch": "Webbsökning för research",
@@ -480,6 +485,38 @@ window.LANG_SV = {
         "wordSupplements": "Orddetaljer"
       },
       "noEnabledProviders": "Inga AI-leverantörer aktiverade. Aktivera minst en leverantör i inställningarna.",
+      "noPronunciationProviders": "Ingen aktiverad AI-leverantör kan skapa uttal. Slå på Uttal för en leverantör under inställningarna för AI-leverantörer.",
+      "localModel": {
+        "quality": "Översättningskvalitet",
+        "tierLight": "Lokal Lätt",
+        "tierMedium": "Lokal Medel",
+        "tierHigh": "Lokal Hög",
+        "tierHint": "Högre kvalitet översätter mer exakt, men använder mer lagringsutrymme och minne.",
+        "tierDownloaded": "Nedladdad",
+        "device": "Processor",
+        "deviceAuto": "Auto (WebGPU i första hand)",
+        "deviceCpu": "Endast CPU (långsammare)",
+        "idleUnload": "Frigör minne vid inaktivitet",
+        "idleAfter": "Efter {minutes} min",
+        "idleAfterHours": "Efter {hours} tim",
+        "idleNever": "Aldrig",
+        "statusNotDownloaded": "Inte nedladdad ännu. Ladda ner modellen en gång för att översätta på den här enheten.",
+        "statusDownloading": "Laddar ner {percent}% · {loaded} / {total} MB",
+        "statusDownloaded": "Nedladdad · Läses in i minnet vid översättning",
+        "statusLoading": "Läser in i minnet…",
+        "statusReady": "Klar · {device}",
+        "statusError": "Fel: {error}",
+        "download": "Ladda ner modell ({size})",
+        "cancel": "Avbryt",
+        "unload": "Frigör minne",
+        "remove": "Ta bort modell",
+        "confirmRemove": "Klicka igen för att ta bort",
+        "test": "Testa översättning",
+        "privacy": "Låttexter översätts på den här enheten och skickas aldrig någonstans. Motorn (jsDelivr) och modellen (Hugging Face) laddas bara ner en gång.",
+        "notReady": "Den lokala modellen är inte redo än. Ladda ner den först under Inställningar > AI-leverantörer > Local AI.",
+        "unsupportedLanguage": "Den lokala modellen kan inte översätta till {language}.",
+        "downloadBusy": "Vänta tills modellen har laddats ner och försök sedan igen."
+      },
       "allProvidersFailed": "Alla AI-leverantörer kunde inte behandla begäran.",
       "enabledCapabilities": "Aktiverade funktioner",
       "capabilitiesDesc": "Välj vilka funktioner den här leverantören hanterar",
@@ -2412,6 +2449,10 @@ window.LANG_SV = {
       "animationsLabel": "Vinylanimationer",
       "animationsDesc": "Använd animationer för uppspelning, paus, rotation, entré och låtbyte.",
       "centerRotationLabel": "Rotera skivans mitt",
+      "trackChangeAnimationLabel": "Animation vid låtbyte",
+      "trackChangeAnimationDesc": "Animera bytet av omslag och skiva när låten ändras. Om detta stängs av fortsätter skivan att rotera när vinylanimationer är aktiverade.",
+      "rotationSpeedLabel": "Skivans rotationshastighet",
+      "rotationSpeedDesc": "Ställ in 25–200 %. Vid 100 % roterar skivan ett varv på 6 sekunder. Musikens uppspelningshastighet ändras inte.",
       "centerRotationDesc": "Roterar mittetiketten tillsammans med skivan under uppspelning.",
       "lyricsLabel": "Visa LP-text",
       "lyricsDesc": "Visar den aktuella textraden under skivan i LP-läget.",

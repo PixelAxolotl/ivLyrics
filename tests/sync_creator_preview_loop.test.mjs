@@ -69,6 +69,10 @@ const createPreview = ({ mode = "preview", initialPosition = 0, textRun = false,
 	vm.runInContext([
 		slice("const getSyncCreatorLockedPlaybackProgressIndex", "const countSyncCreatorRangeChars"),
 		slice("const getSyncCreatorProgressGradient", "const normalizeSyncCreatorIsrc"),
+		`Object.assign(globalThis, (() => {
+			${source.slice(0, source.indexOf("const SyncDataCreator ="))}
+			return { hasOrderedSyncCreatorTimes, getSyncCreatorRejoinedLineChars };
+		})());`,
 	].join("\n"), context);
 	const refreshCallbacks = () => {
 		vm.runInContext(`globalThis.previewHelpers = (() => {
@@ -85,9 +89,9 @@ const createPreview = ({ mode = "preview", initialPosition = 0, textRun = false,
 			lookupCalls.push(args);
 			return helpers.getPreviewProgressIndexAtTime(...args);
 		};
-		context.applyPlaybackProgressVisual = (value) => {
+		context.applyPlaybackProgressVisual = (value, currentTimeSec) => {
 			playbackCalls.push(value);
-			return helpers.applyPlaybackProgressVisual(value);
+			return helpers.applyPlaybackProgressVisual(value, currentTimeSec);
 		};
 	};
 	refreshCallbacks();

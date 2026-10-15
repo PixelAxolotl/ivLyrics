@@ -209,6 +209,10 @@ window.LANG_DE = {
       "label": "Farbe für Hintergrund",
       "desc": "Wählen Sie die Farbe für den einfarbigen Hintergrund"
     },
+    "videoFallback": {
+      "label": "Hintergrund ohne Video",
+      "desc": "Wähle den Hintergrund, wenn kein Video gefunden oder abgespielt werden kann."
+    },
     "videoBackground": {
       "label": "Video-Hintergrund",
       "desc": "Verwendet ein YouTube-Video als Hintergrund (Beta)"
@@ -471,6 +475,7 @@ window.LANG_DE = {
       "moveDown": "Nach unten verschieben",
       "supports": {
         "translate": "Übersetzung",
+        "pronunciation": "Aussprache",
         "metadata": "Metadaten",
         "tmi": "TMI",
         "researchWebSearch": "Websuche für Recherche",
@@ -480,6 +485,38 @@ window.LANG_DE = {
         "wordSupplements": "Wortdetails"
       },
       "noEnabledProviders": "Keine KI-Anbieter aktiviert. Bitte aktiviere mindestens einen Anbieter in den Einstellungen.",
+      "noPronunciationProviders": "Kein aktivierter KI-Anbieter kann die Aussprache erzeugen. Aktivieren Sie „Aussprache“ für einen Anbieter in den Einstellungen unter KI-Anbieter.",
+      "localModel": {
+        "quality": "Übersetzungsqualität",
+        "tierLight": "Lokal Leicht",
+        "tierMedium": "Lokal Mittel",
+        "tierHigh": "Lokal Hoch",
+        "tierHint": "Höhere Qualität übersetzt genauer, benötigt aber mehr Speicherplatz und Arbeitsspeicher.",
+        "tierDownloaded": "Heruntergeladen",
+        "device": "Prozessor",
+        "deviceAuto": "Auto (WebGPU bevorzugt)",
+        "deviceCpu": "Nur CPU (langsamer)",
+        "idleUnload": "Arbeitsspeicher bei Inaktivität freigeben",
+        "idleAfter": "Nach {minutes} Min.",
+        "idleAfterHours": "Nach {hours} Std.",
+        "idleNever": "Nie",
+        "statusNotDownloaded": "Noch nicht heruntergeladen. Laden Sie das Modell einmal herunter, um auf diesem Gerät zu übersetzen.",
+        "statusDownloading": "Herunterladen {percent}% · {loaded} / {total} MB",
+        "statusDownloaded": "Heruntergeladen · Wird beim Übersetzen in den Arbeitsspeicher geladen",
+        "statusLoading": "Wird in den Arbeitsspeicher geladen…",
+        "statusReady": "Bereit · {device}",
+        "statusError": "Fehler: {error}",
+        "download": "Modell herunterladen ({size})",
+        "cancel": "Abbrechen",
+        "unload": "Arbeitsspeicher freigeben",
+        "remove": "Modell löschen",
+        "confirmRemove": "Zum Löschen erneut klicken",
+        "test": "Übersetzung testen",
+        "privacy": "Songtexte werden auf diesem Gerät übersetzt und nirgendwohin gesendet. Engine (jsDelivr) und Modell (Hugging Face) werden nur einmal heruntergeladen.",
+        "notReady": "Das lokale Modell ist noch nicht bereit. Laden Sie es zuerst unter Einstellungen > KI-Anbieter > Local AI herunter.",
+        "unsupportedLanguage": "Das lokale Modell unterstützt die Zielsprache {language} nicht.",
+        "downloadBusy": "Warten Sie, bis der Modell-Download abgeschlossen ist, und versuchen Sie es dann erneut."
+      },
       "allProvidersFailed": "Alle KI-Anbieter konnten die Anfrage nicht verarbeiten.",
       "enabledCapabilities": "Aktivierte Funktionen",
       "capabilitiesDesc": "Wählen Sie aus, welche Funktionen dieser Anbieter übernimmt",
@@ -2412,6 +2449,10 @@ window.LANG_DE = {
       "animationsLabel": "Vinyl-Animationen",
       "animationsDesc": "Aktiviert Animationen für Wiedergabe, Pause, Drehung, Einblenden und Titelwechsel.",
       "centerRotationLabel": "LP-Mitte drehen",
+      "trackChangeAnimationLabel": "Animation beim Titelwechsel",
+      "trackChangeAnimationDesc": "Animiert den Wechsel von Hülle und Schallplatte beim Titelwechsel. Bei deaktivierter Option dreht sich die Platte weiter, solange Vinyl-Animationen aktiviert sind.",
+      "rotationSpeedLabel": "Drehgeschwindigkeit der Schallplatte",
+      "rotationSpeedDesc": "Einstellbar von 25–200 %. Bei 100 % dreht sich die Platte einmal in 6 Sekunden. Die Wiedergabegeschwindigkeit bleibt unverändert.",
       "centerRotationDesc": "Dreht das mittlere Etikett während der Wiedergabe mit der Schallplatte.",
       "lyricsLabel": "LP-Text anzeigen",
       "lyricsDesc": "Zeigt im LP-Modus die aktuelle Textzeile unter der Schallplatte an.",

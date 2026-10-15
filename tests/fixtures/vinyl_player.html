@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LP local fixture</title>
+<link rel="stylesheet" href="@SOURCE_PREFIX@/style.css">
+<style>
+  :root { color-scheme: dark; --spice-button-active: #f9a0b3; --spice-text: #fff; }
+  body { margin: 0; background: radial-gradient(ellipse at 30% 40%, #3c2638, #15101b 75%); color: #fff; font: 14px system-ui, sans-serif; }
+  .qa-controls { position: fixed; z-index: 10000; top: 0; right: 0; bottom: 0; width: 276px; overflow: auto; padding: 20px; background: #16121fe8; box-sizing: border-box; }
+  .qa-controls h1 { margin: 0 0 12px; font-size: 19px; }
+  .qa-controls p { font-size: 12px; line-height: 1.5; color: #bcb2c5; }
+  .qa-controls label { display: block; margin: 15px 0; }
+  .qa-controls input[type=checkbox] { margin-right: 8px; }
+  .qa-controls input[type=range], .qa-controls select { display: block; width: 100%; margin-top: 7px; }
+  .qa-controls button { padding: 8px; margin: 4px 6px 4px 0; background: #493748; color: #fff; border: 0; border-radius: 6px; }
+  .qa-controls output { margin-left: 8px; color: #f9a0b3; }
+  .qa-main .fullscreen-vinyl-overlay { right: 276px; }
+  .qa-main .fullscreen-presentation-dock, .qa-main .fullscreen-stage-controls-dock { display: none; }
+  .qa-small { position: fixed; z-index: 9999; bottom: 26px; left: 24px; width: 84px; height: 84px; }
+  .qa-small::before { content: "84 px compact cover"; position: absolute; bottom: 100%; white-space: nowrap; font-size: 10px; opacity: .6; }
+  .qa-album-view { position: absolute; top: 30%; left: 20%; width: 240px; height: 240px; }
+</style>
+<div id="root"></div>
+<script src="/react.js"></script>
+<script src="/react-dom.js"></script>
+<script src="@SOURCE_PREFIX@/langs/LangEn.js"></script>
+<script>
+  window.I18n = { t: key => key.split('.').reduce((value, part) => value?.[part], window.LANG_EN) || key };
+  window.Spicetify = { React, SVGIcons: {}, Player: { data: { item: {} } } };
+  window.createOutsideTextOutlineShadow = () => "none";
+</script>
+<script src="@SOURCE_PREFIX@/metadata.js"></script>
+<script src="@SOURCE_PREFIX@/settings.js"></script>
+<script src="@SOURCE_PREFIX@/VinylPlayerMode.js"></script>
+<script>
+  const h = React.createElement;
+  const storageKey = "ivlyrics-vinyl-local-fixture-@SOURCE_PREFIX@";
+  const cover = index => "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="${index % 2 ? '#945579' : '#2f6d7a'}"/><stop offset="1" stop-color="#152431"/></linearGradient></defs><rect width="400" height="400" fill="url(#g)"/><circle cx="290" cy="130" r="120" fill="#ffffff15"/><path d="M0 310L400 160V400H0" fill="#ffffff10"/><text x="30" y="285" fill="white" font-size="28" font-family="sans-serif">LOCAL LP ${index}</text><text x="32" y="319" fill="#ffffffa0" font-size="15" font-family="sans-serif">SIMULATED PLAYBACK</text></svg>`);
+  const Fixture = () => {
+    const [visual, setVisual] = React.useState(() => ({
+      "fullscreen-vinyl-animations": true, "fullscreen-vinyl-track-change-animation": true,
+      "fullscreen-vinyl-rotation-speed": 100, "fullscreen-vinyl-center-rotation": true,
+      "fullscreen-vinyl-lyrics-enabled": false, "translate-metadata": true,
+      "translate-metadata-mode": "translated", "fullscreen-trim-title": true,
+      ...JSON.parse(localStorage.getItem(storageKey) || "{}"),
+    }));
+    const [index, setIndex] = React.useState(1);
+    const [isPlaying, setPlaying] = React.useState(true);
+    const [presentation, setPresentation] = React.useState("vinyl");
+    const metadata = {
+      translated: {
+        title: `아주 긴 노래 제목이 레코드 중앙에서 앨범의 원형 글자와 겹치지 않는지 확인하는 로컬 테스트 ${index} (리마스터)`,
+        artist: "번역된 가수 이름과 아주 긴 아티스트 이름 [피처링]",
+      },
+      romanized: { title: `Aju gin norae jemok ${index} - Live`, artist: "Beonyeokdoen gasu" },
+    };
+    const item = { uri: `spotify:track:fixture${index}`, metadata: {
+      title: `本当に長い曲のタイトルがレコード中央でアルバムの円形文字と重ならないことを確認するテスト ${index} (Remastered)`,
+      artist_name: "元のアーティストの長い名前 [feat. Guest]",
+      album_title: "CIRCULAR ALBUM TEXT • LOCAL QA",
+      image_url: cover(index),
+    } };
+    const CONFIG = { visual };
+    const track = window.fixtureLiveTrack(CONFIG, item.uri, metadata, item);
+    const vinylSettings = window.fixtureVinylSettings(CONFIG);
+    const save = (key, value) => setVisual(current => {
+      const next = { ...current, [key]: value };
+      localStorage.setItem(storageKey, JSON.stringify(next));
+      return next;
+    });
+    window.fixture = {
+      save, setPlaying, setIndex, setPresentation, track, visual,
+      reset: () => { localStorage.removeItem(storageKey); location.reload(); },
+    };
+    const renderControl = item => h("label", { key: item.key, title: item.info },
+      item.type === "toggle" && h("input", { type: "checkbox", checked: item.defaultValue,
+        onChange: event => save(item.key, event.target.checked), "data-setting-key": item.key }),
+      item.desc,
+      item.type === "range" && h(React.Fragment, null,
+        h("output", null, `${item.defaultValue}${item.unit}`),
+        h("input", { type: "range", min: item.min, max: item.max, step: item.step,
+          value: item.defaultValue, "aria-label": item.desc, "data-setting-key": item.key,
+          onChange: event => save(item.key, Number(event.target.value)) })));
+    const compact = className => h("div", { className }, h(window.ivLyricsVinylPlayerMode.CompactAlbumVinyl, {
+      track, isPlaying, animationsEnabled: vinylSettings.animations,
+      rotationSpeed: vinylSettings.rotationSpeed, centerRotationEnabled: vinylSettings.centerRotation,
+      reducedMotion: vinylSettings.reducedMotion,
+    }));
+    return h(React.Fragment, null,
+      h("aside", { className: "qa-controls" },
+        h("h1", null, "LP local fixture"),
+        h("p", null, "Production LP renderer, CSS, metadata resolver and setting descriptors. Playback and settings here affect this fixture only."),
+        h("button", { onClick: () => setIndex(value => value + 1) }, "Next fixture track"),
+        h("button", { onClick: () => setPlaying(value => !value) }, isPlaying ? "Pause fixture" : "Play fixture"),
+        h("label", null, "Fixture presentation", h("select", { value: presentation, onChange: event => setPresentation(event.target.value) },
+          ["vinyl", "compact-vinyl", "compact-album"].map(value => h("option", { key: value, value }, value)))),
+        window.fixtureSettingItems(CONFIG).map(renderControl),
+        h("label", null, h("input", { type: "checkbox", checked: visual["reduce-motion"] === true, onChange: event => save("reduce-motion", event.target.checked) }), "Reduce motion (app)"),
+        h("label", null, h("input", { type: "checkbox", checked: visual["translate-metadata"], onChange: event => save("translate-metadata", event.target.checked) }), "Translate metadata"),
+        h("label", null, h("input", { type: "checkbox", checked: visual["fullscreen-trim-title"], onChange: event => save("fullscreen-trim-title", event.target.checked) }), "Simplify titles"),
+        h("label", null, "Metadata display", h("select", { value: visual["translate-metadata-mode"], onChange: event => save("translate-metadata-mode", event.target.value) },
+          ["translated", "romanized", "original-translated", "original-romanized", "all"].map(value => h("option", { key: value, value }, value))))),
+      h("main", { className: "qa-main" }, presentation === "compact-album" ? compact("qa-album-view")
+        : h(window.ivLyricsVinylPlayerMode, {
+          track, vinylSettings, isPlaying, presentationMode: presentation,
+          position: 30000, duration: 180000, albumRadius: 12,
+          onTogglePlayback: () => setPlaying(value => !value),
+          onStopPlayback: () => setPlaying(false), onSeek: () => {},
+        })),
+      presentation !== "compact-album" && compact("qa-small"));
+  };
+  ReactDOM.createRoot(document.getElementById("root")).render(h(Fixture));
+</script>
+</html>

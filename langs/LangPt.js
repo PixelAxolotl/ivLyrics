@@ -209,6 +209,10 @@ window.LANG_PT = {
       "label": "Cor do Fundo Sólido",
       "desc": "Selecione a cor para o fundo sólido"
     },
+    "videoFallback": {
+      "label": "Fundo quando o vídeo não está disponível",
+      "desc": "Escolha o fundo exibido quando o vídeo não existe ou não pode ser reproduzido."
+    },
     "videoBackground": {
       "label": "Fundo de Vídeo",
       "desc": "Usa vídeos do YouTube como fundo (Beta)"
@@ -471,6 +475,7 @@ window.LANG_PT = {
       "moveDown": "Mover para baixo",
       "supports": {
         "translate": "Tradução",
+        "pronunciation": "Pronúncia",
         "metadata": "Metadados",
         "tmi": "TMI",
         "researchWebSearch": "Busca na web para pesquisa",
@@ -480,6 +485,38 @@ window.LANG_PT = {
         "wordSupplements": "Detalhes das palavras"
       },
       "noEnabledProviders": "Nenhum provedor de IA habilitado. Por favor, habilite pelo menos um nas configurações.",
+      "noPronunciationProviders": "Nenhum provedor de IA habilitado pode gerar a pronúncia. Ative “Pronúncia” em um provedor nas configurações de Provedores de IA.",
+      "localModel": {
+        "quality": "Qualidade da tradução",
+        "tierLight": "Local Leve",
+        "tierMedium": "Local Média",
+        "tierHigh": "Local Alta",
+        "tierHint": "Qualidade mais alta traduz com mais precisão, mas usa mais armazenamento e memória.",
+        "tierDownloaded": "Baixado",
+        "device": "Processador",
+        "deviceAuto": "Automático (WebGPU primeiro)",
+        "deviceCpu": "Somente CPU (mais lento)",
+        "idleUnload": "Liberar memória quando ocioso",
+        "idleAfter": "Após {minutes} min",
+        "idleAfterHours": "Após {hours} h",
+        "idleNever": "Nunca",
+        "statusNotDownloaded": "Ainda não baixado. Baixe o modelo uma vez para traduzir neste dispositivo.",
+        "statusDownloading": "Baixando {percent}% · {loaded} / {total} MB",
+        "statusDownloaded": "Baixado · Carregado na memória ao traduzir",
+        "statusLoading": "Carregando na memória…",
+        "statusReady": "Pronto · {device}",
+        "statusError": "Erro: {error}",
+        "download": "Baixar modelo ({size})",
+        "cancel": "Cancelar",
+        "unload": "Liberar memória",
+        "remove": "Excluir modelo",
+        "confirmRemove": "Clique novamente para excluir",
+        "test": "Testar tradução",
+        "privacy": "As letras são traduzidas neste dispositivo e nunca são enviadas a lugar nenhum. O mecanismo (jsDelivr) e o modelo (Hugging Face) são baixados apenas uma vez.",
+        "notReady": "O modelo local ainda não está pronto. Baixe-o primeiro em Configurações > Provedores de IA > Local AI.",
+        "unsupportedLanguage": "O modelo local não pode traduzir para o {language}.",
+        "downloadBusy": "Aguarde o download do modelo terminar e tente novamente."
+      },
       "allProvidersFailed": "Todos os provedores de IA falharam ao processar a solicitação.",
       "enabledCapabilities": "Recursos Ativados",
       "capabilitiesDesc": "Selecione quais recursos este provedor gerencia",
@@ -2412,6 +2449,10 @@ window.LANG_PT = {
       "animationsLabel": "Animações do vinil",
       "animationsDesc": "Usa animações de reprodução, pausa, rotação, entrada e troca de faixa.",
       "centerRotationLabel": "Girar o centro do vinil",
+      "trackChangeAnimationLabel": "Animação na troca de faixa",
+      "trackChangeAnimationDesc": "Anima a troca da capa e do disco ao mudar de faixa. Ao desativar esta opção, o disco continua girando se as animações do vinil estiverem ativadas.",
+      "rotationSpeedLabel": "Velocidade de rotação do disco",
+      "rotationSpeedDesc": "Ajuste entre 25–200%. Em 100%, o disco dá uma volta a cada 6 segundos. A velocidade de reprodução não muda.",
       "centerRotationDesc": "Gira o rótulo central junto com o disco durante a reprodução.",
       "lyricsLabel": "Mostrar letra no modo vinil",
       "lyricsDesc": "Mostra a linha atual abaixo do disco no modo vinil.",

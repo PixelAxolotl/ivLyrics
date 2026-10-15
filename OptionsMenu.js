@@ -543,6 +543,10 @@ function ensureFluentModalStyles() {
   line-height: 1.45;
 }
 
+.ivlyrics-first-language-provider-hint[hidden] {
+  display: none;
+}
+
 .ivlyrics-first-language-provider-hint-icon {
   flex: 0 0 auto;
   color: #93c5fd;
@@ -2558,15 +2562,36 @@ function hasExplicitFirstLanguageModes(modeKey) {
 
 const FIRST_LANGUAGE_KEYLESS_PROVIDER_IDS = new Set(["bing-translate", "google-translate"]);
 
-function shouldShowFirstLanguageAIProviderHint() {
+// Translation and pronunciation are separate provider capabilities, so each
+// one is checked on its own: keyless-only translation, and whether any enabled
+// provider still has pronunciation turned on.
+function getFirstLanguageAIProviderHintState() {
   try {
-    const enabledTranslationProviders = (window.AIAddonManager?.getEnabledProviders?.() || [])
-      .filter((provider) => provider?.supports?.translate === true);
-    return enabledTranslationProviders.length > 0
-      && enabledTranslationProviders.every((provider) => FIRST_LANGUAGE_KEYLESS_PROVIDER_IDS.has(provider.id));
+    const manager = window.AIAddonManager;
+    const enabledProviders = manager?.getEnabledProviders?.() || [];
+    const getProvidersFor = (capability) => (typeof manager?.getEnabledProvidersFor === "function"
+      ? manager.getEnabledProvidersFor(capability) || []
+      : enabledProviders.filter((provider) => provider?.supports?.[capability] === true));
+    const translationProviders = getProvidersFor("translate");
+    return {
+      keylessTranslationOnly: translationProviders.length > 0
+        && translationProviders.every((provider) => FIRST_LANGUAGE_KEYLESS_PROVIDER_IDS.has(provider?.id)),
+      missingPronunciation: getProvidersFor("pronunciation").length === 0,
+      hasPronunciationCapableProvider: enabledProviders.some((provider) => provider?.supports?.pronunciation === true),
+    };
   } catch {
-    return false;
+    return { keylessTranslationOnly: false, missingPronunciation: false, hasPronunciationCapableProvider: false };
   }
+}
+
+function getFirstLanguageAIProviderHintKey(state, wantsPronunciation) {
+  if (wantsPronunciation && state.missingPronunciation) {
+    // An enabled provider that can pronounce only needs its Pronunciation chip.
+    return state.hasPronunciationCapableProvider
+      ? "settings.aiProviders.noPronunciationProviders"
+      : "firstLanguagePrompt.pronunciationAiProviderHint";
+  }
+  return state.keylessTranslationOnly ? "firstLanguagePrompt.aiProviderHint" : null;
 }
 
 function openFirstLanguagePrompt({ sourceLang, modeKey }) {
@@ -2636,10 +2661,21 @@ function openFirstLanguagePrompt({ sourceLang, modeKey }) {
       pronunciation: false,
       translation: false,
     };
+    const providerHintState = getFirstLanguageAIProviderHintState();
+    const providerHintId = "ivLyrics-first-language-provider-hint";
+    let providerHint = null;
     let providerHintText = null;
     const action = document.createElement("button");
     action.type = "button";
     action.className = "ivlyrics-first-language-action";
+
+    const updateProviderHint = () => {
+      if (!providerHint || !providerHintText) return;
+      const hintKey = getFirstLanguageAIProviderHintKey(providerHintState, draft.pronunciation);
+      providerHint.hidden = !hintKey;
+      if (hintKey) providerHintText.textContent = I18n.t(hintKey);
+      host.shell.setAttribute("aria-describedby", hintKey ? `${descriptionId} ${providerHintId}` : descriptionId);
+    };
 
     const updateAction = () => {
       const hasSelection = draft.pronunciation || draft.translation;
@@ -2647,13 +2683,7 @@ function openFirstLanguagePrompt({ sourceLang, modeKey }) {
       action.textContent = I18n.t(
         hasSelection ? "firstLanguagePrompt.apply" : "firstLanguagePrompt.notNow"
       );
-      if (providerHintText) {
-        providerHintText.textContent = I18n.t(
-          draft.pronunciation
-            ? "firstLanguagePrompt.pronunciationAiProviderHint"
-            : "firstLanguagePrompt.aiProviderHint"
-        );
-      }
+      updateProviderHint();
     };
 
     const createToggleRow = ({ key, iconText, label }) => {
@@ -2700,9 +2730,9 @@ function openFirstLanguagePrompt({ sourceLang, modeKey }) {
       })
     );
 
-    if (shouldShowFirstLanguageAIProviderHint()) {
-      const providerHintId = "ivLyrics-first-language-provider-hint";
-      const providerHint = document.createElement("div");
+    if (getFirstLanguageAIProviderHintKey(providerHintState, false)
+      || getFirstLanguageAIProviderHintKey(providerHintState, true)) {
+      providerHint = document.createElement("div");
       providerHint.id = providerHintId;
       providerHint.className = "ivlyrics-first-language-provider-hint";
       providerHint.setAttribute("role", "note");
@@ -2711,10 +2741,9 @@ function openFirstLanguagePrompt({ sourceLang, modeKey }) {
       providerHintIcon.setAttribute("aria-hidden", "true");
       providerHintIcon.textContent = "✦";
       providerHintText = document.createElement("span");
-      providerHintText.textContent = I18n.t("firstLanguagePrompt.aiProviderHint");
       providerHint.append(providerHintIcon, providerHintText);
       body.appendChild(providerHint);
-      host.shell.setAttribute("aria-describedby", `${descriptionId} ${providerHintId}`);
+      updateProviderHint();
     }
 
     action.addEventListener("click", () => {

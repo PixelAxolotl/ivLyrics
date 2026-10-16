@@ -548,6 +548,7 @@ const SimpleVideoPreview = ({ videoId, startTime, skipSegments = [] }) => {
   useEffect(() => {
     if (!useHelper || !videoRef.current || !helperVideoUrl) return;
     const video = videoRef.current;
+    video.muted = true;
     video.currentTime = startTime;
     video.play().catch(() => { });
   }, [useHelper, helperVideoUrl, startTime]);
@@ -600,7 +601,8 @@ const SimpleVideoPreview = ({ videoId, startTime, skipSegments = [] }) => {
           modestbranding: 1,
           rel: 0,
           showinfo: 0,
-          mute: 0,
+          // Spotify is playing the song; a preview is only a picture.
+          mute: 1,
           playsinline: 1,
           start: Math.floor(startTime),
           origin: window.location.origin,
@@ -669,7 +671,7 @@ const SimpleVideoPreview = ({ videoId, startTime, skipSegments = [] }) => {
       ref: videoRef,
       src: helperVideoUrl,
       style: { width: "100%", height: "180px", background: "#000", objectFit: "contain" },
-      muted: false,
+      muted: true,
       playsInline: true,
       autoPlay: true,
     }),

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 
@@ -41,6 +41,7 @@ function createEnvironment({ delayedMethods = false, preExisting = false, apiUna
         this.events = new Map();
         this.calls = [];
         this.muted = false;
+        this.volume = 100;
         this.state = 1;
         this.time = 10;
         this.duration = 216;
@@ -57,12 +58,14 @@ function createEnvironment({ delayedMethods = false, preExisting = false, apiUna
             this.getDuration = () => this.duration;
             this.getPlaybackRate = () => 1;
             this.isMuted = () => this.muted;
-            for (const name of ["seekTo", "playVideo", "pauseVideo", "loadVideoById", "cueVideoById", "loadVideoByUrl", "cueVideoByUrl", "removeCueRange", "loadPlaylist", "cuePlaylist", "nextVideo", "setPlaybackRate", "mute", "unMute"]) {
+            this.getVolume = () => this.volume;
+            for (const name of ["seekTo", "playVideo", "pauseVideo", "loadVideoById", "cueVideoById", "loadVideoByUrl", "cueVideoByUrl", "removeCueRange", "loadPlaylist", "cuePlaylist", "nextVideo", "setPlaybackRate", "mute", "unMute", "setVolume"]) {
                 this[name] = (...args) => {
                     this.calls.push([name, ...args]);
                     if (name === "seekTo") this.time = args[0];
                     if (name === "mute") this.muted = true;
                     if (name === "unMute") this.muted = false;
+                    if (name === "setVolume") this.volume = args[0];
                 };
             }
         };
@@ -128,7 +131,27 @@ test("real iframe ad events hide and mute ads without seeking the content to its
     assert.equal(env.window.VideoBackgroundDepend.isAdPlayback(player), false);
     assert.equal(player.iframe.style.getPropertyValue("opacity"), "0.75");
     assert.equal(player.iframe.style.getPropertyPriority("opacity"), "important");
-    assert.equal(player.muted, false);
+    // The player was not muted yet when the ad began (the race that switched
+    // the background's sound on by itself); it stays muted afterwards.
+    assert.equal(player.muted, true);
+    assert.equal(player.calls.some(([name]) => name === "unMute"), false, "an ad never unmutes a player");
+});
+
+test("a YouTube player is never left audible", () => {
+    const env = createEnvironment();
+    const player = env.player();
+    env.poll();
+    assert.equal(player.muted, true, "a poll mutes a player that is not muted");
+    assert.equal(player.volume, 0, "and turns its volume down, so an unmute inside the iframe stays silent");
+    // A muted-autoplay embed's own "unmute" click, or any later unmute.
+    player.unMute();
+    player.setVolume(100);
+    player.emit("onStateChange", 1);
+    assert.equal(player.muted, true, "the next state change mutes it again");
+    assert.equal(player.volume, 0);
+    player.unMute();
+    env.poll();
+    assert.equal(player.muted, true, "and so does the next poll");
 });
 
 test("ad state events work without getAdState and ignore normal PLAYING during an ad", () => {
@@ -488,3 +511,26 @@ for (const action of ["load", "destroy", "restore"]) {
         assert.equal(player.__ytAdControlState.previewLimitTimers.size, 0);
     });
 }
+
+test("no YouTube player or background video in the app is created or left audible", () => {
+    // The song is Spotify's; every video ivLyrics shows is only a picture. The
+    // video picker's previews used to start unmuted (mute: 0, a <video> with
+    // muted: false), playing over the song.
+    const sources = readdirSync(new URL("..", import.meta.url))
+        .filter(name => name.endsWith(".js") && !name.startsWith("Lang"))
+        .map(name => [name, readFileSync(new URL(`../${name}`, import.meta.url), "utf8")]);
+    assert.ok(sources.length > 50, "scanned the app's source files");
+    const audible = [];
+    for (const [name, text] of sources) {
+        for (const [pattern, what] of [
+            [/\bmute:\s*0\b/, "YT.Player with mute: 0"],
+            [/\bplaymuted:\s*(?:0|false)\b/, "playmuted off"],
+            [/createElement\(\s*["']video["'][\s\S]{0,400}?\bmuted:\s*false/, "<video> with muted: false"],
+            [/\.muted\s*=\s*false/, "video.muted = false"],
+            [/\.unMute\b/, "unMute()"],
+        ]) {
+            if (pattern.test(text)) audible.push(`${name}: ${what}`);
+        }
+    }
+    assert.deepEqual(audible, []);
+});

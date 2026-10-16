@@ -676,11 +676,21 @@
         state.hiddenIframe = null;
     };
 
+    // ivLyrics never plays YouTube audio: Spotify plays the song and the embed
+    // is only a picture. Every patched player is created muted, so a "not
+    // muted" reading is a race (an ad that starts before the initial mute
+    // lands) or a muted-autoplay embed's own unmute click, never a choice to
+    // keep. Restoring it after an ad switched the background's sound on by
+    // itself; volume 0 also keeps an unmute inside the iframe silent.
+    const keepPlayerSilent = (player) => {
+        if (!player) return;
+        try { if (player.isMuted?.() === false) player.mute?.(); } catch (err) { }
+        try { if (Number(player.getVolume?.()) > 0) player.setVolume?.(0); } catch (err) { }
+    };
+
     const restoreMutedState = (player, state) => {
-        if (state.previousMuted === false) {
-            try { player.unMute?.(); } catch (err) { }
-        }
         state.previousMuted = null;
+        keepPlayerSilent(player);
     };
 
     const suppressAdPlayback = (player) => {
@@ -896,6 +906,7 @@
         }
         listen("onStateChange", event => {
             if (state.disposed) return;
+            keepPlayerSilent(player);
             applyMutedPlaybackIntent(player, event?.data);
             scheduleMutedPreviewLimitRemoval(player);
             if (isAdPlayback(player)) suppressAdPlayback(player);
@@ -915,6 +926,7 @@
                 return;
             }
             attachAdSkipper(player);
+            keepPlayerSilent(player);
             if (isAdPlayback(player)) suppressAdPlayback(player);
             else restoreNormalPlayback(player);
         }, 400);

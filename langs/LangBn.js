@@ -3003,6 +3003,7 @@ window.LANG_BN = {
     "kindPop": "পপ",
     "rangeStyleTitle": "আংশিক ইফেক্ট · রঙ",
     "rangeStyleHint": "প্রিভিউ বা আইডল অবস্থায় গানের লাইনে ডান-ড্র্যাগ করে অক্ষর নির্বাচন করুন।",
+    "offsetSelectionHint": "ডান-ড্র্যাগ করে অক্ষর নির্বাচন করুন — স্পিকার ও ইফেক্ট নির্বাচন অনুসরণ করবে।",
     "rangeStyleSelectLabel": "স্টাইল দেওয়ার অক্ষরসীমা",
     "rangeStyleSelected": "নির্বাচিত",
     "rangeStyleSelectPrompt": "প্রথমে কাঙ্ক্ষিত অক্ষরগুলোর ওপর টানুন।",

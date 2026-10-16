@@ -3003,6 +3003,7 @@ window.LANG_KO = {
     "kindPop": "팝",
     "rangeStyleTitle": "부분 효과 · 색상",
     "rangeStyleHint": "미리보기나 대기 상태에서 가사 줄을 오른쪽 버튼으로 드래그해 글자를 선택하세요.",
+    "offsetSelectionHint": "오른쪽 드래그로 글자를 선택하세요. 스피커와 효과 설정이 선택 영역에 적용됩니다.",
     "rangeStyleSelectLabel": "스타일을 적용할 글자 범위",
     "rangeStyleSelected": "선택",
     "rangeStyleSelectPrompt": "먼저 적용할 글자를 드래그하세요.",

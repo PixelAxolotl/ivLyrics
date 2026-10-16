@@ -3003,6 +3003,7 @@ window.LANG_ZH_CN = {
     "kindPop": "弹出",
     "rangeStyleTitle": "局部效果与颜色",
     "rangeStyleHint": "在预览或空闲状态下，在歌词行上右键拖动以选择字符。",
+    "offsetSelectionHint": "右键拖动选择字符——音色和效果将应用于所选内容。",
     "rangeStyleSelectLabel": "要应用样式的字符范围",
     "rangeStyleSelected": "已选择",
     "rangeStyleSelectPrompt": "请先拖动选择要设置样式的字符。",

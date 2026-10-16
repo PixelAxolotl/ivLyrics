@@ -3003,6 +3003,7 @@ window.LANG_ES = {
     "kindPop": "Pop",
     "rangeStyleTitle": "Efectos parciales · color",
     "rangeStyleHint": "Arrastra con el botón derecho sobre la línea para seleccionar caracteres, en vista previa o reposo.",
+    "offsetSelectionHint": "Arrastra con el botón derecho para seleccionar: voz y efectos siguen la selección.",
     "rangeStyleSelectLabel": "Rango de caracteres para aplicar estilo",
     "rangeStyleSelected": "Selección",
     "rangeStyleSelectPrompt": "Primero arrastra sobre los caracteres deseados.",

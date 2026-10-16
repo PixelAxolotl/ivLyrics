@@ -3003,6 +3003,7 @@ window.LANG_ZH_TW = {
     "kindPop": "彈出",
     "rangeStyleTitle": "局部效果與色彩",
     "rangeStyleHint": "在預覽或閒置狀態下，在歌詞行上按住右鍵拖曳以選取字元。",
+    "offsetSelectionHint": "按住右鍵拖曳選取字元——音色與效果將套用到選取範圍。",
     "rangeStyleSelectLabel": "要套用樣式的字元範圍",
     "rangeStyleSelected": "已選取",
     "rangeStyleSelectPrompt": "請先拖曳選取要設定樣式的字元。",

@@ -3003,6 +3003,7 @@ window.LANG_PT = {
     "kindPop": "Pop",
     "rangeStyleTitle": "Efeitos parciais · cor",
     "rangeStyleHint": "Arraste com o botão direito na linha para selecionar caracteres, na pré-visualização ou em repouso.",
+    "offsetSelectionHint": "Arraste com o botão direito para selecionar: voz e efeitos seguem a seleção.",
     "rangeStyleSelectLabel": "Intervalo de caracteres para estilizar",
     "rangeStyleSelected": "Selecionado",
     "rangeStyleSelectPrompt": "Primeiro arraste sobre os caracteres desejados.",

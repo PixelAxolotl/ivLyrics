@@ -3003,6 +3003,7 @@ window.LANG_EN = {
     "kindPop": "Pop",
     "rangeStyleTitle": "Partial effects · color",
     "rangeStyleHint": "Right-drag the lyric line to select characters, in preview or idle.",
+    "offsetSelectionHint": "Right-drag to select characters — Speaker and effect controls follow the selection.",
     "rangeStyleSelectLabel": "Character range to style",
     "rangeStyleSelected": "Selected",
     "rangeStyleSelectPrompt": "Drag over the characters to style first.",

@@ -3003,6 +3003,7 @@ window.LANG_IT = {
     "kindPop": "Pop",
     "rangeStyleTitle": "Effetti parziali · colore",
     "rangeStyleHint": "Trascina con il tasto destro sulla riga per selezionare i caratteri, in anteprima o in pausa.",
+    "offsetSelectionHint": "Trascina con il tasto destro per selezionare: voce ed effetti seguono la selezione.",
     "rangeStyleSelectLabel": "Intervallo di caratteri da stilizzare",
     "rangeStyleSelected": "Selezione",
     "rangeStyleSelectPrompt": "Prima trascina sui caratteri desiderati.",

@@ -3003,6 +3003,7 @@ window.LANG_FR = {
     "kindPop": "Pop",
     "rangeStyleTitle": "Effets partiels · couleur",
     "rangeStyleHint": "Faites un glisser-déposer avec le bouton droit sur la ligne pour sélectionner des caractères, en aperçu ou au repos.",
+    "offsetSelectionHint": "Sélectionnez par glisser-droit — les réglages voix et effet suivent la sélection.",
     "rangeStyleSelectLabel": "Plage de caractères à styliser",
     "rangeStyleSelected": "Sélection",
     "rangeStyleSelectPrompt": "Faites d’abord glisser sur les caractères voulus.",

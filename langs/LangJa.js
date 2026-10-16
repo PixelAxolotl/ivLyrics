@@ -3003,6 +3003,7 @@ window.LANG_JA = {
     "kindPop": "ポップ",
     "rangeStyleTitle": "部分エフェクト・色",
     "rangeStyleHint": "プレビューまたはアイドル状態で、歌詞行を右ドラッグして文字を選択します。",
+    "offsetSelectionHint": "右ドラッグで文字を選択 — スピーカーとエフェクトは選択範囲に適用されます。",
     "rangeStyleSelectLabel": "スタイルを適用する文字範囲",
     "rangeStyleSelected": "選択",
     "rangeStyleSelectPrompt": "先にスタイルを適用する文字をドラッグしてください。",

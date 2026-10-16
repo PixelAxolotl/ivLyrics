@@ -3003,6 +3003,7 @@ window.LANG_AR = {
     "kindPop": "فرقعة",
     "rangeStyleTitle": "تأثيرات جزئية · لون",
     "rangeStyleHint": "اسحب بزر الفأرة الأيمن على سطر الكلمات لتحديد الأحرف، في وضع المعاينة أو الخمول.",
+    "offsetSelectionHint": "اسحب بالزر الأيمن لتحديد الأحرف — يتبع المتحدث والمؤثرات التحديد.",
     "rangeStyleSelectLabel": "نطاق الأحرف المراد تنسيقه",
     "rangeStyleSelected": "المحدد",
     "rangeStyleSelectPrompt": "اسحب أولاً فوق الأحرف المطلوبة.",

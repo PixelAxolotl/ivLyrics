@@ -3003,6 +3003,7 @@ window.LANG_HI = {
     "kindPop": "पॉप",
     "rangeStyleTitle": "आंशिक प्रभाव · रंग",
     "rangeStyleHint": "प्रीव्यू या आइडल में गीत पंक्ति पर राइट-ड्रैग करके अक्षर चुनें।",
+    "offsetSelectionHint": "राइट-ड्रैग से अक्षर चुनें — स्पीकर व इफेक्ट चयन का पालन करेंगे।",
     "rangeStyleSelectLabel": "शैली के लिए अक्षर सीमा",
     "rangeStyleSelected": "चयनित",
     "rangeStyleSelectPrompt": "पहले इच्छित अक्षरों पर खींचें।",

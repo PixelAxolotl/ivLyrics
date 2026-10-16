@@ -3003,6 +3003,7 @@ window.LANG_CS = {
     "kindPop": "Pop",
     "rangeStyleTitle": "Částečné efekty · barva",
     "rangeStyleHint": "V náhledu nebo v nečinnosti vyber znaky tažením pravým tlačítkem na řádku textu.",
+    "offsetSelectionHint": "Výběr znaků tažením pravým tlačítkem — hlas i efekty se řídí výběrem.",
     "rangeStyleSelectLabel": "Rozsah znaků pro styl",
     "rangeStyleSelected": "Vybráno",
     "rangeStyleSelectPrompt": "Nejprve přetáhněte přes požadované znaky.",

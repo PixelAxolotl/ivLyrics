@@ -3003,6 +3003,7 @@ window.LANG_VI = {
     "kindPop": "Pop",
     "rangeStyleTitle": "Hiệu ứng một phần · màu",
     "rangeStyleHint": "Kéo chuột phải trên dòng lời để chọn ký tự, ở chế độ xem trước hoặc chờ.",
+    "offsetSelectionHint": "Kéo chuột phải để chọn ký tự — giọng và hiệu ứng theo vùng chọn.",
     "rangeStyleSelectLabel": "Khoảng ký tự cần tạo kiểu",
     "rangeStyleSelected": "Đã chọn",
     "rangeStyleSelectPrompt": "Trước tiên hãy kéo qua các ký tự cần chọn.",

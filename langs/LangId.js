@@ -3003,6 +3003,7 @@ window.LANG_ID = {
     "kindPop": "Pop",
     "rangeStyleTitle": "Efek sebagian · warna",
     "rangeStyleHint": "Seret dengan klik kanan pada baris lirik untuk memilih karakter, dalam pratinjau atau idle.",
+    "offsetSelectionHint": "Seret klik kanan untuk memilih karakter — Speaker dan efek mengikuti seleksi.",
     "rangeStyleSelectLabel": "Rentang karakter yang akan diberi gaya",
     "rangeStyleSelected": "Dipilih",
     "rangeStyleSelectPrompt": "Seret dulu pada karakter yang diinginkan.",

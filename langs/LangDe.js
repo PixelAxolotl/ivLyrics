@@ -3003,6 +3003,7 @@ window.LANG_DE = {
     "kindPop": "Pop",
     "rangeStyleTitle": "Teileffekte · Farbe",
     "rangeStyleHint": "Wähle in der Vorschau oder im Leerlauf Zeichen per Rechtsziehen auf der Liedtextzeile.",
+    "offsetSelectionHint": "Zeichen per Rechtsziehen auswählen – Speaker- und Effektregler folgen der Auswahl.",
     "rangeStyleSelectLabel": "Zeichenbereich für Stil",
     "rangeStyleSelected": "Ausgewählt",
     "rangeStyleSelectPrompt": "Ziehe zuerst über die gewünschten Zeichen.",

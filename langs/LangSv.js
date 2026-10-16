@@ -3003,6 +3003,7 @@ window.LANG_SV = {
     "kindPop": "Pop",
     "rangeStyleTitle": "Partiella effekter · färg",
     "rangeStyleHint": "Högerdra på textraden för att välja tecken, i förhandsvisning eller viloläge.",
+    "offsetSelectionHint": "Högerdra för att välja tecken – röst och effekter följer markeringen.",
     "rangeStyleSelectLabel": "Teckenintervall att formatera",
     "rangeStyleSelected": "Valt",
     "rangeStyleSelectPrompt": "Dra först över de tecken du vill formatera.",

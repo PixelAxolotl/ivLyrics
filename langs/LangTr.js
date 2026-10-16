@@ -3003,6 +3003,7 @@ window.LANG_TR = {
     "kindPop": "Patlama",
     "rangeStyleTitle": "Kısmi efektler · renk",
     "rangeStyleHint": "Önizleme veya boşta durumdayken şarkı satırında sağa sürükleyerek karakter seçin.",
+    "offsetSelectionHint": "Sağa sürükleyerek karakter seçin — konuşmacı ve efekt seçimi izler.",
     "rangeStyleSelectLabel": "Stil uygulanacak karakter aralığı",
     "rangeStyleSelected": "Seçili",
     "rangeStyleSelectPrompt": "Önce istediğiniz karakterlerin üzerinde sürükleyin.",

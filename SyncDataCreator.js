@@ -1828,6 +1828,42 @@ const normalizeSyncCreatorStyleRanges = (ranges, lineStart = 0, lineEnd = Number
 	return flattened;
 };
 
+// Shared display rule for the merged style UI: when a right-click range is
+// active, the line-level pickers show the setting every selected character
+// shares, or nothing when the range is mixed or uncovered.
+const resolveSyncCreatorSelectionStyle = (selection, ranges) => {
+	const empty = { kind: '', speaker: '', color: '', fallback: '', hasOverride: false };
+	if (
+		!selection
+		|| !Number.isInteger(selection.start)
+		|| !Number.isInteger(selection.end)
+		|| selection.end < selection.start
+	) {
+		return empty;
+	}
+	const list = Array.isArray(ranges) ? ranges : [];
+	const overlapping = list.some(range => range.end >= selection.start && range.start <= selection.end);
+	const kinds = new Set();
+	const speakers = new Set();
+	const colors = new Set();
+	const fallbacks = new Set();
+	for (let index = selection.start; index <= selection.end; index++) {
+		const covering = list.find(range => range.start <= index && range.end >= index);
+		if (!covering) return { ...empty, hasOverride: overlapping };
+		kinds.add(covering.kind || '');
+		speakers.add(covering.speaker || '');
+		colors.add(covering['speaker-color'] || '');
+		fallbacks.add(covering['speaker-fallback'] || '');
+	}
+	return {
+		kind: kinds.size === 1 ? [...kinds][0] : '',
+		speaker: speakers.size === 1 ? [...speakers][0] : '',
+		color: colors.size === 1 ? [...colors][0] : '',
+		fallback: fallbacks.size === 1 ? [...fallbacks][0] : '',
+		hasOverride: true
+	};
+};
+
 const applySyncCreatorStyleRangePatch = (ranges, start, end, patch, lineStart, lineEnd) => {
 	const selectionStart = Math.max(lineStart, Math.min(Number(start), Number(end)));
 	const selectionEnd = Math.min(lineEnd, Math.max(Number(start), Number(end)));
@@ -3425,11 +3461,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const [isParallelSplitCollapsed, setIsParallelSplitCollapsed] = useState(false);
 	const [lineMetaDrafts, setLineMetaDrafts] = useState({});
 	const [lineStyleDrafts, setLineStyleDrafts] = useState({});
-	const [styleRangeEffect, setStyleRangeEffect] = useState('');
-	const [styleRangeSpeaker, setStyleRangeSpeaker] = useState(SYNC_CREATOR_DEFAULT_SPEAKER);
-	const [styleRangeSpeakerColor, setStyleRangeSpeakerColor] = useState('');
-	const [styleRangeSpeakerFallback, setStyleRangeSpeakerFallback] = useState(SYNC_CREATOR_DEFAULT_CUSTOM_FALLBACK);
-	const [isStyleRangeEditorExpanded, setIsStyleRangeEditorExpanded] = useState(false);
 	const [multiVocalMode, setMultiVocalMode] = useState(false);
 	const [pendingMultiVocalDecision, setPendingMultiVocalDecision] = useState(null);
 	const [syncData, setSyncData] = useState(null);
@@ -7048,6 +7079,20 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		setOffsetSelectionRange(null);
 	}, []);
 
+	// One-time teaching toast on first editor startup: right-click
+	// selections also drive the Speaker and effect controls.
+	useEffect(() => {
+		let shown = false;
+		try {
+			shown = window.localStorage?.getItem('ivLyrics:syncCreator:offsetSelectionHintShown') === '1';
+		} catch (_) { /* Private mode or blocked storage still gets one toast. */ }
+		if (shown) return;
+		try {
+			window.localStorage?.setItem('ivLyrics:syncCreator:offsetSelectionHintShown', '1');
+		} catch (_) { /* Showing the toast matters more than remembering it. */ }
+		Toast.success(I18n.t('syncCreator.offsetSelectionHint') || 'Right-drag to select characters — Speaker and effect controls follow the selection.', 6000);
+	}, []);
+
 	const clearLyricTextSelection = useCallback(() => {
 		try {
 			window.getSelection?.()?.removeAllRanges?.();
@@ -7077,6 +7122,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 		if (suppressNextLockContextMenuRef.current) {
 			suppressNextLockContextMenuRef.current = false;
+			return;
+		}
+		// Right-clicks outside any character clear the active selection
+		// instead of arming the clamped edge character.
+		if (charIndex === null || charIndex < 0) {
+			clearOffsetSelection();
+			clearRecordingLock();
 			return;
 		}
 		// Outside record mode a plain right-click toggles a single-character
@@ -8117,7 +8169,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			}
 			const touch = e.touches ? e.touches[0] : e;
 			const charIndex = getCharIndexFromPoint(touch.clientX, touch.clientY);
-			if (charIndex < 0) return;
+			if (charIndex < 0) {
+				clearOffsetSelection();
+				clearRecordingLock();
+				return;
+			}
 			if (mode === 'record') {
 				rightLockDragStartRef.current = charIndex;
 				isRightLockDraggingRef.current = true;
@@ -8138,8 +8194,18 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 		const touch = e.touches ? e.touches[0] : e;
 		const charIndex = getCharIndexFromPoint(touch.clientX, touch.clientY);
-		if (charIndex >= 0) handleDragStart(charIndex, e);
-	}, [mode, currentLineIndex, lyricsLines.length, getCharIndexFromPoint, handleDragStart, isCurrentSyncTargetMetaComplete, showMissingMetaToast]);
+		if (charIndex < 0) {
+			clearOffsetSelection();
+			clearRecordingLock();
+			return;
+		}
+		if (mode !== 'record') return;
+		if (!isCurrentSyncTargetMetaComplete) {
+			showMissingMetaToast();
+			return;
+		}
+		handleDragStart(charIndex, e);
+	}, [mode, currentLineIndex, lyricsLines.length, getCharIndexFromPoint, handleDragStart, isCurrentSyncTargetMetaComplete, showMissingMetaToast, clearOffsetSelection, clearRecordingLock]);
 
 	useEffect(() => {
 		if (!isDragging) return;
@@ -8307,10 +8373,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			};
 		});
 	}, [lineCharOffsets, currentLineIndex, multiVocalMode, claimSessionForLocalEditing]);
-
-	useEffect(() => {
-		setStyleRangeEffect('');
-	}, [offsetSelectionRange]);
 
 	const updateCurrentLineStyleRanges = useCallback((patch) => {		// Partial effects follow the main lyric line's right-click selection,
 		// which only exists outside record mode.
@@ -10577,7 +10639,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			} else {
 				charElementsRef.current.forEach((element, index) => {
 					if (!element) return;
-					element.style.color = currentSpeakerTextColor;
+					element.style.color = element.dataset?.ivSyncCreatorBaseColor || currentSpeakerTextColor;
 					element.style.background = element.dataset.ivSyncCreatorSynced === '1'
 						? (completed[index] ? SYNC_CREATOR_PROGRESS_BACKGROUND : SYNC_CREATOR_SYNCED_BACKGROUND) : '';
 				});
@@ -10610,7 +10672,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			if (!el) return;
 
 			const isSynced = el.dataset.ivSyncCreatorSynced === '1';
-			el.style.color = currentSpeakerTextColor;
+			el.style.color = el.dataset?.ivSyncCreatorBaseColor || currentSpeakerTextColor;
 			if (isSynced && normalizedIndex >= 0 && index <= completedIndex) {
 				el.style.background = SYNC_CREATOR_PROGRESS_BACKGROUND;
 			} else {
@@ -11834,7 +11896,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const baseBackground = !options.wordSpacer && isSynced
 			? (isPlayed ? SYNC_CREATOR_PROGRESS_BACKGROUND : SYNC_CREATOR_SYNCED_BACKGROUND)
 			: '';
-		const baseColor = !options.wordSpacer ? currentSpeakerTextColor : '';
+		const baseColor = !options.wordSpacer ? (inlineStyleColor || currentSpeakerTextColor) : '';
 		const originalContent = furigana
 			? react.createElement('span', { style: s.charFuriganaWrap },
 				char === ' ' ? '\u00A0' : char,
@@ -12350,10 +12412,26 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			]
 		)
 	);
+	// Merged style UI: with an active right-click range (preview/idle only,
+	// never a parallel part), the line-level effect and speaker controls
+	// read and write that range instead of the whole line.
+	const selectionStyleTarget = (
+		mode !== 'record' && !activeParallelPart && offsetSelectionRange
+	) ? {
+		start: currentLineStart + offsetSelectionRange.start,
+		end: currentLineStart + offsetSelectionRange.end
+	} : null;
+	const selectionStyleDisplay = selectionStyleTarget
+		? resolveSyncCreatorSelectionStyle(selectionStyleTarget, currentLineStyleRanges)
+		: null;
 	const updateCurrentTextEffect = useCallback((value) => {
+		if (selectionStyleTarget) {
+			updateCurrentLineStyleRanges({ kind: value });
+			return;
+		}
 		if (activeParallelPart) updateParallelPartMeta(activeParallelPart.id, 'kind', value);
 		else updateCurrentLineMeta('kind', value);
-	}, [activeParallelPart, updateCurrentLineMeta, updateParallelPartMeta]);
+	}, [activeParallelPart, updateCurrentLineMeta, updateParallelPartMeta, updateCurrentLineStyleRanges, selectionStyleTarget]);
 
 	const renderLineInspector = () => {
 		const targetSpeaker = activeParallelPart ? activeParallelPart.speaker : currentLineMeta.speaker;
@@ -12364,6 +12442,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			true,
 			targetSpeaker
 		);
+		// Merged style UI: with an active right-click range the inspector
+		// shows the range's shared setting (blank when mixed) instead of
+		// the whole-line values.
+		const hasRangeSelection = Boolean(selectionStyleTarget);
+		const shownSpeaker = hasRangeSelection ? (selectionStyleDisplay.speaker || '') : targetSpeaker;
+		const shownSpeakerColor = hasRangeSelection ? (selectionStyleDisplay.color || '') : targetSpeakerColor;
+		const shownSpeakerFallback = hasRangeSelection ? (selectionStyleDisplay.fallback || '') : targetSpeakerFallback;
 		const updateSpeakerMeta = (field, value) => {
 			if (activeParallelPart) updateParallelPartMeta(activeParallelPart.id, field, value);
 			else updateCurrentLineMeta(field, value);
@@ -12375,6 +12460,22 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			{ color: bulkCustomSpeakerColor, fallback: bulkCustomSpeakerFallback }
 		);
 		const updateSpeaker = (value) => {
+			if (hasRangeSelection) {
+				const transition = resolveSyncCreatorSpeakerTransition({
+					currentSpeaker: selectionStyleDisplay.speaker,
+					currentColor: selectionStyleDisplay.color,
+					currentFallback: selectionStyleDisplay.fallback,
+					nextSpeaker: value,
+					remembered: {}
+				});
+				if (!transition) return;
+				updateCurrentLineStyleRanges({
+					speaker: transition.speaker,
+					'speaker-fallback': transition.fallback,
+					'speaker-color': transition.color
+				});
+				return;
+			}
 			const transition = resolveSyncCreatorSpeakerTransition({
 				currentSpeaker: targetSpeaker,
 				currentColor: targetSpeakerColor,
@@ -12395,6 +12496,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const updateSpeakerColor = (value) => {
 			const color = normalizeSyncCreatorSpeakerColor(value);
 			if (!color) return false;
+			if (hasRangeSelection) {
+				updateCurrentLineStyleRanges({
+					speaker: selectionStyleDisplay.speaker || targetSpeaker || SYNC_CREATOR_DEFAULT_SPEAKER,
+					'speaker-color': color,
+					'speaker-fallback': selectionStyleDisplay.fallback || targetSpeakerFallback || SYNC_CREATOR_DEFAULT_CUSTOM_FALLBACK
+				});
+				return true;
+			}
 			customSpeakerMetaMemoryRef.current.set(customSpeakerMemoryKey, {
 				color,
 				fallback: normalizeSyncCreatorSpeakerFallback(targetSpeakerFallback)
@@ -12407,6 +12516,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const updateSpeakerFallback = (value) => {
 			const fallback = normalizeSyncCreatorSpeakerFallback(value);
 			if (!fallback) return;
+			if (hasRangeSelection) {
+				updateCurrentLineStyleRanges({
+					speaker: selectionStyleDisplay.speaker || targetSpeaker || SYNC_CREATOR_DEFAULT_SPEAKER,
+					'speaker-color': selectionStyleDisplay.color || targetSpeakerColor,
+					'speaker-fallback': fallback
+				});
+				return;
+			}
 			customSpeakerMetaMemoryRef.current.set(customSpeakerMemoryKey, {
 				color: normalizeSyncCreatorSpeakerColor(targetSpeakerColor)
 					|| rememberedCustomSpeakerMeta.color,
@@ -12415,26 +12532,44 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			setBulkCustomSpeakerFallback(fallback);
 			updateSpeakerMeta('speaker-fallback', fallback);
 		};
+		const speakerSubtitleText = activeParallelPart
+			? (activeParallelPart.role || '')
+			: (hasRangeSelection
+				? `“${currentFullLineChars.slice(selectionStyleTarget.start - currentLineStart, selectionStyleTarget.end - currentLineStart + 1).join('')}”`
+				: (I18n.t('syncCreator.allLine') || 'Full line'));
 		return react.createElement('div', { style: s.sideInspectorGrid },
 			react.createElement('div', { style: s.panel },
-				react.createElement('div', { style: s.panelTitle }, I18n.t('syncCreator.speakerLabel') || 'SPEAKER'),
-				react.createElement('div', { style: s.panelSubtitle }, activeParallelPart ? (activeParallelPart.role || '') : (I18n.t('syncCreator.allLine') || 'Full line')),
-				renderSpeakerPicker(targetSpeaker, targetSpeakerColor, targetSpeakerFallback, updateSpeaker),
-				isSyncCreatorCustomSpeaker(targetSpeaker) && react.createElement('div', { style: s.customSpeakerColorEditor },
+				react.createElement('div', { style: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 } },
+					react.createElement('div', { style: { minWidth: 0 } },
+						react.createElement('div', { style: s.panelTitle }, I18n.t('syncCreator.speakerLabel') || 'SPEAKER'),
+						react.createElement('div', { style: s.panelSubtitle }, speakerSubtitleText)
+					),
+					hasRangeSelection && react.createElement('button', {
+						type: 'button',
+						style: { ...s.deleteBtn, flexShrink: 0, alignSelf: 'center', opacity: selectionStyleDisplay.hasOverride ? 1 : 0.45 },
+						disabled: !selectionStyleDisplay.hasOverride,
+						onClick: () => {
+							if (!updateCurrentLineStyleRanges({ kind: null, speaker: null })) return;
+							Toast.success(I18n.t('syncCreator.rangeStyleCleared') || '선택 범위의 스타일을 지웠습니다.');
+						}
+					}, I18n.t('syncCreator.rangeStyleClear') || '스타일 지우기')
+				),
+				renderSpeakerPicker(shownSpeaker, shownSpeakerColor, shownSpeakerFallback, updateSpeaker),
+				isSyncCreatorCustomSpeaker(shownSpeaker) && react.createElement('div', { style: s.customSpeakerColorEditor },
 					react.createElement('input', {
 						type: 'color',
 						style: s.customSpeakerColorPicker,
-						value: sanitizeSyncCreatorSpeakerColor(targetSpeaker, targetSpeakerColor, true, targetSpeakerFallback),
+						value: sanitizeSyncCreatorSpeakerColor(shownSpeaker, shownSpeakerColor, true, shownSpeakerFallback),
 						onChange: (event) => updateSpeakerColor(event.target.value),
 						'aria-label': I18n.t('syncCreator.speakerCustomColor') || 'Custom speaker color'
 					}),
 					react.createElement('div', { style: s.customSpeakerColorFields },
 						react.createElement('div', { style: s.customSpeakerColorLabel }, I18n.t('syncCreator.speakerCustomColor') || 'Custom speaker color'),
 						react.createElement('input', {
-							key: `${currentLineStart}:${activeParallelPart?.id || 'line'}:${targetSpeakerColor}`,
+							key: `${currentLineStart}:${activeParallelPart?.id || 'line'}:${shownSpeakerColor}`,
 							type: 'text',
 							style: s.customSpeakerColorText,
-							defaultValue: sanitizeSyncCreatorSpeakerColor(targetSpeaker, targetSpeakerColor, true, targetSpeakerFallback),
+							defaultValue: sanitizeSyncCreatorSpeakerColor(shownSpeaker, shownSpeakerColor, true, shownSpeakerFallback),
 							placeholder: '#00ff00',
 							maxLength: 7,
 							onKeyDown: (event) => {
@@ -12442,7 +12577,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							},
 							onBlur: (event) => {
 								if (updateSpeakerColor(event.target.value)) return;
-								event.target.value = sanitizeSyncCreatorSpeakerColor(targetSpeaker, targetSpeakerColor, true, targetSpeakerFallback);
+								event.target.value = sanitizeSyncCreatorSpeakerColor(shownSpeaker, shownSpeakerColor, true, shownSpeakerFallback);
 								Toast.error(I18n.t('syncCreator.speakerCustomColorInvalid') || 'Enter a valid HEX color.');
 							}
 						}),
@@ -12450,7 +12585,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						react.createElement('div', { style: s.customSpeakerColorLabel }, I18n.t('syncCreator.speakerCustomFallback') || 'Fallback color group'),
 						react.createElement('select', {
 							style: { ...s.select, width: '100%' },
-							value: targetSpeakerFallback,
+							value: shownSpeakerFallback,
 							onChange: (event) => updateSpeakerFallback(event.target.value)
 						}, SYNC_CREATOR_CUSTOM_FALLBACK_OPTIONS.map(value => react.createElement('option', {
 							key: value,
@@ -12461,8 +12596,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				),
 				react.createElement('div', { style: s.railDivider }),
 				renderBulkSpeakerControl({
-					seedColor: isSyncCreatorCustomSpeaker(targetSpeaker) ? targetSpeakerColor : rememberedCustomSpeakerMeta.color,
-					seedFallback: isSyncCreatorCustomSpeaker(targetSpeaker) ? targetSpeakerFallback : rememberedCustomSpeakerMeta.fallback
+					seedColor: isSyncCreatorCustomSpeaker(shownSpeaker) ? shownSpeakerColor : rememberedCustomSpeakerMeta.color,
+					seedFallback: isSyncCreatorCustomSpeaker(shownSpeaker) ? shownSpeakerFallback : rememberedCustomSpeakerMeta.fallback
 				})
 			)
 		);
@@ -12951,190 +13086,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	);
 	};
 
-	const renderStyleRangeEditor = () => {
-		if (!currentFullLineChars.length) return null;
-		// Partial effects are preview/idle-only: right-click there means lock.
-		if (mode === 'record') return null;
-		const selectionStart = offsetSelectionRange ? offsetSelectionRange.start : -1;
-		const selectionEnd = offsetSelectionRange ? offsetSelectionRange.end : -1;
-		const selectedText = selectionStart >= 0
-			? currentFullLineChars.slice(selectionStart, selectionEnd + 1).join('')
-			: '';
-		const selectRangeEffect = (value) => {
-			if (!value) return;
-			setStyleRangeEffect(value);
-			updateCurrentLineStyleRanges({ kind: value });
-		};
-		const applyRangeSpeakerMeta = (speaker, color, fallback) => {
-			const speakerMeta = resolveSyncCreatorBulkSpeakerMeta(speaker, color, fallback);
-			if (!speakerMeta) return false;
-			return updateCurrentLineStyleRanges({
-				speaker: speakerMeta.speaker,
-				'speaker-color': speakerMeta.color,
-				'speaker-fallback': speakerMeta.fallback
-			});
-		};
-		const selectRangeSpeaker = (value) => {
-			const transition = resolveSyncCreatorSpeakerTransition({
-				currentSpeaker: styleRangeSpeaker,
-				currentColor: styleRangeSpeakerColor,
-				currentFallback: styleRangeSpeakerFallback,
-				nextSpeaker: value,
-				remembered: {
-					color: styleRangeSpeakerColor || bulkCustomSpeakerColor,
-					fallback: styleRangeSpeakerFallback || bulkCustomSpeakerFallback
-				}
-			});
-			if (!transition) return;
-			setStyleRangeSpeaker(transition.speaker);
-			setStyleRangeSpeakerColor(transition.color);
-			setStyleRangeSpeakerFallback(transition.fallback || SYNC_CREATOR_DEFAULT_CUSTOM_FALLBACK);
-			applyRangeSpeakerMeta(
-				transition.speaker,
-				transition.color,
-				transition.fallback || SYNC_CREATOR_DEFAULT_CUSTOM_FALLBACK
-			);
-		};
-		const clearStyle = () => {
-			if (!updateCurrentLineStyleRanges({ kind: null, speaker: null })) return;
-			setStyleRangeEffect('');
-			Toast.success(I18n.t('syncCreator.rangeStyleCleared') || '선택 범위의 스타일을 지웠습니다.');
-		};
-
-const renderStyleRangeColorColumn = () => react.createElement('section', { className: 'sync-creator-range-style-pane sync-creator-range-color-picker' },
-					react.createElement('div', { className: 'sync-creator-range-style-pane-title' }, I18n.t('syncCreator.rangeColorLabel') || '부분 색상'),
-					react.createElement('div', {
-						className: 'sync-creator-range-speaker-palette',
-						style: {
-							width: '100%',
-							maxHeight: 270,
-							overflowY: 'auto',
-							overflowX: 'hidden',
-							overscrollBehavior: 'contain'
-						}
-					},
-						renderSpeakerPicker(
-							styleRangeSpeaker,
-							styleRangeSpeakerColor,
-							styleRangeSpeakerFallback,
-							selectRangeSpeaker,
-							{ disabled: !selectedText }
-						),
-						isSyncCreatorCustomSpeaker(styleRangeSpeaker) && react.createElement('div', {
-							style: { display: 'grid', gridTemplateColumns: '34px minmax(110px, 1fr)', gap: 7, marginTop: 7, alignItems: 'center' }
-						},
-							react.createElement('input', {
-								type: 'color',
-								disabled: !selectedText,
-								value: sanitizeSyncCreatorSpeakerColor(styleRangeSpeaker, styleRangeSpeakerColor, true, styleRangeSpeakerFallback),
-								onChange: event => {
-									const nextColor = normalizeSyncCreatorSpeakerColor(event.target.value);
-									setStyleRangeSpeakerColor(nextColor);
-									applyRangeSpeakerMeta(styleRangeSpeaker, nextColor, styleRangeSpeakerFallback);
-								},
-								style: { width: 34, height: 30, padding: 2, border: `1px solid ${TOSS_BORDER}`, borderRadius: 7, background: 'transparent' },
-								'aria-label': I18n.t('syncCreator.speakerCustomColor') || 'Custom speaker color'
-							}),
-							react.createElement('select', {
-								style: { ...s.select, width: '100%' },
-								disabled: !selectedText,
-								value: styleRangeSpeakerFallback,
-								onChange: event => {
-									const nextFallback = normalizeSyncCreatorSpeakerFallback(event.target.value) || SYNC_CREATOR_DEFAULT_CUSTOM_FALLBACK;
-									setStyleRangeSpeakerFallback(nextFallback);
-									applyRangeSpeakerMeta(styleRangeSpeaker, styleRangeSpeakerColor, nextFallback);
-								}
-							}, SYNC_CREATOR_CUSTOM_FALLBACK_OPTIONS.map(value => react.createElement('option', {
-								key: value,
-								value
-							}, value.replace(' 1', ''))))
-						)
-					)
-				);
-
-		const renderStyleRangeToggle = () => react.createElement('button', {
-				type: 'button',
-				style: {
-					width: '100%',
-					minHeight: 38,
-					display: 'grid',
-					gridTemplateColumns: 'minmax(0, 1fr) auto auto',
-					alignItems: 'center',
-					gap: 9,
-					padding: '8px 11px',
-					border: 'none',
-					borderRadius: 0,
-					background: 'transparent',
-					color: 'var(--spice-text)',
-					textAlign: 'left',
-					cursor: 'pointer'
-				},
-				onClick: () => {
-					setIsStyleRangeEditorExpanded(value => !value);
-				},
-				'aria-expanded': isStyleRangeEditorExpanded
-			},
-				react.createElement('strong', {
-					style: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, fontWeight: 700 }
-				}, I18n.t('syncCreator.rangeStyleTitle') || '부분 효과 · 색상'),
-				react.createElement('span', { style: { fontSize: 10.5, color: 'var(--spice-subtext)', whiteSpace: 'nowrap' } },
-					currentLineStyleRanges.length
-						? `${currentLineStyleRanges.length} ${I18n.t('syncCreator.rangeStyleCount') || '개 범위'}`
-						: (I18n.t('syncCreator.rangeStyleEmpty') || '설정된 범위 없음')
-				),
-				react.createElement('span', { style: { color: 'var(--spice-subtext)', fontSize: 16, lineHeight: 1 } }, isStyleRangeEditorExpanded ? '⌃' : '⌄')
-		);
-		const renderStyleRangeExpandedBody = () => react.createElement('div', {
-				style: { padding: '0 11px 10px', borderTop: `1px solid ${TOSS_BORDER}` }
-			},
-				react.createElement('div', { style: { marginTop: 8, fontSize: 10.5, color: 'var(--spice-subtext)', lineHeight: 1.4 } },
-					I18n.t('syncCreator.rangeStyleHint') || 'Right-drag the lyric line to select characters.'
-				),
-				react.createElement('div', {
-					style: { minHeight: 28, marginTop: 5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }
-				},
-					react.createElement('div', {
-						style: { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 10.5, color: selectedText ? 'var(--spice-text)' : 'var(--spice-subtext)' }
-					}, selectedText
-						? `${I18n.t('syncCreator.rangeStyleSelected') || '선택'}: “${selectedText}” (${selectionStart + 1}–${selectionEnd + 1})`
-						: (I18n.t('syncCreator.rangeStyleSelectPrompt') || 'Right-drag the lyric line first.')
-					),
-					react.createElement('button', {
-						type: 'button',
-						style: { ...s.deleteBtn, flexShrink: 0, opacity: selectedText ? 1 : 0.45 },
-						disabled: !selectedText,
-						onClick: clearStyle
-					}, I18n.t('syncCreator.rangeStyleClear') || '스타일 지우기')
-				),
-				react.createElement('div', { className: 'sync-creator-range-style-columns' },
-					react.createElement('section', { className: 'sync-creator-range-style-pane sync-creator-range-effect-picker' },
-						react.createElement('div', { className: 'sync-creator-range-style-pane-title' }, I18n.t('syncCreator.typeLabel') || 'Text effect'),
-						renderTextEffectPicker(styleRangeEffect, selectRangeEffect, {
-							compact: true,
-							disabled: !selectedText,
-							allowEmpty: true
-						})
-					),
-					renderStyleRangeColorColumn()
-				)
-		);
-		return react.createElement('section', {
-			className: 'sync-creator-range-style-editor',
-			style: {
-				flexShrink: 0,
-				marginTop: 8,
-				border: `1px solid ${TOSS_BORDER}`,
-				borderRadius: 10,
-				background: 'rgba(255,255,255,0.025)',
-				overflow: 'hidden'
-			}
-		},
-			renderStyleRangeToggle(),
-			isStyleRangeEditorExpanded && renderStyleRangeExpandedBody()
-		);
-	};
-
-	const renderStagePanel = () => react.createElement('div', { className: 'sync-creator-stage', style: { ...s.panel, ...s.stagePanel } },
+const renderStagePanel = () => react.createElement('div', { className: 'sync-creator-stage', style: { ...s.panel, ...s.stagePanel } },
 		isLoading && react.createElement('div', { style: s.loading }, I18n.t('syncCreator.loadingLyrics')),
 		error && react.createElement('div', { style: { ...s.error, display: 'flex', flexDirection: 'column', alignItems: 'center' } },
 			react.createElement('div', null, error)
@@ -13189,9 +13141,12 @@ const renderStyleRangeColorColumn = () => react.createElement('section', { class
 			mode === 'record' && react.createElement('div', { style: s.hint }, syncGranularityRecordingHint),
 			react.createElement('div', { style: s.effectStripRow },
 				react.createElement('span', { style: s.effectStripTitle }, I18n.t('syncCreator.typeLabel') || 'Text effect'),
-				renderTextEffectPicker(currentTextEffectKind, updateCurrentTextEffect, { compact: true })
-			),
-			renderStyleRangeEditor()
+				renderTextEffectPicker(
+					selectionStyleTarget ? selectionStyleDisplay.kind : currentTextEffectKind,
+					updateCurrentTextEffect,
+					{ compact: true, allowEmpty: Boolean(selectionStyleTarget) }
+				)
+			)
 		)
 	);
 

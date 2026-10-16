@@ -3003,6 +3003,7 @@ window.LANG_MS = {
     "kindPop": "Pop",
     "rangeStyleTitle": "Kesan separa · warna",
     "rangeStyleHint": "Seret klik kanan pada baris lirik untuk memilih aksara, dalam pratonton atau melahu.",
+    "offsetSelectionHint": "Seret klik kanan untuk memilih aksara — Speaker dan kesan mengikut pilihan.",
     "rangeStyleSelectLabel": "Julat aksara untuk digayakan",
     "rangeStyleSelected": "Dipilih",
     "rangeStyleSelectPrompt": "Seret dahulu pada aksara yang dikehendaki.",

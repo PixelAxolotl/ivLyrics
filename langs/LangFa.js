@@ -3003,6 +3003,7 @@ window.LANG_FA = {
     "kindPop": "پاپ",
     "rangeStyleTitle": "جلوه‌های بخشی · رنگ",
     "rangeStyleHint": "در حالت پیش‌نمایش یا بیکار، با درگ راست روی خط شعر کاراکترها را انتخاب کنید.",
+    "offsetSelectionHint": "با درگ راست کاراکتر انتخاب کنید — صدا و افکت از انتخاب پیروی می‌کنند.",
     "rangeStyleSelectLabel": "بازه نویسه‌ها برای سبک‌دهی",
     "rangeStyleSelected": "انتخاب‌شده",
     "rangeStyleSelectPrompt": "ابتدا روی نویسه‌های موردنظر بکشید.",

@@ -6999,6 +6999,14 @@ const useSyncedLyricsEngine = ({
 			if (isCurrentRenderedLine) {
 				className += " lyrics-lyricsContainer-LyricsLine-active";
 			}
+			// Past karaoke rows are styled from this class. A :has(.is-complete)
+			// rule on the row restyled every element of the page each time a
+			// line finished (about 100 ms on a fast PC, far more on a slow one).
+			// Rows fading out into the padding keep it, as the old rule matched them.
+			if (isKara && Number.isFinite(position) && playbackWindows[lineNumber]
+				&& position >= playbackWindows[lineNumber].contentEndTime) {
+				className += " lyrics-lyricsContainer-LyricsLine-complete";
+			}
 			const isOutsideVisibleRange = !isHighlightedLine
 				&& lineNumber !== visualAnchorLineNumber
 				&& (shouldHideSyncedLine({
@@ -9536,6 +9544,31 @@ const SyncedLyricsPage = react.memo(({ lyrics = [], trackUri = "", provider, con
 
 	const itemPosition = isKara ? karaokePosition : 0;
 	const renderCache = useMemo(() => ({ elementsByItem: new WeakMap() }), [lyricsId]);
+	// While a multi-vocal line anchors one of its rows, the rows take a calmer
+	// transition (style.css, [data-active-vocal-row]). The list is marked here
+	// instead of by a :has(.active-vocal-row) rule, which restyled every element
+	// of the page whenever the active row changed (about 100 ms on a fast PC).
+	// Vocal stacks publish their anchored row in an attribute.
+	useEffect(() => {
+		const page = lyricContainerEle.current;
+		if (!isKara || !page || typeof MutationObserver !== "function") return undefined;
+		const update = () => {
+			const list = page.querySelector(":scope > .lyrics-lyricsContainer-SyncedLyrics");
+			if (!list) return;
+			const anchored = Array.from(list.querySelectorAll(".lyrics-karaoke-stack[data-active-karaoke-vocal-row-index]"))
+				.some((stack) => Number(stack.getAttribute("data-active-karaoke-vocal-row-index")) >= 0);
+			if (anchored !== list.hasAttribute("data-active-vocal-row")) list.toggleAttribute("data-active-vocal-row", anchored);
+		};
+		const observer = new MutationObserver(update);
+		observer.observe(page, {
+			subtree: true,
+			childList: true,
+			attributes: true,
+			attributeFilter: ["data-active-karaoke-vocal-row-index"],
+		});
+		update();
+		return () => observer.disconnect();
+	}, [isKara, containerReady, lyricsId]);
 	const renderedItems = useMemo(() => renderLyricsItems({
 		items: renderItems,
 		isKara,

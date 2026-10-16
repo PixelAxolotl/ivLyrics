@@ -66,9 +66,12 @@ const normalizePresentation = (value) => JSON.parse(JSON.stringify(value, functi
 	// routing is verified in the scripted presentation test below.
 	if (key === "detailClassName" || key === "fadeDurationMs" || key === "--lyrics-interlude-fade-duration"
 		|| key.startsWith("--line-motion-")) return undefined;
+	// Finished karaoke rows carry a class for their past-line style (it
+	// replaced a :has() rule); karaoke_past_line_style.test.mjs covers it.
 	if (key === "className" && typeof entry === "string") return entry.split(" ")
 		.filter(name => !/^lyrics-line-detail(?:-(?:current|past|future))?$/.test(name)
-			&& name !== "lyrics-interlude-departing").join(" ");
+			&& name !== "lyrics-interlude-departing"
+			&& name !== "lyrics-lyricsContainer-LyricsLine-complete").join(" ");
 	return entry;
 }));
 

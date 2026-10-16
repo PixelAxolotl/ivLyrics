@@ -2648,8 +2648,10 @@ div.lyrics-tabBar-headerItemLink {
   padding-block: 0.08em;
 }
 
+/* Set by KaraokeLine while a multi-vocal row anchors the page; a
+   :has(.active-vocal-row) rule restyled every element whenever the row changed. */
 .lyrics-lyricsContainer-SyncedLyricsPage.is-karaoke
-  .lyrics-lyricsContainer-SyncedLyrics:has(.lyrics-karaoke-part.active-vocal-row)
+  .lyrics-lyricsContainer-SyncedLyrics[data-active-vocal-row]
   > .lyrics-lyricsContainer-LyricsLine:not(.lyrics-lyricsContainer-LyricsLine-paddingLine) {
   transition-property: transform, color, opacity;
   transition-duration:
@@ -3436,21 +3438,21 @@ div.lyrics-tabBar-headerItemLink {
 }
 
 .lyrics-lyricsContainer-SyncedLyricsPage.is-karaoke
-  .lyrics-lyricsContainer-LyricsLine:not(.lyrics-lyricsContainer-LyricsLine-active):has(.lyrics-karaoke-line.is-complete) {
+  .lyrics-lyricsContainer-LyricsLine.lyrics-lyricsContainer-LyricsLine-complete:not(.lyrics-lyricsContainer-LyricsLine-active) {
   opacity: var(--iv-lyrics-past-line-opacity, 0.52);
 }
 
 .lyrics-lyricsContainer-SyncedLyricsPage.is-karaoke
-  .lyrics-lyricsContainer-LyricsLine:not(.lyrics-lyricsContainer-LyricsLine-active):has(.lyrics-karaoke-line.is-complete) {
-  /* Keep :has invalidation on the row, rather than adding all glyphs to the
-     document's relational-selector invalidation set. Resolve the endpoint on
-     each glyph so nested vocal rows retain their own speaker colors. */
+  .lyrics-lyricsContainer-LyricsLine.lyrics-lyricsContainer-LyricsLine-complete:not(.lyrics-lyricsContainer-LyricsLine-active) {
+  /* Set on the row by the renderer: a :has(.is-complete) rule here restyled
+     the whole page whenever a line finished. Resolve the endpoint on each
+     glyph so nested vocal rows retain their own speaker colors. */
   --iv-karaoke-past-color-share: 100%;
 }
 
 .lyrics-lyricsContainer-LyricsContainer.highlight-mode-enabled
   .lyrics-lyricsContainer-SyncedLyricsPage.is-karaoke
-  .lyrics-lyricsContainer-LyricsLine:not(.lyrics-lyricsContainer-LyricsLine-active):has(.lyrics-karaoke-line.is-complete) {
+  .lyrics-lyricsContainer-LyricsLine.lyrics-lyricsContainer-LyricsLine-complete:not(.lyrics-lyricsContainer-LyricsLine-active) {
   opacity: var(--highlight-inactive-opacity, 0.3);
 }
 

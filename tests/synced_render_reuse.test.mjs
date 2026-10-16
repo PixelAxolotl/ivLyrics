@@ -18,7 +18,12 @@ let harness = helper.slice(helper.indexOf('const repoRoot'), helper.indexOf('tes
   // is verified by the scripted presentation tests.
   // Fade duration now fits late handoffs; interlude_handoff.test.mjs verifies
   // the intentional change while this suite still compares all source timing.
+  // The past-line class postdates the frozen pass; karaoke_past_line_style
+  // verifies it.
   .replace('const comparable = normalizePresentation(output);', `const comparable = JSON.parse(JSON.stringify(output, function(key, value) {
+    if (key === 'className' && typeof value === 'string') {
+      return value.split(' ').filter(name => name !== 'lyrics-lyricsContainer-LyricsLine-complete').join(' ');
+    }
     return (key === 'lineRef' && Object.hasOwn(this, 'delay')) || key === 'fadeDurationMs'
       || key === '--lyrics-interlude-fade-duration' || key.startsWith('--line-motion-') ? undefined : value;
   }));`)

@@ -182,14 +182,18 @@ test("the YouTube sync leaves the held pre-roll exactly on the mapped time", () 
     assert.deepEqual(player.calls[0], ["seekTo", 0.4]);
 });
 
-test("the YouTube sync corrects steady drift only while playing", () => {
-    const run = (playerState, shouldPlay) => {
+test("the YouTube sync only reloads the video for drift past the seek threshold", () => {
+    // VideoBackgroundDepend turns a seek into a positioned reload (a
+    // muted-autoplay embed ignores seekTo): 0.3-0.9 s of black. A steady 0.3 s
+    // lag used to be "corrected" that way every ~3 s, each reload lagging a
+    // little again, so the picture kept cutting to black.
+    const run = ({ lag, playerState = 1, shouldPlay = true, seconds = 30 }) => {
         const driftState = createVideoDriftState();
         const player = createPlayer({ time: 0, state: playerState });
         const seeks = [];
-        for (let now = 0; now <= 6000; now += TICK_MS) {
+        for (let now = 0; now <= seconds * 1000; now += TICK_MS) {
             const target = 20 + now / 1000;
-            player.getCurrentTime = () => target - 0.3;
+            player.getCurrentTime = () => target - lag;
             player.calls.length = 0;
             syncYouTubePlayerTimeline({
                 player, targetVideoTime: target, shouldHoldAtStart: false, shouldPlay,
@@ -199,6 +203,31 @@ test("the YouTube sync corrects steady drift only while playing", () => {
         }
         return seeks;
     };
-    assert.ok(run(1, true).length >= 1, "playing: steady 0.3 s lag is corrected");
-    assert.equal(run(2, false).length, 0, "paused: nothing to correct");
+    for (const lag of [0.2, 0.3, -0.3, 0.45]) {
+        assert.equal(run({ lag }).length, 0, `a steady ${lag} s drift is left alone`);
+    }
+    assert.ok(run({ lag: 0.8, seconds: 2 }).length >= 1, "drift past half a second still gets one seek");
+    assert.equal(run({ lag: 0.3, playerState: 2, shouldPlay: false }).length, 0, "paused: nothing to correct");
+});
+
+test("the drift planner leaves soft corrections to players that can take them", () => {
+    const drive = (options) => {
+        const state = createVideoDriftState();
+        const actions = [];
+        for (let now = 0; now <= 12000; now += TICK_MS) {
+            actions.push(planVideoDriftCorrection(state, {
+                currentTime: 20 + now / 1000 - 0.3, targetTime: 20 + now / 1000, now,
+                isPlaying: true, isSteady: true, ...options,
+            }));
+        }
+        return actions;
+    };
+    assert.ok(drive({}).some(action => action.type === "seek"), "by default a steady lag is corrected with a seek");
+    assert.ok(drive({ canAdjustRate: true }).every(action => action.type !== "seek"), "a local video eases it out with its speed");
+    assert.ok(drive({ allowSoftSeek: false }).every(action => action.type === "none"), "a reloading player only gets hard seeks");
+    // Hard drift is still corrected at once, with the learned lead.
+    const state = createVideoDriftState();
+    state.leadSeconds = 0.4;
+    assert.deepEqual({ ...planVideoDriftCorrection(state, { currentTime: 5, targetTime: 20, now: 0, isPlaying: true, allowSoftSeek: false }) },
+        { type: "seek", time: 20.4 });
 });

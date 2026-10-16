@@ -46,9 +46,10 @@ const getVideoSyncOffsetSeconds = (captionStartTime, lyricsStartTime, videoInfo)
 const VIDEO_SYNC_INTERVAL_MS = 250;
 const VIDEO_SYNC_SEEK_THRESHOLD_SECONDS = 0.5;
 // Drift below the seek threshold used to be left alone, so a video that resumed
-// late after a seek could stay up to half a second behind. Steady drift above
-// this is now corrected, and the time a seek needs to resume is learned so the
-// next seek lands on time.
+// late after a seek could stay up to half a second behind. Players that can
+// change speed (the local helper video) now ease steady drift above this out,
+// and the time a seek needs to resume is learned so the next seek lands on
+// time. YouTube players keep to hard seeks: each one reloads the video.
 const VIDEO_DRIFT_SOFT_THRESHOLD_SECONDS = 0.15;
 const VIDEO_DRIFT_BACKOFF_THRESHOLD_SECONDS = 0.35;
 const VIDEO_DRIFT_SAMPLE_COUNT = 6;
@@ -314,6 +315,10 @@ const planVideoDriftCorrection = (state, {
     isPlaying = false,
     isSteady = false,
     canAdjustRate = false,
+    // False for players whose every seek reloads the video: a visible black gap
+    // (see syncYouTubePlayerTimeline). Only drift past the seek threshold is
+    // worth that.
+    allowSoftSeek = true,
 }) => {
     if (!state || !Number.isFinite(targetTime)) return { type: "none" };
     const lead = isPlaying ? state.leadSeconds : 0;
@@ -348,7 +353,8 @@ const planVideoDriftCorrection = (state, {
         return { type: "rate", rate: Math.round((1 - rateDelta) * 1000) / 1000 };
     }
 
-    if (Math.abs(median) <= state.softThresholdSeconds || now - state.lastSeekAt < VIDEO_DRIFT_SOFT_INTERVAL_MS) {
+    if (!allowSoftSeek || Math.abs(median) <= state.softThresholdSeconds
+        || now - state.lastSeekAt < VIDEO_DRIFT_SOFT_INTERVAL_MS) {
         return { type: "none" };
     }
     state.softCorrectionTimes = state.softCorrectionTimes
@@ -429,6 +435,11 @@ const syncYouTubePlayerTimeline = ({
                 now,
                 isPlaying: shouldPlay,
                 isSteady: shouldPlay && playerState === 1,
+                // VideoBackgroundDepend turns a seek into a positioned reload (a
+                // muted-autoplay embed ignores seekTo), which blanks the picture
+                // for 0.3-0.9 s. Correcting a 0.2 s drift that way costs far more
+                // than the drift, and every such reload lags a little again.
+                allowSoftSeek: false,
             });
             if (correction.type === "seek") player.seekTo(wrapVideoSyncTime(correction.time, player.getDuration?.()), true);
         }

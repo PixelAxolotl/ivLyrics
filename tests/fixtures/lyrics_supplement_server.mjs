@@ -105,6 +105,8 @@ window.supplementFixture={
  play(){position=progress();epoch=performance.now();playing=true;},
  pause(){position=progress();playing=false;paint();},
  track(next){track=next;render();paint();},
+ replaceLyrics(next,nextTrack){if(nextTrack)track=nextTrack;base=next;lyrics=next;app.state.currentLyrics=next;render();paint();},
+ get position(){return progress()},
  refreshWords(){ReactDOM.flushSync(()=>window.dispatchEvent(new CustomEvent('ivLyrics:word-supplements-invalidated')));},
  targetWords(next){wordTarget=next;revision++;render();paint();},
  resolveWords(kind,prefix='reading',lineIndex=null){
@@ -140,7 +142,12 @@ createServer((request,response)=>{
     } else if(url.pathname==='/react.js'||url.pathname==='/react-dom.js'){
       const name=url.pathname==='/react.js'?'react':'react-dom';body=readFileSync(resolve(modules,name,'umd',name+'.development.js'));
     } else if(url.pathname==='/LyricsWordSegmenter.js')body=readFileSync(resolve(root,'LyricsWordSegmenter.js'));
-    else if(url.pathname==='/style.css'){body=readFileSync(resolve(root,'style.css'),'utf8').replace(/^@import\s+[^;]+;/gm,'');type='text/css';}
+    else if(url.pathname==='/style.css'||url.pathname==='/karaoke-before.css'){
+      body=(url.pathname==='/karaoke-before.css'
+        ?execFileSync('git',['show','44c062547c2448b015610882090503aa98b5f7cb:style.css'],{cwd:root,encoding:'utf8'})
+        :readFileSync(resolve(root,'style.css'),'utf8')).replace(/^@import\s+[^;]+;/gm,'');
+      type='text/css';
+    }
     else{response.writeHead(404);response.end();return;}
     response.writeHead(200,{'Content-Type':type+';charset=utf-8','Cache-Control':'no-store'});response.end(body);
   }catch(error){response.writeHead(500);response.end(String(error.stack));}

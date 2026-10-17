@@ -144,6 +144,31 @@ const allDeclarations = (h) => Array.from(h.api.sidebarTabs).flatMap(({ id }) =>
 const settingRows = (h, tree) => elements(tree).filter((node) => node.type === h.OptionList)
   .flatMap((node) => Array.from(node.props.items || []));
 
+test("album-art mode shortcut has one LP settings owner, persistent saving and the normal reset path", () => {
+  const key = "fullscreen-album-open-lp", h = harness();
+  const physical = allDeclarations(h).filter(({ item }) => item.key === key);
+  assert.equal(physical.length, 1);
+  assert.equal(physical[0].tabId, "fullscreen");
+  assert.equal(physical[0].sectionKey, "vinyl-mode");
+  assert.equal(physical[0].item.defaultValue, true);
+  assert.equal(h.getSettingDefaultValue(key), true);
+  h.clearCalls();
+  physical[0].onChange(key, false);
+  assert.equal(h.visual[key], false);
+  assert.deepEqual(h.saves, [{ method: "saveConfig", key, value: false }]);
+  h.render();
+  const registry = Array.from(h.api.buildSettingsRegistry()).filter(item => item.key === key);
+  assert.equal(registry.length, 1);
+  assert.equal(registry[0].tabId, "fullscreen");
+  const search = Array.from(h.api.searchableSettings).filter(item => item.settingKey === key);
+  assert.equal(search.length, 1);
+  assert.equal(search[0].sectionKey, "fullscreen");
+  h.clearCalls();
+  h.api.resetChangedEntries(registry);
+  assert.equal(h.visual[key], true);
+  assert.deepEqual(h.saves, [{ method: "saveConfig", key, value: true }]);
+});
+
 test("production menus give persisted controls one tab owner, with Performance flags exclusive", () => {
   const h = harness();
   const rows = allDeclarations(h);

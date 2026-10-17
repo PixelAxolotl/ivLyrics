@@ -2596,6 +2596,8 @@ window.LANG_SV = {
     },
     "settings": {
       "subtitle": "Anpassa storlek, animationer och typografi för den nedre textraden i vinylläget.",
+      "albumClickOpensModeLabel": "Öppna lägen via albumomslaget",
+      "albumClickOpensModeDesc": "Klicka på albumomslaget för att öppna det valda LP-, CD- eller videoläget. När det här alternativet är avstängt kan du fortfarande välja ett läge i menyn.",
       "albumSizeLabel": "Omslagsstorlek",
       "albumSizeDesc": "Justerar albumomslagets storlek i vinylläget.",
       "recordSizeLabel": "Skivstorlek",

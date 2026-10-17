@@ -2962,6 +2962,10 @@ const CONFIG = {
       StorageManager.getItem("ivLyrics:visual:fullscreen-album-radius") ||
       "12",
     // Fullscreen vinyl mode
+    "fullscreen-album-open-lp": StorageManager.get(
+      "ivLyrics:visual:fullscreen-album-open-lp",
+      true
+    ),
     "fullscreen-vinyl-album-size":
       Number(StorageManager.getItem("ivLyrics:visual:fullscreen-vinyl-album-size")) ||
       100,

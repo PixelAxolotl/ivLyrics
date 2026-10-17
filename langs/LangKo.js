@@ -2596,6 +2596,8 @@ window.LANG_KO = {
     },
     "settings": {
       "subtitle": "LP 모드의 크기, 모션, 하단 가사 글꼴을 조정합니다.",
+      "albumClickOpensModeLabel": "앨범 클릭으로 모드 열기",
+      "albumClickOpensModeDesc": "앨범 이미지를 클릭하면 선택한 LP·CD·비디오 모드로 전환합니다. 꺼도 메뉴에서 직접 모드를 선택할 수 있습니다.",
       "albumSizeLabel": "앨범 커버 크기",
       "albumSizeDesc": "LP 모드의 앨범 커버 크기를 조절합니다.",
       "recordSizeLabel": "LP 판 크기",

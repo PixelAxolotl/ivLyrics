@@ -7420,7 +7420,8 @@ const SETTINGS_DEFAULT_VALUES = Object.freeze({
   "translate-metadata-mode": "translated", "fullscreen-two-column": true,
   "fullscreen-layout-reverse": false, "fullscreen-show-album": true, "fullscreen-show-info": true,
   "fullscreen-center-when-no-lyrics": true, "fullscreen-album-size": "400",
-  "fullscreen-album-radius": "12", "fullscreen-vinyl-album-size": 100,
+  "fullscreen-album-radius": "12", "fullscreen-album-open-lp": true,
+  "fullscreen-vinyl-album-size": 100,
   "fullscreen-vinyl-record-size": 100, "fullscreen-vinyl-background-blur": 0,
   "fullscreen-vinyl-animations": true, "fullscreen-vinyl-track-change-animation": true,
   "fullscreen-vinyl-rotation-speed": 100, "fullscreen-vinyl-center-rotation": true,
@@ -10062,6 +10063,14 @@ const ConfigModal = ({
         name: I18n.t("settingsAdvanced.fullscreenMode.title"),
         desc: I18n.t("settingsAdvanced.fullscreenMode.subtitle"),
         i18nKeys: ["tabs.fullscreen", "settingsAdvanced.fullscreenMode.title", "settingsAdvanced.fullscreenMode.subtitle"]
+      },
+      {
+        section: I18n.t("tabs.fullscreen"),
+        sectionKey: "fullscreen",
+        settingKey: "fullscreen-album-open-lp",
+        name: I18n.t("vinyl.settings.albumClickOpensModeLabel"),
+        desc: I18n.t("vinyl.settings.albumClickOpensModeDesc"),
+        i18nKeys: ["tabs.fullscreen", "vinyl.mode", "vinyl.settings.albumClickOpensModeLabel", "vinyl.settings.albumClickOpensModeDesc"]
       },
       {
         section: I18n.t("tabs.fullscreen"),
@@ -14187,6 +14196,13 @@ react.createElement(OptionList, {
           }),
           react.createElement(OptionList, {
             items: [
+              {
+                desc: I18n.t("vinyl.settings.albumClickOpensModeLabel"),
+                info: I18n.t("vinyl.settings.albumClickOpensModeDesc"),
+                key: "fullscreen-album-open-lp",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-album-open-lp"] !== false,
+              },
               {
                 desc: I18n.t("vinyl.settings.albumSizeLabel"),
                 info: I18n.t("vinyl.settings.albumSizeDesc"),

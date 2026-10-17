@@ -2596,6 +2596,8 @@ window.LANG_TR = {
     },
     "settings": {
       "subtitle": "Plak modunun boyutunu, animasyonlarını ve alttaki şarkı sözü yazı tipini özelleştirin.",
+      "albumClickOpensModeLabel": "Albüm kapağına tıklayarak modları aç",
+      "albumClickOpensModeDesc": "Seçili LP, CD veya video modunu açmak için albüm kapağına tıklayın. Bu seçenek kapalıyken de menüden bir mod seçebilirsiniz.",
       "albumSizeLabel": "Albüm kapağı boyutu",
       "albumSizeDesc": "Plak modundaki albüm kapağının boyutunu ayarlar.",
       "recordSizeLabel": "Plak boyutu",

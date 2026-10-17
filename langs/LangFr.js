@@ -2596,6 +2596,8 @@ window.LANG_FR = {
     },
     "settings": {
       "subtitle": "Personnalisez la taille, les animations et la typographie inférieure du mode vinyle.",
+      "albumClickOpensModeLabel": "Ouvrir les modes depuis la pochette",
+      "albumClickOpensModeDesc": "Cliquez sur la pochette pour ouvrir le mode LP, CD ou vidéo sélectionné. Lorsque cette option est désactivée, vous pouvez toujours choisir un mode dans le menu.",
       "albumSizeLabel": "Taille de la pochette",
       "albumSizeDesc": "Ajuste la taille de la pochette en mode vinyle.",
       "recordSizeLabel": "Taille du disque",

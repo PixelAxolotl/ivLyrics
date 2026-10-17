@@ -2596,6 +2596,8 @@ window.LANG_IT = {
     },
     "settings": {
       "subtitle": "Personalizza dimensioni, animazioni e tipografia inferiore della modalità vinile.",
+      "albumClickOpensModeLabel": "Apri le modalità dalla copertina",
+      "albumClickOpensModeDesc": "Fai clic sulla copertina dell'album per aprire la modalità LP, CD o video selezionata. Anche se questa opzione è disattivata, puoi comunque scegliere una modalità dal menu.",
       "albumSizeLabel": "Dimensione copertina",
       "albumSizeDesc": "Regola la dimensione della copertina in modalità vinile.",
       "recordSizeLabel": "Dimensione disco",

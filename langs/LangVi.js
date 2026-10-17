@@ -2596,6 +2596,8 @@ window.LANG_VI = {
     },
     "settings": {
       "subtitle": "Tùy chỉnh kích thước, chuyển động và phông lời bên dưới của chế độ đĩa than.",
+      "albumClickOpensModeLabel": "Mở chế độ bằng cách nhấp vào bìa album",
+      "albumClickOpensModeDesc": "Nhấp vào bìa album để mở chế độ LP, CD hoặc video đã chọn. Khi tắt tùy chọn này, bạn vẫn có thể chọn chế độ từ menu.",
       "albumSizeLabel": "Kích thước bìa album",
       "albumSizeDesc": "Điều chỉnh kích thước bìa album trong chế độ đĩa than.",
       "recordSizeLabel": "Kích thước đĩa",

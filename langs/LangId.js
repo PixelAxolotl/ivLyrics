@@ -2596,6 +2596,8 @@ window.LANG_ID = {
     },
     "settings": {
       "subtitle": "Sesuaikan ukuran, animasi, dan tipografi lirik bawah pada mode vinil.",
+      "albumClickOpensModeLabel": "Buka mode dengan mengeklik sampul album",
+      "albumClickOpensModeDesc": "Klik sampul album untuk membuka mode LP, CD, atau video yang dipilih. Saat opsi ini dimatikan, Anda tetap dapat memilih mode dari menu.",
       "albumSizeLabel": "Ukuran sampul album",
       "albumSizeDesc": "Menyesuaikan ukuran sampul album dalam mode vinil.",
       "recordSizeLabel": "Ukuran piringan",

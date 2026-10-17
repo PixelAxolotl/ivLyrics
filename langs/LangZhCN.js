@@ -2596,6 +2596,8 @@ window.LANG_ZH_CN = {
     },
     "settings": {
       "subtitle": "调整黑胶模式的尺寸、动效和底部歌词字体。",
+      "albumClickOpensModeLabel": "点击专辑封面打开模式",
+      "albumClickOpensModeDesc": "点击专辑封面即可打开所选的 LP、CD 或视频模式。关闭此选项后，仍可从菜单中选择模式。",
       "albumSizeLabel": "专辑封面大小",
       "albumSizeDesc": "调整黑胶模式中的专辑封面大小。",
       "recordSizeLabel": "唱片大小",

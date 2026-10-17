@@ -103,6 +103,21 @@ test("CD settings catalog and literal UI lookups only request existing translati
   }
 });
 
+test("album-art entry preference resolves in all 22 languages without English fallback", async () => {
+  for (const [file, locale] of locales) {
+    assert.equal(await i18n.setLanguage(locale.meta.code), true);
+    for (const suffix of ["Label", "Desc"]) {
+      const key = `vinyl.settings.albumClickOpensMode${suffix}`;
+      const value = ownValue(locale, key), reference = ownValue(english, key);
+      assert.equal(typeof value, "string", `${file}: ${key}`);
+      assert.ok(value.trim(), `${file}: ${key}`);
+      assert.equal(i18n.t(key), value, `${file}: no fallback`);
+      assert.deepEqual(formatTokens(value), formatTokens(reference));
+      if (file !== "LangEn.js") assert.notEqual(normalize(value), normalize(reference), `${file}: translated copy`);
+    }
+  }
+});
+
 for (const [file, locale] of locales) {
   test(`${file}: every CD string resolves locally with intact formatting and no English fallback`, async () => {
     assert.deepEqual(leafKeys(locale.vinyl.cd), cdKeys);

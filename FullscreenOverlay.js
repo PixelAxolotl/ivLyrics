@@ -2352,6 +2352,7 @@ const FullscreenOverlay = (() => {
             const albumRadiusValue = Number(CONFIG?.visual?.["fullscreen-album-radius"]);
             const albumRadius = isNaN(albumRadiusValue) ? 12 : albumRadiusValue;
             const vinylAnimationsEnabled = CONFIG?.visual?.["fullscreen-vinyl-animations"] !== false;
+            const albumClickOpensMode = CONFIG?.visual?.["fullscreen-album-open-lp"] !== false;
             const titleSize = Number(CONFIG?.visual?.["fullscreen-title-size"]) || 48;
             const artistSize = Number(CONFIG?.visual?.["fullscreen-artist-size"]) || 24;
 
@@ -2400,7 +2401,7 @@ const FullscreenOverlay = (() => {
 
             return {
                 showAlbum, showInfo, albumSize, albumRadiusValue, albumRadius,
-                vinylAnimationsEnabled, titleSize, artistSize,
+                vinylAnimationsEnabled, albumClickOpensMode, titleSize, artistSize,
                 showClock, clockShowSeconds, clockSize, showContext, showContextImage,
                 showNextTrack, nextTrackSeconds, showControls, showVolume, showProgress,
                 showLyricsProgress, showQueue, autoHideUI, autoHideDelay,
@@ -2412,7 +2413,7 @@ const FullscreenOverlay = (() => {
         };
         const {
             showAlbum, showInfo, albumSize, albumRadiusValue, albumRadius,
-            vinylAnimationsEnabled, titleSize, artistSize,
+            vinylAnimationsEnabled, albumClickOpensMode, titleSize, artistSize,
             showClock, clockShowSeconds, clockSize, showContext, showContextImage,
             showNextTrack, nextTrackSeconds, showControls, showVolume, showProgress,
             showLyricsProgress, showQueue, autoHideUI, autoHideDelay,
@@ -2669,6 +2670,11 @@ const FullscreenOverlay = (() => {
                 return;
             }
 
+            // This preference gates only the artwork shortcut into a focused
+            // mode. Existing LP/CD/video views can still exit through the cover,
+            // and the explicit mode switcher remains available independently.
+            if (!albumClickOpensMode) return;
+
             if (lpModeExitTimerRef.current) {
                 window.clearTimeout(lpModeExitTimerRef.current);
                 lpModeExitTimerRef.current = null;
@@ -2690,7 +2696,8 @@ const FullscreenOverlay = (() => {
             onPresentationModeChange,
             runLpSharedTransition,
             tvModeEnabled,
-            vinylAnimationsEnabled
+            vinylAnimationsEnabled,
+            albumClickOpensMode
         ]);
 
         const handlePresentationModeChange = useCallback((nextMode) => {
@@ -2871,8 +2878,9 @@ const FullscreenOverlay = (() => {
         const tmiTitle = I18n.t("tmi.title");
         const vinylTmiHint = I18n.t("vinyl.tmiHint");
         const tmiDisclaimer = I18n.t("tmi.disclaimer");
+        const albumCanToggleMode = !tvModeEnabled && (presentationModeActive || albumClickOpensMode);
         const albumInteractionLabel = [
-            tvModeEnabled ? null : albumActionCopy.lpHint,
+            albumCanToggleMode ? albumActionCopy.lpHint : null,
             vinylTmiHint,
             tmiDisclaimer
         ]
@@ -2889,10 +2897,10 @@ const FullscreenOverlay = (() => {
             onPointerLeave: handleAlbumPointerEnd,
             onDragStart: (event) => event.preventDefault(),
             onKeyDown: handleAlbumKeyDown,
-            role: "button",
+            role: albumCanToggleMode ? "button" : "img",
             tabIndex: 0,
             "aria-label": albumInteractionLabel,
-            "aria-keyshortcuts": "Enter Space Shift+F10",
+            "aria-keyshortcuts": albumCanToggleMode ? "Enter Space Shift+F10" : "Shift+F10",
             title: cdAlbumActive ? undefined : albumInteractionLabel
         };
 
@@ -2903,7 +2911,7 @@ const FullscreenOverlay = (() => {
         },
             react.createElement("div", { className: "album-mode-hint-layout" },
                 react.createElement("div", { className: "album-mode-actions" },
-                    react.createElement("div", { className: "album-mode-action is-primary" },
+                    albumCanToggleMode && react.createElement("div", { className: "album-mode-action is-primary" },
                         react.createElement("div", { className: "album-mode-action-header" },
                             react.createElement("span", { className: "album-mode-action-title" }, albumActionCopy.lpTitle),
                             react.createElement("span", { className: "album-mode-action-gesture" }, albumActionCopy.click)

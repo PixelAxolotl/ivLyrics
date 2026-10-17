@@ -2596,6 +2596,8 @@ window.LANG_CS = {
     },
     "settings": {
       "subtitle": "Přizpůsobte velikost, animace a typografii spodního textu ve vinylovém režimu.",
+      "albumClickOpensModeLabel": "Otevírat režimy kliknutím na obal alba",
+      "albumClickOpensModeDesc": "Kliknutím na obal alba otevřete vybraný režim LP, CD nebo videa. I když je tato volba vypnutá, můžete režim vybrat z nabídky.",
       "albumSizeLabel": "Velikost obalu",
       "albumSizeDesc": "Upraví velikost obalu alba ve vinylovém režimu.",
       "recordSizeLabel": "Velikost desky",

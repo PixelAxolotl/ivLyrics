@@ -2596,6 +2596,8 @@ window.LANG_MS = {
     },
     "settings": {
       "subtitle": "Sesuaikan saiz, animasi dan tipografi lirik bawah bagi mod vinil.",
+      "albumClickOpensModeLabel": "Buka mod dengan mengklik kulit album",
+      "albumClickOpensModeDesc": "Klik kulit album untuk membuka mod LP, CD atau video yang dipilih. Apabila pilihan ini dimatikan, anda masih boleh memilih mod daripada menu.",
       "albumSizeLabel": "Saiz kulit album",
       "albumSizeDesc": "Melaraskan saiz kulit album dalam mod vinil.",
       "recordSizeLabel": "Saiz piring hitam",

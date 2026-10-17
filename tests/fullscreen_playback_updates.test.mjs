@@ -254,6 +254,80 @@ test("CD hover hints and native tooltips are hidden in landscape and portrait wh
   }
 });
 
+test("album shortcut preference blocks pointer and keyboard entry without advertising the disabled action", () => {
+  for (const portrait of [false, true]) {
+    const changes = [];
+    const h = createHarness({ visual: { "fullscreen-album-open-lp": false, "reduce-motion": true },
+      windowOverrides: { matchMedia: query => ({ matches: query.includes("orientation") && portrait,
+        addEventListener() {}, removeEventListener() {} }) },
+    });
+    h.update({ onPresentationModeChange: next => changes.push(next) });
+    const album = () => byClass(h.tree, "clickable-album-container");
+    const event = key => ({ key, preventDefault() {}, stopPropagation() {} });
+    album().props.onClick(event());
+    for (const key of ["Enter", " "]) album().props.onKeyDown(event(key));
+    assert.deepEqual(changes, []);
+    assert.doesNotMatch(album().props["aria-label"], /vinyl.openHint/);
+    assert.match(album().props["aria-label"], /vinyl.tmiHint/);
+    assert.equal(album().props.role, "img");
+    assert.equal(album().props["aria-keyshortcuts"], "Shift+F10");
+    assert.equal(elements(h.tree).some(node => node.props.className === "album-mode-action is-primary"), false);
+
+    h.config.visual["fullscreen-album-open-lp"] = true;
+    h.update();
+    assert.match(album().props["aria-label"], /vinyl.openHint/);
+    assert.equal(album().props.role, "button");
+    album().props.onClick(event());
+    assert.deepEqual(changes, ["vinyl"], "enabling the preference works without a page reload");
+    h.unmount();
+  }
+});
+
+test("disabled artwork entry preserves manual mode selection and cover exits for every focused mode", () => {
+  for (const mode of ["vinyl", "compact-vinyl", "video"]) {
+    const changes = [];
+    const h = createHarness({ visual: { "fullscreen-album-open-lp": false, "reduce-motion": true } });
+    h.update({ onPresentationModeChange: next => changes.push(next) });
+    const switcher = elements(h.tree).find(node => node.type === h.vinyl.PresentationSwitcher);
+    switcher.props.onChange(mode);
+    assert.deepEqual(changes, [mode], "explicit menu entry remains enabled");
+    h.update({ presentationMode: mode });
+    const focused = elements(h.tree).find(node => node.type === h.vinyl);
+    const album = mode === "compact-vinyl" ? byClass(h.tree, "clickable-album-container")
+      : { props: focused.props.interactionProps };
+    assert.equal(album.props.role, "button");
+    assert.match(album.props["aria-label"], /vinyl.closeHint/);
+    album.props.onClick();
+    assert.deepEqual(changes, [mode, "standard"], "turning off the shortcut never traps an existing focused view");
+    h.unmount();
+  }
+});
+
+test("disabled album shortcut preserves context-menu and long-press Research gestures", () => {
+  for (const gesture of ["context", "long-press"]) {
+    let timer = 0;
+    const timers = new Map();
+    const h = createHarness({ visual: { "fullscreen-album-open-lp": false }, windowOverrides: {
+      AIAddonManager: { getEnabledProvidersFor: () => [{}] },
+      setTimeout(callback, delay) { timers.set(++timer, { callback, delay }); return timer; },
+      clearTimeout(id) { timers.delete(id); },
+    } });
+    const album = byClass(h.tree, "clickable-album-container");
+    if (gesture === "context") album.props.onKeyDown({ key: "F10", shiftKey: true,
+      preventDefault() {}, stopPropagation() {} });
+    else {
+      album.props.onPointerDown({ button: 0, pointerId: 1, clientX: 10, clientY: 10 });
+      const press = [...timers.values()].find(value => value.delay === 650);
+      assert.ok(press, "the normal long-press interval remains available");
+      press.callback();
+    }
+    h.update();
+    assert.ok(elements(h.tree).some(node => typeof node.props.onAgree === "function"
+      && typeof node.props.onCancel === "function"), "Research consent still opens");
+    h.unmount();
+  }
+});
+
 test("CD size fits short and narrow windows without changing the saved size or other presentations", () => {
   const h = createHarness({ mode: "compact-vinyl", visual: { "fullscreen-cd-disc-size": 140 },
     windowOverrides: { innerWidth: 1200, innerHeight: 720 } });

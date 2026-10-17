@@ -2596,6 +2596,8 @@ window.LANG_JA = {
     },
     "settings": {
       "subtitle": "LP モードのサイズ、アニメーション、下部歌詞のフォントを調整します。",
+      "albumClickOpensModeLabel": "ジャケットのクリックでモードを開く",
+      "albumClickOpensModeDesc": "アルバムジャケットをクリックすると、選択したLP・CD・ビデオモードが開きます。オフにしても、メニューからモードを選択できます。",
       "albumSizeLabel": "アルバムジャケットのサイズ",
       "albumSizeDesc": "LP モードのアルバムジャケットのサイズを調整します。",
       "recordSizeLabel": "レコードのサイズ",

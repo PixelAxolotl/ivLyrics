@@ -2596,6 +2596,8 @@ window.LANG_PT = {
     },
     "settings": {
       "subtitle": "Personalize o tamanho, as animações e a tipografia inferior do modo vinil.",
+      "albumClickOpensModeLabel": "Abrir modos pela capa do álbum",
+      "albumClickOpensModeDesc": "Clique na capa do álbum para abrir o modo LP, CD ou vídeo selecionado. Mesmo com esta opção desativada, você ainda pode escolher um modo pelo menu.",
       "albumSizeLabel": "Tamanho da capa",
       "albumSizeDesc": "Ajusta o tamanho da capa do álbum no modo vinil.",
       "recordSizeLabel": "Tamanho do disco",

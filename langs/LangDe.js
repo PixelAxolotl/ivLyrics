@@ -2596,6 +2596,8 @@ window.LANG_DE = {
     },
     "settings": {
       "subtitle": "Passe Größe, Animationen und die untere Liedtext-Typografie des Vinylmodus an.",
+      "albumClickOpensModeLabel": "Modi per Klick auf das Albumcover öffnen",
+      "albumClickOpensModeDesc": "Klicke auf das Albumcover, um den ausgewählten LP-, CD- oder Videomodus zu öffnen. Ist diese Option deaktiviert, kannst du weiterhin einen Modus über das Menü auswählen.",
       "albumSizeLabel": "Covergröße",
       "albumSizeDesc": "Passt die Größe des Albumcovers im Vinylmodus an.",
       "recordSizeLabel": "Plattengröße",

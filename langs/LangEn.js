@@ -2596,6 +2596,8 @@ window.LANG_EN = {
     },
     "settings": {
       "subtitle": "Customize the LP mode size, motion, and bottom lyric typography.",
+      "albumClickOpensModeLabel": "Open modes from album art",
+      "albumClickOpensModeDesc": "Click album art to open the selected LP, CD, or video mode. When this is off, you can still choose a mode from the menu.",
       "albumSizeLabel": "Album cover size",
       "albumSizeDesc": "Adjusts the album cover size in LP mode.",
       "recordSizeLabel": "Record size",

@@ -76,3 +76,7 @@ Report issues on [Discord](https://discord.gg/2fu36fUzdE) or [GitHub](https://gi
 [Support development](https://buymeacoffee.com/ivlis) · [Credits and license](https://github.com/ivLis-Studio/ivLyrics/blob/main/README_EN.md#support-and-credits)
 
 ivLyrics is an unofficial project and is not affiliated with Spotify. Lyrics, translations, and videos belong to their respective rights holders. See the [full usage notice](https://github.com/ivLis-Studio/ivLyrics/blob/main/README_EN.md#support-and-credits) before using or sharing content.
+
+## License and open-source notices
+
+ivLyrics uses the [GNU LGPL v2.1 license](https://github.com/ivLis-Studio/ivLyrics/blob/main/LICENSE). Third-party credits and the full spicetify-visualizer MIT notice are collected at the [bottom of the README](https://github.com/ivLis-Studio/ivLyrics/blob/main/README_EN.md#license-and-open-source-notices). The original notices are also preserved in the distributed runtime files.

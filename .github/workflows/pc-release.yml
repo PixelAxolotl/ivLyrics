@@ -205,6 +205,8 @@ jobs:
           set -euo pipefail
           archive="$RUNNER_TEMP/ivLyrics.zip"
           checksum="$RUNNER_TEMP/ivLyrics.zip.sha256"
+          # .gitattributes excludes build-only source/reference folders.
+          # Runtime bundles and the README license notices remain in the ZIP.
           git archive --format=zip --prefix=ivLyrics/ --output="$archive" HEAD
           (
             cd "$RUNNER_TEMP"

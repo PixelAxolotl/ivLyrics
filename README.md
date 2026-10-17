@@ -204,3 +204,40 @@ NVIDIA NIM은 기본 URL `https://integrate.api.nvidia.com/v1`과 채팅용 모�
 >
 
 </details>
+
+## 라이선스와 오픈소스 고지
+
+ivLyrics의 라이선스 전문은 [GNU LGPL v2.1](LICENSE)에서 확인할 수 있습니다. 포함된 외부 구성요소에는 각 구성요소의 라이선스가 적용됩니다.
+
+- **TinySegmenter** — Copyright (c) 2008, Taku Kudo. [저작권·라이선스 고지](TinySegmenter.LICENSE.txt)
+- **wa-sqlite 1.0.0** — Copyright (c) 2023 Roy T. Hashimoto. MIT 라이선스이며, 고지 전문은 배포되는 `LrclibLocalDatabaseRuntime.js`에도 보존되어 있습니다.
+- **spicetify-visualizer** — Copyright (c) 2026 Konsl. MIT 라이선스입니다. CD 비주얼라이저의 음량·피치 보간 로직 일부를 [원본 커밋](https://github.com/Konsl/spicetify-visualizer/tree/12cb2a9066690b4e023bccc9466ae784ebb62364)에서 수정·통합했습니다. 원형 렌더러와 생명주기 처리는 ivLyrics에서 구현했습니다.
+
+<details>
+<summary>spicetify-visualizer — MIT 라이선스 전문</summary>
+
+```text
+MIT License
+
+Copyright (c) 2026 Konsl
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+</details>

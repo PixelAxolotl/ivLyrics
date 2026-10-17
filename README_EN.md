@@ -205,3 +205,40 @@ External AI features may send lyrics or song information to the provider you cho
 > This project does not claim ownership of any lyrics, translations, videos, or other third-party content, nor does it grant licenses to such content. Users are solely responsible for reviewing and complying with all applicable copyright laws, platform policies, API terms of service, and local regulations. Any responsibility for storing, reproducing, distributing, transmitting, or commercially using content through this project rests entirely with the user.
 
 </details>
+
+## License and open-source notices
+
+The full ivLyrics license is available in [GNU LGPL v2.1](LICENSE). Included third-party components remain covered by their respective licenses.
+
+- **TinySegmenter** — Copyright (c) 2008, Taku Kudo. [Copyright and license notice](TinySegmenter.LICENSE.txt)
+- **wa-sqlite 1.0.0** — Copyright (c) 2023 Roy T. Hashimoto. MIT License; the full notice is also preserved in the distributed `LrclibLocalDatabaseRuntime.js`.
+- **spicetify-visualizer** — Copyright (c) 2026 Konsl. MIT License. Parts of the CD visualizer's loudness and pitch interpolation are adapted from the [original commit](https://github.com/Konsl/spicetify-visualizer/tree/12cb2a9066690b4e023bccc9466ae784ebb62364). The radial renderer and lifecycle are specific to ivLyrics.
+
+<details>
+<summary>spicetify-visualizer — full MIT license</summary>
+
+```text
+MIT License
+
+Copyright (c) 2026 Konsl
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+</details>

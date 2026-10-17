@@ -4754,7 +4754,7 @@ const shouldUseKaraokeTextRun = (text) => {
 const shouldWrapKaraokeByWord = (text, motionStyle = null) => {
 	const normalizedText = typeof text === "string" ? text : "";
 	return /\S\s+\S/u.test(normalizedText)
-		|| (motionStyle === "expressive" && /[^\s\-\u2010\u2011][\-\u2010\u2011]+[^\s\-\u2010\u2011]/u.test(normalizedText));
+		|| (motionStyle === "expressive" && /[^\s.\-\u2010\u2011][.\-\u2010\u2011]+[^\s.\-\u2010\u2011]/u.test(normalizedText));
 };
 
 const clampKaraokeFillCurveValue = (value, fallback = 0) => {
@@ -8162,10 +8162,11 @@ const isKaraokeExpressiveEmphasisUnit = (startTime, endTime) => (
 // Decides what moves for each glyph of a character-timed line. Syllabic
 // scripts move per glyph ("char"); a space-delimited word moves as one unit
 // ("word", via its word wrapper) unless it is held, or a longer word has enough
-// time to move letter by letter ("emphasis"). Hyphens end a motion unit without
-// consuming or changing any glyph. Apostrophes and prolonged sound marks stay joined.
+// time to move letter by letter ("emphasis"). Hyphens and ASCII periods end a
+// motion unit without consuming or changing any glyph. Apostrophes and prolonged
+// sound marks stay joined.
 const KARAOKE_EXPRESSIVE_GLYPH_SCRIPT_REGEX = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}]/u;
-const KARAOKE_EXPRESSIVE_HYPHEN_REGEX = /^[\-\u2010\u2011]+$/u;
+const KARAOKE_EXPRESSIVE_SEPARATOR_REGEX = /^[.\-\u2010\u2011]+$/u;
 const KARAOKE_EXPRESSIVE_EMPHASIS_MAX_LETTERS = 24;
 const KARAOKE_EXPRESSIVE_LONG_WORD_MIN_LETTERS = 7;
 const KARAOKE_EXPRESSIVE_LONG_WORD_MIN_MS = 600;
@@ -8175,13 +8176,13 @@ const getKaraokeExpressiveUnitRanges = (timedChars, startIndex = 0, charCount = 
 	const ranges = [];
 	let start = startIndex;
 	let hasText = false;
-	let afterHyphen = false;
+	let afterSeparator = false;
 	const end = Math.min(timedChars.length, startIndex + charCount);
 	const flush = (index) => {
 		if (index > start) ranges.push({ startIndex: start, charCount: index - start });
 		start = index;
 		hasText = false;
-		afterHyphen = false;
+		afterSeparator = false;
 	};
 	for (let index = startIndex; index < end; index++) {
 		const char = String(timedChars[index]?.char ?? "");
@@ -8190,12 +8191,12 @@ const getKaraokeExpressiveUnitRanges = (timedChars, startIndex = 0, charCount = 
 			start = index + 1;
 			continue;
 		}
-		const hyphen = KARAOKE_EXPRESSIVE_HYPHEN_REGEX.test(char);
-		// Keep repeated/trailing hyphens with the preceding piece, and a
-		// leading hyphen run with the first piece. Never create empty units.
-		if (afterHyphen && !hyphen && hasText) flush(index);
-		if (!hyphen) hasText = true;
-		afterHyphen = hyphen;
+		const separator = KARAOKE_EXPRESSIVE_SEPARATOR_REGEX.test(char);
+		// Keep repeated/trailing separators with the preceding piece, and a
+		// leading separator run with the first piece. Never create empty units.
+		if (afterSeparator && !separator && hasText) flush(index);
+		if (!separator) hasText = true;
+		afterSeparator = separator;
 	}
 	flush(end);
 	return ranges;
@@ -8239,7 +8240,7 @@ const classifyKaraokeExpressiveUnits = (timedChars, allowWordMotion = true) => {
 		const { startTime, endTime } = getKaraokeExpressiveWordWindow(timedChars, index, letterCount);
 		const duration = Number.isFinite(startTime) && Number.isFinite(endTime) ? endTime - startTime : 0;
 		// Punctuation is drawn but is not an extra sung letter. In particular,
-		// attaching a hyphen must not turn a six-letter piece into a long word.
+		// attaching a separator must not turn a six-letter piece into a long word.
 		let sungLetters = 0;
 		for (let charIndex = index; charIndex < end; charIndex++) {
 			if (KARAOKE_EXPRESSIVE_WORD_LETTER_REGEX.test(String(timedChars[charIndex]?.char ?? ""))) sungLetters++;

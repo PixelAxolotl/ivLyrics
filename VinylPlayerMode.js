@@ -39,7 +39,6 @@ const VinylPlayerMode = (() => {
     const TRACK_RECORD_EMERGE_MS = 720;
     const TRACK_RECORD_RAISE_MS = 360;
     const TRACK_HANDOFF_MS = 96;
-    const TRACK_COVER_PRELOAD_MAX_MS = 320;
     const VINYL_FALLBACK_ACCENT = "var(--spice-button-active, #ff809d)";
     const VINYL_SEEK_END_GUARD_MIN_MS = 250;
     const VINYL_SEEK_END_GUARD_MAX_MS = 500;
@@ -1083,6 +1082,7 @@ const VinylPlayerMode = (() => {
                     },
                         react.createElement("img", {
                             src: coverUrl,
+                            decoding: "async",
                             alt: "",
                             draggable: false
                         })
@@ -1095,6 +1095,7 @@ const VinylPlayerMode = (() => {
                 },
                     react.createElement("img", {
                         src: incomingTrack.coverUrl,
+                        decoding: "async",
                         alt: "",
                         draggable: false
                     }),
@@ -1212,14 +1213,6 @@ const VinylPlayerMode = (() => {
         && left?.artist === right?.artist
         && left?.album === right?.album;
 
-    const getTrackVisualKey = (track) => [
-        track?.uri,
-        track?.coverUrl,
-        track?.title,
-        track?.artist,
-        track?.album
-    ].map((value) => String(value || "")).join("\u0001");
-
     const Mode = react.memo(({
         track = {},
         albumRadius = 0,
@@ -1282,9 +1275,7 @@ const VinylPlayerMode = (() => {
         const [incomingTrack, setIncomingTrack] = useState(null);
         const incomingTrackRef = useRef(null);
         const [trackTransition, setTrackTransition] = useState("idle");
-        const requestedTrackKeyRef = useRef("");
         const trackTransitionRevisionRef = useRef(0);
-        const trackPreloadTimerRef = useRef(null);
         const trackSleeveTimerRef = useRef(null);
         const trackDepartureTimerRef = useRef(null);
         const trackAlbumTimerRef = useRef(null);
@@ -1293,10 +1284,6 @@ const VinylPlayerMode = (() => {
         const trackHandoffTimerRef = useRef(null);
 
         const clearTrackTimers = useCallback(() => {
-            if (trackPreloadTimerRef.current) {
-                window.clearTimeout(trackPreloadTimerRef.current);
-                trackPreloadTimerRef.current = null;
-            }
             if (trackSleeveTimerRef.current) {
                 window.clearTimeout(trackSleeveTimerRef.current);
                 trackSleeveTimerRef.current = null;
@@ -1323,6 +1310,8 @@ const VinylPlayerMode = (() => {
             }
         }, []);
 
+        // A track URI owns the animation lifecycle. Artwork and translated
+        // metadata can hydrate independently without restarting or ending it.
         useEffect(() => {
             const shownTrack = displayedTrackRef.current;
             if (
@@ -1334,7 +1323,6 @@ const VinylPlayerMode = (() => {
                 || areSameTrackVisuals(shownTrack, liveTrack)
             ) {
                 trackTransitionRevisionRef.current += 1;
-                requestedTrackKeyRef.current = "";
                 clearTrackTimers();
                 if (shownTrack?.uri !== liveTrack.uri || !areSameTrackVisuals(shownTrack, liveTrack)) {
                     displayedTrackRef.current = liveTrack;
@@ -1346,21 +1334,8 @@ const VinylPlayerMode = (() => {
                 return;
             }
 
-            if (incomingTrackRef.current?.uri === liveTrack.uri) {
-                // Translation/settings updates belong to the incoming record;
-                // they must not restart an already running track handoff.
-                const updatedTrack = { ...liveTrack, accent: incomingTrackRef.current.accent };
-                incomingTrackRef.current = updatedTrack;
-                setIncomingTrack(updatedTrack);
-                return;
-            }
-
-            const nextTrackKey = getTrackVisualKey(liveTrack);
-            if (requestedTrackKeyRef.current === nextTrackKey) return;
-
             const revision = trackTransitionRevisionRef.current + 1;
             trackTransitionRevisionRef.current = revision;
-            requestedTrackKeyRef.current = nextTrackKey;
             clearTrackTimers();
 
             if (!shownTrack?.uri) {
@@ -1376,18 +1351,10 @@ const VinylPlayerMode = (() => {
             setIncomingTrack(liveTrack);
             setTrackTransition("record-clearing");
 
-            let preloadImage = null;
-            let coverReady = false;
-            let departureFinished = false;
-            let flightStarted = false;
+            // The mounted incoming sleeve already loads its image. Its network
+            // or decoding latency must not gate the fixed animation timeline.
             const beginFlight = () => {
-                if (
-                    flightStarted
-                    || !coverReady
-                    || !departureFinished
-                    || trackTransitionRevisionRef.current !== revision
-                ) return;
-                flightStarted = true;
+                if (trackTransitionRevisionRef.current !== revision) return;
                 setTrackTransition("album-arriving");
                 trackAlbumTimerRef.current = window.setTimeout(() => {
                     if (trackTransitionRevisionRef.current !== revision) return;
@@ -1425,16 +1392,6 @@ const VinylPlayerMode = (() => {
                 }, TRACK_ALBUM_ARRIVE_MS);
             };
 
-            const markCoverReady = () => {
-                if (coverReady || trackTransitionRevisionRef.current !== revision) return;
-                coverReady = true;
-                if (trackPreloadTimerRef.current) {
-                    window.clearTimeout(trackPreloadTimerRef.current);
-                    trackPreloadTimerRef.current = null;
-                }
-                beginFlight();
-            };
-
             trackSleeveTimerRef.current = window.setTimeout(() => {
                 if (trackTransitionRevisionRef.current !== revision) return;
                 trackSleeveTimerRef.current = null;
@@ -1446,46 +1403,35 @@ const VinylPlayerMode = (() => {
                     trackDepartureTimerRef.current = window.setTimeout(() => {
                         if (trackTransitionRevisionRef.current !== revision) return;
                         trackDepartureTimerRef.current = null;
-                        departureFinished = true;
                         beginFlight();
                     }, TRACK_ALBUM_DEPART_MS);
                 }, TRACK_RECORD_SLEEVE_MS);
             }, TRACK_RECORD_CLEAR_MS);
-
-            trackPreloadTimerRef.current = window.setTimeout(
-                markCoverReady,
-                TRACK_COVER_PRELOAD_MAX_MS
-            );
-
-            if (liveTrack.coverUrl && typeof window.Image === "function") {
-                preloadImage = new window.Image();
-                preloadImage.decoding = "async";
-                preloadImage.onload = markCoverReady;
-                preloadImage.onerror = markCoverReady;
-                preloadImage.src = liveTrack.coverUrl;
-                if (preloadImage.complete) markCoverReady();
-            } else {
-                markCoverReady();
-            }
-
-            return () => {
-                if (preloadImage) {
-                    preloadImage.onload = null;
-                    preloadImage.onerror = null;
-                }
-            };
         }, [
             liveTrack.uri,
-            liveTrack.coverUrl,
-            liveTrack.title,
-            liveTrack.artist,
-            liveTrack.album,
             animationsEnabled,
             trackChangeEnabled,
             reducedMotion,
             clearTrackTimers,
             isFullVinylPresentation
         ]);
+
+        useEffect(() => {
+            const incoming = incomingTrackRef.current;
+            if (incoming?.uri === liveTrack.uri && !areSameTrackVisuals(incoming, liveTrack)) {
+                const updatedTrack = { ...liveTrack, accent: incoming.accent };
+                incomingTrackRef.current = updatedTrack;
+                setIncomingTrack(updatedTrack);
+            }
+            // Both copies are visible during the final handoff. Hydrate both
+            // without cancelling its remaining timer or changing the LP color.
+            const shownTrack = displayedTrackRef.current;
+            if (shownTrack?.uri === liveTrack.uri && !areSameTrackVisuals(shownTrack, liveTrack)) {
+                const updatedTrack = { ...liveTrack, accent: shownTrack.accent };
+                displayedTrackRef.current = updatedTrack;
+                setDisplayedTrack(updatedTrack);
+            }
+        }, [liveTrack.uri, liveTrack.coverUrl, liveTrack.title, liveTrack.artist, liveTrack.album]);
 
         useEffect(() => () => {
             trackTransitionRevisionRef.current += 1;

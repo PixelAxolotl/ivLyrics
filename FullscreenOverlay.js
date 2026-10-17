@@ -2010,8 +2010,8 @@ const FullscreenOverlay = (() => {
         );
     });
 
-    // Center standard fullscreen lyrics beside the outer edge of the album and
-    // any protruding compact LP, including configured sizes and transforms.
+    // Center standard fullscreen lyrics beside the outer edge of the album or
+    // CD spectrum. Measure its stable frame, never the rotating artwork bounds.
     // Keep observation away from the frequently changing karaoke subtree.
     const observeFullscreenAlbumLyricsRegion = (panel) => {
         const root = panel?.closest?.(".lyrics-lyricsContainer-LyricsContainer");
@@ -2038,7 +2038,7 @@ const FullscreenOverlay = (() => {
             frame = null;
             if (disposed) return;
             const visuals = new Set(panel.querySelectorAll(
-                ".lyrics-fullscreen-album-art, .ivlyrics-compact-album-record"
+                ".lyrics-fullscreen-album-art, .ivlyrics-compact-album-record, .ivlyrics-cd-size"
             ));
             for (const visual of observedVisuals) {
                 if (!visuals.has(visual)) {
@@ -2199,20 +2199,26 @@ const FullscreenOverlay = (() => {
             || normalizedPresentationMode === "video";
         const compactPresentationActive =
             normalizedPresentationMode === "compact-vinyl";
+        const cdAlbumActive = compactPresentationActive && CONFIG?.visual?.["fullscreen-tv-mode"] !== true;
 
         const runLpSharedTransition = useCallback((direction, updateMode) => {
-            const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+            const reducedMotion = CONFIG?.visual?.["reduce-motion"] === true
+                || window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
             const animationsEnabled = CONFIG?.visual?.["fullscreen-vinyl-animations"] !== false;
             if (!animationsEnabled || reducedMotion || typeof document?.startViewTransition !== "function") return false;
-            if (lpViewTransitionRef.current) return true;
-
             const root = document.documentElement;
             const directionClass = "is-lp-view-" + direction;
+            // A second choice should win immediately, not be swallowed while
+            // the previous album snapshot is still moving.
+            lpViewTransitionRef.current?.skipTransition?.();
+            lpViewTransitionRef.current = null;
+            root.classList.remove("is-lp-view-enter", "is-lp-view-exit", "is-lp-view-switch");
             root.classList.add("is-lp-view-transition", directionClass);
             let committed = false;
             let transition = null;
             const cleanup = () => {
-                if (lpViewTransitionRef.current === transition) lpViewTransitionRef.current = null;
+                if (lpViewTransitionRef.current !== transition) return;
+                lpViewTransitionRef.current = null;
                 root.classList.remove("is-lp-view-transition", directionClass);
             };
 
@@ -2232,6 +2238,9 @@ const FullscreenOverlay = (() => {
                     return new Promise((resolve) => window.requestAnimationFrame(resolve));
                 });
                 lpViewTransitionRef.current = transition;
+                // Skipping/unmounting a transition rejects ready even when
+                // its update and finished promises complete successfully.
+                Promise.resolve(transition.ready).catch(() => undefined);
                 Promise.resolve(transition.finished).catch(() => undefined).finally(cleanup);
                 return true;
             } catch (_) {
@@ -2323,7 +2332,23 @@ const FullscreenOverlay = (() => {
             // Get settings from CONFIG
             const showAlbum = CONFIG?.visual?.["fullscreen-show-album"] !== false;
             const showInfo = CONFIG?.visual?.["fullscreen-show-info"] !== false;
-            const albumSize = Number(CONFIG?.visual?.["fullscreen-album-size"]) || 400;
+            const configuredAlbumSize = Number(CONFIG?.visual?.["fullscreen-album-size"]) || 400;
+            // The printed CD occupies 76% of its spectrum frame. Give that
+            // frame more room without changing the saved CD scale or LP art.
+            const preferredCdSlotSize = configuredAlbumSize * 1.25;
+            const requestedDiscSize = Number(CONFIG?.visual?.["fullscreen-cd-disc-size"] ?? 100);
+            const cdExtent = (Number.isFinite(requestedDiscSize) ? Math.min(140, Math.max(70, requestedDiscSize)) : 100) / 100 * 0.96;
+            const viewportHeight = Number(window.innerHeight);
+            const viewportWidth = Number(window.innerWidth);
+            // CD size remains a preference, not permission to cover metadata or
+            // lyrics on short/narrow windows. Reserve the complete spectrum and
+            // the existing title/artist/progress area before fitting the slot.
+            const cdHeightLimit = Number.isFinite(viewportHeight) && viewportHeight > 0
+                ? Math.max(100, viewportHeight - 280) / Math.max(1, cdExtent) : preferredCdSlotSize;
+            const cdWidthLimit = Number.isFinite(viewportWidth) && viewportWidth > 0
+                ? Math.max(100, viewportWidth / (CONFIG?.visual?.["fullscreen-two-column"] !== false ? 2 : 1) - 112) / Math.max(1, cdExtent) : preferredCdSlotSize;
+            const albumSize = cdAlbumActive
+                ? Math.min(preferredCdSlotSize, cdHeightLimit, cdWidthLimit) : configuredAlbumSize;
             const albumRadiusValue = Number(CONFIG?.visual?.["fullscreen-album-radius"]);
             const albumRadius = isNaN(albumRadiusValue) ? 12 : albumRadiusValue;
             const vinylAnimationsEnabled = CONFIG?.visual?.["fullscreen-vinyl-animations"] !== false;
@@ -2606,6 +2631,9 @@ const FullscreenOverlay = (() => {
 
             // TV mode always uses the plain album artwork presentation.
             if (tvModeEnabled) return;
+            const allowAlbumTransition = vinylAnimationsEnabled
+                && CONFIG?.visual?.["reduce-motion"] !== true
+                && !window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
 
             if (suppressAlbumClickRef.current) {
                 suppressAlbumClickRef.current = false;
@@ -2618,7 +2646,7 @@ const FullscreenOverlay = (() => {
 
             if (presentationModeActive) {
                 if (lpModeClosing) return;
-                if (!vinylAnimationsEnabled) {
+                if (!allowAlbumTransition) {
                     setLpModeClosing(false);
                     onPresentationModeChange?.("standard");
                     return;
@@ -2647,7 +2675,7 @@ const FullscreenOverlay = (() => {
             }
             setLpModeClosing(false);
             const nextPresentation = getDefaultFocusedPresentation();
-            if (!vinylAnimationsEnabled) {
+            if (!allowAlbumTransition) {
                 onPresentationModeChange?.(nextPresentation);
                 return;
             }
@@ -2667,6 +2695,7 @@ const FullscreenOverlay = (() => {
 
         const handlePresentationModeChange = useCallback((nextMode) => {
             const normalized = normalizeFocusedPresentation(nextMode);
+            if (normalized === normalizedPresentationMode) return;
             if (normalized === "standard") {
                 handleAlbumModeClick();
                 return;
@@ -2677,8 +2706,13 @@ const FullscreenOverlay = (() => {
                 lpModeExitTimerRef.current = null;
             }
             setLpModeClosing(false);
+            // The switcher uses the same album handoff as clicking a cover,
+            // including CD <-> LP and either presentation <-> video stage.
+            const direction = presentationModeActive ? "switch" : "enter";
+            if (runLpSharedTransition(direction, () => onPresentationModeChange?.(normalized))) return;
             onPresentationModeChange?.(normalized);
-        }, [handleAlbumModeClick, onPresentationModeChange]);
+        }, [handleAlbumModeClick, normalizedPresentationMode, onPresentationModeChange,
+            presentationModeActive, runLpSharedTransition]);
 
         const handleAlbumContextMenu = useCallback((event) => {
             event.preventDefault();
@@ -2744,7 +2778,8 @@ const FullscreenOverlay = (() => {
             document.documentElement?.classList.remove(
                 "is-lp-view-transition",
                 "is-lp-view-enter",
-                "is-lp-view-exit"
+                "is-lp-view-exit",
+                "is-lp-view-switch"
             );
         }, [clearAlbumPressTimer, restoreResearchPlaybackGuard]);
 
@@ -2823,7 +2858,11 @@ const FullscreenOverlay = (() => {
 
         const albumActionCopy = {
             click: I18n.t("vinyl.click"),
-            lpTitle: I18n.t("vinyl.mode"),
+            lpTitle: I18n.t(
+                (compactPresentationActive || (!presentationModeActive && CONFIG?.visual?.["fullscreen-focus-presentation"] === "compact-vinyl"))
+                    ? "vinyl.cd.mode"
+                    : "vinyl.mode"
+            ),
             lpHint: presentationModeActive
                 ? I18n.t("vinyl.closeHint")
                 : I18n.t("vinyl.openHint"),
@@ -2854,10 +2893,10 @@ const FullscreenOverlay = (() => {
             tabIndex: 0,
             "aria-label": albumInteractionLabel,
             "aria-keyshortcuts": "Enter Space Shift+F10",
-            title: albumInteractionLabel
+            title: cdAlbumActive ? undefined : albumInteractionLabel
         };
 
-        const renderAlbumModeHint = () => react.createElement("div", {
+        const renderAlbumModeHint = () => cdAlbumActive ? null : react.createElement("div", {
             className: "album-mode-hint",
             style: { borderRadius: `${albumRadius}px` },
             "aria-hidden": "true"
@@ -2900,6 +2939,20 @@ const FullscreenOverlay = (() => {
         if (!isFullscreen) return null;
 
         const computeVinylSettings = () => ({
+                    cdSettings: {
+                        discSize: CONFIG?.visual?.["fullscreen-cd-disc-size"] ?? 100,
+                        rotationEnabled: CONFIG?.visual?.["fullscreen-cd-rotation-enabled"] !== false,
+                        rotationSpeed: CONFIG?.visual?.["fullscreen-cd-rotation-speed"] ?? 100,
+                        enabled: CONFIG?.visual?.["fullscreen-cd-visualizer-enabled"] !== false,
+                        style: CONFIG?.visual?.["fullscreen-cd-visualizer-style"] || "bars",
+                        colorMode: CONFIG?.visual?.["fullscreen-cd-visualizer-color-mode"] || "album",
+                        albumGradient: CONFIG?.visual?.["fullscreen-cd-visualizer-album-gradient"] !== false,
+                        customColor: CONFIG?.visual?.["fullscreen-cd-visualizer-color"] || "#ffffff",
+                        sensitivity: CONFIG?.visual?.["fullscreen-cd-visualizer-sensitivity"] ?? 100,
+                        density: CONFIG?.visual?.["fullscreen-cd-visualizer-density"] ?? 64,
+                        thickness: CONFIG?.visual?.["fullscreen-cd-visualizer-thickness"] ?? 2,
+                        mirror: CONFIG?.visual?.["fullscreen-cd-visualizer-mirror"] === true,
+                    },
                     albumSize: CONFIG?.visual?.["fullscreen-vinyl-album-size"] ?? 100,
                     recordSize: CONFIG?.visual?.["fullscreen-vinyl-record-size"] ?? 100,
                     backgroundBlur: CONFIG?.visual?.["fullscreen-vinyl-background-blur"] ?? 0,
@@ -2995,19 +3048,23 @@ const FullscreenOverlay = (() => {
         }
 
         const CompactAlbumVinyl = VinylMode?.CompactAlbumVinyl;
+        const requestedCdSize = Number(CONFIG?.visual?.["fullscreen-cd-disc-size"] ?? 100);
+        const cdScale = Number.isFinite(requestedCdSize) ? Math.min(140, Math.max(70, requestedCdSize)) / 100 : 1;
+        const cdSlotStyle = cdAlbumActive ? {
+            "--iv-cd-overflow": Math.max(0, cdScale * 0.48 - 0.5),
+            "--iv-cd-slot-size": `${albumSize}px`
+        } : {};
         const renderAlbumVisual = ({
             coverClassName,
             coverStyle
         }) => {
-            if (!tvModeEnabled && compactPresentationActive && CompactAlbumVinyl) {
+            if (cdAlbumActive && CompactAlbumVinyl) {
                 return react.createElement(CompactAlbumVinyl, {
                     track: liveVinylTrack,
                     isPlaying,
-                    animationsEnabled: vinylAnimationsEnabled,
+                    animationsEnabled: true,
                     reducedMotion: CONFIG?.visual?.["reduce-motion"] === true,
-                    rotationSpeed: CONFIG?.visual?.["fullscreen-vinyl-rotation-speed"] ?? 100,
-                    centerRotationEnabled:
-                        CONFIG?.visual?.["fullscreen-vinyl-center-rotation"] !== false,
+                    cdSettings: computeVinylSettings().cdSettings,
                     albumRadius,
                     coverClassName,
                     coverStyle
@@ -3381,7 +3438,7 @@ const FullscreenOverlay = (() => {
                     showAlbum && react.createElement("div", {
                         ...albumInteractionProps,
                         className: "portrait-album-container clickable-album-container",
-                        style: { borderRadius: `${albumRadius}px` }
+                        style: { ...cdSlotStyle, borderRadius: `${albumRadius}px` }
                     },
                         renderAlbumVisual({
                             coverClassName: `portrait-album-art ivlyrics-fullscreen-shared-album ${albumShadow ? 'with-shadow' : ''}`,
@@ -3547,6 +3604,7 @@ const FullscreenOverlay = (() => {
                             ...albumInteractionProps,
                             className: `lyrics-fullscreen-album-container clickable-album-container`,
                             style: {
+                                ...cdSlotStyle,
                                 width: `${albumSize}px`,
                                 height: `${albumSize}px`,
                                 maxWidth: `${albumSize}px`,

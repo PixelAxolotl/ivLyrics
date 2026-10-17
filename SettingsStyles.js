@@ -464,6 +464,24 @@ const SETTINGS_MODAL_CSS = `
 #${APP_NAME}-config-container .settings-card-desc { font-size: 12px; line-height: 1.55; color: var(--text-3); }
 #${APP_NAME}-config-container .settings-card-opt.is-plain { justify-content: center; }
 
+/* CD visualizer shape tiles: nine schematics laid out as 3x3, 5+4 or one row,
+   so a single tile never dangles on its own line. */
+#${APP_NAME}-config-container .setting-row-right:has(> .settings-cd-style-cards),
+#${APP_NAME}-config-container .setting-row-right:has(> .settings-cd-color-cards) { container-type: inline-size; }
+#${APP_NAME}-config-container .settings-cards.settings-cd-style-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+@container (min-width: 480px) { #${APP_NAME}-config-container .settings-cards.settings-cd-style-cards { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+@container (min-width: 900px) { #${APP_NAME}-config-container .settings-cards.settings-cd-style-cards { grid-template-columns: repeat(9, minmax(0, 1fr)); } }
+#${APP_NAME}-config-container .settings-cd-style-cards .settings-card-opt { align-items: center; gap: 6px; padding: 10px 6px 9px; }
+#${APP_NAME}-config-container .settings-cd-style-cards .settings-card-title { justify-content: center; min-width: 0; max-width: 100%; text-align: center; font-size: 12.5px; }
+#${APP_NAME}-config-container .settings-cd-style-cards .settings-card-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#${APP_NAME}-config-container .settings-cd-style-cards .settings-card-check { position: absolute; top: 6px; right: 6px; width: 14px; height: 14px; }
+#${APP_NAME}-config-container .settings-cd-style-thumb { flex: 0 0 auto; width: 48px; height: 48px; color: var(--text-3); transition: color var(--t-fast); }
+#${APP_NAME}-config-container .settings-cd-style-cards .settings-card-opt:hover:not(:disabled) .settings-cd-style-thumb { color: var(--text-2); }
+#${APP_NAME}-config-container .settings-cd-style-cards .settings-card-opt.is-on .settings-cd-style-thumb { color: var(--accent); }
+#${APP_NAME}-config-container .settings-cards.settings-cd-color-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@container (min-width: 540px) { #${APP_NAME}-config-container .settings-cards.settings-cd-color-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+#${APP_NAME}-config-container .settings-cd-color-swatch { display: block; height: 6px; border-radius: 3px; box-shadow: inset 0 0 0 1px var(--line-2); }
+
 /* background modes */
 #${APP_NAME}-config-container .settings-mode-grid, #${APP_NAME}-config-container .settings-mode-grid.settings-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 #${APP_NAME}-config-container .settings-section-body > .settings-mode-grid { padding: 10px; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--surface); }

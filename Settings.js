@@ -5470,6 +5470,8 @@ const ConfigSelection = ({
   presentation,
   iconMap,
   swatchMap,
+  visualMap,
+  cardsClassName = "",
   compact = false,
   onChange = () => { },
 }) => {
@@ -5501,6 +5503,7 @@ const ConfigSelection = ({
     label: optionLabel,
     icon: iconMap?.[optionKey],
     color: swatchMap?.[optionKey],
+    visual: visualMap?.[optionKey],
   }));
 
   if (kind === "seg") {
@@ -5518,6 +5521,7 @@ const ConfigSelection = ({
       value: value === undefined || value === null ? "" : String(value),
       label: name,
       disabled,
+      className: cardsClassName,
       onChange: setValueCallback,
     });
   }
@@ -7421,6 +7425,13 @@ const SETTINGS_DEFAULT_VALUES = Object.freeze({
   "fullscreen-vinyl-animations": true, "fullscreen-vinyl-track-change-animation": true,
   "fullscreen-vinyl-rotation-speed": 100, "fullscreen-vinyl-center-rotation": true,
   "fullscreen-vinyl-lyrics-enabled": true, "fullscreen-focus-presentation": "vinyl",
+  "fullscreen-cd-disc-size": 100, "fullscreen-cd-rotation-enabled": true,
+  "fullscreen-cd-rotation-speed": 100, "fullscreen-cd-visualizer-enabled": true,
+  "fullscreen-cd-visualizer-style": "bars", "fullscreen-cd-visualizer-color-mode": "album",
+  "fullscreen-cd-visualizer-album-gradient": true,
+  "fullscreen-cd-visualizer-color": "#ffffff", "fullscreen-cd-visualizer-sensitivity": 100,
+  "fullscreen-cd-visualizer-density": 64, "fullscreen-cd-visualizer-thickness": 2,
+  "fullscreen-cd-visualizer-mirror": false,
   "fullscreen-vinyl-tonearm-style": "s", "fullscreen-vinyl-tonearm-finish": "white",
   "fullscreen-vinyl-tonearm-size": 100, "fullscreen-vinyl-original-font-family": "Pretendard Variable",
   "fullscreen-vinyl-original-font-size": 31, "fullscreen-vinyl-original-font-weight": 600,
@@ -7999,6 +8010,150 @@ const getSettingsPreviewFlag = (key, fallback) => {
   return value === undefined || value === null ? fallback : value !== false && value !== "false";
 };
 
+// Same hue wheel as the CD canvas (CdVisualizer.js RAINBOW_HUES).
+const SETTINGS_CD_RAINBOW_HUES = [330, 20, 48, 140, 188, 228, 276, 330];
+const SETTINGS_CD_STYLE_ORDER = ["bars", "blocks", "spikes", "line", "wave", "dots", "aura", "pulse", "particles"];
+const settingsCdRainbowColor = (fraction, mirror = false) => {
+  const hues = SETTINGS_CD_RAINBOW_HUES;
+  const turn = ((Number(fraction) % 1) + 1) % 1;
+  const position = mirror ? (turn <= 0.5 ? turn * 2 : (1 - turn) * 2) * (hues.length - 2) : turn * (hues.length - 1);
+  const index = Math.min(hues.length - 2, Math.floor(position));
+  let delta = hues[index + 1] - hues[index];
+  if (delta > 180) delta -= 360;
+  if (delta < -180) delta += 360;
+  return `hsl(${Math.round((hues[index] + delta * (position - index) + 360) % 360)}, 82%, 68%)`;
+};
+
+// Static schematics, not simulated audio. The even-odd paths leave the centre
+// transparent, including in the small presentation picker and shape cards.
+const SettingsCdDiscPreview = ({
+  visualizer = true, style = "bars", color = "#b8cfdd", density = 64, thickness = 2,
+  mirror = false, rainbow = false, albumGradient = false, variant = "full",
+} = {}) => {
+  const mini = variant === "mini";
+  const ring = (outer, inner) => `M ${100 - outer} 100 a ${outer} ${outer} 0 1 0 ${outer * 2} 0 a ${outer} ${outer} 0 1 0 ${-outer * 2} 0 M ${100 - inner} 100 a ${inner} ${inner} 0 1 0 ${inner * 2} 0 a ${inner} ${inner} 0 1 0 ${-inner * 2} 0`;
+  // Thumbnails use fewer, balanced bands so each shape reads at 48 px.
+  const count = mini ? ({ spikes: 16, blocks: 20 }[style] || 24) : Math.max(24, Math.min(128, Number(density) || 64));
+  const width = Math.max(1, Math.min(6, Number(thickness) || 2)) * (mini ? 2.6 : 1);
+  const disc = mini ? 58 : 76, base = mini ? 66 : 83, span = mini ? 30 : 10;
+  const at = (angle, radius) => [100 + Math.sin(angle) * radius, 100 - Math.cos(angle) * radius];
+  const round = (value) => Math.round(value * 100) / 100;
+  const angleOf = (index) => index / count * Math.PI * 2;
+  const level = (index) => {
+    const band = mirror ? Math.min(index, count - index) : index;
+    if (!mini) return (Math.sin(band * 0.73) + 1) / 2;
+    const angle = angleOf(band);
+    return 0.5 + 0.3 * Math.sin(3 * angle + 0.6) + 0.2 * Math.sin(5 * angle + 1.9);
+  };
+  const tipOf = (index) => base + 2 + level(index) * (span - 2);
+  const points = Array.from({ length: count }, (_, index) => ({ angle: angleOf(index), radius: tipOf(index), point: at(angleOf(index), tipOf(index)) }));
+  const tone = (index) => rainbow ? settingsCdRainbowColor(index / count, mirror) : color;
+  const gradientId = `ivl-cd-rainbow-${mini ? "mini" : "full"}-${mirror ? "m" : "c"}`;
+  const albumPatternId = `ivl-cd-album-${mini ? "mini" : "full"}`;
+  const paint = rainbow ? `url(#${gradientId})` : albumGradient ? `url(#${albumPatternId})` : color;
+  const contour = (scale = 1) => {
+    const tips = Array.from({ length: count }, (_, index) => at(angleOf(index), base + 2 + level(index) * (span - 2) * scale));
+    const mid = (a, b) => [round((a[0] + b[0]) / 2), round((a[1] + b[1]) / 2)];
+    return `M ${mid(tips[count - 1], tips[0]).join(" ")} ${tips.map((tip, index) =>
+      `Q ${round(tip[0])} ${round(tip[1])} ${mid(tip, tips[(index + 1) % count]).join(" ")}`).join(" ")} Z`;
+  };
+  const circlePath = (radius) => `M ${100 - radius} 100 a ${radius} ${radius} 0 1 0 ${radius * 2} 0 a ${radius} ${radius} 0 1 0 ${-radius * 2} 0`;
+  const shapes = () => {
+    if (style === "line") {
+      if (!rainbow) return [react.createElement("path", { key: "line", d: `${points.map(({ point }, index) => `${index ? "L" : "M"}${point.join(" ")}`).join(" ")} Z` })];
+      return points.map(({ point }, index) => {
+        const next = points[(index + 1) % count].point;
+        return react.createElement("line", { key: index, x1: point[0], y1: point[1], x2: next[0], y2: next[1], stroke: tone(index) });
+      });
+    }
+    if (style === "dots") {
+      return points.map(({ point }, index) => react.createElement("circle", { key: index, cx: point[0], cy: point[1], r: width, fill: rainbow ? tone(index) : undefined }));
+    }
+    if (style === "wave") {
+      return [
+        react.createElement("path", { key: "fill", d: `${contour()} ${circlePath(base)}`, fillRule: "evenodd", fill: paint, fillOpacity: 0.26, stroke: "none" }),
+        react.createElement("path", { key: "crest", d: contour(), fill: "none", stroke: paint }),
+      ];
+    }
+    if (style === "aura") {
+      return [[1, 0.16], [0.66, 0.22], [0.36, 0.3]].map(([scale, opacity]) =>
+        react.createElement("path", { key: scale, d: `${contour(scale)} ${circlePath(disc)}`, fillRule: "evenodd", fill: paint, fillOpacity: opacity, stroke: "none" }));
+    }
+    if (style === "blocks") {
+      const levels = mini ? 3 : 5;
+      const start = base + 1.5, pitch = (span - 1.5) / (levels - 0.3), block = pitch * 0.7;
+      const blockWidth = Math.min(width * 2.2 + 1, base * Math.PI * 2 / count * 0.72);
+      return points.map(({ angle }, index) => {
+        const lit = Math.max(1, Math.round(level(index) * levels));
+        const [x1, y1] = at(angle, start), [x2, y2] = at(angle, start + lit * pitch - (pitch - block));
+        return react.createElement("line", { key: index, x1, y1, x2, y2, stroke: tone(index), strokeWidth: blockWidth, strokeLinecap: "butt", strokeDasharray: `${round(block)} ${round(pitch - block)}` });
+      });
+    }
+    if (style === "spikes") {
+      const half = Math.PI / count * Math.min(1, 0.55 + Math.max(1, Math.min(6, Number(thickness) || 2)) * 0.075);
+      return points.map(({ angle, radius }, index) => react.createElement("path", {
+        key: index, fill: tone(index), stroke: "none",
+        d: `M ${at(angle - half, base + 0.5).map(round).join(" ")} L ${at(angle, radius).map(round).join(" ")} L ${at(angle + half, base + 0.5).map(round).join(" ")} Z`,
+      }));
+    }
+    if (style === "pulse") {
+      return [[0.08, 1, 1.5], [0.36, 0.7, 1.2], [0.66, 0.42, 0.95], [0.94, 0.2, 0.7]].map(([reach, opacity, scale], index) =>
+        react.createElement("circle", { key: index, cx: 100, cy: 100, r: round(base + reach * span), fill: "none", stroke: paint, strokeOpacity: opacity, strokeWidth: round(width * scale) }));
+    }
+    if (style === "particles") {
+      const stride = Math.max(2, Math.round(count / 16));
+      return [0, 1, 2].flatMap((generation) => points.filter((_, index) => index % stride === generation % stride).map(({ angle }, index) => {
+        const band = index * stride + (generation % stride);
+        const [x, y] = at(angle, base + 3 + (span - 4) * (0.12 + generation * 0.36) * (0.55 + 0.45 * level(band)));
+        return react.createElement("circle", { key: `${generation}-${band}`, cx: round(x), cy: round(y), r: round(width * (1 - generation * 0.22)), fill: tone(band), fillOpacity: 1 - generation * 0.3 });
+      }));
+    }
+    return points.map(({ angle, radius }, index) => react.createElement("line", {
+      key: index, x1: at(angle, base)[0], y1: at(angle, base)[1], x2: at(angle, radius)[0], y2: at(angle, radius)[1], stroke: rainbow ? tone(index) : undefined,
+    }));
+  };
+  const filled = style === "dots" || style === "spikes" || style === "particles";
+  return react.createElement(
+    "svg",
+    {
+      className: mini ? "settings-cd-style-thumb" : "settings-cd-disc-preview", viewBox: "0 0 200 200",
+      width: mini ? 48 : "100%", height: mini ? 48 : "100%", "aria-hidden": "true", focusable: "false",
+      "data-cd-style": style, "data-cd-mirror": mirror ? "true" : undefined, style: { display: "block", overflow: "visible" },
+    },
+    rainbow && visualizer ? react.createElement("defs", null,
+      react.createElement("linearGradient", { id: gradientId, x1: 0, y1: 0, x2: mirror ? 0 : 1, y2: 1 },
+        ...(mirror ? SETTINGS_CD_RAINBOW_HUES.slice(0, -1) : SETTINGS_CD_RAINBOW_HUES).map((hue, index, hues) =>
+          react.createElement("stop", { key: index, offset: round(index / (hues.length - 1)), stopColor: `hsl(${hue}, 82%, 68%)` })))) : null,
+    albumGradient && !rainbow && visualizer ? react.createElement("defs", null,
+      ...["#c8ab83", "#557784", "#a5bfbc", "#c8ab83"].map((shade, index, shades) =>
+        react.createElement("radialGradient", {
+          key: index, id: `${albumPatternId}-${index}`, gradientUnits: "userSpaceOnUse",
+          cx: at(index / shades.length * Math.PI * 2, 75)[0],
+          cy: at(index / shades.length * Math.PI * 2, 75)[1], r: 145,
+        }, react.createElement("stop", { offset: 0, stopColor: shade, stopOpacity: 1 }),
+        react.createElement("stop", { offset: 1, stopColor: shade, stopOpacity: 0 }))),
+      react.createElement("pattern", { id: albumPatternId, width: 200, height: 200, patternUnits: "userSpaceOnUse" },
+        react.createElement("rect", { width: 200, height: 200, fill: "#557784" }),
+        ...[0, 1, 2, 3].map(index => react.createElement("rect", {
+          key: index, width: 200, height: 200, fill: `url(#${albumPatternId}-${index})`, opacity: .85,
+        })))) : null,
+    ...(mini ? [
+      react.createElement("path", { key: "disc", d: ring(disc, 14), fillRule: "evenodd", fill: "currentColor", opacity: 0.2 }),
+      react.createElement("circle", { key: "hub", cx: 100, cy: 100, r: 24, fill: "none", stroke: "currentColor", strokeWidth: 3, opacity: 0.32 }),
+    ] : [
+      react.createElement("path", { key: "disc", d: ring(76, 19), fillRule: "evenodd", fill: "#557784" }),
+      react.createElement("path", { key: "art", d: "M27 81 Q67 21 131 43 Q171 57 173 92 L120 83 Q77 57 27 81", fill: "#c8ab83", opacity: 0.65 }),
+      react.createElement("path", { key: "rim", d: ring(76, 74), fillRule: "evenodd", fill: "#dce2e8", opacity: 0.7 }),
+      react.createElement("path", { key: "hub-ring", d: ring(25, 9), fillRule: "evenodd", fill: "#dce2e8", opacity: 0.28 }),
+      react.createElement("circle", { key: "hub-outer", cx: 100, cy: 100, r: 19, fill: "none", stroke: "#e3eaf0", strokeWidth: 0.8, opacity: 0.65 }),
+      react.createElement("circle", { key: "hub-inner", cx: 100, cy: 100, r: 9, fill: "none", stroke: "#e3eaf0", strokeWidth: 0.8, opacity: 0.65 }),
+    ]),
+    visualizer ? react.createElement("g", {
+      fill: filled ? paint : "none", stroke: filled ? "none" : paint, strokeWidth: width, strokeLinecap: "round", strokeLinejoin: "round",
+    }, ...shapes()) : null
+  );
+};
+
 // Schematic fullscreen layout that follows the fullscreen settings.
 const SettingsFullscreenPreview = ({ view = "basic" }) => {
   useSettingsConfigRevision();
@@ -8024,18 +8179,34 @@ const SettingsFullscreenPreview = ({ view = "basic" }) => {
     flag("fullscreen-show-album-name", false) ? react.createElement("em", null) : null
   );
   const nodes = [];
-  const tvMode = view === "tv" || (view !== "vinyl" && flag("fullscreen-tv-mode", false));
-  if (view === "vinyl") {
-    const presentation = visual["fullscreen-focus-presentation"] || "vinyl";
+  const tvMode = view === "tv" || (!["vinyl", "cd"].includes(view) && flag("fullscreen-tv-mode", false));
+  if (view === "cd") {
+    const colorMode = visual["fullscreen-cd-visualizer-color-mode"] || "album";
+    const color = colorMode === "custom" ? normalizeSettingsHexColor(visual["fullscreen-cd-visualizer-color"]) || "#ffffff"
+      : colorMode === "white" ? "#ffffff" : "#b8cfdd";
+    nodes.push(react.createElement("div", { key: "cd-art", className: "settings-fs-el settings-fs-col settings-fs-col-art" },
+      react.createElement("div", { className: "settings-fs-cd", style: { width: `${Math.min(100, number("fullscreen-cd-disc-size", 100) * 0.68)}%`, aspectRatio: "1", alignSelf: "center" } },
+        react.createElement(SettingsCdDiscPreview, {
+          visualizer: flag("fullscreen-cd-visualizer-enabled", true),
+          style: visual["fullscreen-cd-visualizer-style"] || "bars", color,
+          density: number("fullscreen-cd-visualizer-density", 64),
+          thickness: number("fullscreen-cd-visualizer-thickness", 2),
+          mirror: flag("fullscreen-cd-visualizer-mirror", false),
+          rainbow: colorMode === "rainbow",
+          albumGradient: colorMode === "album" && flag("fullscreen-cd-visualizer-album-gradient", true),
+        })),
+      flag("fullscreen-show-info", true) ? info : null));
+    nodes.push(react.createElement("div", { key: "cd-lyrics", className: "settings-fs-el settings-fs-col settings-fs-col-lyrics" }, bars(5, "cd")));
+  } else if (view === "vinyl") {
     const armStyle = visual["fullscreen-vinyl-tonearm-style"] || "s";
     const finish = { white: "#f2f2f2", silver: "#b9bec7", black: "#1d1f24" }[visual["fullscreen-vinyl-tonearm-finish"] || "white"] || "#f2f2f2";
     nodes.push(react.createElement(
       "div",
       {
         key: "record",
-        className: `settings-fs-record${flag("fullscreen-vinyl-animations", true) ? " is-spin" : ""}${presentation === "compact-vinyl" ? " is-compact" : ""}`,
+        className: `settings-fs-record${flag("fullscreen-vinyl-animations", true) ? " is-spin" : ""}`,
         style: {
-          "--record": number("fullscreen-vinyl-record-size", 100) * (presentation === "compact-vinyl" ? 0.7 : 1),
+          "--record": number("fullscreen-vinyl-record-size", 100),
           "--rpm": number("fullscreen-vinyl-rotation-speed", 100),
         },
       },
@@ -8541,10 +8712,98 @@ const getPerformanceSettingsSections = () => {
   ];
 };
 
+// One catalog owns CD controls, search aliases and changed-setting destinations.
+// Keep conditional rows in the catalog so saved custom colours remain reachable
+// even when the visualizer is off or another colour mode is selected.
+const isCdSettingsKey = (key) => typeof key === "string" && (
+  key.startsWith("fullscreen-cd-") || key === "cd-mode" || key === "cd-visualizer"
+);
+
+// Search only needs metadata, not references to inactive input components.
+const getCdSettingsSections = ({ controls = true } = {}) => {
+  const option = (key, name, extra = {}) => ({
+    key: `fullscreen-cd-${key}`,
+    desc: I18n.t(`vinyl.cd.${name}Label`),
+    info: I18n.t(`vinyl.cd.${name}Desc`),
+    i18nKeys: [`vinyl.cd.${name}Label`, `vinyl.cd.${name}Desc`],
+    ...extra,
+  });
+  const slider = (key, name, fallback, min, max, step, unit = "%", extra = {}) => option(key, name, {
+    type: controls ? ConfigSliderRange : null, min, max, step, unit,
+    defaultValue: CONFIG.visual[`fullscreen-cd-${key}`] ?? fallback,
+    ...extra,
+  });
+  const visualizerOff = () => !getSettingsPreviewFlag("fullscreen-cd-visualizer-enabled", true);
+  // Pulse rings are circular and level-driven, so density and mirroring would
+  // have no visible effect there; their saved values are kept for other shapes.
+  const pulseShapeOrOff = () => visualizerOff() || CONFIG.visual["fullscreen-cd-visualizer-style"] === "pulse";
+  const choices = (key, name, values, group, fallback, extra = {}) => option(key, name, {
+    type: controls ? ConfigSelection : null, presentation: "cards", disabled: visualizerOff,
+    options: Object.fromEntries(values.map((value) => [value, I18n.t(`vinyl.cd.${group}.${value}`)])),
+    defaultValue: CONFIG.visual[`fullscreen-cd-${key}`] || fallback,
+    i18nKeys: [`vinyl.cd.${name}Label`, `vinyl.cd.${name}Desc`, ...values.map((value) => `vinyl.cd.${group}.${value}`)],
+    ...extra,
+  });
+  const mirrored = getSettingsPreviewFlag("fullscreen-cd-visualizer-mirror", false);
+  const swatch = (background) => react.createElement("span", { className: "settings-cd-color-swatch", style: { background }, "aria-hidden": "true" });
+  return [
+    {
+      sectionKey: "cd-mode", titleKey: "vinyl.cd.mode", subtitleKey: "vinyl.cd.subtitle",
+      items: [
+        slider("disc-size", "discSize", 100, 70, 140, 5),
+        option("rotation-enabled", "rotation", { type: controls ? ConfigSlider : null, defaultValue: getSettingsPreviewFlag("fullscreen-cd-rotation-enabled", true) }),
+        slider("rotation-speed", "rotationSpeed", 100, 25, 200, 5, "%", {
+          disabled: () => !getSettingsPreviewFlag("fullscreen-cd-rotation-enabled", true),
+        }),
+      ],
+    },
+    {
+      sectionKey: "cd-visualizer", titleKey: "vinyl.cd.visualizerTitle", subtitleKey: "vinyl.cd.visualizerDesc",
+      items: [
+        option("visualizer-enabled", "enabled", { type: controls ? ConfigSlider : null, defaultValue: getSettingsPreviewFlag("fullscreen-cd-visualizer-enabled", true) }),
+        choices("visualizer-style", "style", SETTINGS_CD_STYLE_ORDER, "styles", "bars", {
+          cardsClassName: "settings-cd-style-cards",
+          visualMap: controls ? Object.fromEntries(SETTINGS_CD_STYLE_ORDER.map((value) => [value, react.createElement(SettingsCdDiscPreview, {
+            variant: "mini", style: value, color: "currentColor", density: 24, thickness: 2, mirror: mirrored,
+          })])) : undefined,
+        }),
+        option("visualizer-mirror", "mirror", {
+          type: controls ? ConfigSlider : null, defaultValue: mirrored, disabled: pulseShapeOrOff,
+        }),
+        choices("visualizer-color-mode", "colorMode", ["album", "white", "custom", "rainbow"], "colorModes", "album", {
+          cardsClassName: "settings-cd-color-cards",
+          visualMap: controls ? {
+            album: swatch("radial-gradient(circle at 15% 20%, #c8925a, transparent 70%), radial-gradient(circle at 85% 80%, #4d7472, transparent 70%), #8c8160"),
+            white: swatch("#ffffff"),
+            custom: swatch(normalizeSettingsHexColor(CONFIG.visual["fullscreen-cd-visualizer-color"]) || "#ffffff"),
+            rainbow: swatch(`linear-gradient(90deg, ${SETTINGS_CD_RAINBOW_HUES.map((hue) => `hsl(${hue}, 82%, 68%)`).join(", ")})`),
+          } : undefined,
+        }),
+        option("visualizer-color", "color", {
+          type: controls ? ConfigColorPicker : null, defaultValue: CONFIG.visual["fullscreen-cd-visualizer-color"] || "#ffffff",
+          when: () => !visualizerOff() && CONFIG.visual["fullscreen-cd-visualizer-color-mode"] === "custom",
+        }),
+        option("visualizer-album-gradient", "albumGradient", {
+          type: controls ? ConfigSlider : null,
+          defaultValue: getSettingsPreviewFlag("fullscreen-cd-visualizer-album-gradient", true),
+          disabled: visualizerOff,
+          when: () => (CONFIG.visual["fullscreen-cd-visualizer-color-mode"] || "album") === "album",
+        }),
+        slider("visualizer-sensitivity", "sensitivity", 100, 25, 200, 5, "%", { disabled: visualizerOff }),
+        slider("visualizer-density", "density", 64, 24, 128, 8, "", { disabled: pulseShapeOrOff }),
+        slider("visualizer-thickness", "thickness", 2, 1, 6, 0.5, "px", { disabled: visualizerOff }),
+      ],
+    },
+  ];
+};
+
 const getCanonicalSettingsDestination = (() => {
   let performanceKeys = null;
   return (tabId, settingKey) => {
     if (!settingKey) return { tabId, settingKey };
+    if (isCdSettingsKey(settingKey)) {
+      return { tabId: "fullscreen", settingKey };
+    }
     if (settingKey === "video-background") return { tabId: "appearance", settingKey };
     if (settingKey === "prefetch") {
       return { tabId: "performance", settingKey: "performance-background-work" };
@@ -9000,12 +9259,12 @@ const FULLSCREEN_PRESENTATION_PRESETS = Object.freeze([
   {
     id: "compact-vinyl",
     labelKey: "vinyl.presentation.compactLabel",
-    fallbackLabel: "Compact vinyl",
+    fallbackLabel: "CD mode",
     descriptionKey: "vinyl.presentation.compactDescription",
     fallbackDescription:
-      "Keep the standard lyric layout and show a partially exposed record behind the album cover.",
+      "Show a circular album cover with a centre hole and a surrounding visualizer.",
     icon:
-      '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2"/>',
+      '<path d="M2 12a10 10 0 1 0 20 0 10 10 0 1 0-20 0M10 12a2 2 0 1 0 4 0 2 2 0 1 0-4 0" fill="currentColor" fill-opacity=".15" fill-rule="evenodd" stroke="none"/><circle cx="12" cy="12" r="9.5"/><circle cx="12" cy="12" r="4" stroke-opacity=".45"/><circle cx="12" cy="12" r="2"/><path d="M4.5 7.5 8 5M16 19l3.5-2.5" stroke-opacity=".65"/>',
   },
   {
     id: "vinyl",
@@ -9113,8 +9372,9 @@ const FullscreenPresentationPicker = ({ defaultValue, onChange }) => {
             "div",
             { className: "settings-choice-icon" },
             react.createElement("svg", {
-              width: 20,
-              height: 20,
+              className: preset.id === "compact-vinyl" ? "settings-cd-presentation-preview" : undefined,
+              width: preset.id === "compact-vinyl" ? 30 : 20,
+              height: preset.id === "compact-vinyl" ? 30 : 20,
               viewBox: "0 0 24 24",
               fill: "none",
               stroke: "currentColor",
@@ -9783,6 +10043,18 @@ const ConfigModal = ({
     ];
     // 전체화면 탭
     const buildFullscreenTabSettings = () => [
+      ...getCdSettingsSections({ controls: false }).flatMap((section) => [
+        {
+          section: I18n.t("tabs.fullscreen"), sectionKey: "fullscreen", settingKey: section.sectionKey,
+          name: I18n.t(section.titleKey), desc: I18n.t(section.subtitleKey),
+          i18nKeys: ["tabs.fullscreen", "vinyl.cd.mode", section.titleKey, section.subtitleKey],
+        },
+        ...section.items.map((item) => ({
+          section: I18n.t("tabs.fullscreen"), sectionKey: "fullscreen", settingKey: item.key,
+          name: item.desc, desc: item.info,
+          i18nKeys: ["tabs.fullscreen", "vinyl.cd.mode", section.titleKey, ...item.i18nKeys],
+        })),
+      ]),
       {
         section: I18n.t("tabs.fullscreen"),
         sectionKey: "fullscreen",
@@ -9804,7 +10076,6 @@ const ConfigModal = ({
           "vinyl.presentation.settingsTitle",
           "vinyl.presentation.settingsDescription",
           "vinyl.presentation.vinylLabel",
-          "vinyl.presentation.compactLabel",
           "vinyl.presentation.videoLabel",
           "vinyl.settings.backgroundBlurLabel",
           "vinyl.settings.backgroundBlurDesc",
@@ -10533,7 +10804,7 @@ const ConfigModal = ({
   const pendingTabScrollRef = react.useRef(initialSettingKey || null);
   const pendingScrollTopRef = react.useRef(null);
   const scrollMemoryRef = react.useRef(new Map());
-  const [fullscreenView, setFullscreenView] = react.useState("basic");
+  const [fullscreenView, setFullscreenView] = react.useState(() => isCdSettingsKey(initialSettingKey) ? "cd" : "basic");
   const [navigationRevision, setNavigationRevision] = react.useState(0);
 
   react.useEffect(() => {
@@ -10977,6 +11248,11 @@ const ConfigModal = ({
       pinnedSectionRef.current = null;
       setChangedView(false);
       pendingTabScrollRef.current = destination.settingKey || null;
+      // Conditional inputs may not have a DOM anchor (for example, the custom
+      // colour in Album colour mode). Still open their canonical CD subview.
+      if (destination.tabId === "fullscreen" && isCdSettingsKey(destination.settingKey)) {
+        setFullscreenView("cd");
+      }
       if (destination.tabId !== activeTab || changedView) {
         pendingScrollTopRef.current = destination.settingKey ? null : (scrollMemoryRef.current.get(destination.tabId) ?? 0);
         setActiveTab(destination.tabId);
@@ -11433,6 +11709,7 @@ const ConfigModal = ({
     { value: "basic", label: getSettingsText("settingsUi.fullscreenViews.basic", "Basics") },
     { value: "normal", label: getSettingsText("settingsUi.fullscreenViews.normal", "Normal mode") },
     { value: "tv", label: getSettingsText("settingsUi.fullscreenViews.tv", "TV mode") },
+    { value: "cd", label: I18n.t("vinyl.cd.mode") },
     { value: "vinyl", label: I18n.t("vinyl.mode") || "LP" },
   ];
 
@@ -13885,6 +14162,14 @@ react.createElement(OptionList, {
           })
           ),
     ];
+    // CD owns its appearance and visualizer controls, independently of LP.
+    const renderFullscreenCdSection = () => getCdSettingsSections().map((section) =>
+      react.createElement(SettingsSection, {
+        key: section.sectionKey, sectionKey: section.sectionKey,
+        title: I18n.t(section.titleKey), subtitle: I18n.t(section.subtitleKey),
+        view: "cd", hidden: fullscreenView !== "cd",
+      }, react.createElement(OptionList, { items: section.items, onChange: saveVinylSetting }))
+    );
     // ===== LP 모드 섹션 =====
     const renderFullscreenVinylSection = () => [
           react.createElement(SettingsSection, {
@@ -14409,6 +14694,7 @@ react.createElement(OptionList, {
       ...renderFullscreenTitleArtistSection(),
       ...renderFullscreenNormalLayoutSection(),
       ...renderFullscreenTvModeSection(),
+      ...renderFullscreenCdSection(),
       ...renderFullscreenVinylSection(),
     );
   };

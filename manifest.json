@@ -46,6 +46,7 @@
 		"WordLevelSupplements.js",
 		"Pages.js",
 		"VinylActiveLyricRenderer.js",
+		"CdVisualizer.js",
 		"VinylPlayerMode.js",
 		"SettingsStyles.js",
 		"Settings.js",

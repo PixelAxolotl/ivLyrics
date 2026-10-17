@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ivLyrics · production CD renderer fixture</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/style.css">
+<style>
+  :root { color-scheme: dark; --spice-button-active: #b9d5e3; --spice-text: #f4f5f6; --spice-subtext: #a3adb3; }
+  * { box-sizing: border-box; }
+  html, body, #root { margin: 0; width: 100%; min-height: 100%; }
+  body { background: #171f26; color: #f4f5f6; font: 14px system-ui,sans-serif; }
+  body[data-theme=light] { background: #e5e9ec; color: #202a32; color-scheme: light; }
+  .qa-caption { position: fixed; top: 24px; left: 32px; z-index: 20; font-size: 12px; opacity: .65; }
+  .qa-main { position: relative; width: calc(100vw - 300px); height: 100dvh; display: grid; grid-template-columns: 48% 52%; align-items: center; padding: 56px 36px; gap: 20px; }
+  .qa-album { min-width: 0; text-align: center; }
+  .qa-cd-slot { position: relative; width: min(100%, 440px); aspect-ratio: 1; margin: 0 auto; cursor: pointer; }
+  .qa-cd-slot:focus-visible { outline: 2px solid currentColor; outline-offset: 10px; border-radius: 50%; }
+  .qa-album h1 { margin: 32px 0 6px; font-size: clamp(20px,2.1vw,32px); font-weight: 650; }
+  .qa-album p { margin: 0; opacity: .65; }
+  .qa-lyrics { font-size: clamp(23px,2.6vw,42px); line-height: 1.55; font-weight: 650; padding-inline: 20px; }
+  .qa-lyrics p { margin-block: 26px; opacity: .28; }
+  .qa-lyrics p.is-active { opacity: 1; }
+  .qa-lyrics small { display: block; font-size: .43em; font-weight: 400; opacity: .65; }
+  .qa-controls { position: fixed; inset: 0 0 0 auto; width: 300px; overflow-y: auto; padding: 20px; background: #10171eea; color: #e8edf0; z-index: 10000; }
+  .qa-controls summary { font-size: 17px; font-weight: 650; cursor: pointer; }
+  .qa-controls p { font-size: 12px; line-height: 1.5; opacity: .65; }
+  .qa-controls label { display: block; margin-block: 14px; }
+  .qa-controls select, .qa-controls input[type=range] { width: 100%; margin-top: 6px; }
+  .qa-controls select, .qa-controls button { padding: 8px; border: 1px solid #75818a66; border-radius: 5px; background: #27313a; color: #e8edf0; }
+  .qa-controls button { margin: 4px 4px 4px 0; }
+  .qa-controls output { margin-left: 8px; }
+  .qa-controls input[type=checkbox] { margin-right: 8px; }
+  .qa-main .fullscreen-vinyl-overlay { right: 300px; }
+  .qa-main .fullscreen-presentation-dock { width: calc(100vw - 300px); }
+  .qa-main.qa-overlay { padding: 0; display: block; width: 100vw; overflow: hidden; }
+  .qa-overlay > .lyrics-lyricsContainer-LyricsContainer { width: 100vw; height: 100dvh; }
+  .qa-small { position: fixed; bottom: 20px; left: 24px; width: 84px; height: 84px; }
+  @media(max-width:900px) {
+    .qa-main { width: 100vw; padding: 64px 24px; gap: 10px; }
+    .qa-controls { inset: auto 12px 12px auto; width: min(300px, calc(100vw - 24px)); max-height: 60dvh; border-radius: 8px; padding: 14px; }
+    .qa-main .fullscreen-vinyl-overlay { right: 0; }
+    .qa-main .fullscreen-presentation-dock { width: 100vw; }
+    .qa-caption { left: 20px; top: 20px; }
+  }
+  @media(max-width:560px) {
+    .qa-main { grid-template-columns: 1fr; height: auto; min-height: 100dvh; align-content: center; }
+    .qa-cd-slot { width: min(72vw,300px); }
+    .qa-album h1 { margin-top: 22px; }
+    .qa-lyrics { font-size: 24px; text-align: center; }
+    .qa-lyrics p:not(.is-active) { display: none; }
+    .qa-small { display: none; }
+  }
+</style>
+<div id="root"></div>
+<script src="/react.js"></script>
+<script src="/react-dom.js"></script>
+<script src="/langs/LangEn.js"></script>
+<script>
+  const h = React.createElement;
+  const params = new URLSearchParams(location.search);
+  const errors = [];
+  addEventListener("error", event => errors.push(event.message));
+  addEventListener("unhandledrejection", event => errors.push(String(event.reason)));
+  window.I18n = { t: key => key.split('.').reduce((value, part) => value?.[part], window.LANG_EN) || key };
+  window.createOutsideTextOutlineShadow = () => "none";
+  window.qaAudio = { requests: [], delay: 0, available: true, active: true, base: 26000, sampledAt: performance.now() };
+  const progress = () => qaAudio.base + (qaAudio.active ? performance.now() - qaAudio.sampledAt : 0);
+  const sample = { track: { duration: 180 }, beats: Array.from({ length: 360 }, (_, i) => ({ start: i * 0.5, duration: 0.5, confidence: 0.85 })),
+    segments: Array.from({ length: 720 }, (_, i) => ({
+    start: i * .25, duration: .25, loudness_start: -24 + 8 * Math.sin(i * .2),
+    loudness_max: -7 + 5 * Math.sin(i * .61), loudness_max_time: .06, loudness_end: -22,
+    pitches: Array.from({ length: 12 }, (_, p) => .08 + .8 * Math.pow((Math.sin(i * .31 + p * .8) + 1) / 2, 2)),
+  })) };
+  window.CONFIG = { visual: {} };
+  window.Utils = { getSafePlayerProgress: progress, getTrackSyncOffset: async () => 0, getGlobalSyncOffset: () => 0 };
+  window.Spicetify = {
+    React, SVGIcons: {}, Player: { data: { item: {} }, getProgress: progress, getDuration: () => 180000,
+      getVolume: () => .5, getRepeat: () => 0, getShuffle: () => false, getHeart: () => false,
+      isPlaying: () => qaAudio.active, addEventListener() {}, removeEventListener() {} },
+    getAudioData: async uri => {
+      qaAudio.requests.push({ method: "getAudioData", uri });
+      const available = qaAudio.available;
+      await new Promise(resolve => setTimeout(resolve, qaAudio.delay));
+      if (!available) throw new Error("Fixture analysis intentionally unavailable");
+      return sample;
+    },
+    CosmosAsync: { get: async url => {
+      qaAudio.requests.push({ method: "CosmosAsync", url });
+      if (!qaAudio.available) throw new Error("Fixture analysis intentionally unavailable");
+      return sample;
+    } },
+  };
+</script>
+<script src="/metadata.js"></script>
+<script src="/CdVisualizer.js"></script>
+<script src="/VinylPlayerMode.js"></script>
+<script src="/FullscreenOverlay.js"></script>
+<script>
+  const art = index => "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600"><rect width="600" height="600" fill="${index % 2 ? '#3b7683' : '#847e65'}"/><path d="M0 380 Q150 180 300 340 T600 230V600H0" fill="#adc3ba"/><path d="M0 480 Q180 300 350 440 T600 380V600H0" fill="#253d45"/><circle cx="435" cy="150" r="75" fill="#dfcaa7"/><path d="M180 600V320l24-45 25 45v280M163 394l42-100 43 100" fill="#1e343b"/><text x="38" y="80" font-family="sans-serif" font-size="32" letter-spacing="6" fill="#e5ded0">DAYLIGHT · ${index}</text></svg>`);
+  const artworkBlobs = new Map();
+  const paletteArt = index => {
+    if (!artworkBlobs.has(index)) artworkBlobs.set(index, URL.createObjectURL(new Blob([
+      decodeURIComponent(art(index).slice("data:image/svg+xml,".length)),
+    ], { type: "image/svg+xml" })));
+    return artworkBlobs.get(index);
+  };
+  const Fixture = () => {
+    const [visual, setVisual] = React.useState(() => ({
+      "fullscreen-cd-disc-size": 100, "fullscreen-cd-rotation-enabled": true, "fullscreen-cd-rotation-speed": 100,
+      "fullscreen-cd-visualizer-enabled": true, "fullscreen-cd-visualizer-style": "bars",
+      "fullscreen-cd-visualizer-color-mode": "album", "fullscreen-cd-visualizer-color": "#f4b980",
+      "fullscreen-cd-visualizer-sensitivity": 100, "fullscreen-cd-visualizer-density": 64, "fullscreen-cd-visualizer-thickness": 2,
+      "fullscreen-cd-visualizer-mirror": false,
+      "fullscreen-vinyl-lyrics-enabled": false, "fullscreen-vinyl-track-change-animation": false,
+      "fullscreen-auto-hide-ui": false, "fullscreen-info-gap": 24, "fullscreen-show-controls": false,
+      "fullscreen-show-context": false, "fullscreen-show-queue": false, "fullscreen-show-volume": false,
+      "fullscreen-show-next-track": false, "fullscreen-show-clock": false, "alignment": "center",
+      ...JSON.parse(localStorage.getItem("cd-fixture-settings") || "{}"),
+    }));
+    const [index, setIndex] = React.useState(1);
+    const [playing, setPlaying] = React.useState(true);
+    const [presentation, setPresentation] = React.useState("inline");
+    const [overlayMode, setOverlayMode] = React.useState("compact-vinyl");
+    const [theme, setTheme] = React.useState(params.get("theme") || "dark");
+    const [hydration, setHydration] = React.useState(0);
+    const [clicks, setClicks] = React.useState(0);
+    const item = { uri: `spotify:track:${String(index).padStart(22,"0")}`, metadata: {
+      title: hydration ? "Daylight · translated title" : "Daylight", artist_name: "Fixture Artist", album_title: "Small Things", image_url: paletteArt(index),
+    } };
+    const config = { visual };
+    window.CONFIG.visual = visual;
+    const track = window.fixtureLiveTrack(config, item.uri, null, item);
+    const vinylSettings = window.fixtureVinylSettings(config);
+    const save = (key, value) => setVisual(current => {
+      const next = { ...current, [key]: value }; localStorage.setItem("cd-fixture-settings", JSON.stringify(next)); return next;
+    });
+    const togglePlayback = () => {
+      qaAudio.base = progress(); qaAudio.sampledAt = performance.now(); qaAudio.active = !playing; setPlaying(!playing);
+      Spicetify.Player.data.isPaused = playing;
+    };
+    React.useEffect(() => { document.body.dataset.theme = theme; }, [theme]);
+    window.cdFixture = { visual, save, setIndex, setPresentation, setHydration, track, errors, overlayMode, setOverlayMode,
+      seek: value => { qaAudio.base = value; qaAudio.sampledAt = performance.now(); },
+      togglePlayback, setTheme, clicks,
+    };
+    const toggle = (key, text, fallback = true) => h("label", { key }, h("input", { type: "checkbox", checked: visual[key] ?? fallback, onChange: event => save(key, event.target.checked) }), text);
+    const range = (key, text, min, max, step) => h("label", { key }, text, h("output", null, visual[key]), h("input", {
+      type: "range", "aria-label": text, min, max, step, value: visual[key], onChange: event => save(key, Number(event.target.value)),
+    }));
+    const choice = (key, text, values) => h("label", { key }, text, h("select", { "aria-label": text, value: visual[key], onChange: event => save(key, event.target.value) },
+      values.map(value => h("option", { key: value, value }, value))));
+    return h(React.Fragment, null,
+      h("div", { className: "qa-caption" }, "Production CD renderer · fixture audio analysis"),
+      h("details", { className: "qa-controls", open: innerWidth > 900 }, h("summary", null, "CD fixture controls"),
+        h("p", null, "Deterministic local analysis, not live Spotify audio. Settings and playback affect this origin only."),
+        h("button", { onClick: togglePlayback }, playing ? "Pause" : "Play"),
+        h("button", { onClick: () => setIndex(value => value + 1) }, "Next track"),
+        h("button", { onClick: () => setHydration(value => value + 1) }, "Hydrate metadata"),
+        h("button", { onClick: () => setTheme(theme === "dark" ? "light" : "dark") }, "Toggle theme"),
+        h("label", null, "Presentation", h("select", { "aria-label": "Presentation", value: presentation, onChange: event => setPresentation(event.target.value) },
+          ["inline", "compact-vinyl", "vinyl", "video", "overlay"].map(value => h("option", { key: value, value }, value)))),
+        toggle("fullscreen-cd-visualizer-enabled", "Visualizer"),
+        choice("fullscreen-cd-visualizer-style", "Shape", window.ivLyricsCdVisualizer.STYLES),
+        choice("fullscreen-cd-visualizer-color-mode", "Color mode", window.ivLyricsCdVisualizer.COLOR_MODES),
+        toggle("fullscreen-cd-visualizer-mirror", "Mirror", false),
+        toggle("fullscreen-cd-visualizer-album-gradient", "Album gradient"),
+        h("label", null, "Custom color", h("input", { type: "color", "aria-label": "Custom color", value: visual["fullscreen-cd-visualizer-color"], onChange: event => save("fullscreen-cd-visualizer-color", event.target.value) })),
+        range("fullscreen-cd-disc-size", "Disc size", 70, 140, 5),
+        toggle("fullscreen-cd-rotation-enabled", "Rotate CD"),
+        range("fullscreen-cd-rotation-speed", "Rotation speed", 25, 200, 5),
+        range("fullscreen-cd-visualizer-sensitivity", "Reaction", 25, 200, 5),
+        range("fullscreen-cd-visualizer-density", "Density", 24, 128, 8),
+        range("fullscreen-cd-visualizer-thickness", "Thickness", 1, 6, .5),
+        toggle("reduce-motion", "Reduce motion", false),
+        h("p", null, `Album interactions: ${clicks}`)),
+      h("main", { className: `qa-main${presentation === "overlay" ? " qa-overlay" : ""}` }, presentation === "overlay" ? h("div", { className: `lyrics-lyricsContainer-LyricsContainer fullscreen-active${innerHeight > innerWidth ? " portrait-mode" : ""}` },
+        h(window.FullscreenOverlay, { isFullscreen: true, presentationMode: overlayMode, trackUri: track.uri, title: track.title, artist: track.artist, coverUrl: track.coverUrl,
+          onPresentationModeChange: setOverlayMode }),
+        h("div", { className: "lyrics-lyricsContainer-SyncedLyricsPage" }, h("p", null, "Production album slot geometry")))
+        : presentation === "inline" ? h(React.Fragment, null,
+        h("section", { className: "qa-album" },
+          h("div", { className: "qa-cd-slot", role: "button", tabIndex: 0, "aria-label": "Album interaction", onClick: () => setClicks(value => value + 1) },
+            h(window.ivLyricsVinylPlayerMode.CompactAlbumVinyl, { track, isPlaying: playing, cdSettings: vinylSettings.cdSettings, reducedMotion: visual["reduce-motion"] })),
+          h("h1", null, track.title), h("p", null, track.artist)),
+        h("section", { className: "qa-lyrics" }, h("p", null, "Keep the little things"), h("p", { className: "is-active" }, "A little light, a little time", h("small", null, "Fixture lyrics · not a Spotify playback verdict")), h("p", null, "And everything in between")))
+        : h(window.ivLyricsVinylPlayerMode, { track, vinylSettings, isPlaying: playing, presentationMode: presentation, onPresentationModeChange: setPresentation, onTogglePlayback: togglePlayback,
+          position: progress(), duration: 180000, interactionProps: { onClick: () => setClicks(value => value + 1) } })),
+      h("div", { className: "qa-small" }, h(window.ivLyricsVinylPlayerMode.CompactDisc, { track, isPlaying: playing, cdSettings: vinylSettings.cdSettings, reducedMotion: visual["reduce-motion"] })));
+  };
+  ReactDOM.createRoot(document.getElementById("root")).render(h(Fixture));
+</script>
+</html>

@@ -73,18 +73,18 @@ const VinylPlayerMode = (() => {
         return reducedMotion;
     };
 
-    const useRotationSpeed = (rotationSpeed) => {
+    const useRotationSpeed = (rotationSpeed, animationName = "ivlyrics-vinyl-spin-clock") => {
         const clockRef = useRef(null);
         const rate = normalizeRotationSpeed(rotationSpeed) / 100;
         (react.useLayoutEffect || useEffect)(() => {
             // Keep the CSS clock and its current time. Changing animation-duration
             // would reinterpret elapsed time and visibly jump the record's angle.
             for (const animation of clockRef.current?.getAnimations?.() || []) {
-                if (animation.animationName === "ivlyrics-vinyl-spin-clock") {
+                if (animation.animationName === animationName) {
                     animation.updatePlaybackRate(rate);
                 }
             }
-        }, [rate]);
+        }, [rate, animationName]);
         return clockRef;
     };
 
@@ -232,7 +232,7 @@ const VinylPlayerMode = (() => {
         {
             id: "compact-vinyl",
             labelKey: "vinyl.presentation.compactLabel",
-            fallback: "Compact vinyl",
+            fallback: "CD",
             icon: "compact"
         },
         {
@@ -466,93 +466,121 @@ const VinylPlayerMode = (() => {
         );
     });
 
-    const CompactVinyl = react.memo(({
-        track,
-        isPlaying,
-        centerRotationEnabled,
-        rotationSpeed = 100,
-        recordScale = 1,
-        interactionProps = {}
-    }) => {
-        const clockRef = useRotationSpeed(rotationSpeed);
-        const label = I18n.t("vinyl.closeHint") || "Return to standard view";
-        return react.createElement("button", {
-            ...interactionProps,
-            ref: clockRef,
-            type: "button",
-            className: [
-                "ivlyrics-compact-vinyl-stage",
-                isPlaying ? "is-playing" : "is-paused",
-                centerRotationEnabled ? "is-center-rotation-enabled" : ""
-            ].filter(Boolean).join(" "),
-            style: {
-                "--iv-vinyl-accent": track.accent,
-                "--iv-vinyl-compact-scale": recordScale
-            },
-            "aria-label": label,
-            "aria-describedby": "ivlyrics-vinyl-compact-title ivlyrics-vinyl-compact-artist",
-            title: label
-        },
-            react.createElement(VinylDisc, {
-                title: track.title,
-                artist: track.artist,
-                album: track.album,
-                idPrefix: "ivlyrics-vinyl-compact"
-            })
-        );
-    });
-
-    const CompactAlbumVinyl = react.memo(({
-        track,
-        isPlaying,
+    // Keep the former compact-vinyl presentation id and public component alias
+    // so saved preferences and FullscreenOverlay's album interactions survive.
+    // The CD face rotates on its own compositor layer, never the spectrum or
+    // the lyric tree. Hydrating artwork/AI metadata does not reset its clock.
+    const CompactDisc = react.memo(({
+        track = {},
+        isPlaying = false,
         animationsEnabled = true,
-        centerRotationEnabled = true,
-        rotationSpeed = 100,
         reducedMotion: appReducedMotion = false,
-        albumRadius = 12,
-        coverClassName = "",
-        coverStyle = {}
+        cdSettings = {},
+        coverClassName = ""
     }) => {
         const systemReducedMotion = useReducedMotion();
         const reducedMotion = appReducedMotion || systemReducedMotion;
-        const clockRef = useRotationSpeed(rotationSpeed);
+        const rotationEnabled = cdSettings.rotationEnabled !== false;
+        const clockRef = useRotationSpeed(cdSettings.rotationSpeed, "ivlyrics-cd-spin");
+        const enabled = cdSettings.enabled !== false;
+        const [analysisState, setAnalysisState] = useState({ uri: track.uri, status: "loading" });
+        const [noticeVisible, setNoticeVisible] = useState(true);
+        const setAnalysisStatus = useCallback(next => setAnalysisState(current => (
+            current.uri === track.uri && current.status === next
+                ? current : { uri: track.uri, status: next }
+        )), [track.uri]);
+        const discSize = Number(cdSettings.discSize ?? 100);
+        const scale = Number.isFinite(discSize) ? Math.min(140, Math.max(70, discSize)) / 100 : 1;
+        const Visualizer = window.ivLyricsCdVisualizer?.Visualizer;
+        const status = !enabled ? "disabled" : !Visualizer ? "unavailable"
+            : analysisState.uri === track.uri ? analysisState.status : "loading";
+        useEffect(() => {
+            setNoticeVisible(true);
+            if (status !== "unavailable") return;
+            const timer = window.setTimeout(() => setNoticeVisible(false), 3200);
+            return () => window.clearTimeout(timer);
+        }, [track.uri, status]);
+        const statusKey = status === "loading" ? "vinyl.cd.loading" : "vinyl.cd.unavailable";
         return react.createElement("div", {
             className: [
                 "ivlyrics-compact-album-vinyl",
+                "ivlyrics-cd-stage",
                 isPlaying ? "is-playing" : "is-paused",
-                animationsEnabled && !reducedMotion ? "" : "is-motion-disabled",
-                centerRotationEnabled ? "is-center-rotation-enabled" : ""
+                animationsEnabled && rotationEnabled && !reducedMotion ? "" : "is-motion-disabled"
             ].filter(Boolean).join(" "),
             style: {
-                "--iv-vinyl-accent": track.accent,
-                "--iv-compact-album-radius": `${albumRadius}px`
+                "--iv-cd-accent": track.accent || "#e5e7eb",
+                "--iv-cd-scale": scale
             },
+            "data-visualizer-status": status,
             "aria-hidden": "true"
         },
-            react.createElement("span", {
-                ref: clockRef,
-                className: "ivlyrics-compact-album-record"
+            react.createElement("div", {
+                className: "ivlyrics-cd-size"
             },
-                react.createElement(VinylDisc, {
-                    title: track.title,
-                    artist: track.artist,
-                    album: track.album,
-                    idPrefix: "ivlyrics-compact-album"
-                })
-            ),
-            react.createElement("img", {
-                src: track.coverUrl,
-                className: [
-                    "ivlyrics-compact-album-cover",
-                    coverClassName
-                ].filter(Boolean).join(" "),
-                style: {
-                    ...coverStyle,
-                    borderRadius: `${albumRadius}px`
+                Visualizer && react.createElement(Visualizer, {
+                    trackUri: track.uri,
+                    artworkUrl: track.coverUrl,
+                    accent: track.accent,
+                    enabled,
+                    playing: isPlaying,
+                    reducedMotion: reducedMotion || !animationsEnabled,
+                    settings: cdSettings,
+                    className: "ivlyrics-cd-visualizer",
+                    onStatusChange: setAnalysisStatus
+                }),
+                react.createElement("div", {
+                    // Carry only the shared-transition marker. Square-cover
+                    // geometry/shadow classes must not leak into the CD face.
+                    className: `ivlyrics-cd-disc${String(coverClassName || "").split(/\s+/).includes("ivlyrics-fullscreen-shared-album") ? " ivlyrics-fullscreen-shared-album" : ""}`
                 },
-                draggable: false
-            })
+                    react.createElement("div", {
+                        ref: clockRef,
+                        className: "ivlyrics-cd-print-rotor"
+                    },
+                        react.createElement("div", { className: "ivlyrics-cd-print" },
+                            track.coverUrl && react.createElement("img", {
+                                key: track.coverUrl,
+                                src: track.coverUrl,
+                                alt: "",
+                                className: "ivlyrics-cd-artwork",
+                                draggable: false,
+                                onError: event => { event.currentTarget.style.visibility = "hidden"; }
+                            })
+                        )
+                    ),
+                    react.createElement("span", { className: "ivlyrics-cd-rim" }),
+                    react.createElement("span", { className: "ivlyrics-cd-hub" }),
+                    react.createElement("span", { className: "ivlyrics-cd-reflection" })
+                )
+            ),
+            enabled && (status === "loading" || status === "unavailable") &&
+                react.createElement("span", {
+                    key: `${track.uri}:${status}`,
+                    className: `ivlyrics-cd-status${noticeVisible ? "" : " is-dismissed"}`,
+                    title: I18n.t(statusKey)
+                }, I18n.t(statusKey))
         );
+    });
+
+    const CompactAlbumVinyl = CompactDisc;
+
+    const CompactVinyl = react.memo(({
+        track = {},
+        isPlaying,
+        cdSettings = {},
+        reducedMotion = false,
+        interactionProps = {}
+    }) => {
+        const label = I18n.t("vinyl.closeHint") || "Return to standard view";
+        return react.createElement("button", {
+            ...interactionProps,
+            type: "button",
+            className: "ivlyrics-compact-vinyl-stage",
+            style: { "--iv-vinyl-accent": track.accent },
+            "aria-label": label,
+            title: label
+        }, react.createElement(CompactDisc, { track, isPlaying, reducedMotion, cdSettings }));
     });
 
     const VinylPlayer = react.memo(({
@@ -1676,9 +1704,8 @@ const VinylPlayerMode = (() => {
             isCompactVinylPresentation ? react.createElement(CompactVinyl, {
                 track: liveTrack,
                 isPlaying,
-                centerRotationEnabled,
-                rotationSpeed,
-                recordScale,
+                cdSettings: vinylSettings.cdSettings,
+                reducedMotion,
                 interactionProps
             }) : null,
             react.createElement(PresentationSwitcher, {
@@ -1712,6 +1739,7 @@ const VinylPlayerMode = (() => {
 
     Mode.PresentationSwitcher = PresentationSwitcher;
     Mode.CompactAlbumVinyl = CompactAlbumVinyl;
+    Mode.CompactDisc = CompactDisc;
     return Mode;
 })();
 

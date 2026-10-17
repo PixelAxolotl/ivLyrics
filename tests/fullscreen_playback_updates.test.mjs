@@ -7,7 +7,7 @@ const source = readFileSync(new URL("../FullscreenOverlay.js", import.meta.url),
 
 // Run the actual overlay with persistent hooks, effects and event subscriptions.
 // Child components stay as elements so only work scheduled by the root is counted.
-const createHarness = ({ mode = "standard", visual = {}, windowOverrides = {} } = {}) => {
+const createHarness = ({ mode = "standard", visual = {}, windowOverrides = {}, documentOverrides = {} } = {}) => {
   const slots = [];
   const intervals = new Map();
   const listeners = new Map();
@@ -77,13 +77,14 @@ const createHarness = ({ mode = "standard", visual = {}, windowOverrides = {} } 
   };
   const vinyl = () => null;
   vinyl.CompactAlbumVinyl = () => null;
+  vinyl.PresentationSwitcher = () => null;
   const config = { visual: { "fullscreen-auto-hide-ui": false, ...visual } };
   const context = vm.createContext({
     Spicetify: { React: react, Player: player },
     CONFIG: config,
     I18n: { t: (key) => key },
     window: { ivLyricsVinylPlayerMode: vinyl, ...windowOverrides },
-    document: { documentElement: { classList: { remove() {} } } },
+    document: { documentElement: { classList: { remove() {} } }, ...documentOverrides },
     setInterval(callback, delay) { intervals.set(++timerId, { callback, delay }); return timerId; },
     clearInterval(id) { intervals.delete(id); },
     console,
@@ -144,6 +145,7 @@ test("LP labels follow existing metadata modes, simplification and track ownersh
       "translate-metadata": true, "fullscreen-trim-title": true,
       "fullscreen-vinyl-track-change-animation": false,
       "fullscreen-vinyl-rotation-speed": 175,
+      "fullscreen-cd-rotation-speed": 75,
       "reduce-motion": true,
     } });
     h.player.data.item.metadata.title = "Song (Remastered)";
@@ -175,11 +177,207 @@ test("LP labels follow existing metadata modes, simplification and track ownersh
     h.update({ trackUri: "spotify:track:one" });
     assert.equal(track().title, "번역 제목 (리마스터)");
     const stage = elements(h.tree).find(node => node.type === h.vinyl || node.type === h.vinyl.CompactAlbumVinyl);
-    assert.equal(mode === "vinyl" ? stage.props.vinylSettings.rotationSpeed : stage.props.rotationSpeed, 175);
+    assert.equal(mode === "vinyl" ? stage.props.vinylSettings.rotationSpeed : stage.props.cdSettings.rotationSpeed, mode === "vinyl" ? 175 : 75);
     assert.equal(mode === "vinyl" ? stage.props.vinylSettings.reducedMotion : stage.props.reducedMotion, true);
     if (mode === "vinyl") assert.equal(stage.props.vinylSettings.trackChangeAnimation, false);
     h.unmount();
   }
+});
+
+test("CD settings reach only the compact presentation and stay independent of LP animation switches", () => {
+  const h = createHarness({ mode: "compact-vinyl", visual: {
+    "fullscreen-vinyl-animations": false, "fullscreen-vinyl-center-rotation": false,
+    "fullscreen-cd-visualizer-enabled": true, "fullscreen-cd-visualizer-style": "line",
+    "fullscreen-cd-visualizer-color-mode": "custom", "fullscreen-cd-visualizer-color": "#aabbcc",
+    "fullscreen-cd-visualizer-sensitivity": 125, "fullscreen-cd-visualizer-density": 80,
+    "fullscreen-cd-visualizer-thickness": 3, "fullscreen-cd-rotation-enabled": true,
+    "fullscreen-cd-visualizer-mirror": true,
+  } });
+  const stage = () => elements(h.tree).find(node => node.type === h.vinyl.CompactAlbumVinyl);
+  assert.equal(stage().props.animationsEnabled, true);
+  assert.equal(stage().props.cdSettings.enabled, true);
+  assert.equal(stage().props.cdSettings.style, "line");
+  assert.equal(stage().props.cdSettings.customColor, "#aabbcc");
+  assert.equal(stage().props.cdSettings.density, 80);
+  assert.equal(stage().props.cdSettings.mirror, true);
+  h.config.visual["fullscreen-cd-visualizer-style"] = "particles";
+  h.config.visual["fullscreen-cd-visualizer-color-mode"] = "rainbow";
+  h.update();
+  assert.deepEqual([stage().props.cdSettings.style, stage().props.cdSettings.colorMode], ["particles", "rainbow"]);
+  h.config.visual["fullscreen-cd-visualizer-mirror"] = "true";
+  h.update();
+  assert.equal(stage().props.cdSettings.mirror, false, "only a saved boolean enables mirroring");
+  h.config.visual["fullscreen-cd-visualizer-style"] = "line";
+  h.config.visual["fullscreen-cd-visualizer-color-mode"] = "custom";
+  h.config.visual["fullscreen-cd-visualizer-enabled"] = false;
+  h.update();
+  assert.equal(stage().props.cdSettings.enabled, false);
+  assert.equal(stage().props.cdSettings.style, "line", "turning off a spectrum retains its preferences");
+  h.unmount();
+});
+
+test("CD frames are larger and reserve their full spectrum extent without changing normal album size", () => {
+  const h = createHarness({ mode: "compact-vinyl", visual: { "fullscreen-cd-disc-size": 140 } });
+  const wrapper = () => byClass(h.tree, "lyrics-fullscreen-album-container");
+  assert.equal(wrapper().props.style["--iv-cd-slot-size"], "500px");
+  assert.equal(wrapper().props.style.width, "500px");
+  assert.ok(Math.abs(wrapper().props.style["--iv-cd-overflow"] - .172) < .000001);
+  for (const size of [70, 100, "invalid"]) {
+    h.config.visual["fullscreen-cd-disc-size"] = size;
+    h.update();
+    assert.equal(wrapper().props.style["--iv-cd-overflow"], 0);
+    assert.equal(wrapper().props.style.width, "500px");
+  }
+  h.update({ presentationMode: "standard" });
+  assert.equal(wrapper().props.style["--iv-cd-overflow"], undefined, "normal album layout remains untouched");
+  assert.equal(wrapper().props.style.width, "400px");
+  h.unmount();
+});
+
+test("CD hover hints and native tooltips are hidden in landscape and portrait while album gestures remain available", () => {
+  for (const portrait of [false, true]) {
+    const h = createHarness({ mode: "compact-vinyl", windowOverrides: {
+      matchMedia: query => ({ matches: query.includes("orientation") && portrait, addEventListener() {}, removeEventListener() {} }),
+    } });
+    const wrapper = () => byClass(h.tree, "clickable-album-container");
+    assert.equal(byClass(h.tree, "album-mode-hint"), undefined);
+    assert.equal(wrapper().props.title, undefined);
+    assert.match(wrapper().props["aria-label"], /vinyl.tmiHint/);
+    assert.equal(wrapper().props.tabIndex, 0);
+    for (const gesture of ["onClick", "onContextMenu", "onPointerDown", "onKeyDown"]) {
+      assert.equal(typeof wrapper().props[gesture], "function", `${gesture} is retained`);
+    }
+    h.update({ presentationMode: "standard" });
+    assert.ok(byClass(h.tree, "album-mode-hint"), "normal albums retain their existing hover hint");
+    assert.match(wrapper().props.title, /vinyl.tmiHint/);
+    h.unmount();
+  }
+});
+
+test("CD size fits short and narrow windows without changing the saved size or other presentations", () => {
+  const h = createHarness({ mode: "compact-vinyl", visual: { "fullscreen-cd-disc-size": 140 },
+    windowOverrides: { innerWidth: 1200, innerHeight: 720 } });
+  const width = () => Number.parseFloat(byClass(h.tree, "lyrics-fullscreen-album-container").props.style.width);
+  assert.ok(width() < 330 && width() > 300);
+  assert.equal(h.config.visual["fullscreen-cd-disc-size"], 140);
+  h.update({ presentationMode: "standard" });
+  assert.equal(width(), 400);
+  h.unmount();
+});
+
+test("app and OS reduce-motion both enter and exit CD immediately without snapshots or delayed closing", () => {
+  for (const [appReduced, osReduced] of [[true, false], [false, true]]) {
+    for (const mode of ["standard", "compact-vinyl"]) {
+      const changes = [];
+      const h = createHarness({ mode, visual: { "reduce-motion": appReduced, "fullscreen-focus-presentation": "compact-vinyl" },
+        windowOverrides: {
+          matchMedia: query => ({ matches: query.includes("prefers-reduced-motion") && osReduced, addEventListener() {}, removeEventListener() {} }),
+          setTimeout() { assert.fail("reduced motion must not wait for a closing animation"); },
+        },
+        documentOverrides: { startViewTransition() { assert.fail("reduced motion must not create album snapshots"); } },
+      });
+      h.update({ onPresentationModeChange: next => changes.push(next) });
+      byClass(h.tree, "lyrics-fullscreen-album-container").props.onClick();
+      assert.deepEqual(changes, [mode === "standard" ? "compact-vinyl" : "standard"]);
+      h.unmount();
+    }
+  }
+});
+
+test("leaving a CD during a shared transition handles the normal ready rejection on unmount", async () => {
+  let rejectReady, finish;
+  let skipped = false;
+  const changes = [];
+  const transition = {
+    ready: new Promise((resolve, reject) => { rejectReady = reject; }),
+    finished: new Promise(resolve => { finish = resolve; }),
+    skipTransition() { skipped = true; rejectReady(new Error("Transition was skipped")); finish(); },
+  };
+  const h = createHarness({ mode: "compact-vinyl",
+    windowOverrides: { ReactDOM: { flushSync: update => update() } },
+    documentOverrides: {
+      documentElement: { classList: { add() {}, remove() {} } },
+      startViewTransition(update) { update(); return transition; },
+    },
+  });
+  h.update({ onPresentationModeChange: next => changes.push(next) });
+  byClass(h.tree, "clickable-album-container").props.onClick();
+  assert.deepEqual(changes, ["standard"]);
+  h.unmount();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(skipped, true);
+});
+
+test("all four fullscreen presentations share their handoff, including focused-to-focused changes", async () => {
+  const modes = ["standard", "compact-vinyl", "vinyl", "video"];
+  for (const from of modes) for (const to of modes) {
+    const classes = new Set(), changes = [];
+    let snapshots = 0, finish;
+    const h = createHarness({ mode: from,
+      windowOverrides: { ReactDOM: { flushSync: update => update() } },
+      documentOverrides: {
+        documentElement: { classList: {
+          add: (...names) => names.forEach(name => classes.add(name)),
+          remove: (...names) => names.forEach(name => classes.delete(name)),
+        } },
+        startViewTransition(update) {
+          snapshots++;
+          update();
+          return { ready: Promise.resolve(), finished: new Promise(resolve => { finish = resolve; }), skipTransition() { finish(); } };
+        },
+      },
+    });
+    h.update({ onPresentationModeChange: next => changes.push(next) });
+    const switcher = elements(h.tree).find(node => node.type === h.vinyl.PresentationSwitcher);
+    const focused = elements(h.tree).find(node => node.type === h.vinyl);
+    (switcher?.props.onChange || focused.props.onPresentationModeChange)(to);
+    assert.deepEqual(changes, from === to ? [] : [to], `${from} -> ${to}: selected mode`);
+    assert.equal(snapshots, from === to ? 0 : 1, `${from} -> ${to}: shared handoff`);
+    if (from !== to) {
+      const direction = to === "standard" ? "exit" : from === "standard" ? "enter" : "switch";
+      assert.ok(classes.has(`is-lp-view-${direction}`), `${from} -> ${to}: direction`);
+      finish();
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(classes.size, 0, "transition classes must not affect later frames");
+    }
+    h.unmount();
+  }
+});
+
+test("rapid mode changes keep the latest selection and old completion cannot clear the new handoff", async () => {
+  const classes = new Set(), transitions = [], changes = [];
+  const h = createHarness({ mode: "compact-vinyl",
+    windowOverrides: { ReactDOM: { flushSync: update => update() } },
+    documentOverrides: {
+      documentElement: { classList: {
+        add: (...names) => names.forEach(name => classes.add(name)),
+        remove: (...names) => names.forEach(name => classes.delete(name)),
+      } },
+      startViewTransition(update) {
+        let finish;
+        const transition = { ready: Promise.resolve(), finished: new Promise(resolve => { finish = resolve; }),
+          skipped: false, finish: () => finish(), skipTransition() { this.skipped = true; finish(); } };
+        transitions.push(transition);
+        update();
+        return transition;
+      },
+    },
+  });
+  h.update({ onPresentationModeChange: next => { changes.push(next); h.update({ presentationMode: next }); } });
+  const choose = next => {
+    const node = elements(h.tree).find(node => node.type === h.vinyl || node.type === h.vinyl.PresentationSwitcher);
+    (node.props.onChange || node.props.onPresentationModeChange)(next);
+  };
+  choose("vinyl"); choose("video"); choose("compact-vinyl");
+  assert.deepEqual(changes, ["vinyl", "video", "compact-vinyl"]);
+  assert.equal(transitions[0].skipped, true);
+  assert.equal(transitions[1].skipped, true);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.ok(classes.has("is-lp-view-switch"), "stale completion must not remove the active direction");
+  transitions.at(-1).finish();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(classes.size, 0);
+  h.unmount();
 });
 
 for (const mode of ["standard", "compact-vinyl"]) {

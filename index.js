@@ -2992,6 +2992,18 @@ const CONFIG = {
       "ivLyrics:visual:fullscreen-vinyl-lyrics-enabled",
       true
     ),
+    "fullscreen-cd-disc-size": Number(StorageManager.getItem("ivLyrics:visual:fullscreen-cd-disc-size") ?? 100),
+    "fullscreen-cd-rotation-enabled": StorageManager.get("ivLyrics:visual:fullscreen-cd-rotation-enabled", true),
+    "fullscreen-cd-rotation-speed": Number(StorageManager.getItem("ivLyrics:visual:fullscreen-cd-rotation-speed") ?? 100),
+    "fullscreen-cd-visualizer-enabled": StorageManager.get("ivLyrics:visual:fullscreen-cd-visualizer-enabled", true),
+    "fullscreen-cd-visualizer-style": StorageManager.getItem("ivLyrics:visual:fullscreen-cd-visualizer-style") || "bars",
+    "fullscreen-cd-visualizer-color-mode": StorageManager.getItem("ivLyrics:visual:fullscreen-cd-visualizer-color-mode") || "album",
+    "fullscreen-cd-visualizer-album-gradient": StorageManager.get("ivLyrics:visual:fullscreen-cd-visualizer-album-gradient", true),
+    "fullscreen-cd-visualizer-color": StorageManager.getItem("ivLyrics:visual:fullscreen-cd-visualizer-color") || "#ffffff",
+    "fullscreen-cd-visualizer-sensitivity": Number(StorageManager.getItem("ivLyrics:visual:fullscreen-cd-visualizer-sensitivity") ?? 100),
+    "fullscreen-cd-visualizer-density": Number(StorageManager.getItem("ivLyrics:visual:fullscreen-cd-visualizer-density") ?? 64),
+    "fullscreen-cd-visualizer-thickness": Number(StorageManager.getItem("ivLyrics:visual:fullscreen-cd-visualizer-thickness") ?? 2),
+    "fullscreen-cd-visualizer-mirror": StorageManager.get("ivLyrics:visual:fullscreen-cd-visualizer-mirror", false),
     "fullscreen-focus-presentation":
       normalizeIvLyricsDefaultFullscreenPresentation(
         StorageManager.getItem("ivLyrics:visual:fullscreen-focus-presentation")

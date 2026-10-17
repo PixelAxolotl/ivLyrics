@@ -70,14 +70,14 @@ const server = createServer((request, response) => {
       const timer = setTimeout(finish, Math.min(15000, Math.max(0, Number(url.searchParams.get("delay")) || 0)));
       response.on("close", () => clearTimeout(timer));
       return;
-    } else if (path === "/") {
-      body = readFileSync(new URL("./vinyl_player.html", import.meta.url), "utf8")
+    } else if (path === "/" || path === "/cd") {
+      body = readFileSync(new URL(path === "/cd" ? "./cd_player.html" : "./vinyl_player.html", import.meta.url), "utf8")
         .replaceAll("@SOURCE_PREFIX@", url.searchParams.has("baseline") ? "/baseline" : "");
       type = "text/html";
     } else if (files.has(path)) body = readFileSync(files.get(path));
     else if (path === "/metadata.js") body = metadataSource(baseline);
     else if (path === "/settings.js") body = settingsSource(baseline);
-    else if (["/style.css", "/VinylPlayerMode.js", "/VinylActiveLyricRenderer.js", "/Pages.js", "/LyricsWordSegmenter.js", "/langs/LangEn.js"].includes(path)) {
+    else if (["/style.css", "/CdVisualizer.js", "/FullscreenOverlay.js", "/VinylPlayerMode.js", "/VinylActiveLyricRenderer.js", "/Pages.js", "/LyricsWordSegmenter.js", "/langs/LangEn.js"].includes(path)) {
       body = readSource(path.slice(1), baseline);
       if (path.endsWith(".css")) { type = "text/css"; body = body.replace(/^@import\s+[^;]+;/gm, ""); }
     } else if (path === "/favicon.ico") { response.writeHead(204); response.end(); return; }

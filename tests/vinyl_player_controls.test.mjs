@@ -155,14 +155,14 @@ test("master, app and live OS reduced-motion settings override track transitions
   }
 });
 
-test("speed bounds and updates retain the CSS clock time without changing other animations", () => {
-  for (const component of ["VinylPlayer", "CompactVinyl", "CompactAlbumVinyl"]) {
-    const clock = { animationName: "ivlyrics-vinyl-spin-clock", currentTime: 1375, playbackRate: 1,
+test("LP and CD speed updates retain their independent CSS clocks without changing entrance animations", () => {
+  for (const component of ["VinylPlayer", "CompactAlbumVinyl"]) {
+    const clock = { animationName: component === "VinylPlayer" ? "ivlyrics-vinyl-spin-clock" : "ivlyrics-cd-spin", currentTime: 1375, playbackRate: 1,
       updatePlaybackRate(rate) { this.playbackRate = rate; } };
     const entrance = { animationName: "fullscreen-compact-vinyl-in", updatePlaybackRate() { assert.fail("entrance speed must remain independent"); } };
     const h = createHarness({ component, clocks: [clock, entrance], centerRotationEnabled: false });
     for (const [value, rate] of [[150, 1.5], ["50", 0.5], [999, 2], [-10, 0.25], [0, 0.25], [NaN, 1], [undefined, 1]]) {
-      h.render({ rotationSpeed: value, isPlaying: false });
+      h.render({ rotationSpeed: value, cdSettings: { rotationSpeed: value }, isPlaying: false });
       assert.equal(clock.playbackRate, rate);
       assert.equal(clock.currentTime, 1375, "speed changes retain paused rotation phase");
     }
@@ -170,6 +170,69 @@ test("speed bounds and updates retain the CSS clock time without changing other 
     assert.equal(clock.currentTime, 1375);
     h.unmount();
   }
+});
+
+test("the former compact presentation renders the CD face without a sleeve, groove label or tonearm", () => {
+  const h = createHarness({ component: "CompactAlbumVinyl" });
+  assert.match(h.tree.props.className, /ivlyrics-cd-stage/);
+  assert.equal(elements(h.tree).filter(node => node.type === "img").length, 1);
+  assert.equal(elements(h.tree).find(node => node.type === "img").props.src, first.coverUrl);
+  assert.ok(elements(h.tree).some(node => node.props.className === "ivlyrics-cd-hub"));
+  assert.ok(elements(h.tree).some(node => node.props.className === "ivlyrics-cd-rim"));
+  assert.equal(elements(h.tree).some(node => /ivlyrics-vinyl-(sleeve|record|label|tonearm)/.test(node.props.className || "")), false);
+  assert.equal(h.tree.props["data-visualizer-status"], "unavailable", "a missing optional module must not break the album view");
+  h.render({ cdSettings: { enabled: false, discSize: 140, rotationEnabled: false } });
+  assert.equal(h.tree.props["data-visualizer-status"], "disabled");
+  assert.equal(h.tree.props.style["--iv-cd-scale"], 1.4);
+  assert.match(h.tree.props.className, /is-motion-disabled/);
+  assert.equal(elements(h.tree).some(node => node.props.className === "ivlyrics-cd-status"), false);
+  h.render({ cdSettings: { discSize: "invalid" }, reducedMotion: true });
+  assert.equal(h.tree.props.style["--iv-cd-scale"], 1);
+  assert.match(h.tree.props.className, /is-motion-disabled/);
+  h.unmount();
+});
+
+test("CD motion follows playback, its own toggle and live OS reduce-motion preference", () => {
+  const h = createHarness({ component: "CompactAlbumVinyl", isPlaying: true });
+  assert.match(h.tree.props.className, /is-playing/);
+  assert.doesNotMatch(h.tree.props.className, /is-motion-disabled/);
+  h.setReducedMotion(true);
+  assert.match(h.tree.props.className, /is-motion-disabled/);
+  h.setReducedMotion(false);
+  h.render({ isPlaying: false, cdSettings: { rotationEnabled: true } });
+  assert.match(h.tree.props.className, /is-paused/);
+  h.unmount();
+});
+
+test("the CD shares only its fixed disc bounds with album view transitions", () => {
+  const h = createHarness({ component: "CompactAlbumVinyl", coverClassName: "lyrics-fullscreen-album-art ivlyrics-fullscreen-shared-album with-shadow" });
+  const shared = elements(h.tree).filter(node => node.props.className?.split(/\s+/).includes("ivlyrics-fullscreen-shared-album"));
+  assert.equal(shared.length, 1);
+  assert.equal(shared[0].type, "div");
+  assert.equal(shared[0].props.className, "ivlyrics-cd-disc ivlyrics-fullscreen-shared-album");
+  assert.equal(elements(h.tree).some(node => /lyrics-fullscreen-album-art|with-shadow/.test(node.props.className || "")), false);
+  h.unmount();
+});
+
+test("CD analysis failure dismisses once, survives settings updates, and resets only on a new track", () => {
+  const h = createHarness({ component: "CompactAlbumVinyl" });
+  const notice = () => elements(h.tree).find(node => node.props.className?.startsWith("ivlyrics-cd-status"));
+  assert.equal(notice().props.className, "ivlyrics-cd-status");
+  h.advance(3199);
+  assert.equal(notice().props.className, "ivlyrics-cd-status");
+  h.advance(1);
+  assert.match(notice().props.className, /is-dismissed/);
+  h.render({ cdSettings: { style: "line", albumGradient: false } });
+  assert.match(notice().props.className, /is-dismissed/, "changing settings must not repeat an unavailable notice");
+  assert.equal(h.timerCount, 0);
+  h.render({ track: second });
+  assert.equal(notice().props.className, "ivlyrics-cd-status");
+  h.render({ cdSettings: { enabled: false } });
+  assert.equal(notice(), undefined);
+  assert.equal(h.timerCount, 0);
+  h.render({ cdSettings: { enabled: true } });
+  assert.equal(notice().props.className, "ivlyrics-cd-status");
+  h.unmount();
 });
 
 test("saved LP preferences reload with bounded speeds and unchanged defaults", () => {

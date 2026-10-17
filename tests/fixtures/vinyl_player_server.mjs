@@ -1,7 +1,7 @@
 // Usage: node tests/fixtures/vinyl_player_server.mjs /path/to/node_modules [port]
 // Requires local React 18 UMD files. Serves only the fixture and production
 // LP sources on loopback; it never connects to Spotify or changes app settings.
-// Add ?baseline=1 to render the unmodified 23a7e63 sources for comparison.
+// Add ?baseline=1 to render the unmodified 44c0625 sources for comparison.
 import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -13,7 +13,7 @@ const reactRoot = process.argv[2];
 if (!reactRoot) throw new Error("Pass a node_modules directory containing React 18 UMD files");
 const port = Number(process.argv[3] || 48173);
 const readSource = (path, baseline) => baseline
-  ? execFileSync("git", ["show", `23a7e63:${path}`], { cwd: root, encoding: "utf8", maxBuffer: 2 * 1024 * 1024 })
+  ? execFileSync("git", ["show", `44c0625:${path}`], { cwd: root, encoding: "utf8", maxBuffer: 2 * 1024 * 1024 })
   : readFileSync(resolve(root, path), "utf8");
 const section = (source, start, end) => {
   const from = source.indexOf(start), to = source.indexOf(end, from);
@@ -60,16 +60,26 @@ const server = createServer((request, response) => {
     const baseline = url.pathname.startsWith("/baseline/");
     const path = baseline ? url.pathname.slice("/baseline".length) : url.pathname;
     let body, type = "application/javascript";
-    if (path === "/") {
+    if (path === "/qa-art.svg") {
+      const finish = () => {
+        if (response.destroyed) return;
+        const failed = url.searchParams.has("fail");
+        response.writeHead(failed ? 503 : 200, { "Content-Type": "image/svg+xml", "Cache-Control": "no-store" });
+        response.end(failed ? "fixture artwork failure" : '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="#25767e"/><text x="30" y="210" fill="white" font-size="28">HYDRATED LOCAL ART</text></svg>');
+      };
+      const timer = setTimeout(finish, Math.min(15000, Math.max(0, Number(url.searchParams.get("delay")) || 0)));
+      response.on("close", () => clearTimeout(timer));
+      return;
+    } else if (path === "/") {
       body = readFileSync(new URL("./vinyl_player.html", import.meta.url), "utf8")
         .replaceAll("@SOURCE_PREFIX@", url.searchParams.has("baseline") ? "/baseline" : "");
       type = "text/html";
     } else if (files.has(path)) body = readFileSync(files.get(path));
     else if (path === "/metadata.js") body = metadataSource(baseline);
     else if (path === "/settings.js") body = settingsSource(baseline);
-    else if (["/style.css", "/VinylPlayerMode.js", "/langs/LangEn.js"].includes(path)) {
+    else if (["/style.css", "/VinylPlayerMode.js", "/VinylActiveLyricRenderer.js", "/Pages.js", "/LyricsWordSegmenter.js", "/langs/LangEn.js"].includes(path)) {
       body = readSource(path.slice(1), baseline);
-      if (path.endsWith(".css")) type = "text/css";
+      if (path.endsWith(".css")) { type = "text/css"; body = body.replace(/^@import\s+[^;]+;/gm, ""); }
     } else if (path === "/favicon.ico") { response.writeHead(204); response.end(); return; }
     else { response.writeHead(404); response.end(); return; }
     response.writeHead(200, { "Content-Type": `${type}; charset=utf-8`, "Cache-Control": "no-store" });
@@ -78,4 +88,4 @@ const server = createServer((request, response) => {
     response.writeHead(500, { "Content-Type": "text/plain" }); response.end(error.message);
   }
 });
-server.listen(port, "127.0.0.1", () => console.log(`LP fixture: http://127.0.0.1:${port}`));
+server.listen(port, "127.0.0.1", () => console.log(`LP fixture: http://127.0.0.1:${server.address().port}`));

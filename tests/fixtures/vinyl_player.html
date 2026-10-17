@@ -29,7 +29,39 @@
   window.I18n = { t: key => key.split('.').reduce((value, part) => value?.[part], window.LANG_EN) || key };
   window.Spicetify = { React, SVGIcons: {}, Player: { data: { item: {} } } };
   window.createOutsideTextOutlineShadow = () => "none";
+  const react = React, reactDom = ReactDOM;
+  const { useState, useRef, useEffect, useMemo, useCallback } = React;
+  window.CONFIG = { visual: { "translate:display-mode": "below", "furigana-enabled": false, "auto-instrumental-break": false } };
+  window.qaLyricState = { ready: false, locale: "ja" };
+  window.FuriganaConverter = { isAvailable: () => window.qaLyricState.ready };
+  window.Utils = {
+    getDetectedLanguage: () => window.qaLyricState.locale,
+    getSafePlayerProgress: () => 2500,
+    getPlayerPlaybackSnapshot: () => ({ position: 2500, sampledAt: performance.now(), isPlaying: false }),
+    getPseudoKaraokeRenderAdvance: () => 0,
+    getTrackSyncOffset: async () => 0, getGlobalSyncOffset: () => 0,
+    rubyTextToHTML: text => String(text || ""),
+    applyFuriganaIfEnabled: text => window.CONFIG.visual["furigana-enabled"] && window.qaLyricState.ready && window.qaLyricState.locale === "ja"
+      ? String(text).replace("漢", "<ruby>漢<rt>かん</rt></ruby>") : text,
+    isSectionHeader: () => false, formatLyricLineToCopy: text => String(text || ""),
+    createHTMLProps: text => ({ dangerouslySetInnerHTML: { __html: text } }),
+  };
+  window.StorageManager = { get: (_key, fallback) => fallback, getItem: () => null };
+  window.ivLyricsDebug = () => {};
+  Object.assign(Spicetify.Player, { getProgress: () => 2500, getDuration: () => 180000, addEventListener() {}, removeEventListener() {} });
 </script>
+<script src="@SOURCE_PREFIX@/LyricsWordSegmenter.js"></script>
+<script src="@SOURCE_PREFIX@/Pages.js"></script>
+<script>
+  window.qaLyricPreparations = { inputs: 0, display: 0 };
+  const qaPrimitives = window.ivLyricsLyricRendererPrimitives;
+  window.ivLyricsLyricRendererPrimitives = Object.freeze({
+    ...qaPrimitives,
+    getEmbeddedAuxiliaryDisplayValues: (...args) => { window.qaLyricPreparations.inputs++; return qaPrimitives.getEmbeddedAuxiliaryDisplayValues(...args); },
+    buildLyricDisplayState: (...args) => { window.qaLyricPreparations.display++; return qaPrimitives.buildLyricDisplayState(...args); },
+  });
+</script>
+<script src="@SOURCE_PREFIX@/VinylActiveLyricRenderer.js"></script>
 <script src="@SOURCE_PREFIX@/metadata.js"></script>
 <script src="@SOURCE_PREFIX@/settings.js"></script>
 <script src="@SOURCE_PREFIX@/VinylPlayerMode.js"></script>
@@ -46,6 +78,7 @@
       ...JSON.parse(localStorage.getItem(storageKey) || "{}"),
     }));
     const [index, setIndex] = React.useState(1);
+    const [qaOverrides, setQaOverrides] = React.useState({});
     const [isPlaying, setPlaying] = React.useState(true);
     const [presentation, setPresentation] = React.useState("vinyl");
     const metadata = {
@@ -62,7 +95,7 @@
       image_url: cover(index),
     } };
     const CONFIG = { visual };
-    const track = window.fixtureLiveTrack(CONFIG, item.uri, metadata, item);
+    const track = { ...window.fixtureLiveTrack(CONFIG, item.uri, metadata, item), ...qaOverrides[index] };
     const vinylSettings = window.fixtureVinylSettings(CONFIG);
     const save = (key, value) => setVisual(current => {
       const next = { ...current, [key]: value };
@@ -71,6 +104,9 @@
     });
     window.fixture = {
       save, setPlaying, setIndex, setPresentation, track, visual,
+      overrideTrack: (trackIndex, patch) => setQaOverrides(current => ({
+        ...current, [trackIndex]: { ...current[trackIndex], ...patch },
+      })),
       reset: () => { localStorage.removeItem(storageKey); location.reload(); },
     };
     const renderControl = item => h("label", { key: item.key, title: item.info },

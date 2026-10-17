@@ -289,6 +289,21 @@ test("a compensated YouTube seek already in the next loop keeps its buffering gr
     assert.equal(driftState.leadSeconds, 1.5, "the natural wrap must not poison latency learning");
 });
 
+test("a helper's compensated loop seek waits too, but a real backward seek still takes priority", () => {
+    for (const targetTime of [0, 7]) {
+        const state = createVideoDriftState();
+        state.leadSeconds = 1.5;
+        const options = { isPlaying: true, isSteady: false, canAdjustRate: true, durationSeconds: 20 };
+        planVideoDriftCorrection(state, { ...options, currentTime: 17.5, targetTime: 19.5, now: 0 });
+        planVideoDriftCorrection(state, { ...options, currentTime: 1, targetTime: 19.75, now: 250 });
+        const correction = planVideoDriftCorrection(state, { ...options, currentTime: 1, targetTime, now: 500 });
+        assert.deepEqual({ ...correction }, targetTime === 0
+            ? { type: "rate", rate: 1 }
+            : { type: "seek", time: 8.5 });
+        assert.equal(state.leadSeconds, 1.5);
+    }
+});
+
 test("a paused seek and subsequent resume do not inherit stale target or latency samples", () => {
     const state = createVideoDriftState();
     planVideoDriftCorrection(state, {

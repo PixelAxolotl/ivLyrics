@@ -21855,6 +21855,19 @@ a.research-media-item:hover {
   width: 100%;
 }
 
+.ivl-tb-offset-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.ivl-tb-video-sync-share {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
+}
+
 .ivl-tb-offset-value {
   display: block;
   padding: 0;

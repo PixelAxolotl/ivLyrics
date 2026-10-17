@@ -93,6 +93,8 @@ const loadBubble = () => {
     ToolbarPanelRow: () => null,
     ToolbarToggleRow: () => null,
     ToolbarOffsetSteps: () => null,
+    ToolbarButton: "button",
+    IvLyricsToolbarIcon: () => null,
     ToolbarRangeField: () => null,
   });
   const pillSource = section(optionsSource, "const COMMUNITY_VIDEO_SYNC_MAX_SECONDS", "\nconst TrackSyncAdjustPill");
@@ -314,12 +316,17 @@ test("all locales provide the quick-sync video strings", () => {
     const source = read("langs/" + file);
     const context = { window: {} };
     vm.runInNewContext(source, context);
-    const strings = Object.values(context.window)[0]?.syncAdjust;
+    const bundle = Object.values(context.window)[0];
+    const strings = bundle?.syncAdjust;
     for (const key of ["noVideo", "quickLyricsLabel", "quickVideoLabel", "videoTitle", "videoInfo"]) {
       assert.ok(
         typeof strings?.[key] === "string" && strings[key].trim(),
         `${file}: missing syncAdjust.${key}`
       );
+    }
+    for (const key of ["share", "shareInfo", "shared", "shareFailed", "cannotShare"]) {
+      assert.ok(typeof bundle?.videoSync?.[key] === "string" && bundle.videoSync[key].trim(),
+        `${file}: missing videoSync.${key}`);
     }
   }
 });

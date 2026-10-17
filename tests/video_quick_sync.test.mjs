@@ -45,6 +45,7 @@ function createEnvironment() {
             setItem: (key, value) => storage.set(key, String(value)),
         },
         IvLyricsToolbarIcon: () => null,
+        ToolbarButton: "button",
         ToolbarOffsetSteps: () => null,
         Utils: {
             getTrackSyncOffset: async (uri) => lyricOffsets.get(uri) ?? 0,
@@ -121,6 +122,7 @@ function mount(env, component = "TrackSyncAdjustPill", props = {}) {
         modeButton: (icon) => root.buttons().find((node) => node.children.some((child) => child?.props?.name === icon)),
         button: (label) => root.buttons().find((node) => text(node) === label),
         share: () => root.buttons().find((node) => node.props.className === "lyrics-track-sync-share"),
+        panelShare: () => root.buttons().find((node) => node.props.className === "ivl-tb-video-sync-share"),
     };
     root.render();
     return root;
@@ -318,6 +320,95 @@ test("shares exactly the canonical start once, snapshotting before delayed authe
     gate.resolve(); await pending; await flush();
     assert.deepEqual(env.completedSubmissions, [[TRACK, autoVideo.youtubeVideoId, autoVideo.youtubeTitle, 14.3, [{ start: 1, end: 2 }]]]);
     assert.deepEqual(env.toasts, [["success", "videoSync.shared"]]);
+});
+
+test("video popup always offers an explicit share button, but adjustments and mount never submit", async () => {
+    const env = createEnvironment(); activate(env, autoVideo);
+    const panel = mount(env, "CurrentVideoSyncPanelControl");
+    assert.ok(panel.panelShare(), "share action is discoverable even before an edit");
+    assert.equal(panel.panelShare().props.disabled, true, "an automatic guess is not a contribution");
+    assert.equal(panel.panelShare().props.title, "videoSync.shareInfo");
+    await panel.panelShare().props.onClick();
+    const steps = nodes(panel.tree).find((node) => Array.isArray(node.props.steps));
+    steps.props.onStep(100); steps.props.onStep(10); await flush();
+    assert.equal(env.submissions.length, 0, "every step remains a local preference");
+    assert.equal(panel.panelShare().props.disabled, false);
+    await panel.panelShare().props.onClick();
+    assert.deepEqual(env.completedSubmissions, [[TRACK, autoVideo.youtubeVideoId, autoVideo.youtubeTitle, 12.41, []]]);
+});
+
+test("popup share snapshots the applied video, exact latest anchor and skip segments before auth", async () => {
+    const env = createEnvironment(), segments = [{ start: 1, end: 2 }];
+    activate(env, { ...knownVideo(8), youtubeVideoId: "user-applied", youtubeTitle: "Applied video", skipSegments: segments });
+    const panel = mount(env, "CurrentVideoSyncPanelControl"), gate = deferred();
+    env.authGate = gate;
+    const step = nodes(panel.tree).find((node) => Array.isArray(node.props.steps)).props.onStep;
+    const share = panel.panelShare().props.onClick;
+    step(10); step(10);
+    const pending = share(); share(); await flush();
+    assert.equal(env.submissions.length, 1, "rapid duplicate clicks send once");
+    assert.equal(panel.panelShare().props["aria-busy"], true);
+    assert.equal(panel.panelShare().props.disabled, true);
+    segments[0].end = 99;
+    activate(env, { ...knownVideo(40), youtubeVideoId: "replacement" }, "spotify:track:next");
+    panel.update({ trackUri: "spotify:track:next" });
+    gate.resolve(); await pending; await flush();
+    assert.deepEqual(env.completedSubmissions, [[TRACK, "user-applied", "Applied video", 8.02, [{ start: 1, end: 2 }]]]);
+    assert.deepEqual(env.toasts, [["success", "videoSync.shared"]]);
+});
+
+test("popup rejects stale video/track buttons, stopped players and a restored automatic guess", async () => {
+    for (const replacement of [
+        { ...knownVideo(7), youtubeVideoId: "replacement" },
+        { ...knownVideo(7), playerReady: false },
+        { ...autoVideo },
+        null,
+    ]) {
+        const env = createEnvironment(); activate(env, knownVideo(5));
+        const panel = mount(env, "CurrentVideoSyncPanelControl"), share = panel.panelShare().props.onClick;
+        env.window.ivLyricsActiveCommunityVideoInfo = replacement ? { trackUri: TRACK, playerReady: true, ...replacement } : null;
+        await share(); assert.equal(env.submissions.length, 0);
+    }
+    const env = createEnvironment(); activate(env, knownVideo(5));
+    const panel = mount(env, "CurrentVideoSyncPanelControl"), share = panel.panelShare().props.onClick;
+    panel.update({ trackUri: "spotify:track:next" });
+    await share(); assert.equal(env.submissions.length, 0, "new props revoke the old handler even before the player event");
+});
+
+test("popup and quick pill share one in-flight guard per applied track/video", async () => {
+    const env = createEnvironment(); activate(env, knownVideo(8));
+    const pill = mount(env), panel = mount(env, "CurrentVideoSyncPanelControl"), gate = deferred();
+    await showVideo(pill); env.authGate = gate;
+    const pending = pill.share().props.onClick();
+    await panel.panelShare().props.onClick(); await flush();
+    assert.equal(env.submissions.length, 1, "a second surface cannot repeat the same contribution before render");
+    assert.equal(panel.panelShare().props.disabled, true);
+    assert.equal(panel.panelShare().props["aria-busy"], true);
+    const openedLater = mount(env, "CurrentVideoSyncPanelControl");
+    assert.equal(openedLater.panelShare().props.disabled, true, "a newly opened popup sees the pending request");
+    activate(env, { ...knownVideo(15), youtubeVideoId: "different-applied-video" }); await flush();
+    assert.equal(panel.panelShare().props.disabled, false, "a different video's explicit contribution is independent");
+    const other = panel.panelShare().props.onClick();
+    assert.equal(env.submissions.length, 2);
+    gate.resolve(); await pending; await other; await flush();
+    assert.equal(panel.panelShare().props.disabled, false);
+    assert.equal(pill.share().props.disabled, false);
+    assert.equal(env.completedSubmissions.length, 2);
+});
+
+test("popup validates timing, handles errors and releases its duplicate guard for an explicit retry", async () => {
+    const env = createEnvironment(); activate(env, { ...knownVideo(11), videoDurationSeconds: 10 });
+    const panel = mount(env, "CurrentVideoSyncPanelControl");
+    await panel.panelShare().props.onClick();
+    assert.equal(env.submissions.length, 0); assert.deepEqual(env.toasts.at(-1), ["error", "videoSync.cannotShare"]);
+    activate(env, knownVideo(0)); env.window.ivLyrics_firstLyricTime = 0; await flush();
+    env.submitError = new Error("sign in required");
+    await panel.panelShare().props.onClick(); await flush();
+    assert.deepEqual(env.toasts.at(-1), ["error", "sign in required"]);
+    assert.equal(panel.panelShare().props.disabled, false);
+    env.submitError = null; await panel.panelShare().props.onClick(); await flush();
+    assert.equal(env.submissions.length, 2); assert.equal(env.completedSubmissions[0][3], 0);
+    assert.deepEqual(env.toasts.at(-1), ["success", "videoSync.shared"]);
 });
 
 test("share errors release the duplicate guard, and lyric mode has no share action", async () => {

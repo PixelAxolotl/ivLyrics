@@ -11167,6 +11167,12 @@ html.is-lp-view-switch::view-transition-new(root) {
   text-shadow: var(--lyrics-text-shadow, 0 0 0 transparent) !important;
 }
 
+/* A vocal stack's paragraph groups multiple rows, not one visible lyric.
+   Keep its backing clear so the individual subtitle backgrounds stand alone. */
+.fullscreen-vinyl-overlay.is-presentation-video .fullscreen-vinyl-active-lyric .lyrics-lyricsContainer-LyricsLine > p:has(.lyrics-karaoke-stack) {
+  background: transparent;
+}
+
 .fullscreen-vinyl-overlay.is-presentation-video .fullscreen-vinyl-active-lyric .lyrics-lyricsContainer-LyricsLine-phonetic,
 .fullscreen-vinyl-overlay.is-presentation-video .fullscreen-vinyl-active-lyric .lyrics-lyricsContainer-LyricsLine-translation {
   position: relative;

@@ -259,6 +259,36 @@ test("forced YouTube seeks record the new target so the next buffering tick does
     assert.equal(driftState.leadSeconds, 0);
 });
 
+test("a compensated YouTube seek already in the next loop keeps its buffering grace", () => {
+    const driftState = createVideoDriftState();
+    driftState.leadSeconds = 1.5;
+    const player = createPlayer({ time: 17.5, state: 1 });
+    player.getDuration = () => 20;
+    let playerState = 1;
+    let videoTime = 17.5;
+    player.getPlayerState = () => playerState;
+    player.getCurrentTime = () => videoTime;
+    player.seekTo = time => {
+        player.calls.push(["seekTo", time]);
+        videoTime = time;
+        playerState = 3;
+    };
+    const holdState = { isHolding: false };
+    const tick = (targetVideoTime, now) => syncYouTubePlayerTimeline({
+        player, targetVideoTime, now, driftState, holdState,
+        shouldHoldAtStart: false, shouldPlay: true,
+    });
+    tick(19.5, 0);
+    tick(19.75, 250);
+    tick(0, 500);
+    tick(0.25, 750);
+    assert.deepEqual(player.calls, [["seekTo", 1]], "the pending load already landed in the next loop");
+    playerState = 1;
+    tick(1, 1500);
+    assert.deepEqual(player.calls, [["seekTo", 1]]);
+    assert.equal(driftState.leadSeconds, 1.5, "the natural wrap must not poison latency learning");
+});
+
 test("a paused seek and subsequent resume do not inherit stale target or latency samples", () => {
     const state = createVideoDriftState();
     planVideoDriftCorrection(state, {

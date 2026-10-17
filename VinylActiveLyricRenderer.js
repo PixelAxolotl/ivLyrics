@@ -364,6 +364,22 @@ const VinylActiveLyricRenderer = (() => {
         const fadeDurationMs = useMemo(() => handoff.fadeDurationMs,
             [handoff.isDeparting, handoffStart, handoffNextStart, settingsRevision]);
         const handoffClass = handoff.isDeparting ? " lyrics-interlude-departing" : "";
+        const visualSettings = typeof CONFIG !== "undefined" ? CONFIG?.visual : window.CONFIG?.visual;
+        const lyricsDisplayMode = visualSettings?.["translate:display-mode"];
+        const furiganaEnabled = !!visualSettings?.["furigana-enabled"];
+        const furiganaReady = window.FuriganaConverter?.isAvailable?.() === true;
+        const lyricsLocale = String(window.Utils?.getDetectedLanguage?.() || "auto");
+        // Text/supplement preparation is stable between playback ticks. Keep
+        // the same invalidation inputs as the shared page renderer, including
+        // late furigana readiness and language detection results.
+        const displayState = useMemo(() => {
+            if (!displayLine) return null;
+            const { text, originalText, text2 } = getEmbeddedAuxiliaryDisplayValues(displayLine);
+            return {
+                ...buildLyricDisplayState(isKara, displayLine, text, originalText, text2),
+                originalText,
+            };
+        }, [displayLine, isKara, settingsRevision, lyricsDisplayMode, furiganaEnabled, furiganaReady, lyricsLocale]);
 
         if (isLeadingPrelude) {
             return react.createElement(
@@ -384,14 +400,7 @@ const VinylActiveLyricRenderer = (() => {
         }
 
         if (!sourceLine) return null;
-        const { text, originalText, text2 } = getEmbeddedAuxiliaryDisplayValues(displayLine);
-        const { mainText, subText, subText2, hasSubLine } = buildLyricDisplayState(
-            isKara,
-            displayLine,
-            text,
-            originalText,
-            text2
-        );
+        const { mainText, subText, subText2, hasSubLine, originalText } = displayState;
         const lineClassName = [
             "lyrics-lyricsContainer-LyricsLine",
             "lyrics-lyricsContainer-LyricsLine-active",

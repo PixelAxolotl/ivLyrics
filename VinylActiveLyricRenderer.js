@@ -46,13 +46,24 @@ const VinylActiveLyricRenderer = (() => {
         liveClock = null
     ) => {
         const scrollEntriesRef = useRef(new Map());
-        const progressRef = useRef(0);
+        const scrollTimingRef = useRef(null);
         const appliedProgressRef = useRef(null);
         const wakeLiveScrollRef = useRef(null);
         const hasScrollTiming = Number.isFinite(lineStartTime)
             && Number.isFinite(lineEndTime)
             && lineEndTime > lineStartTime;
-        progressRef.current = getLineScrollProgress(position, lineStartTime, lineEndTime);
+        scrollTimingRef.current = { position, lineStartTime, lineEndTime, liveClock };
+
+        const getCurrentScrollProgress = (frameTime) => {
+            // Measurement can run between playback commits or outlive a timing
+            // correction. Sample the same current clock and bounds as live frames.
+            const timing = scrollTimingRef.current;
+            return getLineScrollProgress(
+                timing.liveClock ? timing.liveClock.getPosition(frameTime) : timing.position,
+                timing.lineStartTime,
+                timing.lineEndTime
+            );
+        };
 
         const applyScrollProgress = (progress) => {
             if (appliedProgressRef.current === progress) return;
@@ -84,7 +95,7 @@ const VinylActiveLyricRenderer = (() => {
                 scrollEntriesRef.current.clear();
             };
 
-            const measure = () => {
+            const measure = (frameTime) => {
                 measureFrame = null;
                 if (disposed || !root.isConnected) return;
 
@@ -133,6 +144,7 @@ const VinylActiveLyricRenderer = (() => {
                     row.travel = Math.max(0, Math.ceil(paddedContentWidth - viewportWidth));
                 });
 
+                const progress = getCurrentScrollProgress(frameTime);
                 rows.forEach(({ viewport, content, overflows, travel, direction }) => {
                     if (!overflows) return;
                     if (travel <= SCROLL_OVERFLOW_THRESHOLD_PX) {
@@ -144,10 +156,10 @@ const VinylActiveLyricRenderer = (() => {
                     content.style.transform = getScrollTransform(
                         travel,
                         direction,
-                        progressRef.current
+                        progress
                     );
                 });
-                appliedProgressRef.current = progressRef.current;
+                appliedProgressRef.current = progress;
                 wakeLiveScrollRef.current?.();
             };
 
@@ -200,7 +212,7 @@ const VinylActiveLyricRenderer = (() => {
             const tick = (frameTime) => {
                 frameId = null;
                 if (disposed) return;
-                const progress = getLineScrollProgress(liveClock.getPosition(frameTime), lineStartTime, lineEndTime);
+                const progress = getCurrentScrollProgress(frameTime);
                 if (scrollEntriesRef.current.size > 0 && appliedProgressRef.current !== progress) {
                     applyScrollProgress(progress);
                     quietFrames = 0;
@@ -233,7 +245,7 @@ const VinylActiveLyricRenderer = (() => {
             }
             // The start/end holds occupy most of a line's lifetime. Geometry
             // measurements apply their own current transform after a resize.
-            applyScrollProgress(progressRef.current);
+            applyScrollProgress(getCurrentScrollProgress());
         }, [position, lineStartTime, lineEndTime, motionEnabled]);
     };
 

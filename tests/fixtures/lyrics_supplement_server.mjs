@@ -142,6 +142,7 @@ createServer((request,response)=>{
     } else if(url.pathname==='/react.js'||url.pathname==='/react-dom.js'){
       const name=url.pathname==='/react.js'?'react':'react-dom';body=readFileSync(resolve(modules,name,'umd',name+'.development.js'));
     } else if(url.pathname==='/LyricsWordSegmenter.js')body=readFileSync(resolve(root,'LyricsWordSegmenter.js'));
+    else if(url.pathname==='/VinylActiveLyricRenderer.js')body=readFileSync(resolve(root,'VinylActiveLyricRenderer.js'));
     else if(url.pathname==='/style.css'||url.pathname==='/karaoke-before.css'){
       body=(url.pathname==='/karaoke-before.css'
         ?execFileSync('git',['show','44c062547c2448b015610882090503aa98b5f7cb:style.css'],{cwd:root,encoding:'utf8'})

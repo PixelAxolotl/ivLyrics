@@ -191,9 +191,9 @@ const createHarness = ({ rows = [{}], reducedMotion = false, layoutAudit, liveCl
       [...mediaListeners].forEach(callback => callback({ matches }));
       flushFrames();
     },
-    notifyLayoutChange() {
+    notifyLayoutChange(flush = true) {
       [...observers].forEach(observer => observer.callback());
-      flushFrames();
+      if (flush) flushFrames();
     },
     unmount() {
       slots.forEach(slot => slot?.cleanup?.());
@@ -394,6 +394,91 @@ test("live LP playback slides overflowing rows on every display frame and rests 
   clock.position = 9000;
   h.render({});
   assertScrolling(h.rows[0], -340);
+  h.unmount();
+});
+
+test("observer remeasurement between playback commits preserves the latest live slide", () => {
+  const clock = { position: 4000 };
+  const h = createHarness({ positionOverride: null, liveClock: clock, rows: [
+    { naturalWidth: 600 },
+    { naturalWidth: 400, direction: "rtl" },
+  ] });
+  clock.position = 5000;
+  h.render({}, false);
+  clock.position = 5033.333;
+  h.runFrame();
+  assertScrolling(h.rows[0], -87.833305);
+  assertScrolling(h.rows[1], 36.166655);
+  const offsets = h.rows.map(row => row.content.style.transform);
+
+  // The live tick is already queued when the observer schedules measurement.
+  // Inspect this frame before another tick can hide a one-frame rollback.
+  h.notifyLayoutChange(false);
+  h.runFrame();
+  assert.deepEqual(h.rows.map(row => row.content.style.transform), offsets);
+  h.runFrame();
+  assert.deepEqual(h.rows.map(row => row.content.style.transform), offsets);
+  h.unmount();
+});
+
+test("paused live remeasurement retains its pose and follows real seeks without a playback commit", () => {
+  const clock = { position: 4000 };
+  const h = createHarness({ positionOverride: null, liveClock: clock });
+  clock.position = 5000;
+  h.render({}, false);
+  clock.position = 6000;
+  h.runFrame();
+  h.flushFrames();
+  assertScrolling(h.rows[0], -170);
+  assert.equal(h.pendingFrames(), 0, "the frozen playback clock lets the loop rest");
+
+  for (const [position, offset] of [[6000, -170], [4500, -42.5], [2000, 0], [9000, -340]]) {
+    clock.position = position;
+    h.notifyLayoutChange(false);
+    h.runFrame();
+    assertScrolling(h.rows[0], offset);
+    h.flushFrames();
+    assertScrolling(h.rows[0], offset);
+    assert.equal(h.pendingFrames(), 0, "remeasurement must settle at the paused or sought position");
+  }
+  h.unmount();
+});
+
+test("remeasurement uses revised valid timing with a live clock or an explicit position", () => {
+  for (const live of [false, true]) {
+    const clock = { position: 5000 };
+    const h = createHarness({ positionOverride: live ? null : 5000, liveClock: clock });
+    assertScrolling(h.rows[0], -85);
+    // Same index/start/settings and valid timing: the measuring effect stays mounted.
+    h.render({ lyrics: [{ text: "A long original lyric", startTime: 1000, endTime: 21000 }] }, false);
+    clock.position = 10000;
+    h.notifyLayoutChange(false);
+    h.runFrame();
+    assertScrolling(h.rows[0], live ? -127.5 : 0);
+    h.flushFrames();
+    assertScrolling(h.rows[0], live ? -127.5 : 0);
+    h.unmount();
+  }
+});
+
+test("live remeasurement keeps motion disabled and resumes at the current clock position", () => {
+  const clock = { position: 5000 };
+  const h = createHarness({ positionOverride: null, liveClock: clock });
+  h.render({ motionEnabled: false });
+  clock.position = 6000;
+  h.notifyLayoutChange();
+  assertWrapped(h.rows[0]);
+  assert.equal(h.pendingFrames(), 0);
+  h.render({ motionEnabled: true });
+  assertScrolling(h.rows[0], -170);
+
+  h.setReducedMotion(true);
+  clock.position = 7000;
+  h.notifyLayoutChange();
+  assertWrapped(h.rows[0]);
+  assert.equal(h.pendingFrames(), 0);
+  h.setReducedMotion(false);
+  assertScrolling(h.rows[0], -255);
   h.unmount();
 });
 

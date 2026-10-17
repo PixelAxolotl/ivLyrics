@@ -2806,6 +2806,10 @@ const renderLyricMainContent = ({
 }) => {
 	if (isKara) {
 		return react.createElement(KaraokeLine, {
+			// A source refresh can replace a single voice with parallel vocals (or
+			// merge them back) at the same row/time. Those renderers use different
+			// hooks; remount only this structural boundary, not ordinary AI updates.
+			key: hasKaraokeVocalRows(line) ? "parallel-vocals" : "single-vocal",
 			line,
 			...(furiganaMapOverride instanceof Map ? { furiganaMapOverride } : null),
 			...(charReadings instanceof Map ? { charReadings } : null),

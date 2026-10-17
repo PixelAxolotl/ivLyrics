@@ -57,7 +57,8 @@ function productionDefaults() {
 
 function previewHelpers() {
   const source = readFileSync(resolve(root, "Pages.js"), "utf8");
-  const names = ["getLyricsTypographyStyleVariables", "createBreakIconChildren", "InterludeIndicator"];
+  const names = ["getLyricsTypographyStyleVariables", "createBreakIconChildren", "InterludeIndicator",
+    "getLyricsDisplayMode", "renderAnnotatedLyricHTML", "renderLyricSubLine"];
   const seen = new Set();
   const result = [];
   const add = name => {
@@ -72,6 +73,17 @@ function previewHelpers() {
     result.push(body);
   };
   names.forEach(add);
+  const index = readFileSync(resolve(root, "index.js"), "utf8");
+  result.push(declaration(index, "PRONUNCIATION_DISPLAY_MODES"), declaration(index, "isPronunciationDisplayMode"));
+  // Use the actual pure text/ruby helpers without loading Utils' host startup.
+  const utils = readFileSync(resolve(root, "Utils.js"), "utf8");
+  result.push(declaration(utils, "KANJI_CHARACTER_REGEX"));
+  const methods = ["rubyTextToHTML", "applyFuriganaIfEnabled"].map(name => {
+    const start = utils.indexOf(`\n  ${name}(`), end = utils.indexOf("\n  },", start);
+    if (start < 0 || end < start) throw new Error(`Production preview text helper not found: ${name}`);
+    return utils.slice(start, end + "\n  },".length);
+  });
+  result.push(`Object.assign(Utils, {${methods.join("\n")}\n});`);
   return result.join("\n");
 }
 

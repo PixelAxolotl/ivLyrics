@@ -6246,6 +6246,10 @@ const syncSettingsLyricsPreviewStyles = () => {
 
 // NowPlaying 패널 가사 미리보기 컴포넌트
 const NowPlayingPanelPreview = () => {
+  useSettingsConfigRevision("ivLyrics:panel-preview-update");
+  const visual = CONFIG.visual || {};
+  if (!getSettingsPreviewFlag("panel-lyrics-enabled", true)) return null;
+
   const parsePanelNumber = (value, fallback) => {
     const parsed = parseInt(value, 10);
     return Number.isNaN(parsed) ? fallback : parsed;
@@ -6255,66 +6259,33 @@ const NowPlayingPanelPreview = () => {
     return Number.isFinite(parsed) ? parsed : fallback;
   };
 
-  const [fontFamily, setFontFamily] = useState(CONFIG.visual["panel-lyrics-font-family"] || "Pretendard Variable");
-  const [originalFont, setOriginalFont] = useState(CONFIG.visual["panel-lyrics-original-font"] || "");
-  const [phoneticFont, setPhoneticFont] = useState(CONFIG.visual["panel-lyrics-phonetic-font"] || "");
-  const [translationFont, setTranslationFont] = useState(CONFIG.visual["panel-lyrics-translation-font"] || "");
-  const [fontScale, setFontScale] = useState(parsePanelNumber(CONFIG.visual["panel-font-scale"], 100));
-  const [originalSize, setOriginalSize] = useState(parsePanelNumber(CONFIG.visual["panel-lyrics-original-size"], 26));
-  const [phoneticSize, setPhoneticSize] = useState(parsePanelNumber(CONFIG.visual["panel-lyrics-phonetic-size"], 13));
-  const [translationSize, setTranslationSize] = useState(parsePanelNumber(CONFIG.visual["panel-lyrics-translation-size"], 13));
-  const [originalOutlineWidth, setOriginalOutlineWidth] = useState(parsePanelFloat(CONFIG.visual["panel-lyrics-original-outline-width"], 0));
-  const [originalOutlineColor, setOriginalOutlineColor] = useState(CONFIG.visual["panel-lyrics-original-outline-color"] || "#000000");
-  const [phoneticOutlineWidth, setPhoneticOutlineWidth] = useState(parsePanelFloat(CONFIG.visual["panel-lyrics-phonetic-outline-width"], 0));
-  const [phoneticOutlineColor, setPhoneticOutlineColor] = useState(CONFIG.visual["panel-lyrics-phonetic-outline-color"] || "#000000");
-  const [translationOutlineWidth, setTranslationOutlineWidth] = useState(parsePanelFloat(CONFIG.visual["panel-lyrics-translation-outline-width"], 0));
-  const [translationOutlineColor, setTranslationOutlineColor] = useState(CONFIG.visual["panel-lyrics-translation-outline-color"] || "#000000");
+  const fontFamily = visual["panel-lyrics-font-family"] || "Pretendard Variable";
+  const originalFont = visual["panel-lyrics-original-font"] || "";
+  const phoneticFont = visual["panel-lyrics-phonetic-font"] || "";
+  const translationFont = visual["panel-lyrics-translation-font"] || "";
+  const fontScale = parsePanelNumber(visual["panel-font-scale"], 100);
+  const originalSize = parsePanelNumber(visual["panel-lyrics-original-size"], 26);
+  const phoneticSize = parsePanelNumber(visual["panel-lyrics-phonetic-size"], 13);
+  const translationSize = parsePanelNumber(visual["panel-lyrics-translation-size"], 13);
+  const originalOutlineWidth = parsePanelFloat(visual["panel-lyrics-original-outline-width"], 0);
+  const originalOutlineColor = visual["panel-lyrics-original-outline-color"] || "#000000";
+  const phoneticOutlineWidth = parsePanelFloat(visual["panel-lyrics-phonetic-outline-width"], 0);
+  const phoneticOutlineColor = visual["panel-lyrics-phonetic-outline-color"] || "#000000";
+  const translationOutlineWidth = parsePanelFloat(visual["panel-lyrics-translation-outline-width"], 0);
+  const translationOutlineColor = visual["panel-lyrics-translation-outline-color"] || "#000000";
 
   // 배경 설정
-  const [bgType, setBgType] = useState(CONFIG.visual["panel-bg-type"] || "album");
-  const [bgColor, setBgColor] = useState(CONFIG.visual["panel-bg-color"] || "#6366f1");
-  const [bgGradient1, setBgGradient1] = useState(CONFIG.visual["panel-bg-gradient-1"] || "#6366f1");
-  const [bgGradient2, setBgGradient2] = useState(CONFIG.visual["panel-bg-gradient-2"] || "#a855f7");
-  const [bgOpacity, setBgOpacity] = useState(parsePanelNumber(CONFIG.visual["panel-bg-opacity"], 30));
+  const bgType = visual["panel-bg-type"] || "album";
+  const bgColor = visual["panel-bg-color"] || "#6366f1";
+  const bgGradient1 = visual["panel-bg-gradient-1"] || "#6366f1";
+  const bgGradient2 = visual["panel-bg-gradient-2"] || "#a855f7";
+  const bgOpacity = parsePanelNumber(visual["panel-bg-opacity"], 30);
 
   // Border 설정
-  const [borderEnabled, setBorderEnabled] = useState(CONFIG.visual["panel-border-enabled"] ?? false);
-  const [borderColor, setBorderColor] = useState(CONFIG.visual["panel-border-color"] || "#ffffff");
-  const [borderOpacity, setBorderOpacity] = useState(parsePanelNumber(CONFIG.visual["panel-border-opacity"], 10));
-
-  // 설정 변경 리스너
-  useEffect(() => {
-    const handlePreviewUpdate = (event) => {
-      const { name, value } = event.detail || {};
-      if (name === "panel-lyrics-font-family") setFontFamily(value || "Pretendard Variable");
-      if (name === "panel-lyrics-original-font") setOriginalFont(value || "");
-      if (name === "panel-lyrics-phonetic-font") setPhoneticFont(value || "");
-      if (name === "panel-lyrics-translation-font") setTranslationFont(value || "");
-      if (name === "panel-font-scale") setFontScale(parsePanelNumber(value, 100));
-      if (name === "panel-lyrics-original-size") setOriginalSize(parsePanelNumber(value, 26));
-      if (name === "panel-lyrics-phonetic-size") setPhoneticSize(parsePanelNumber(value, 13));
-      if (name === "panel-lyrics-translation-size") setTranslationSize(parsePanelNumber(value, 13));
-      if (name === "panel-lyrics-original-outline-width") setOriginalOutlineWidth(parsePanelFloat(value, 0));
-      if (name === "panel-lyrics-original-outline-color") setOriginalOutlineColor(value || "#000000");
-      if (name === "panel-lyrics-phonetic-outline-width") setPhoneticOutlineWidth(parsePanelFloat(value, 0));
-      if (name === "panel-lyrics-phonetic-outline-color") setPhoneticOutlineColor(value || "#000000");
-      if (name === "panel-lyrics-translation-outline-width") setTranslationOutlineWidth(parsePanelFloat(value, 0));
-      if (name === "panel-lyrics-translation-outline-color") setTranslationOutlineColor(value || "#000000");
-      // 배경 설정
-      if (name === "panel-bg-type") setBgType(value || "album");
-      if (name === "panel-bg-color") setBgColor(value || "#6366f1");
-      if (name === "panel-bg-gradient-1") setBgGradient1(value || "#6366f1");
-      if (name === "panel-bg-gradient-2") setBgGradient2(value || "#a855f7");
-      if (name === "panel-bg-opacity") setBgOpacity(parsePanelNumber(value, 30));
-      // Border 설정
-      if (name === "panel-border-enabled") setBorderEnabled(value === true || value === "true");
-      if (name === "panel-border-color") setBorderColor(value || "#ffffff");
-      if (name === "panel-border-opacity") setBorderOpacity(parsePanelNumber(value, 10));
-    };
-
-    window.addEventListener("ivLyrics:panel-preview-update", handlePreviewUpdate);
-    return () => window.removeEventListener("ivLyrics:panel-preview-update", handlePreviewUpdate);
-  }, []);
+  const borderEnabled = getSettingsPreviewFlag("panel-border-enabled", false);
+  const borderColor = visual["panel-border-color"] || "#ffffff";
+  const borderOpacity = parsePanelNumber(visual["panel-border-opacity"], 10);
+  const supplements = getSettingsPreviewSupplementVisibility();
 
   const scale = fontScale / 100;
   const baseFontFamily = `'${fontFamily}', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif`;
@@ -6337,7 +6308,7 @@ const NowPlayingPanelPreview = () => {
   ];
 
   const activeIndex = 4;
-  const previewLineSlotHeight = Math.round(Math.max(68, Math.min(96, originalSize * scale * 3.6)));
+  const previewLineSlotHeight = Math.round(Math.max(52, Math.min(72, (originalSize || 26) * (scale > 0 ? scale : 1) * 2.9)));
   const sampleLyrics = allSampleLyrics.map((line, idx) => ({
     ...line,
     active: idx === activeIndex
@@ -6406,7 +6377,7 @@ const NowPlayingPanelPreview = () => {
               {
                 style: {
                   fontSize: `${originalSize * scale}px`,
-                  fontWeight: line.active ? 800 : 700,
+                  fontWeight: 700,
                   color: line.active ? "#ffffff" : "rgba(255, 255, 255, 0.7)",
                   lineHeight: 1.4,
                   fontFamily: originalFontFamily,
@@ -6416,7 +6387,7 @@ const NowPlayingPanelPreview = () => {
               line.original
             ),
             // 발음 (두 번째)
-            react.createElement(
+            supplements.pronunciation && react.createElement(
               "div",
               {
                 style: {
@@ -6431,7 +6402,7 @@ const NowPlayingPanelPreview = () => {
               line.phonetic
             ),
             // 번역 (마지막)
-            react.createElement(
+            supplements.translation && react.createElement(
               "div",
               {
                 style: {
@@ -7613,24 +7584,31 @@ const useSettingsSignal = (signal) => {
   return value;
 };
 
-// Re-render on "ivLyrics" config events, at most once per frame.
-const useSettingsConfigRevision = () => {
+// Read current CONFIG after config or optional preview notifications, once per frame.
+const useSettingsConfigRevision = (previewEvent = null) => {
   const [revision, setRevision] = react.useState(0);
   react.useEffect(() => {
     let frameId = null;
-    const handleConfig = (event) => {
-      if (event?.detail?.type !== "config" || frameId != null) return;
+    let stopped = false;
+    const schedule = () => {
+      if (stopped || frameId != null) return;
       frameId = requestAnimationFrame(() => {
         frameId = null;
-        setRevision((value) => value + 1);
+        if (!stopped) setRevision((value) => value + 1);
       });
     };
+    const handleConfig = (event) => {
+      if (event?.detail?.type === "config") schedule();
+    };
     window.addEventListener("ivLyrics", handleConfig);
+    if (previewEvent) window.addEventListener(previewEvent, schedule);
     return () => {
+      stopped = true;
       window.removeEventListener("ivLyrics", handleConfig);
+      if (previewEvent) window.removeEventListener(previewEvent, schedule);
       if (frameId != null) cancelAnimationFrame(frameId);
     };
-  }, []);
+  }, [previewEvent]);
   return revision;
 };
 
@@ -7889,8 +7867,29 @@ const SettingsPreviewLayerLinks = ({ onNavigate }) => react.createElement(
   })
 );
 
-const renderSettingsPreviewLine = (active, extra = null, key = undefined) =>
-  react.createElement(
+const getSettingsPreviewSupplementVisibility = () => {
+  const visual = CONFIG.visual || {};
+  // Missing settings keep both sample layers useful; explicit "none" is honored.
+  const modes = [
+    visual["translation-mode:japanese"] ?? "gemini_romaji",
+    visual["translation-mode-2:japanese"] ?? "gemini",
+  ].filter((mode) => mode && mode !== "none");
+  return {
+    pronunciation: modes.some(isPronunciationDisplayMode),
+    translation: modes.some((mode) => !isPronunciationDisplayMode(mode)),
+  };
+};
+
+const renderSettingsPreviewLine = (active, extra = null, key = undefined) => {
+  const visibility = getSettingsPreviewSupplementVisibility();
+  const isKara = getSettingsPreviewFlag("karaoke-mode-enabled", true);
+  const phonetic = visibility.pronunciation ? I18n.t("settingsAdvanced.livePreview.sampleTextPhonetic") : null;
+  const translation = visibility.translation ? I18n.t("settingsAdvanced.livePreview.sampleText") : null;
+  const line = { ...SETTINGS_LYRICS_PREVIEW_LINE, phoneticText: phonetic, translationText: translation };
+  const { mainText, subText, subText2 } = getLyricsDisplayMode(
+    isKara, line, phonetic, SETTINGS_LYRICS_PREVIEW_TEXT, translation
+  );
+  return react.createElement(
     "div",
     {
       key,
@@ -7899,34 +7898,34 @@ const renderSettingsPreviewLine = (active, extra = null, key = undefined) =>
     },
     react.createElement(
       "p",
-      null,
-      active
+      !isKara && typeof mainText === "string"
+        ? { dangerouslySetInnerHTML: { __html: renderAnnotatedLyricHTML(mainText) } }
+        : null,
+      isKara && active
         ? react.createElement(KaraokeLine, {
-          line: SETTINGS_LYRICS_PREVIEW_LINE,
+          line,
           position: SETTINGS_LYRICS_PREVIEW_LINE.endTime,
           isActive: true,
           furiganaMapOverride: SETTINGS_LYRICS_PREVIEW_FURIGANA,
         })
-        : SETTINGS_LYRICS_PREVIEW_TEXT
+        : isKara ? SETTINGS_LYRICS_PREVIEW_TEXT : null
     ),
-    react.createElement(
-      "p",
-      { className: "lyrics-lyricsContainer-LyricsLine-phonetic" },
-      I18n.t("settingsAdvanced.livePreview.sampleTextPhonetic")
+    renderLyricSubLine(
+      "lyrics-lyricsContainer-LyricsLine-phonetic", subText
     ),
-    react.createElement(
-      "p",
-      { className: "lyrics-lyricsContainer-LyricsLine-translation" },
-      I18n.t("settingsAdvanced.livePreview.sampleText")
+    renderLyricSubLine(
+      "lyrics-lyricsContainer-LyricsLine-translation", subText2
     ),
     extra
   );
+};
 
 // The live preview renders the app's own lyric markup and CSS: KaraokeLine,
 // the interlude indicator from Pages.js and the cultural-note paragraph.
 const SettingsLyricsPreview = ({ kind = "lyrics" }) => {
   const revision = useSettingsConfigRevision();
   const visual = CONFIG.visual || {};
+  const isKara = getSettingsPreviewFlag("karaoke-mode-enabled", true);
   const mode = getCurrentSettingsBackgroundMode();
   const preset = SETTINGS_BACKGROUND_PRESETS.find((candidate) => candidate.id === mode);
   const brightness = Number(visual["background-brightness"]);
@@ -7957,11 +7956,11 @@ const SettingsLyricsPreview = ({ kind = "lyrics" }) => {
     ];
   } else if (kind === "annotation") {
     tag = getSettingsText("settings.culturalAnnotations.label", tag);
-    lines = [renderSettingsPreviewLine(true, react.createElement(
+    lines = [renderSettingsPreviewLine(true, getSettingsPreviewFlag("cultural-annotations-enabled", false) ? react.createElement(
       "p",
       { className: "lyrics-lyricsContainer-LyricsLine-culturalNote" },
       getSettingsText("settingsUi.preview.annotationSample", "")
-    ), "active")];
+    ) : null, "active")];
   } else {
     lines = [renderSettingsPreviewLine(true, null, "active")];
   }
@@ -7989,7 +7988,7 @@ const SettingsLyricsPreview = ({ kind = "lyrics" }) => {
       react.createElement(
         "div",
         {
-          className: `settings-live-preview-stage lyrics-lyricsContainer-SyncedLyricsPage is-karaoke${visual["karaoke-line-transition"] ? " karaoke-line-transition-enabled" : ""}`,
+          className: `settings-live-preview-stage lyrics-lyricsContainer-SyncedLyricsPage${isKara ? " is-karaoke" : ""}${isKara && getSettingsPreviewFlag("karaoke-line-transition", true) ? " karaoke-line-transition-enabled" : ""}`,
         },
         react.createElement(
           "div",
@@ -8029,7 +8028,7 @@ const settingsCdRainbowColor = (fraction, mirror = false) => {
 // transparent, including in the small presentation picker and shape cards.
 const SettingsCdDiscPreview = ({
   visualizer = true, style = "bars", color = "#b8cfdd", density = 64, thickness = 2,
-  mirror = false, rainbow = false, albumGradient = false, variant = "full",
+  mirror = false, rainbow = false, albumGradient = false, variant = "full", rotation = false, rotationSpeed = 100,
 } = {}) => {
   const mini = variant === "mini";
   const ring = (outer, inner) => `M ${100 - outer} 100 a ${outer} ${outer} 0 1 0 ${outer * 2} 0 a ${outer} ${outer} 0 1 0 ${-outer * 2} 0 M ${100 - inner} 100 a ${inner} ${inner} 0 1 0 ${inner * 2} 0 a ${inner} ${inner} 0 1 0 ${-inner * 2} 0`;
@@ -8143,7 +8142,9 @@ const SettingsCdDiscPreview = ({
       react.createElement("circle", { key: "hub", cx: 100, cy: 100, r: 24, fill: "none", stroke: "currentColor", strokeWidth: 3, opacity: 0.32 }),
     ] : [
       react.createElement("path", { key: "disc", d: ring(76, 19), fillRule: "evenodd", fill: "#557784" }),
-      react.createElement("path", { key: "art", d: "M27 81 Q67 21 131 43 Q171 57 173 92 L120 83 Q77 57 27 81", fill: "#c8ab83", opacity: 0.65 }),
+      react.createElement("path", { key: "art", className: `settings-cd-artwork${rotation ? " is-spinning" : ""}`,
+        style: { "--cd-rotation-period": `${24 * 100 / Math.max(25, Math.min(200, Number(rotationSpeed) || 100))}s` },
+        d: "M27 81 Q67 21 131 43 Q171 57 173 92 L120 83 Q77 57 27 81", fill: "#c8ab83", opacity: 0.65 }),
       react.createElement("path", { key: "rim", d: ring(76, 74), fillRule: "evenodd", fill: "#dce2e8", opacity: 0.7 }),
       react.createElement("path", { key: "hub-ring", d: ring(25, 9), fillRule: "evenodd", fill: "#dce2e8", opacity: 0.28 }),
       react.createElement("circle", { key: "hub-outer", cx: 100, cy: 100, r: 19, fill: "none", stroke: "#e3eaf0", strokeWidth: 0.8, opacity: 0.65 }),
@@ -8172,21 +8173,56 @@ const SettingsFullscreenPreview = ({ view = "basic" }) => {
       })
     )
   );
-  const info = react.createElement(
+  const tvMode = view === "tv" || (view === "basic" && flag("fullscreen-tv-mode", false));
+  const focused = view === "vinyl";
+  const twoColumn = flag("fullscreen-two-column", true);
+  const reverse = flag("fullscreen-layout-reverse", false);
+  const controlsPosition = visual["fullscreen-controls-position"] || "left-panel";
+  const controls = flag("fullscreen-show-controls", true);
+  const progress = flag("fullscreen-show-progress", true);
+  const hasArtColumn = twoColumn && (flag("fullscreen-show-album", true) || flag("fullscreen-show-info", true) || controlsPosition === "left-panel");
+  const info = (albumNameKey = "fullscreen-show-album-name") => react.createElement(
     "div",
     { className: "settings-fs-info" },
     react.createElement("b", null),
     react.createElement("small", null),
-    flag("fullscreen-show-album-name", false) ? react.createElement("em", null) : null
+    flag(albumNameKey, true) ? react.createElement("em", null) : null
   );
+  // Match the runtime hierarchy: progress is above the buttons, volume is
+  // below them, and only the button/volume surface receives its background.
+  const player = (placement, showControls, showProgress, showVolume = false) => {
+    if (!showControls && !showProgress) return null;
+    const progressRow = showProgress ? react.createElement("div", { className: "settings-fs-progress-row" },
+        react.createElement("small", null, "1:24"),
+        react.createElement("span", { className: "settings-fs-progress" }),
+        react.createElement("small", null, "3:42")) : null;
+    const surface = showControls ? react.createElement("div", {
+        className: `settings-fs-control-surface${!tvMode && !focused && flag("fullscreen-controls-background", false) ? " has-bg" : ""}`,
+      },
+      react.createElement("span", { className: "settings-fs-controls" },
+        ...(tvMode || focused ? [0, 1, 2] : [0, 1, 2, 3, 4, 5, 6]).map(index =>
+          react.createElement("i", { key: index, className: index === (tvMode || focused ? 1 : 3) ? "is-play" : "" }))),
+      showVolume ? react.createElement("span", { className: "settings-fs-volume" }) : null) : null;
+    return react.createElement("div", { key: `player-${placement}`, className: `settings-fs-player is-${placement}` },
+      // TV puts its timeline below the transport; normal and LP put it above.
+      ...(tvMode ? [surface, progressRow] : [progressRow, surface])
+    );
+  };
+  const artChildren = (art) => [
+    flag("fullscreen-show-album", true) ? art : null,
+    flag("fullscreen-show-info", true) ? info() : null,
+    // FullscreenOverlay retains an independent progress-only row in its
+    // album column, even when the main player controls are turned off.
+    controlsPosition === "left-panel" || !controls
+      ? player("left", controlsPosition === "left-panel" && controls, progress, flag("fullscreen-show-volume", true)) : null,
+  ];
   const nodes = [];
-  const tvMode = view === "tv" || (!["vinyl", "cd"].includes(view) && flag("fullscreen-tv-mode", false));
   if (view === "cd") {
     const colorMode = visual["fullscreen-cd-visualizer-color-mode"] || "album";
     const color = colorMode === "custom" ? normalizeSettingsHexColor(visual["fullscreen-cd-visualizer-color"]) || "#ffffff"
       : colorMode === "white" ? "#ffffff" : "#b8cfdd";
-    nodes.push(react.createElement("div", { key: "cd-art", className: "settings-fs-el settings-fs-col settings-fs-col-art" },
-      react.createElement("div", { className: "settings-fs-cd", style: { width: `${Math.min(100, number("fullscreen-cd-disc-size", 100) * 0.68)}%`, aspectRatio: "1", alignSelf: "center" } },
+    if (hasArtColumn) nodes.push(react.createElement("div", { key: "cd-art", className: `settings-fs-el settings-fs-col settings-fs-col-art${reverse ? " is-right" : ""}` },
+      ...artChildren(react.createElement("div", { className: "settings-fs-cd", style: { "--cd-size": number("fullscreen-cd-disc-size", 100) / 100 } },
         react.createElement(SettingsCdDiscPreview, {
           visualizer: flag("fullscreen-cd-visualizer-enabled", true),
           style: visual["fullscreen-cd-visualizer-style"] || "bars", color,
@@ -8195,23 +8231,28 @@ const SettingsFullscreenPreview = ({ view = "basic" }) => {
           mirror: flag("fullscreen-cd-visualizer-mirror", false),
           rainbow: colorMode === "rainbow",
           albumGradient: colorMode === "album" && flag("fullscreen-cd-visualizer-album-gradient", true),
-        })),
-      flag("fullscreen-show-info", true) ? info : null));
-    nodes.push(react.createElement("div", { key: "cd-lyrics", className: "settings-fs-el settings-fs-col settings-fs-col-lyrics" }, bars(5, "cd")));
+          rotation: flag("fullscreen-cd-rotation-enabled", true) && !flag("reduce-motion", false),
+          rotationSpeed: number("fullscreen-cd-rotation-speed", 100),
+        })))));
+    nodes.push(react.createElement("div", { key: "cd-lyrics", className: `settings-fs-el settings-fs-col settings-fs-col-lyrics${twoColumn ? "" : " is-single"}${reverse && twoColumn ? " is-left" : ""}` }, bars(5, "cd")));
   } else if (view === "vinyl") {
     const armStyle = visual["fullscreen-vinyl-tonearm-style"] || "s";
     const finish = { white: "#f2f2f2", silver: "#b9bec7", black: "#1d1f24" }[visual["fullscreen-vinyl-tonearm-finish"] || "white"] || "#f2f2f2";
+    const vinylAnimations = flag("fullscreen-vinyl-animations", true);
     nodes.push(react.createElement(
       "div",
       {
         key: "record",
-        className: `settings-fs-record${flag("fullscreen-vinyl-animations", true) ? " is-spin" : ""}`,
+        className: `settings-fs-record${vinylAnimations ? " is-spin" : ""}`,
         style: {
           "--record": number("fullscreen-vinyl-record-size", 100),
           "--rpm": number("fullscreen-vinyl-rotation-speed", 100),
         },
       },
-      react.createElement("span", { className: "settings-fs-record-label", style: { "--label": number("fullscreen-vinyl-album-size", 100) } })
+      react.createElement("span", {
+        className: `settings-fs-record-label${vinylAnimations && flag("fullscreen-vinyl-center-rotation", true) ? " is-spin" : ""}`,
+        style: { "--label": number("fullscreen-vinyl-album-size", 100) },
+      })
     ));
     nodes.push(react.createElement("span", {
       key: "arm",
@@ -8227,16 +8268,13 @@ const SettingsFullscreenPreview = ({ view = "basic" }) => {
       "div",
       { key: "tv-info", className: "settings-fs-el settings-fs-tv-info" },
       react.createElement("span", { className: "settings-fs-album", style: { "--album": number("fullscreen-tv-album-size", 140) * 1.4 } }),
-      info
+      info("fullscreen-tv-show-album-name")
     ));
   } else {
-    const twoColumn = flag("fullscreen-two-column", true);
-    const reverse = flag("fullscreen-layout-reverse", false);
-    nodes.push(react.createElement(
+    if (hasArtColumn) nodes.push(react.createElement(
       "div",
-      { key: "art", className: `settings-fs-el settings-fs-col settings-fs-col-art${twoColumn ? "" : " is-single"}${reverse && twoColumn ? " is-right" : ""}` },
-      flag("fullscreen-show-album", true) ? react.createElement("span", { className: "settings-fs-album" }) : null,
-      flag("fullscreen-show-info", true) ? info : null
+      { key: "art", className: `settings-fs-el settings-fs-col settings-fs-col-art${reverse ? " is-right" : ""}` },
+      ...artChildren(react.createElement("span", { className: `settings-fs-album${flag("fullscreen-album-shadow", true) ? " has-shadow" : ""}` }))
     ));
     nodes.push(react.createElement(
       "div",
@@ -8244,10 +8282,12 @@ const SettingsFullscreenPreview = ({ view = "basic" }) => {
       bars(5, "main")
     ));
   }
-  if (flag("fullscreen-show-clock", true)) {
-    nodes.push(react.createElement("span", { key: "clock", className: "settings-fs-el settings-fs-clock" }, "21:47"));
+  if (!focused && (flag("fullscreen-show-clock", true) || flag("fullscreen-show-next-track", true))) {
+    nodes.push(react.createElement("div", { key: "top-right", className: "settings-fs-el settings-fs-top-right" },
+      flag("fullscreen-show-clock", true) ? react.createElement("span", { className: "settings-fs-clock" }, flag("fullscreen-clock-show-seconds", false) ? "21:47:08" : "21:47") : null,
+      flag("fullscreen-show-next-track", true) ? react.createElement("span", { className: "settings-fs-next" }, react.createElement("i"), react.createElement("b")) : null));
   }
-  if (flag("fullscreen-show-context", true)) {
+  if (!focused && !tvMode && flag("fullscreen-show-context", true)) {
     nodes.push(react.createElement(
       "span",
       { key: "context", className: "settings-fs-el settings-fs-context" },
@@ -8255,38 +8295,42 @@ const SettingsFullscreenPreview = ({ view = "basic" }) => {
       react.createElement("b")
     ));
   }
-  if (flag("fullscreen-show-lyrics-progress", false)) nodes.push(react.createElement("span", { key: "lprog", className: "settings-fs-el settings-fs-lprog" }));
-  if (flag("fullscreen-show-queue", true)) {
+  const lyricProgress = !focused && flag("fullscreen-show-lyrics-progress", false)
+    ? react.createElement("span", { key: "lprog", className: `settings-fs-el settings-fs-lprog${tvMode ? " is-tv" : ""}` },
+      react.createElement("i"), react.createElement("small", null, "4 / 12")) : null;
+  if (!tvMode) nodes.push(lyricProgress);
+  if (!focused && flag("fullscreen-show-queue", true)) {
     nodes.push(react.createElement("span", { key: "queue", className: "settings-fs-el settings-fs-queue" }, react.createElement("i"), react.createElement("i"), react.createElement("i"), react.createElement("i")));
   }
-  if (flag("fullscreen-show-next-track", true)) {
-    nodes.push(react.createElement("span", { key: "next", className: "settings-fs-el settings-fs-next" }, react.createElement("i"), react.createElement("b")));
+  if (tvMode) {
+    const tvPlayer = player("tv", flag("fullscreen-tv-show-controls", true), flag("fullscreen-tv-show-progress", true));
+    if (tvPlayer || lyricProgress) nodes.push(react.createElement("div", { key: "tv-controls", className: "settings-fs-el settings-fs-tv-stack" }, lyricProgress, tvPlayer));
   }
-  if (flag("fullscreen-show-controls", true)) {
-    nodes.push(react.createElement(
-      "span",
-      { key: "controls", className: `settings-fs-el settings-fs-controls${flag("fullscreen-controls-background", false) ? " has-bg" : ""}` },
-      react.createElement("i"),
-      react.createElement("i", { className: "is-play" }),
-      react.createElement("i")
-    ));
-    if (flag("fullscreen-show-progress", true)) nodes.push(react.createElement("span", { key: "progress", className: "settings-fs-el settings-fs-progress" }));
-    if (flag("fullscreen-show-volume", true)) nodes.push(react.createElement("span", { key: "volume", className: "settings-fs-el settings-fs-volume" }));
-  }
+  else if (focused) nodes.push(player("stage", controls, progress));
+  else if (controlsPosition === "bottom") nodes.push(player("bottom", controls, progress, flag("fullscreen-show-volume", true)));
+  nodes.push(react.createElement("span", { key: "menu", className: "settings-fs-el settings-fs-menu", "aria-hidden": "true" }, "≡"));
+  const backgroundMode = getCurrentSettingsBackgroundMode();
+  const brightness = number("background-brightness", 30);
   return react.createElement(
     "div",
     {
-      className: "settings-preview-stage settings-fs-stage",
+      className: `settings-preview-stage settings-fs-stage bg-${backgroundMode}${visual.noise ? " has-noise" : ""}`,
+      "data-preview-mode": focused ? "vinyl" : view === "cd" ? "cd" : tvMode ? "tv" : "normal",
       style: {
+        "--preview-solid": normalizeSettingsHexColor(visual["solid-background-color"]) || "#1e3a8a",
+        "--preview-dim": backgroundMode === "solid-background" || backgroundMode === "none" ? 0 : (100 - brightness) / 100 * 0.72,
         "--clock": number("fullscreen-clock-size", 48),
         "--album": number("fullscreen-album-size", 400),
         "--radius": number("fullscreen-album-radius", 12),
-        "--title": number("fullscreen-title-size", 48),
-        "--artist": number("fullscreen-artist-size", 24),
-        "--btn": number("fullscreen-control-button-size", 36),
+        "--title": tvMode ? number("fullscreen-tv-album-size", 140) * 0.26 : number("fullscreen-title-size", 48),
+        "--artist": tvMode ? number("fullscreen-tv-album-size", 140) * 0.16 : number("fullscreen-artist-size", 24),
+        "--btn": tvMode || focused ? 36 : number("fullscreen-control-button-size", 36),
+        "--info-gap": number("fullscreen-info-gap", 24) * 0.17 + "px",
       },
     },
-    react.createElement("span", { className: "settings-preview-bg is-fullscreen", "aria-hidden": "true" }),
+    react.createElement("span", { className: "settings-preview-bg", "aria-hidden": "true" }),
+    react.createElement("span", { className: "settings-preview-dim", "aria-hidden": "true" }),
+    react.createElement("span", { className: "settings-preview-noise", "aria-hidden": "true" }),
     ...nodes
   );
 };

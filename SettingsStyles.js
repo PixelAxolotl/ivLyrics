@@ -1052,7 +1052,7 @@ const SETTINGS_MODAL_CSS = `
 #${APP_NAME}-config-container .settings-live-preview-line.lyrics-lyricsContainer-SyncedLyrics { display: grid; gap: 36px; grid-area: auto; height: auto; min-width: 0; text-align: inherit; }
 #${APP_NAME}-config-container .settings-live-preview-line > .lyrics-lyricsContainer-LyricsLine { margin: 0 !important; color: var(--lyrics-color-inactive); opacity: 1; transform: none !important; transition: none !important; will-change: auto; pointer-events: none; text-align: inherit; }
 #${APP_NAME}-config-container .settings-live-preview-line > .lyrics-lyricsContainer-LyricsLine-active { color: var(--lyrics-color-active, #fff); }
-#${APP_NAME}-config-container .settings-live-preview-line > .lyrics-lyricsContainer-LyricsLine > p { margin: 0; }
+#${APP_NAME}-config-container .settings-live-preview-line > .lyrics-lyricsContainer-LyricsLine > p:first-child { margin: 0; }
 #${APP_NAME}-config-container .settings-live-preview-line .lyrics-karaoke-line { transition: none !important; }
 #${APP_NAME}-config-container .settings-live-preview-lyrics[data-furigana-enabled="false"] .lyrics-karaoke-ruby rt { display: none; }
 #${APP_NAME}-config-container .settings-live-preview-lyrics[data-furigana-enabled="false"] .lyrics-karaoke-ruby { display: inline; padding-inline: 0; margin-inline: 0; }
@@ -1060,49 +1060,69 @@ const SETTINGS_MODAL_CSS = `
 #${APP_NAME}-config-container .settings-preview-bg.is-fullscreen { background: linear-gradient(140deg, #a87b50 0%, #6f6a52 34%, #3d5d5c 64%, #1a242a 100%); }
 #${APP_NAME}-config-container .settings-preview-bg.is-fullscreen::after { content: ""; position: absolute; inset: 0; background: rgba(0, 0, 0, .35); }
 #${APP_NAME}-config-container .settings-fs-el { position: absolute; transition: all var(--t-slow) var(--ease-out); }
-#${APP_NAME}-config-container .settings-fs-clock { left: 5%; top: 6%; font-weight: 700; font-size: calc(var(--clock, 48) * .18px); letter-spacing: -.5px; }
-#${APP_NAME}-config-container .settings-fs-context { right: 5%; top: 6%; display: flex; align-items: center; gap: 5px; }
+#${APP_NAME}-config-container .settings-fs-top-right { right: 1.875%; top: 3%; display: grid; justify-items: end; gap: 5px; }
+#${APP_NAME}-config-container .settings-fs-clock { font-weight: 700; font-size: calc(var(--clock, 48) * .18px); line-height: 1.2; letter-spacing: -.5px; }
+#${APP_NAME}-config-container .settings-fs-context { left: 1.875%; bottom: 3%; display: flex; align-items: center; gap: 5px; }
 #${APP_NAME}-config-container .settings-fs-context i { width: 14px; height: 14px; border-radius: 3px; background: rgba(255, 255, 255, .35); }
 #${APP_NAME}-config-container .settings-fs-context b { width: 34px; height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .6); }
-#${APP_NAME}-config-container .settings-fs-col { top: 22%; bottom: 20%; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+#${APP_NAME}-config-container .settings-fs-col { top: 12%; bottom: 14%; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: var(--info-gap, 4px); }
 #${APP_NAME}-config-container .settings-fs-col-art { left: 8%; width: 38%; }
 #${APP_NAME}-config-container .settings-fs-col-lyrics { right: 8%; width: 40%; }
 #${APP_NAME}-config-container .settings-fs-col-art.is-right { left: auto; right: 8%; }
 #${APP_NAME}-config-container .settings-fs-col-lyrics.is-left { right: auto; left: 8%; }
 #${APP_NAME}-config-container .settings-fs-col.is-single { left: 15%; right: 15%; width: auto; align-items: center; }
-#${APP_NAME}-config-container .settings-fs-col-art.is-single { top: 14%; bottom: auto; }
-#${APP_NAME}-config-container .settings-fs-col-lyrics.is-single { top: 56%; bottom: 16%; }
-#${APP_NAME}-config-container .settings-fs-album { display: block; width: min(100%, calc(var(--album, 400) * .17px)); aspect-ratio: 1; border-radius: calc(var(--radius, 12) * .25px); background: linear-gradient(140deg, #c8925a 0%, #8c8160 34%, #4d7472 64%, #1e2a31 100%); box-shadow: 0 6px 20px rgba(0, 0, 0, .4); }
-#${APP_NAME}-config-container .settings-fs-info { display: grid; gap: 4px; }
+#${APP_NAME}-config-container .settings-fs-album { display: block; flex: 0 0 auto; width: min(100%, calc(var(--album, 400) * .17px)); aspect-ratio: 1; border-radius: calc(var(--radius, 12) * .25px); background: linear-gradient(140deg, #c8925a 0%, #8c8160 34%, #4d7472 64%, #1e2a31 100%); }
+#${APP_NAME}-config-container .settings-fs-album.has-shadow { box-shadow: 0 6px 20px rgba(0, 0, 0, .4); }
+#${APP_NAME}-config-container .settings-fs-cd { flex: 0 0 auto; width: min(100%, calc(var(--album, 400) * .2125px)); aspect-ratio: 1; }
+#${APP_NAME}-config-container .settings-fs-cd > svg { transform: scale(var(--cd-size, 1)); }
+#${APP_NAME}-config-container .settings-cd-artwork.is-spinning { transform-origin: 100px 100px; animation: settings-cd-spin var(--cd-rotation-period, 24s) linear infinite; }
+@keyframes settings-cd-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) {
+  #${APP_NAME}-config-container .settings-cd-artwork.is-spinning { animation: none; }
+  #${APP_NAME}-config-container .settings-fs-record.is-spin { animation: none; }
+}
+#${APP_NAME}-config-container .settings-fs-info { display: grid; flex: 0 0 auto; width: 100%; justify-items: center; gap: 4px; }
 #${APP_NAME}-config-container .settings-fs-info b { display: block; width: 70%; height: calc(var(--title, 48) * .13px); border-radius: 3px; background: rgba(255, 255, 255, .9); }
 #${APP_NAME}-config-container .settings-fs-info small { display: block; width: 46%; height: calc(var(--artist, 24) * .2px); border-radius: 3px; background: rgba(255, 255, 255, .55); }
 #${APP_NAME}-config-container .settings-fs-info em { display: block; width: 34%; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .35); }
 #${APP_NAME}-config-container .settings-fs-lyrics { display: grid; gap: 6px; width: 100%; }
 #${APP_NAME}-config-container .settings-fs-lyrics i { display: block; height: 6px; border-radius: 3px; background: rgba(255, 255, 255, .32); }
 #${APP_NAME}-config-container .settings-fs-lyrics i.is-on { height: 9px; background: #fff; }
-#${APP_NAME}-config-container .settings-fs-controls { left: 50%; bottom: 7%; display: flex; align-items: center; gap: 8px; padding: 5px 10px; border-radius: var(--r-md); transform: translateX(-50%); }
-#${APP_NAME}-config-container .settings-fs-controls.has-bg { background: rgba(0, 0, 0, .35); }
-#${APP_NAME}-config-container .settings-fs-controls i { width: calc(var(--btn, 36) * .3px); height: calc(var(--btn, 36) * .3px); border-radius: 50%; background: rgba(255, 255, 255, .8); }
-#${APP_NAME}-config-container .settings-fs-controls i.is-play { width: calc(var(--btn, 36) * .42px); height: calc(var(--btn, 36) * .42px); background: #fff; }
-#${APP_NAME}-config-container .settings-fs-progress { left: 8%; right: 8%; bottom: 3%; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .25); }
+#${APP_NAME}-config-container .settings-fs-player { display: flex; flex: 0 0 auto; flex-direction: column; align-items: center; gap: 4px; width: 100%; min-width: 0; }
+#${APP_NAME}-config-container .settings-fs-player:is(.is-bottom, .is-stage) { position: absolute; left: 50%; bottom: 4%; width: 40%; transform: translateX(-50%); }
+#${APP_NAME}-config-container .settings-fs-tv-stack { right: 8%; bottom: 6%; display: grid; justify-items: center; gap: 3px; width: 30%; }
+#${APP_NAME}-config-container .settings-fs-player.is-tv { width: 100%; }
+#${APP_NAME}-config-container .settings-fs-player.is-stage { left: 4%; width: 30%; padding: 4px; border: 1px solid rgba(255, 255, 255, .16); border-radius: var(--r-sm); background: rgba(13, 13, 17, .72); transform: none; }
+#${APP_NAME}-config-container .settings-fs-control-surface { display: grid; justify-items: center; gap: 4px; max-width: 100%; padding: 3px 4px; border-radius: var(--r-sm); }
+#${APP_NAME}-config-container .settings-fs-control-surface.has-bg { background: rgba(0, 0, 0, .35); }
+#${APP_NAME}-config-container .settings-fs-controls { display: flex; align-items: center; justify-content: center; gap: 4px; max-width: 100%; }
+#${APP_NAME}-config-container .settings-fs-controls i { flex: 0 1 auto; width: calc(var(--btn, 36) * .18px); height: calc(var(--btn, 36) * .18px); border-radius: 50%; background: rgba(255, 255, 255, .8); }
+#${APP_NAME}-config-container .settings-fs-controls i.is-play { flex-shrink: 0; width: calc(var(--btn, 36) * .28px); height: calc(var(--btn, 36) * .28px); background: #fff; }
+#${APP_NAME}-config-container .settings-fs-progress-row { display: flex; align-items: center; gap: 3px; width: 100%; }
+#${APP_NAME}-config-container .settings-fs-progress-row small { flex: 0 0 auto; color: rgba(255, 255, 255, .7); font-size: 5px; line-height: 1; }
+#${APP_NAME}-config-container .settings-fs-progress { position: relative; flex: 1; min-width: 0; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .25); }
 #${APP_NAME}-config-container .settings-fs-progress::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 38%; border-radius: 2px; background: #fff; }
-#${APP_NAME}-config-container .settings-fs-volume { right: 6%; bottom: 8%; width: 34px; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .45); }
-#${APP_NAME}-config-container .settings-fs-next { right: 4%; bottom: 15%; display: flex; align-items: center; gap: 5px; padding: 4px 6px; border-radius: var(--r-sm); background: rgba(0, 0, 0, .35); }
+#${APP_NAME}-config-container .settings-fs-volume { display: block; width: 34px; max-width: 70%; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .45); }
+#${APP_NAME}-config-container .settings-fs-next { display: flex; align-items: center; gap: 5px; padding: 4px 6px; border-radius: var(--r-sm); background: rgba(0, 0, 0, .35); }
 #${APP_NAME}-config-container .settings-fs-next i { width: 13px; height: 13px; border-radius: 2px; background: linear-gradient(135deg, #9aa3ad, #46505c); }
 #${APP_NAME}-config-container .settings-fs-next b { width: 26px; height: 4px; border-radius: 2px; background: rgba(255, 255, 255, .6); }
-#${APP_NAME}-config-container .settings-fs-queue { right: 0; top: 0; bottom: 0; width: 19%; display: grid; align-content: start; gap: 5px; padding: 12% 6% 0; background: rgba(0, 0, 0, .3); border-left: 1px solid rgba(255, 255, 255, .1); }
-#${APP_NAME}-config-container .settings-fs-queue i { height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .25); }
-#${APP_NAME}-config-container .settings-fs-lprog { left: 4%; top: 30%; bottom: 30%; width: 2px; overflow: hidden; border-radius: 2px; background: rgba(255, 255, 255, .2); }
-#${APP_NAME}-config-container .settings-fs-lprog::after { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 45%; background: #fff; }
+#${APP_NAME}-config-container .settings-fs-queue { right: 2px; top: 45%; bottom: 45%; width: 3px; border-radius: 2px; background: rgba(255, 255, 255, .3); }
+#${APP_NAME}-config-container .settings-fs-queue i { display: none; }
+#${APP_NAME}-config-container .settings-fs-lprog { right: 7.5%; bottom: 3%; display: flex; align-items: center; gap: 4px; width: 27%; padding: 3px 5px; border-radius: 20px; background: rgba(0, 0, 0, .3); }
+#${APP_NAME}-config-container .settings-fs-lprog i { position: relative; flex: 1; min-width: 0; height: 2px; border-radius: 2px; background: rgba(255, 255, 255, .2); }
+#${APP_NAME}-config-container .settings-fs-lprog i::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 33%; background: #fff; }
+#${APP_NAME}-config-container .settings-fs-lprog small { flex: 0 0 auto; font-size: 5px; line-height: 1; color: rgba(255, 255, 255, .75); }
+#${APP_NAME}-config-container .settings-fs-lprog.is-tv { position: relative; right: auto; bottom: auto; width: 80%; }
+#${APP_NAME}-config-container .settings-fs-menu { right: 1.25%; bottom: 3%; display: grid; place-items: center; width: 5.3125%; aspect-ratio: 1; border-radius: 4px; background: rgba(0, 0, 0, .65); color: rgba(255, 255, 255, .75); font-size: 10px; line-height: 1; }
 #${APP_NAME}-config-container .settings-fs-tv-lyrics { left: 7%; right: 30%; top: 18%; }
-#${APP_NAME}-config-container .settings-fs-tv-info { left: 7%; bottom: 16%; display: flex; align-items: center; gap: 10px; width: 50%; }
+#${APP_NAME}-config-container .settings-fs-tv-info { left: 4%; bottom: 6%; display: flex; align-items: center; gap: 5px; width: 48%; }
 #${APP_NAME}-config-container .settings-fs-tv-info .settings-fs-album { width: calc(var(--album, 196) * .16px); flex: 0 0 auto; }
 #${APP_NAME}-config-container .settings-fs-tv-info .settings-fs-info { flex: 1; }
-#${APP_NAME}-config-container .settings-fs-record { position: absolute; left: 50%; top: 42%; width: calc(var(--record, 100) * .42%); aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, #111 0 13%, transparent 13.5%), repeating-radial-gradient(circle, #151515 0 2px, #1c1c1c 2px 4px); box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
-#${APP_NAME}-config-container .settings-fs-record.is-spin { animation: settings-spin calc(6s * 100 / var(--rpm, 100)) linear infinite; }
+#${APP_NAME}-config-container .settings-fs-record { --iv-vinyl-spin-angle: 0turn; position: absolute; left: 50%; top: 42%; width: calc(var(--record, 100) * .42%); aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, #111 0 13%, transparent 13.5%), repeating-radial-gradient(circle, #151515 0 2px, #1c1c1c 2px 4px); box-shadow: 0 10px 30px rgba(0, 0, 0, .5); }
+#${APP_NAME}-config-container .settings-fs-record.is-spin { animation: ivlyrics-vinyl-spin-clock calc(6s * 100 / var(--rpm, 100)) linear infinite; }
 #${APP_NAME}-config-container .settings-fs-record.is-compact { left: 32%; }
 #${APP_NAME}-config-container .settings-fs-record-label { position: absolute; left: 50%; top: 50%; width: calc(var(--label, 100) * .36%); aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: linear-gradient(140deg, #c8925a 0%, #8c8160 34%, #4d7472 64%, #1e2a31 100%); }
-@keyframes settings-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+#${APP_NAME}-config-container .settings-fs-record-label.is-spin { transform: translate(-50%, -50%) rotate(var(--iv-vinyl-spin-angle)); }
 #${APP_NAME}-config-container .settings-fs-arm { position: absolute; right: 22%; top: 12%; width: 4px; height: calc(var(--arm, 100) * .5%); border-radius: 2px; background: var(--arm-color, #f2f2f2); transform: rotate(18deg); transform-origin: top center; box-shadow: 0 2px 6px rgba(0, 0, 0, .4); }
 #${APP_NAME}-config-container .settings-fs-arm.is-j { border-bottom-left-radius: 10px; }
 #${APP_NAME}-config-container .settings-fs-vinyl-lyrics { left: 12%; right: 12%; bottom: 13%; }

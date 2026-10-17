@@ -13993,29 +13993,6 @@ react.createElement(OptionList, {
               when: () => CONFIG.visual["fullscreen-show-next-track"] !== false,
             },
             {
-              desc: I18n.t("settingsAdvanced.fullscreenUI.showControls.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenUI.showControls.info"),
-              key: "fullscreen-show-controls",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-show-controls"] ?? true,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenUI.showVolume.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenUI.showVolume.info"),
-              key: "fullscreen-show-volume",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-show-volume"] ?? true,
-              when: () => CONFIG.visual["fullscreen-show-controls"] !== false,
-            },
-            {
-              desc: I18n.t("settingsAdvanced.fullscreenUI.showProgressBar.desc"),
-              info: I18n.t("settingsAdvanced.fullscreenUI.showProgressBar.info"),
-              key: "fullscreen-show-progress",
-              type: ConfigSlider,
-              defaultValue: CONFIG.visual["fullscreen-show-progress"] ?? true,
-              when: () => CONFIG.visual["fullscreen-show-controls"] !== false,
-            },
-            {
               desc: I18n.t("settingsAdvanced.fullscreenUI.showLyricsProgress.desc"),
               info: I18n.t("settingsAdvanced.fullscreenUI.showLyricsProgress.info"),
               key: "fullscreen-show-lyrics-progress",
@@ -14041,7 +14018,6 @@ react.createElement(OptionList, {
         chip("fullscreen-show-clock", "clock", ["fullscreen-clock-size", "fullscreen-clock-outline-width", "fullscreen-clock-outline-color"]),
         chip("fullscreen-show-context", "context", ["fullscreen-show-context-image"]),
         chip("fullscreen-show-next-track", "next", ["fullscreen-next-track-seconds"]),
-        chip("fullscreen-show-controls", "controls", ["fullscreen-show-volume", "fullscreen-show-progress"]),
         chip("fullscreen-show-lyrics-progress", "lprogress", []),
         chip("fullscreen-show-queue", "queue", []),
       ],
@@ -14617,6 +14593,29 @@ react.createElement(OptionList, {
           },
           react.createElement(OptionList, {
             items: [
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenUI.showControls.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenUI.showControls.info"),
+                key: "fullscreen-show-controls",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-show-controls"] ?? true,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenUI.showVolume.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenUI.showVolume.info"),
+                key: "fullscreen-show-volume",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-show-volume"] ?? true,
+                when: () => CONFIG.visual["fullscreen-show-controls"] !== false,
+              },
+              {
+                desc: I18n.t("settingsAdvanced.fullscreenUI.showProgressBar.desc"),
+                info: I18n.t("settingsAdvanced.fullscreenUI.showProgressBar.info"),
+                key: "fullscreen-show-progress",
+                type: ConfigSlider,
+                defaultValue: CONFIG.visual["fullscreen-show-progress"] ?? true,
+                when: () => CONFIG.visual["fullscreen-show-controls"] !== false,
+              },
               {
                 desc: I18n.t("settingsAdvanced.controllerStyle.buttonSize.desc"),
                 info: I18n.t("settingsAdvanced.controllerStyle.buttonSize.info"),

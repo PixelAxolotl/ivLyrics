@@ -169,6 +169,72 @@ test("album-art mode shortcut has one LP settings owner, persistent saving and t
   assert.deepEqual(h.saves, [{ method: "saveConfig", key, value: true }]);
 });
 
+test("Song Controls groups visibility and appearance under one searchable section without changing values", () => {
+  const values = {
+    "fullscreen-show-controls": false,
+    "fullscreen-show-volume": false,
+    "fullscreen-show-progress": false,
+    "fullscreen-control-button-size": 44,
+    "fullscreen-controls-background": true,
+  };
+  const keys = Object.keys(values), h = harness(values);
+  const rows = allDeclarations(h).filter(({ item }) => keys.includes(item.key));
+  assert.deepEqual(rows.map(({ item }) => item.key), keys);
+  for (const { item, tabId, sectionKey, onChange } of rows) {
+    assert.equal(tabId, "fullscreen", item.key);
+    assert.equal(sectionKey, "controller-style", item.key);
+    assert.equal(onChange, h.api.handleVisualConfigChange, item.key);
+    assert.equal(item.defaultValue, values[item.key], item.key);
+  }
+  const sections = elements(h.api.renderTabContent("fullscreen"))
+    .filter((node) => node.type === h.SettingsSection && node.props.sectionKey === "controller-style");
+  assert.equal(sections.length, 1);
+  assert.equal(sections[0].props.title, "settingsAdvanced.controllerStyle.title");
+  const list = elements(sections[0]).find((node) => node.type === h.OptionList);
+  const renderedKeys = () => elements(h.component(h.OptionList, list.props))
+    .map((node) => node.props["data-setting-key"]).filter(Boolean);
+  assert.deepEqual(renderedKeys(), [keys[0], ...keys.slice(3)], "hidden controls retain their dependent choices");
+  h.visual[keys[0]] = true;
+  assert.deepEqual(renderedKeys(), keys);
+  h.visual[keys[0]] = values[keys[0]];
+  assert.deepEqual(h.saves, [], "regrouping does not rewrite saved choices");
+
+  const registry = Array.from(h.api.buildSettingsRegistry()).filter(({ key }) => keys.includes(key));
+  assert.deepEqual(registry.map(({ key }) => key), keys);
+  for (const entry of registry) {
+    assert.equal(entry.tabId, "fullscreen");
+    assert.equal(entry.sectionKey, "controller-style");
+  }
+  // The manual section anchor is unchanged; individual rows are discovered
+  // from the mounted DOM (covered by the browser replay).
+  const search = Array.from(h.api.searchableSettings).filter((entry) => entry.settingKey === "controller-style");
+  assert.equal(search.length, 1);
+  assert.equal(search[0].sectionKey, "fullscreen");
+  h.api.pickSearchResult(search[0]);
+  h.render();
+  assert.equal(h.api.activeTab, "fullscreen");
+  assert.equal(h.api.pendingTabScrollRef.current, "controller-style");
+  const changed = h.api.renderChangedView();
+  const group = elements(changed).find((node) =>
+    node.props.className === "settings-changed-menu" && node.props.key === "fullscreen");
+  const changedRows = settingRows(h, group).filter(({ key }) => keys.includes(key));
+  assert.deepEqual(changedRows.map(({ key }) => key), keys);
+  for (const row of changedRows) {
+    assert.equal(row.jump.label, "settingsAdvanced.controllerStyle.title");
+    row.jump.onClick();
+    h.render();
+    assert.equal(h.api.activeTab, "fullscreen");
+    assert.equal(h.api.pendingTabScrollRef.current, row.key);
+  }
+  h.clearCalls();
+  h.api.resetChangedEntries(registry);
+  for (const key of keys) {
+    assert.equal(h.visual[key], h.getSettingDefaultValue(key), key);
+    assert.deepEqual(h.saves.filter((save) => save.key === key),
+      [{ method: "saveConfig", key, value: h.getSettingDefaultValue(key) }]);
+  }
+});
+
 test("production menus give persisted controls one tab owner, with Performance flags exclusive", () => {
   const h = harness();
   const rows = allDeclarations(h);

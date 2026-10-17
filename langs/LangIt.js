@@ -1922,8 +1922,8 @@ window.LANG_IT = {
       }
     },
     "controllerStyle": {
-      "title": "Stile controller",
-      "subtitle": "Imposta aspetto del controller player",
+      "title": "Controlli del brano",
+      "subtitle": "Scegli quali controlli del brano mostrare e personalizzane l'aspetto.",
       "buttonSize": {
         "desc": "Dimensione pulsanti",
         "info": "Dimensione pulsanti play, skip, ecc. (28-48px)"

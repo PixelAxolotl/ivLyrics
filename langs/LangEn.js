@@ -1922,8 +1922,8 @@ window.LANG_EN = {
       }
     },
     "controllerStyle": {
-      "title": "Controller Style",
-      "subtitle": "Configure the appearance of player controls",
+      "title": "Song Controls",
+      "subtitle": "Choose which song controls to show and customize their appearance.",
       "buttonSize": {
         "desc": "Control Button Size",
         "info": "Set size for play, prev/next buttons (28-48px)"

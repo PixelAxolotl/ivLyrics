@@ -1922,8 +1922,8 @@ window.LANG_TR = {
     }
   },
   "controllerStyle": {
-    "title": "Kontrolcü Stili",
-    "subtitle": "Çalar kontrollerinin görünümünü yapılandır",
+    "title": "Şarkı Kontrolleri",
+    "subtitle": "Hangi şarkı kontrollerinin gösterileceğini seç ve görünümlerini özelleştir.",
     "buttonSize": {
       "desc": "Kontrol Butonu Boyutu",
       "info": "Oynat, önceki/sonraki butonları için boyutu ayarla (28-48px)"

@@ -1922,8 +1922,8 @@ window.LANG_MS = {
       }
     },
     "controllerStyle": {
-      "title": "Gaya Pengawal",
-      "subtitle": "Tetapkan penampilan bagi pengawal pemain (player controller)",
+      "title": "Kawalan Lagu",
+      "subtitle": "Pilih kawalan lagu yang ingin dipaparkan dan sesuaikan penampilannya.",
       "buttonSize": {
         "desc": "Saiz Butang Kawalan",
         "info": "Tetapkan saiz butang untuk main, lagu sebelum/seterusnya, dsb. (28-48px)"

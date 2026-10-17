@@ -1922,8 +1922,8 @@ window.LANG_KO = {
       }
     },
     "controllerStyle": {
-      "title": "컨트롤러 스타일",
-      "subtitle": "플레이어 컨트롤러의 외형을 설정합니다",
+      "title": "곡 컨트롤",
+      "subtitle": "표시할 곡 컨트롤과 모양을 설정합니다.",
       "buttonSize": {
         "desc": "컨트롤 버튼 크기",
         "info": "재생, 이전/다음곡 등 버튼의 크기를 설정합니다 (28-48px)"

@@ -1922,8 +1922,8 @@ window.LANG_FR = {
       }
     },
     "controllerStyle": {
-      "title": "Style contrôleur",
-      "subtitle": "Apparence des contrôles de lecture",
+      "title": "Commandes de lecture",
+      "subtitle": "Choisissez les commandes de lecture à afficher et personnalisez leur apparence.",
       "buttonSize": {
         "desc": "Taille boutons",
         "info": "Taille des boutons de contrôle (28-48px)"

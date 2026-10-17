@@ -1922,8 +1922,8 @@ window.LANG_ES = {
       }
     },
     "controllerStyle": {
-      "title": "Estilo de controlador",
-      "subtitle": "Apariencia de los controles de reproducción",
+      "title": "Controles de la canción",
+      "subtitle": "Elige qué controles de la canción mostrar y personaliza su apariencia.",
       "buttonSize": {
         "desc": "Tamaño de botones",
         "info": "Tamaño de los botones de control (28-48px)"

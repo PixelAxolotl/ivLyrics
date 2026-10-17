@@ -1922,8 +1922,8 @@ window.LANG_ID = {
       }
     },
     "controllerStyle": {
-      "title": "Gaya Kontroler",
-      "subtitle": "Atur tampilan kontroler pemutar",
+      "title": "Kontrol Lagu",
+      "subtitle": "Pilih kontrol lagu yang ingin ditampilkan dan sesuaikan tampilannya.",
       "buttonSize": {
         "desc": "Ukuran Tombol Kontrol",
         "info": "Atur ukuran tombol seperti putar, sebelumnya/berikutnya (28-48px)"

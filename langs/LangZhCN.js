@@ -1922,8 +1922,8 @@ window.LANG_ZH_CN = {
       }
     },
     "controllerStyle": {
-      "title": "控制器样式",
-      "subtitle": "设置播放控制器的外观",
+      "title": "歌曲控制",
+      "subtitle": "选择要显示的歌曲控件并自定义其外观。",
       "buttonSize": {
         "desc": "控制按钮大小",
         "info": "设置播放、上一首/下一首等按钮的大小 (28-48px)"

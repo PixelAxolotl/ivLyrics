@@ -1922,8 +1922,8 @@ window.LANG_CS = {
       }
     },
     "controllerStyle": {
-      "title": "Styl ovladače",
-      "subtitle": "Nakonfigurujte vzhled ovládacích prvků přehrávače",
+      "title": "Ovládání skladby",
+      "subtitle": "Vyberte, které ovládací prvky skladby se mají zobrazit, a přizpůsobte jejich vzhled.",
       "buttonSize": {
         "desc": "Velikost ovládacího tlačítka",
         "info": "Nastavit velikost pro přehrávání, tlačítka předchozí/další (28–48 pixelů)"

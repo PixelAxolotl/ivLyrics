@@ -1922,8 +1922,8 @@ window.LANG_DE = {
       }
     },
     "controllerStyle": {
-      "title": "Controller-Stil",
-      "subtitle": "Aussehen der Player-Steuerung",
+      "title": "Songsteuerung",
+      "subtitle": "Wähle aus, welche Steuerelemente angezeigt werden, und passe ihr Aussehen an.",
       "buttonSize": {
         "desc": "Button-Größe",
         "info": "Größe der Steuertasten (28-48px)"

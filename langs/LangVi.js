@@ -1922,8 +1922,8 @@ window.LANG_VI = {
       }
     },
     "controllerStyle": {
-      "title": "Kiểu bộ điều khiển",
-      "subtitle": "Thiết lập ngoại hình của bộ điều khiển phát nhạc",
+      "title": "Điều khiển bài hát",
+      "subtitle": "Chọn các thành phần điều khiển bài hát cần hiển thị và tùy chỉnh giao diện của chúng.",
       "buttonSize": {
         "desc": "Kích thước nút điều khiển",
         "info": "Kích thước các nút phát, trước/sau... (28-48px)"

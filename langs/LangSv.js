@@ -1922,8 +1922,8 @@ window.LANG_SV = {
       }
     },
     "controllerStyle": {
-      "title": "Kontrollstil",
-      "subtitle": "Konfigurera utseendet på spelarkontrollerna",
+      "title": "Låtkontroller",
+      "subtitle": "Välj vilka låtkontroller som ska visas och anpassa deras utseende.",
       "buttonSize": {
         "desc": "Kontrollknappstorlek",
         "info": "Ställ in storlek för uppspelning, föregående/nästa knappar (28-48px)"

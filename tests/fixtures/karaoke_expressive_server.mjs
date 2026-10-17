@@ -80,6 +80,16 @@ const specs=[
 const voiceA=sourceLine('Lead vocal'),voiceB=sourceLine('Background voice');
 specs.push({id:'vocals',locale:'en',line:{text:'Lead / Background',startTime:1000,endTime:voiceB.endTime,
   vocals:{lead:voiceA,background:[voiceB]}},readings:null,ruby:null,granularity:'character'});
+// Optional feature-request replay: keep the established 11-row baseline intact.
+if(new URLSearchParams(location.search).has('longWords')){
+  for(const [id,text,locale,step] of [
+    ['long-latin','together again','en',110],
+    ['long-cyrillic','длинный красивый','ru',110],
+    ['longer-cyrillic','синхронизация сейчас','ru',110],
+    ['quick-cyrillic','длинный красивый','ru',40],
+    ['long-compound','electric-blue again','en',110],
+  ])specs.push({id,locale,line:sourceLine(text,step),readings:null,ruby:null,granularity:'character'});
+}
 let position=1000,revision=0,live=true,frameTime=performance.now();
 const clock={getPosition:()=>position};
 const previewRoot=ReactDOM.createRoot(document.getElementById('rows'));

@@ -8161,12 +8161,16 @@ const isKaraokeExpressiveEmphasisUnit = (startTime, endTime) => (
 
 // Decides what moves for each glyph of a character-timed line. Syllabic
 // scripts move per glyph ("char"); a space-delimited word moves as one unit
-// ("word", via its word wrapper) unless it is held long enough to swell letter
-// by letter ("emphasis"). Hyphens end a motion unit without consuming or
-// changing any glyph. Apostrophes and Japanese prolonged sound marks stay joined.
+// ("word", via its word wrapper) unless it is held, or a longer word has enough
+// time to move letter by letter ("emphasis"). Hyphens end a motion unit without
+// consuming or changing any glyph. Apostrophes and prolonged sound marks stay joined.
 const KARAOKE_EXPRESSIVE_GLYPH_SCRIPT_REGEX = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}]/u;
 const KARAOKE_EXPRESSIVE_HYPHEN_REGEX = /^[\-\u2010\u2011]+$/u;
-const KARAOKE_EXPRESSIVE_EMPHASIS_MAX_LETTERS = 12;
+const KARAOKE_EXPRESSIVE_EMPHASIS_MAX_LETTERS = 24;
+const KARAOKE_EXPRESSIVE_LONG_WORD_MIN_LETTERS = 7;
+const KARAOKE_EXPRESSIVE_LONG_WORD_MIN_MS = 600;
+const KARAOKE_EXPRESSIVE_MIN_MS_PER_GLYPH = 45;
+const KARAOKE_EXPRESSIVE_WORD_LETTER_REGEX = /[\p{L}\p{N}]/u;
 const getKaraokeExpressiveUnitRanges = (timedChars, startIndex = 0, charCount = timedChars.length) => {
 	const ranges = [];
 	let start = startIndex;
@@ -8233,10 +8237,20 @@ const classifyKaraokeExpressiveUnits = (timedChars, allowWordMotion = true) => {
 		const end = index + letterCount;
 		const text = timedChars.slice(index, end).map((charInfo) => charInfo.char).join("");
 		const { startTime, endTime } = getKaraokeExpressiveWordWindow(timedChars, index, letterCount);
+		const duration = Number.isFinite(startTime) && Number.isFinite(endTime) ? endTime - startTime : 0;
+		// Punctuation is drawn but is not an extra sung letter. In particular,
+		// attaching a hyphen must not turn a six-letter piece into a long word.
+		let sungLetters = 0;
+		for (let charIndex = index; charIndex < end; charIndex++) {
+			if (KARAOKE_EXPRESSIVE_WORD_LETTER_REGEX.test(String(timedChars[charIndex]?.char ?? ""))) sungLetters++;
+		}
+		const hasLetterWindow = duration >= letterCount * KARAOKE_EXPRESSIVE_MIN_MS_PER_GLYPH;
+		const longerWord = sungLetters >= KARAOKE_EXPRESSIVE_LONG_WORD_MIN_LETTERS
+			&& duration >= KARAOKE_EXPRESSIVE_LONG_WORD_MIN_MS;
 		const mode = KARAOKE_EXPRESSIVE_GLYPH_SCRIPT_REGEX.test(text)
 			? "char"
 			: letterCount > 1 && letterCount <= KARAOKE_EXPRESSIVE_EMPHASIS_MAX_LETTERS
-				&& isKaraokeExpressiveEmphasisUnit(startTime, endTime)
+				&& hasLetterWindow && (longerWord || isKaraokeExpressiveEmphasisUnit(startTime, endTime))
 				? "emphasis"
 				: allowWordMotion ? "word" : "char";
 		for (let charIndex = index; charIndex < end; charIndex++) charModes[charIndex] = mode;

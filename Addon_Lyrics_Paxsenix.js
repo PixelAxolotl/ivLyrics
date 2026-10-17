@@ -35,7 +35,7 @@
         return params ? String(fallback).replace(/\{(\w+)\}/g, (match, name) => params[name] ?? match) : fallback;
     }
 
-    const CACHE_VERSION = 'paxsenix-provider-v16';
+    const CACHE_VERSION = 'paxsenix-provider-v17';
     const REQUEST_TIMEOUT_MS = 9000;
     const PROVIDER_TIMEOUT_MS = 12000;
     const JAPANESE_LINE_SPLIT_TRIGGER_WIDTH = 22;
@@ -123,7 +123,13 @@
             String(value || '')
                 .replace(/\([^)]*\)|\[[^\]]*\]/g, ' ')
                 .replace(/\s+-\s+(?:remaster(?:ed)?|live|version|edit|mix).*$/i, ' ')
-        );
+        )
+            // Catalogs often omit Latin accents (Señorita / Senorita). Fold
+            // only those marks: stripping every combining mark would also
+            // turn Japanese が into か. NFC restores other decomposed scripts.
+            .normalize('NFD')
+            .replace(/(\p{Script=Latin})\p{M}+/gu, '$1')
+            .normalize('NFC');
     }
 
     function tokenOverlap(left, right) {
@@ -173,9 +179,62 @@
         return score;
     }
 
+    function getLatinShare(value) {
+        const letters = String(value || '').match(/\p{L}/gu) || [];
+        if (!letters.length) return null;
+        return letters.filter(letter => /\p{Script=Latin}/u.test(letter)).length / letters.length;
+    }
+
+    // Shared words over all words, so a title that merely starts like another
+    // ("Love Me Harder" / "Love Me Like You Do") does not count as the same.
+    function tokenSimilarity(left, right) {
+        const leftTokens = new Set(normalizeComparable(left).split(' ').filter(token => token.length > 1));
+        const rightTokens = new Set(normalizeComparable(right).split(' ').filter(token => token.length > 1));
+        if (!leftTokens.size || !rightTokens.size) return 0;
+        let shared = 0;
+        leftTokens.forEach(token => {
+            if (rightTokens.has(token)) shared += 1;
+        });
+        return shared / (leftTokens.size + rightTokens.size - shared);
+    }
+
+    // Whether `needle` is a title-sized part of `haystack`: whole words for
+    // titles in spaced scripts (so "I" is not found inside "Pursuit"), any
+    // stretch for scripts written without spaces. A single short word is too
+    // little to say two titles are the same.
+    function titleContains(haystack, needle) {
+        const compact = needle.replace(/ /g, '');
+        const words = needle.split(' ').filter(Boolean).length;
+        if (words < 2 && compact.length < 4) return false;
+        if ((getLatinShare(needle) ?? 0) >= 0.5) return ` ${haystack} `.includes(` ${needle} `);
+        return haystack.includes(needle);
+    }
+
+    // A search result is this song only when its title says so; artist, album
+    // and length confirm a title match but cannot make one. Apple Music's
+    // catalog has no "Lady Of Namek", and "The Color Violet" by the same artist
+    // on the same album scored 60 on artist and album alone, so its lyrics were
+    // shown. Titles in different scripts (a Korean Spotify title, a romanized
+    // catalog title) cannot be compared; those need a matching length instead.
+    function hasSameSongTitle(candidate, info) {
+        const expected = normalizeTitleCore(info?.title);
+        const actual = normalizeTitleCore(candidate?.title);
+        if (!expected || !actual) return false;
+        // Punctuation spellings: "F.E.E.L." / "FEEL", "Don't" / "Dont".
+        if (expected.replace(/ /g, '') === actual.replace(/ /g, '')) return true;
+        if (titleContains(expected, actual) || titleContains(actual, expected)) return true;
+        if (tokenSimilarity(expected, actual) >= 0.6) return true;
+        const expectedLatin = getLatinShare(expected);
+        const actualLatin = getLatinShare(actual);
+        if (expectedLatin === null || actualLatin === null || (expectedLatin >= 0.5) === (actualLatin >= 0.5)) return false;
+        const expectedDuration = normalizeDurationMilliseconds(info) / 1000;
+        const candidateDuration = Number(candidate?.durationSeconds || 0);
+        return expectedDuration > 0 && candidateDuration > 0 && Math.abs(expectedDuration - candidateDuration) <= 3;
+    }
+
     function selectBestCandidate(candidates, info) {
         const ranked = (Array.isArray(candidates) ? candidates : [])
-            .filter(candidate => candidate?.id)
+            .filter(candidate => candidate?.id && hasSameSongTitle(candidate, info))
             .map(candidate => ({ candidate, score: scoreCandidate(candidate, info) }))
             .sort((left, right) => right.score - left.score);
         return ranked[0]?.score >= 45 ? ranked[0] : null;

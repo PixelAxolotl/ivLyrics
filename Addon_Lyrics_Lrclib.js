@@ -323,8 +323,13 @@
     const LRCLIB_DURATION_TOLERANCE_SEC = 15;
     const LRCLIB_ARTIST_MATCH_THRESHOLD = 0.9;
     const LRCLIB_FALLBACK_TITLE_MATCH_THRESHOLD = 0.98;
+    // An artist match alone does not make a candidate the same song: searches
+    // also return the artist's other songs. Same-song spellings ("F.E.E.L." /
+    // "FEEL", "Señorita" / "Senorita") score 0.85 and up, another song by the
+    // same artist far less ("Lady Of Namek" / "The Color Violet" 0.47).
+    const LRCLIB_ARTIST_MATCH_TITLE_THRESHOLD = 0.8;
     const LRCLIB_ENABLE_INEXACT_SEARCH = true;
-    const LRCLIB_CACHE_VERSION_BASE = '2026-10-16-host-fallback-2';
+    const LRCLIB_CACHE_VERSION_BASE = '2026-10-16-same-song-title-1';
     const LRCLIB_ENGLISH_ACCEPT_LANGUAGE = 'en-US,en;q=0.9';
     const LRCLIB_LYRICSFILE_VERSION = '1.0';
     const LRCLIB_LYRICSFILE_MAX_LENGTH = 2 * 1024 * 1024;
@@ -662,6 +667,44 @@
         if (normalizedCandidate.includes(normalizedExpected) || normalizedExpected.includes(normalizedCandidate)) return 0.99;
 
         return jaroWinkler(normalizedExpected, normalizedCandidate);
+    }
+
+    /**
+     * Whether two titles use the same writing system (Latin or not), so their
+     * similarity means anything: a Korean Spotify title and its romanized
+     * LRCLIB title share no letters.
+     *
+     * @param {string} expectedTitle - title of the playing track
+     * @param {string} candidateTitle - LRCLIB candidate title
+     * @returns {boolean} true when both titles are mostly Latin or both are not
+     */
+    function hasComparableTitleScripts(expectedTitle, candidateTitle) {
+        const latinShare = (text) => {
+            const letters = String(text || '').match(/\p{L}/gu) || [];
+            if (!letters.length) return null;
+            return letters.filter(letter => /\p{Script=Latin}/u.test(letter)).length / letters.length;
+        };
+        const expected = latinShare(expectedTitle);
+        const candidate = latinShare(candidateTitle);
+        if (expected === null || candidate === null) return false;
+        return (expected >= 0.5) === (candidate >= 0.5);
+    }
+
+    /**
+     * An artist-matched candidate is this song only with title evidence: a
+     * similar title, or community sync data that identified this LRCLIB entry
+     * or its exact line shape. Titles in different scripts cannot be compared
+     * and keep the artist match alone.
+     *
+     * @param {Object} candidate - scored LRCLIB candidate
+     * @param {string} expectedTitle - title of the playing track
+     * @returns {boolean} true when the candidate may stand for this song
+     */
+    function hasSameSongTitleEvidence(candidate, expectedTitle) {
+        if (Number(candidate?.syncSourceMatchScore || 0) > 0 || candidate?.syncLineExactMatch) return true;
+        if (Number(candidate?.titleScore || 0) >= LRCLIB_ARTIST_MATCH_TITLE_THRESHOLD) return true;
+        const candidateTitle = candidate?.trackName || candidate?.name || '';
+        return !hasComparableTitleScripts(expectedTitle, candidateTitle);
     }
 
     /**
@@ -2311,7 +2354,7 @@
                         .filter(item => {
                             if (!item?.syncedLyrics && !item?.plainLyrics && !item?.instrumental) return false;
                             if (!candidateFilter(item, metadata)) return false;
-                            if (item.artistMatched) return true;
+                            if (item.artistMatched) return hasSameSongTitleEvidence(item, metadataTitle);
                             if (allowTitleDrivenMatch && item.titleDrivenMatch) return true;
                             return false;
                         })

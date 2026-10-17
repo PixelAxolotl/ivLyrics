@@ -68,6 +68,102 @@ test("a seek that resumes late no longer leaves the video steadily behind", () =
     assert.ok(state.leadSeconds > 0.15 && state.leadSeconds < 0.45, `learned lead ${state.leadSeconds}`);
 });
 
+test("a seek that takes over a second to resume is not re-sent while the video buffers", () => {
+    // Re-seeking every time drift crossed half a second restarted the
+    // buffering: on a slow connection the video never played (27 seeks in
+    // 20 s) and the page stuttered under them.
+    for (const resumeDelay of [0.8, 1.5]) {
+        const { seeks, state, finalDrift } = simulate({ seconds: 20, startDrift: -2, resumeDelay });
+        assert.ok(seeks.length <= 3, `${resumeDelay} s resume: ${seeks.length} seeks`);
+        assert.ok(Math.abs(finalDrift) <= 0.1, `${resumeDelay} s resume: final drift ${finalDrift.toFixed(3)} s`);
+        assert.ok(state.leadSeconds >= resumeDelay - 0.3, `the lead covers the resume time (${state.leadSeconds} s)`);
+    }
+});
+
+test("a seek that never resumes is retried with growing patience", () => {
+    const { seeks } = simulate({ seconds: 30, startDrift: -2, resumeDelay: 1000 });
+    const gaps = seeks.slice(1).map((seek, index) => seek.now - seeks[index].now);
+    assert.ok(seeks.length <= 5, `${seeks.length} seeks in 30 s`);
+    assert.deepEqual(gaps, [2500, 5000, 10000, 10000], "waits double up to 10 s");
+});
+
+test("a timing nudge seeks at once even while a previous seek buffers", () => {
+    const state = createVideoDriftState();
+    assert.equal(planVideoDriftCorrection(state, { currentTime: 0, targetTime: 10, now: 0, isPlaying: true }).type, "seek");
+    assert.equal(planVideoDriftCorrection(state, { currentTime: 9, targetTime: 10.75, now: 750, isPlaying: true }).type, "none",
+        "buffering: no second seek");
+    state.seekRequested = true;
+    assert.equal(planVideoDriftCorrection(state, { currentTime: 9, targetTime: 11, now: 1000, isPlaying: true }).type, "seek");
+});
+
+test("Spotify timeline jumps bypass pending buffering grace in both video transports", () => {
+    for (const canAdjustRate of [false, true]) for (const targetTime of [70, 2]) {
+        const state = createVideoDriftState();
+        planVideoDriftCorrection(state, {
+            currentTime: 8, targetTime: 10, now: 0, isPlaying: true,
+            isSteady: false, canAdjustRate,
+        });
+        const correction = planVideoDriftCorrection(state, {
+            currentTime: 10, targetTime, now: 250, isPlaying: true,
+            isSteady: false, canAdjustRate,
+        });
+        assert.deepEqual({ ...correction }, { type: "seek", time: targetTime },
+            `a jump to ${targetTime} must not wait for the old seek`);
+        assert.equal(state.leadSeconds, 0, "the jump is not buffering latency");
+        planVideoDriftCorrection(state, {
+            currentTime: targetTime + 0.25, targetTime: targetTime + 0.25,
+            now: 500, isPlaying: true, isSteady: true, canAdjustRate,
+        });
+        assert.equal(state.leadSeconds, 0);
+    }
+});
+
+test("a timeline jump on the first resumed frame cannot train an incorrect seek lead", () => {
+    for (const canAdjustRate of [false, true]) {
+        const state = createVideoDriftState();
+        planVideoDriftCorrection(state, {
+            currentTime: 8, targetTime: 10, now: 0,
+            isPlaying: true, isSteady: true, canAdjustRate,
+        });
+        const correction = planVideoDriftCorrection(state, {
+            currentTime: 10.75, targetTime: 70, now: 1000,
+            isPlaying: true, isSteady: true, canAdjustRate,
+        });
+        assert.deepEqual({ ...correction }, { type: "seek", time: 70 });
+        assert.equal(state.leadSeconds, 0, "do not learn the 59-second jump as a 3-second lead");
+        const settled = planVideoDriftCorrection(state, {
+            currentTime: 70.25, targetTime: 70.25, now: 1250,
+            isPlaying: true, isSteady: true, canAdjustRate,
+        });
+        assert.notEqual(settled.type, "seek", "no compensating second seek is needed");
+    }
+});
+
+test("a video loop wrap is a new target, not a long buffering delay", () => {
+    const state = createVideoDriftState();
+    planVideoDriftCorrection(state, {
+        currentTime: 17, targetTime: 19, now: 0, isPlaying: true, isSteady: false,
+    });
+    const correction = planVideoDriftCorrection(state, {
+        currentTime: 19, targetTime: 0.25, now: 1250, isPlaying: true, isSteady: false,
+    });
+    assert.deepEqual({ ...correction }, { type: "seek", time: 0.25 });
+    assert.equal(state.leadSeconds, 0);
+});
+
+test("timeline jumps retain already learned latency without training on the jump", () => {
+    const state = createVideoDriftState();
+    state.leadSeconds = 0.3;
+    planVideoDriftCorrection(state, {
+        currentTime: 8, targetTime: 10, now: 0, isPlaying: true, isSteady: true,
+    });
+    const correction = planVideoDriftCorrection(state, {
+        currentTime: 10.3, targetTime: 70, now: 250, isPlaying: true, isSteady: false,
+    });
+    assert.deepEqual({ ...correction }, { type: "seek", time: 70.3 });
+    assert.equal(state.leadSeconds, 0.3);
+});
+
 test("the old half-second threshold left the same player 0.3 s behind for good", () => {
     const oldPlan = (state, { currentTime, targetTime }) =>
         Math.abs(currentTime - targetTime) > 0.5 ? { type: "seek", time: targetTime } : { type: "none" };
@@ -144,6 +240,42 @@ test("an explicit 10ms adjustment overrides drift thresholds and learned lead wh
     });
     assert.deepEqual(player.calls, [["seekTo", 10.01]]);
     assert.equal(driftState.lastSeekAt, 5000);
+});
+
+test("forced YouTube seeks record the new target so the next buffering tick does not seek again", () => {
+    const driftState = createVideoDriftState();
+    const player = createPlayer({ time: 8, state: 3 });
+    const holdState = { isHolding: false };
+    const tick = (targetVideoTime, now, forceSeek = false) => syncYouTubePlayerTimeline({
+        player, targetVideoTime, now, forceSeek, driftState, holdState,
+        shouldHoldAtStart: false, shouldPlay: true,
+    });
+    tick(10, 0);
+    player.calls.length = 0;
+    tick(70, 250, true);
+    player.getCurrentTime = () => 70;
+    tick(70.25, 500);
+    assert.deepEqual(player.calls, [["seekTo", 70]], "do not treat the already sent forced seek as another jump");
+    assert.equal(driftState.leadSeconds, 0);
+});
+
+test("a paused seek and subsequent resume do not inherit stale target or latency samples", () => {
+    const state = createVideoDriftState();
+    planVideoDriftCorrection(state, {
+        currentTime: 8, targetTime: 10, now: 0, isPlaying: true, isSteady: true,
+    });
+    const paused = planVideoDriftCorrection(state, {
+        currentTime: 10, targetTime: 70, now: 250, isPlaying: false, isSteady: false,
+    });
+    assert.deepEqual({ ...paused }, { type: "seek", time: 70 });
+    const resumed = planVideoDriftCorrection(state, {
+        currentTime: 70.25, targetTime: 70.25, now: 1000, isPlaying: true, isSteady: true,
+    });
+    assert.notEqual(resumed.type, "seek");
+    assert.equal(state.leadSeconds, 0);
+    resetVideoDriftState(state);
+    assert.ok(Number.isNaN(state.lastTargetTime));
+    assert.ok(Number.isNaN(state.lastTargetAt));
 });
 
 test("learned seek lead wraps at the video end instead of seeking beyond its duration", () => {

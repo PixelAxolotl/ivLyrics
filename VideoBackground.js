@@ -60,7 +60,16 @@ const VIDEO_DRIFT_SOFT_INTERVAL_MS = 3000;
 // hold sync (each one is a visible jump), so only larger drift is chased.
 const VIDEO_DRIFT_BACKOFF_CORRECTIONS = 4;
 const VIDEO_DRIFT_BACKOFF_WINDOW_MS = 30000;
-const VIDEO_DRIFT_MAX_LEAD_SECONDS = 0.8;
+// A seek can take well over a second to resume on a slow connection; the
+// lead must be able to cover that or every seek lands behind again.
+const VIDEO_DRIFT_MAX_LEAD_SECONDS = 3;
+// After a seek the player buffers before it plays again. When that took longer
+// than drift needs to cross the seek threshold (about 0.75 s), the next tick
+// seeked again and restarted the buffering: the video never played and the
+// page stuttered under a stream of seeks. A buffering seek gets this long,
+// twice as long each time it still has not resumed.
+const VIDEO_DRIFT_SEEK_GRACE_MS = 2500;
+const VIDEO_DRIFT_MAX_SEEK_GRACE_MS = 10000;
 const VIDEO_DRIFT_MAX_RATE_DELTA = 0.05;
 // Keep the outgoing artwork briefly while a new track's background is being
 // resolved.  This avoids a black flash when YouTube or the helper takes a
@@ -275,6 +284,12 @@ const createVideoDriftState = () => ({
     // Set when the user nudges the video timing: the next check lands on the
     // new position at once instead of waiting for steady drift.
     seekRequested: false,
+    // A seek was sent and the video has not played steadily since.
+    awaitingResume: false,
+    seekGraceMs: VIDEO_DRIFT_SEEK_GRACE_MS,
+    lastTargetTime: NaN,
+    lastTargetAt: NaN,
+    lastTargetPlaying: false,
 });
 
 // A new video starts with fresh samples; the learned seek lead depends on the
@@ -287,12 +302,34 @@ const resetVideoDriftState = (state) => {
     state.softCorrectionTimes = [];
     state.softThresholdSeconds = VIDEO_DRIFT_SOFT_THRESHOLD_SECONDS;
     state.seekRequested = false;
+    state.awaitingResume = false;
+    state.seekGraceMs = VIDEO_DRIFT_SEEK_GRACE_MS;
+    state.lastTargetTime = NaN;
+    state.lastTargetAt = NaN;
+    state.lastTargetPlaying = false;
+};
+
+// A Spotify seek, mapped skip or loop wrap changes the requested timeline,
+// not the time a video needed to buffer. Compare consecutive target samples
+// against normal playback progression before waiting or learning seek lead.
+const recordVideoDriftTarget = (state, targetTime, now, isPlaying) => {
+    const hasPreviousSample = Number.isFinite(state.lastTargetTime)
+        && Number.isFinite(state.lastTargetAt) && Number.isFinite(now);
+    const elapsed = hasPreviousSample ? Math.max(0, (now - state.lastTargetAt) / 1000) : 0;
+    const advance = state.lastTargetPlaying && isPlaying ? elapsed : 0;
+    const jumped = hasPreviousSample && (now < state.lastTargetAt ||
+        Math.abs(targetTime - state.lastTargetTime - advance) > VIDEO_SYNC_SEEK_THRESHOLD_SECONDS);
+    state.lastTargetTime = targetTime;
+    state.lastTargetAt = now;
+    state.lastTargetPlaying = isPlaying === true;
+    return jumped;
 };
 
 const noteVideoDriftSeek = (state, now, measureLead) => {
     state.lastSeekAt = now;
     state.samples = [];
     state.measureLeadAfterSeek = measureLead === true;
+    state.awaitingResume = true;
 };
 
 const getMedianValue = (values) => {
@@ -321,12 +358,36 @@ const planVideoDriftCorrection = (state, {
     allowSoftSeek = true,
 }) => {
     if (!state || !Number.isFinite(targetTime)) return { type: "none" };
-    const lead = isPlaying ? state.leadSeconds : 0;
+    const targetJumped = recordVideoDriftTarget(state, targetTime, now, isPlaying);
+    if (targetJumped || state.seekRequested) {
+        state.awaitingResume = false;
+        state.measureLeadAfterSeek = false;
+        state.seekGraceMs = VIDEO_DRIFT_SEEK_GRACE_MS;
+        state.samples = [];
+    }
     const drift = Number.isFinite(currentTime) ? currentTime - targetTime : Infinity;
+    if (state.awaitingResume && isPlaying) {
+        if (!isSteady) {
+            // Still buffering the last seek: seeking again would restart it.
+            if (!state.seekRequested && now - state.lastSeekAt < state.seekGraceMs) {
+                return canAdjustRate ? { type: "rate", rate: 1 } : { type: "none" };
+            }
+            state.seekGraceMs = Math.min(VIDEO_DRIFT_MAX_SEEK_GRACE_MS, state.seekGraceMs * 2);
+        } else {
+            // Playing again. However long the seek took to resume shows up as
+            // the video trailing; aim that much further ahead from now on.
+            state.awaitingResume = false;
+            if (Number.isFinite(drift) && Math.abs(drift) > VIDEO_SYNC_SEEK_THRESHOLD_SECONDS) {
+                state.leadSeconds = Math.min(VIDEO_DRIFT_MAX_LEAD_SECONDS, Math.max(0, state.leadSeconds - drift));
+            } else {
+                state.seekGraceMs = VIDEO_DRIFT_SEEK_GRACE_MS;
+            }
+        }
+    }
     if (state.seekRequested || Math.abs(drift) > VIDEO_SYNC_SEEK_THRESHOLD_SECONDS) {
         state.seekRequested = false;
         noteVideoDriftSeek(state, now, isPlaying);
-        return { type: "seek", time: Math.max(0, targetTime + lead) };
+        return { type: "seek", time: Math.max(0, targetTime + (isPlaying ? state.leadSeconds : 0)) };
     }
     if (!isSteady) {
         state.samples = [];
@@ -426,6 +487,8 @@ const syncYouTubePlayerTimeline = ({
     if (driftState) {
         if (forceSeek || wasHoldingAtStart) {
             // Leaving the held pre-roll lands exactly on the mapped position.
+            recordVideoDriftTarget(driftState, targetVideoTime, now, shouldPlay);
+            driftState.seekGraceMs = VIDEO_DRIFT_SEEK_GRACE_MS;
             noteVideoDriftSeek(driftState, now, shouldPlay);
             player.seekTo(targetVideoTime, true);
         } else {

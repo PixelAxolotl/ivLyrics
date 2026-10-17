@@ -93,10 +93,14 @@ const createRenderer = (source = currentSource) => {
 		setLocale: (next) => { locale = next; },
 		render: (line, position, props = {}) => {
 			hookIndex = 0;
-			return context.renderVocalLine({
+			const element = context.renderVocalLine({
 				line, position, isActive: true, globalCharOffset: 17,
 				activeGlobalCharIndex: 19, renderGranularity: "character", ...props,
 			});
+			// KaraokeLine delegates the vocal stack to its own component, so the
+			// rendered row can arrive as a component element rather than the host
+			// span. Unwrap exactly one level, the way React would mount it.
+			return typeof element?.tag === "function" ? element.tag(element.props) : element;
 		},
 	};
 };

@@ -8554,10 +8554,18 @@ const prefetchWordSupplementsForLyrics = (karaokeLines, { locale = "auto", sourc
 
 window.ivLyricsPrefetchWordSupplements = prefetchWordSupplementsForLyrics;
 
-const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = isActive, isEffectLive = isActive || isEffectFocused, settingsRevision = 0, globalCharOffset = 0, activeGlobalCharIndex = -1, phonetic = null, translation = null, furiganaMapOverride = null, charReadings = null, culturalAnnotations = null, renderGranularity = null, liveClock = null, livePositionMap = null }) => {
-  if (!line) {
-          return "";
-  }
+// React counts hooks per render, so a row that used to bail out early changed the
+// hook count and React threw "Rendered fewer hooks than expected" whenever a line
+// appeared or vanished (a blank beat, or the vocal rows coming and going as the
+// lyric text is re-laid out). Every hook now runs on every render; the missing
+// line is resolved against an inert row and the early returns moved below.
+const EMPTY_KARAOKE_LINE = Object.freeze({
+	text: '', syllables: [], startTime: 0, endTime: 0, vocals: null,
+});
+const KaraokeLine = react.memo(({ line: lineProp, position, isActive, isEffectFocused = isActive, isEffectLive = isActive || isEffectFocused, settingsRevision = 0, globalCharOffset = 0, activeGlobalCharIndex = -1, phonetic = null, translation = null, furiganaMapOverride = null, charReadings = null, culturalAnnotations = null, renderGranularity = null, liveClock = null, livePositionMap = null }) => {
+  const line = lineProp || EMPTY_KARAOKE_LINE;
+
+
 
   const wordTimed = renderGranularity
 	? renderGranularity === "word"
@@ -8651,7 +8659,85 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 		return { rowPhonetics, rowTranslations, stackPhonetic, stackTranslation, culturalAnnotationsByRow };
 	}, [vocalRows, vocalRowRenderData, phonetic, translation, culturalAnnotations, settingsRevision]);
 
-  if (vocalRows) {
+
+	// Every hook above runs on every render, so a line that arrives, disappears or
+	// gains and loses vocal rows never changes the hook count (React error #300).
+	// The two row shapes then live in their own components: a stacked row must
+	// never pay for the single-line glyph pipeline below it.
+	if (!lineProp) {
+		return "";
+	}
+
+	if (vocalRows) {
+		return react.createElement(KaraokeVocalStack, {
+			vocalRows,
+			vocalRowRenderData,
+			vocalActiveCharIndexes,
+			vocalRowLivePositionMaps,
+			vocalAuxiliaryData,
+			shouldUseVocalRowAnchor,
+			activeVocalRowIndex,
+			activeVocalAnchorPosition,
+			activeVocalAnchorWindowMs,
+			globalCharOffset,
+			position,
+			isActive,
+			isEffectFocused,
+			isEffectLive,
+			settingsRevision,
+			renderGranularity,
+			liveClock,
+		});
+	}
+
+	return react.createElement(KaraokeGlyphPipeline, {
+		line,
+		wordTimed,
+		livePaint,
+		liveRootRef,
+		liveDataRef,
+		lyricsLocale,
+		speakerColors,
+		position,
+		isActive,
+		isEffectFocused,
+		isEffectLive,
+		settingsRevision,
+		globalCharOffset,
+		activeGlobalCharIndex,
+		phonetic,
+		translation,
+		furiganaMapOverride,
+		charReadings,
+		culturalAnnotations,
+		renderGranularity,
+		liveClock,
+		livePositionMap,
+	});
+});
+
+// One voice row per singer. Its own component so a row that gains or loses vocal
+// rows mounts and unmounts cleanly instead of changing the hook count of the line
+// that owns it.
+const KaraokeVocalStack = ({
+	vocalRows,
+	vocalRowRenderData,
+	vocalActiveCharIndexes,
+	vocalRowLivePositionMaps,
+	vocalAuxiliaryData,
+	shouldUseVocalRowAnchor,
+	activeVocalRowIndex,
+	activeVocalAnchorPosition,
+	activeVocalAnchorWindowMs,
+	globalCharOffset,
+	position,
+	isActive,
+	isEffectFocused,
+	isEffectLive,
+	settingsRevision,
+	renderGranularity,
+	liveClock,
+}) => {
 		const { rowPhonetics, rowTranslations, stackPhonetic, stackTranslation, culturalAnnotationsByRow } = vocalAuxiliaryData;
           let rowGlobalCharOffset = globalCharOffset;
 		  const stackChildren = vocalRows.map((row, rowIndex) => {
@@ -8737,8 +8823,33 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
                   },
                   stackChildren
           );
-  }
+};
 
+// The single-line glyph pipeline, and the only place the timed-glyph work runs.
+const KaraokeGlyphPipeline = ({
+	line,
+	wordTimed,
+	livePaint,
+	liveRootRef,
+	liveDataRef,
+	lyricsLocale,
+	speakerColors,
+	position,
+	isActive,
+	isEffectFocused,
+	isEffectLive,
+	settingsRevision,
+	globalCharOffset,
+	activeGlobalCharIndex,
+	phonetic,
+	translation,
+	furiganaMapOverride,
+	charReadings,
+	culturalAnnotations,
+	renderGranularity,
+	liveClock,
+	livePositionMap,
+}) => {
 	const furiganaEnabled = CONFIG?.visual?.["furigana-enabled"] === true;
 	const furiganaReady = window.FuriganaConverter?.isAvailable?.() === true;
 	const hasCharReadings = charReadings instanceof Map && Array.from(charReadings.values()).some((entry) => typeof entry === 'string' ? !!entry : !!(entry && entry.text));
@@ -9045,6 +9156,8 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 		return element;
 	};
 	let charElements = effectiveUseTextRun ? [] : glyphUpdates.elements;
+
+
 	if (glyphUpdates) {
 		const updates = getKaraokeGlyphUpdates(glyphUpdates, position, isComplete);
 		if (updates === null) {
@@ -9116,7 +9229,7 @@ const KaraokeLine = react.memo(({ line, position, isActive, isEffectFocused = is
 				`[${annotation.marker}]`
 			))
 	);
-});
+};
 
 // Live karaoke painting.
 // React owns every discrete glyph state (pending, active, done, bouncing). The

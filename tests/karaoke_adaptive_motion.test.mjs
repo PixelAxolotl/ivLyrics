@@ -119,10 +119,13 @@ const createHarness = (source = currentSource, options = {}) => {
 		CONFIG, context, preparationCalls,
 		render: (line, position, props = {}) => {
 			hookIndex = 0;
-			return context.motionHarness.render({
+			const element = context.motionHarness.render({
 				line, position, isActive: true, globalCharOffset: 0,
 				activeGlobalCharIndex: -1, renderGranularity: "character", ...props,
 			});
+			// KaraokeLine renders a row through a child component, so the result can
+			// be a component element. Unwrap one level, the way React would mount it.
+			return typeof element?.tag === "function" ? element.tag(element.props) : element;
 		},
 	};
 };

@@ -6374,19 +6374,49 @@ ruby rt {
 
 /* Lyrics progress container (bottom right) */
 .fullscreen-lyrics-progress-container {
+  --iv-lyrics-progress-right: 24px;
   position: fixed;
   bottom: 24px;
-  right: 24px;
+  right: var(--iv-lyrics-progress-right);
+  width: max-content;
+  max-width: calc(100% - var(--iv-lyrics-progress-right) - 24px);
   z-index: 50;
   transition:
     opacity var(--iv-motion-duration-medium) var(--iv-motion-ease-standard),
-    transform var(--iv-motion-duration-slow) var(--iv-motion-ease-emphasis);
+    transform var(--iv-motion-duration-slow) var(--iv-motion-ease-emphasis),
+    right var(--iv-motion-duration-medium) var(--iv-motion-ease-emphasis),
+    max-width var(--iv-motion-duration-medium) var(--iv-motion-ease-emphasis);
 }
 
 .fullscreen-lyrics-progress-container.hidden {
   opacity: 0;
   transform: translateY(var(--iv-motion-distance-md));
   pointer-events: none;
+}
+
+.fullscreen-lyrics-progress-container .fullscreen-lyrics-progress {
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.fullscreen-lyrics-progress-container .fullscreen-lyrics-progress-bar {
+  flex: 0 1 120px;
+  min-width: 0;
+}
+
+.fullscreen-lyrics-progress-container .fullscreen-lyrics-progress-text {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.lyrics-lyricsContainer-LyricsContainer.motion-reduced .fullscreen-lyrics-progress-container {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fullscreen-lyrics-progress-container {
+    transition: none;
+  }
 }
 
 /* Progress bar container */
@@ -21032,6 +21062,16 @@ a.research-media-item:hover {
   opacity: 1;
   transform: none;
   pointer-events: auto;
+}
+
+/* The bottom-right progress pill shares its edge with the toolbar. Reserve
+   the measured column width only while its icon/entries are visible, including
+   a popup or keyboard focus that keeps it awake after the page idles. The
+   normal right inset returns when it fades out; no lyric layout is moved. */
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active:not(.controls-hidden):has(.ivl-tb) .fullscreen-lyrics-progress-container,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active:has(.ivl-tb:is(.is-engaged, :hover)) .fullscreen-lyrics-progress-container,
+.lyrics-lyricsContainer-LyricsContainer.fullscreen-active:has(.ivl-tb :focus-visible) .fullscreen-lyrics-progress-container {
+  --iv-lyrics-progress-right: calc(16px + var(--iv-fullscreen-toolbar-width, 68px) + 12px);
 }
 
 /* Tooltip, left of the toolbar */

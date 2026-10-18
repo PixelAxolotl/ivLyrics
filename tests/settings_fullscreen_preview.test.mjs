@@ -48,6 +48,33 @@ test("player, progress, volume and background switches have the same independent
   }
 });
 
+test("the album player keeps its timeline inside the control surface", () => {
+  const p = preview({ "fullscreen-controls-background": true });
+  assert.equal(p.within("settings-fs-control-surface", "settings-fs-progress").length, 1);
+  const rows = p.find("is-left").find(node => hasClass(node, "settings-fs-player")).props.children.filter(Boolean);
+  assert.equal(rows.length, 1, "the timeline is a row of the surface, not a sibling above it");
+  const timelineOnly = preview({ "fullscreen-show-controls": false });
+  assert.equal(timelineOnly.find("settings-fs-progress").length, 1);
+  assert.equal(timelineOnly.find("settings-fs-control-surface").length, 0,
+    "without transport buttons the album column keeps its bare timeline row");
+});
+
+test("the bottom player keeps its timeline inside the control surface", () => {
+  const p = preview({ "fullscreen-controls-position": "bottom", "fullscreen-controls-background": true });
+  assert.equal(p.within("settings-fs-control-surface", "settings-fs-progress").length, 1);
+  const rows = p.find("is-bottom").find(node => hasClass(node, "settings-fs-player")).props.children.filter(Boolean);
+  assert.equal(rows.length, 1, "the timeline is a row of the surface, not a sibling above it");
+  assert.ok(hasClass(rows[0], "settings-fs-control-surface"));
+  const timelineOnly = preview({ "fullscreen-controls-position": "bottom", "fullscreen-show-controls": false,
+    "fullscreen-controls-background": true });
+  assert.equal(timelineOnly.find("settings-fs-controls").length, 0);
+  assert.equal(timelineOnly.find("settings-fs-control-surface").length, 1);
+  assert.equal(timelineOnly.within("settings-fs-control-surface", "settings-fs-progress").length, 1);
+  assert.equal(timelineOnly.find("has-bg").length, 1, "the timeline-only surface follows the background setting");
+  assert.equal(preview({ "fullscreen-controls-position": "bottom", "fullscreen-show-controls": false })
+    .find("has-bg").length, 0);
+});
+
 test("reversed and single-column layouts keep actual album/control ownership", () => {
   for (const view of ["normal", "cd"]) {
     const reversed = preview({ "fullscreen-layout-reverse": true }, view);

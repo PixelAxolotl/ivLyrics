@@ -967,7 +967,8 @@ const FullscreenOverlay = (() => {
             },
                 react.createElement("div", {
                     className: "fullscreen-progress-fill",
-                    style: { transform: `scaleX(${Math.max(0, Math.min(1, progressPercent / 100))})` }
+                    // Width, not scaleX: a scaled pill squashes its own caps.
+                    style: { width: `${Math.max(0, Math.min(100, progressPercent))}%` }
                 }),
                 react.createElement("div", {
                     className: "fullscreen-progress-handle",
@@ -979,7 +980,8 @@ const FullscreenOverlay = (() => {
     };
 
     // Player Controls Component (개선된 UI/UX)
-    const PlayerControls = ({ show, showVolume = true, buttonSize = 36, showBackground = false }) => {
+    const PlayerControls = ({ show, showVolume = true, buttonSize = 36, showBackground = false,
+        showProgress = false, progressOnly = false }) => {
         const [isPlaying, setIsPlaying] = useState(false);
         const [isShuffle, setIsShuffle] = useState(false);
         const [repeatMode, setRepeatMode] = useState(0);
@@ -1002,7 +1004,7 @@ const FullscreenOverlay = (() => {
 
         // 재생 상태를 Spicetify.Player.data.isPaused에서 직접 가져옴
         useEffect(() => {
-            if (!show) return;
+            if (!show || progressOnly) return;
 
             const updatePlayState = () => {
                 // Spicetify.Player.data.isPaused가 가장 신뢰할 수 있는 소스
@@ -1075,7 +1077,7 @@ const FullscreenOverlay = (() => {
         }, [isPlaylistPickerOpen]);
 
         useEffect(() => {
-            if (!show) return;
+            if (!show || progressOnly) return;
 
             const updatePlaylistTrackUri = () => {
                 const nextTrackUri = Spicetify.Player.data?.item?.uri || "";
@@ -1537,10 +1539,12 @@ const FullscreenOverlay = (() => {
         return react.createElement("div", {
             className: `fullscreen-player-controls ${showBackground ? 'with-background' : ''}`
         },
+            // Timeline row, grouped inside the surface that owns the background
+            showProgress && react.createElement(ProgressBar, { show: true }),
             // Main control row: like, shuffle, prev, play, next, repeat, add-to-playlist
-            renderMainControlRow(),
+            !progressOnly && renderMainControlRow(),
             // Volume row
-            showVolume && renderVolumeRow()
+            showVolume && !progressOnly && renderVolumeRow()
         );
     };
 
@@ -3775,14 +3779,13 @@ const FullscreenOverlay = (() => {
                             className: leftPlayerControlsClass,
                             ref: setControllerHeightRef
                         },
-                            // Progress bar (독립적으로 표시)
-                            showProgress && react.createElement(ProgressBar, { show: true }),
-                            // Player controls
+                            // Player controls, with the timeline inside their surface
                             react.createElement(PlayerControls, {
                                 show: true,
                                 showVolume: leftPanelShowVolume,
                                 buttonSize: leftPanelControlButtonSize,
-                                showBackground: leftPanelControlsBackground
+                                showBackground: leftPanelControlsBackground,
+                                showProgress
                             })
                         ),
                         // Progress bar only (컨트롤 없이 진행바만 표시)
@@ -3845,19 +3848,25 @@ const FullscreenOverlay = (() => {
             !isPortraitFullscreen && showControlsInBottom && react.createElement("div", {
                 className: `fullscreen-bottom ${!uiVisible ? 'hidden' : ''}`
             },
-                showProgress && react.createElement(ProgressBar, { show: true }),
                 react.createElement(PlayerControls, {
                     show: true,
                     showVolume,
                     buttonSize: controlButtonSize,
-                    showBackground: controlsBackground
+                    showBackground: controlsBackground,
+                    showProgress
                 })
             ),
-            // Progress bar only at bottom (landscape only)
+            // Progress bar only at bottom (landscape only) - same surface as the controls
             !isPortraitFullscreen && !showControls && showProgress && controlsPosition === "bottom" && react.createElement("div", {
                 className: `fullscreen-bottom ${!uiVisible ? 'hidden' : ''}`
             },
-                react.createElement(ProgressBar, { show: true })
+                react.createElement(PlayerControls, {
+                    show: true,
+                    showVolume: false,
+                    showBackground: controlsBackground,
+                    showProgress: true,
+                    progressOnly: true
+                })
             ),
             // Lyrics progress (always at bottom right if enabled)
             !tvModeEnabled && showLyricsProgress && react.createElement("div", {

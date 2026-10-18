@@ -97,12 +97,96 @@ test("volume, progress, background and 28-48px button preferences still reach th
       assert.equal(player.props.buttonSize, buttonSize);
       assert.equal(player.props.showVolume, showVolume);
       assert.equal(player.props.showBackground, showBackground);
-      assert.equal(elements(tree).some(node => node.type === "ProgressBar"), showProgress);
+      assert.equal(player.props.showProgress, showProgress, "the surface owns its timeline");
     }
   }
   const progressOnly = render({ showControlsInLeftPanel: false, showControls: false });
   assert.ok(findClass(progressOnly, "left-controls-progress-only"));
   assert.equal(elements(progressOnly).some(node => node.type === "PlayerControls"), false);
+});
+
+const controlsFrom = source.indexOf("    // Progress Bar Component");
+const controlsTo = source.indexOf("    // Lyrics Progress Indicator", controlsFrom);
+assert.ok(controlsFrom >= 0 && controlsTo > controlsFrom, "exercise the production timeline and control surface");
+
+// Render the real components so their own hooks decide what they start.
+// Effects write into the slot store, so the returned tree carries their state.
+function renderComponent(component, props, extra = {}) {
+  const intervals = [];
+  const slots = [];
+  let cursor = 0;
+  const react = {
+    useState: (initial) => {
+      const index = cursor++;
+      if (!(index in slots)) slots[index] = typeof initial === "function" ? initial() : initial;
+      return [slots[index], (next) => {
+        slots[index] = typeof next === "function" ? next(slots[index]) : next;
+      }];
+    },
+    useRef: (current) => ({ current }),
+    useMemo: (factory) => factory(),
+    useCallback: (callback) => callback,
+    useEffect: (effect) => { effect(); },
+    createElement: (type, elementProps, ...children) => ({ type, props: { ...elementProps, children } }),
+  };
+  const context = {
+    react, console, window: {}, document: { addEventListener() {}, removeEventListener() {} },
+    formatTime: () => "0:00", I18n: { t: (key) => key }, Toast: { success() {}, error() {} },
+    PLAYLIST_ADD_ICON_PATH: "", PLAYLIST_STATUS_BATCH_SIZE: 1,
+    Spicetify: {
+      Player: { data: { item: { uri: "spotify:track:one" } }, getVolume: () => 1, getShuffle: () => false,
+        getRepeat: () => 0, getProgress: () => 90000, getDuration: () => 180000,
+        addEventListener() {}, removeEventListener() {} },
+      SVGIcons: new Proxy({}, { get: () => "" }),
+    },
+    setInterval(callback, delay) { intervals.push(delay); return intervals.length; },
+    clearInterval() {}, setTimeout: () => 0, clearTimeout() {},
+    ...extra,
+  };
+  const run = () => {
+    cursor = 0;
+    const scope = vm.createContext({ ...context });
+    return vm.runInContext(`const { useState, useEffect, useCallback, useMemo, useRef } = react;\n` +
+      `${source.slice(controlsFrom, controlsTo)}\n` +
+      `${component}(${JSON.stringify({ show: true, ...props })})`, scope);
+  };
+  intervals.length = 0;
+  run();
+  return { tree: run(), intervals };
+}
+
+test("the timeline spans its new surface and both of its ends stay round at any thickness", () => {
+  const nested = declarations(".fullscreen-player-controls > .fullscreen-progress-standalone");
+  assert.equal(nested["margin-bottom"], "0", "the surface gap replaces the standalone margin");
+  assert.equal(nested["max-width"], "none", "the timeline spans the surface instead of a 400px cap");
+  assert.equal(nested.width, "100%");
+  assert.doesNotMatch(styles, /\.fullscreen-bottom\.hidden \.fullscreen-progress-standalone/,
+    "the hidden surface animates as a whole now");
+  for (const selector of [".fullscreen-progress-bar", ".fullscreen-progress-fill"]) {
+    assert.equal(declarations(selector)["border-radius"], "999px", selector);
+  }
+  const fill = findClass(renderComponent("ProgressBar").tree, "fullscreen-progress-fill");
+  assert.equal(fill.props.style.width, "50%", "a width-driven fill keeps its caps round at any progress");
+  assert.equal(fill.props.style.transform, undefined, "scaleX squashes the cap radii horizontally");
+  assert.equal(findClass(renderComponent("ProgressBar").tree, "fullscreen-progress-handle").props.style.left, "50%",
+    "the handle still tracks the fill");
+});
+
+test("a timeline-only bottom surface keeps the control background without polling the player", () => {
+  const timelineOnly = renderComponent("PlayerControls",
+    { showVolume: false, showProgress: true, progressOnly: true, showBackground: true });
+  const surface = findClass(timelineOnly.tree, "fullscreen-player-controls");
+  assert.ok(surface.props.className.split(" ").includes("with-background"),
+    "the timeline-only surface keeps the controls background");
+  assert.ok(elements(timelineOnly.tree).some(node => node.type?.name === "ProgressBar"),
+    "the timeline is a row of that surface");
+  assert.equal(elements(timelineOnly.tree).some(node => node.props.className === "fullscreen-control-main-row"), false,
+    "no transport buttons in a timeline-only surface");
+  assert.deepEqual(timelineOnly.intervals, [], "a timeline-only surface never polls the player");
+  assert.ok(renderComponent("PlayerControls").intervals.includes(500),
+    "the transport buttons still follow playback");
+  assert.equal(findClass(renderComponent("PlayerControls").tree, "fullscreen-player-controls")
+    .props.className.split(" ").includes("with-background"), false, "no background unless it is asked for");
 });
 
 test("coarse pointers keep 44px touch targets without reducing the configured buttons", () => {

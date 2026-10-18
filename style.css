@@ -6330,8 +6330,7 @@ ruby rt {
   pointer-events: none;
 }
 
-.fullscreen-bottom.hidden .fullscreen-player-controls,
-.fullscreen-bottom.hidden .fullscreen-progress-standalone {
+.fullscreen-bottom.hidden .fullscreen-player-controls {
   transform: translateY(var(--iv-motion-distance-sm)) scale(0.985);
   opacity: 0;
 }
@@ -6467,7 +6466,8 @@ ruby rt {
   flex: 1;
   height: 6px;
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
+  /* Height-independent radius: both ends stay round when hover thickens the bar. */
+  border-radius: 999px;
   cursor: pointer;
   position: relative;
   transition:
@@ -6484,9 +6484,8 @@ ruby rt {
   width: 100%;
   height: 100%;
   background: var(--spice-text);
-  border-radius: 3px;
-  transform-origin: left center;
-  transition: transform var(--iv-motion-duration-medium) var(--iv-motion-ease-emphasis);
+  border-radius: 999px;
+  transition: width var(--iv-motion-duration-medium) var(--iv-motion-ease-emphasis);
 }
 
 .fullscreen-progress-handle {
@@ -6848,6 +6847,14 @@ ruby rt {
   -webkit-backdrop-filter: blur(20px);
   padding: 16px 20px;
   border-radius: 16px;
+}
+
+/* A surface groups its timeline: the surface gap replaces the standalone
+   margin and the timeline spans the whole inner width. */
+.fullscreen-player-controls > .fullscreen-progress-standalone {
+  margin-bottom: 0;
+  max-width: none;
+  width: 100%;
 }
 
 /* Fit the under-album controller to its contents without entering the lyrics

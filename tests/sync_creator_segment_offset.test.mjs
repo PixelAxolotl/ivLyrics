@@ -243,6 +243,21 @@ test('manual split offset targets the selected part of the original source row, 
     assert.deepEqual(before.lines[1].chars, [11, 11.25, 11.5, 11.75]);
 });
 
+test('a word selected inside a stacked part offsets only that word, never the whole line', () => {
+    const editor = createEditor({ rows: ['PRE', 'ABCDEF', 'TAIL'] });
+    editor.split(2);
+    editor.render('b');
+    const parts = plain(editor.context.currentParallelData.parts);
+    assert.deepEqual(parts[1].chars, [11.5, 11.75, 12, 12.25]);
+    editor.context.offsetSelectionRangeRef = { current: { start: 1, end: 2 } };
+    editor.api.adjustCurrentLineOffset(100);
+    const after = plain(editor.line().parallel.parts);
+    assert.deepEqual(after[1].chars, [11.5, 11.85, 12.1, 12.25], 'only the selected word moves');
+    assert.deepEqual(after[0].chars, parts[0].chars, 'the sibling part never moves');
+    editor.render('b');
+    assert.deepEqual(editor.times(), [11.5, 11.85, 12.1, 12.25]);
+});
+
 for (const row of ['AB / CD', 'AB (CD) EF', 'AB | CD | EF']) {
     test(`automatic vocal offset is independent for ${JSON.stringify(row)}`, () => {
         const editor = createEditor({ rows: ['PRE', row, 'TAIL'] });

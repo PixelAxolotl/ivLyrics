@@ -120,6 +120,18 @@ test('plain context menu selects one character; another click inside clears sele
 	assert.equal(h.context.offsetSelectionRangeRef.current, null);
 });
 
+test('a plain right-click arms the word under the cursor; a second right-click disarms it', () => {
+	const h = createLockedEditor({ text: 'AB CD EF', saved: [1, 2, 3, 4, 5, 6, 7, 8] });
+	h.context.mode = 'idle';
+	h.context.getGranularityEndIndex = index => (index >= 6 ? 7 : index >= 3 ? 4 : 1);
+	h.contextMenu(3);
+	assert.deepEqual(JSON.parse(JSON.stringify(h.context.offsetSelectionRangeRef.current)), { start: 3, end: 4 });
+	h.api.adjustCurrentLineOffset(100);
+	assert.deepEqual(h.times(), [1, 2, 3, 4.1, 5.1, 6, 7, 8]);
+	h.contextMenu(3);
+	assert.equal(h.context.offsetSelectionRangeRef.current, null);
+});
+
 test('queued repeated selection offsets compute from the latest functional state', () => {
 	const h = createLockedEditor(); h.context.mode = 'idle'; h.select(1, 2);
 	const queued = [], apply = h.context.setSyncData;

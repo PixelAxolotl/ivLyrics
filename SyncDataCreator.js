@@ -7230,7 +7230,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			if (offsetRange && clickedIndex >= offsetRange.start && clickedIndex <= offsetRange.end) {
 				clearOffsetSelection();
 			} else {
-				setOffsetSelectionRangeValue(clickedIndex, clickedIndex);
+				// Arm the whole granularity unit under the cursor (a word in word
+				// mode, one character in character mode) instead of a single glyph.
+				const armEnd = Math.max(clickedIndex, Math.min(getGranularityEndIndex(clickedIndex), currentLineChars.length - 1));
+				setOffsetSelectionRangeValue(clickedIndex, armEnd);
 			}
 			return;
 		}
@@ -7305,6 +7308,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		clearRecordingLock,
 		clearOffsetSelection,
 		setOffsetSelectionRangeValue,
+		getGranularityEndIndex,
 		getCurrentSyncTargetSavedChars,
 		getActiveRecordingLockRange,
 		setRecordingLockRangeValue,
@@ -9010,16 +9014,20 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		// Right-drag offset ranges only exist outside record mode (entering
 		// record clears them). Read the ref synchronously in the click handler.
 		// Locks are record-mode-only and released on mode exit, so no lock
-		// interaction exists on this path by design. Parallel parts keep the
-		// whole-line path below so per-part timing runs stay intact.
-		const selectedRange = mode !== 'record' && !activeParallelPart ? offsetSelectionRangeRef.current : null;
+		// interaction exists on this path by design. A range covering the whole
+		// displayed line falls through to the whole-line path below.
+		const selectedRange = mode !== 'record' ? offsetSelectionRangeRef.current : null;
 		const selectionRange = selectedRange && !(selectedRange.start === 0 && selectedRange.end === currentLineChars.length - 1)
 			? selectedRange : null;
 		if (selectionRange) {
 			const existing = Array.isArray(syncData?.lines)
 				? syncData.lines.find(line => line.start === currentLineStart)
 				: null;
-			const savedChars = Array.isArray(existing?.chars) ? existing.chars : [];
+			// Stacked parts keep their timing in their own runs, so the selection
+			// reads the active part's marks instead of the shared source row.
+			const savedChars = activeParallelPart
+				? (Array.isArray(activeParallelPart.chars) ? activeParallelPart.chars : [])
+				: (Array.isArray(existing?.chars) ? existing.chars : []);
 			if (savedChars.length <= selectionRange.end || savedChars.slice(selectionRange.start, selectionRange.end + 1).some(time => !isFiniteSyncCreatorTime(time))) {
 				Toast.error(I18n.t('syncCreator.selectionOffsetRequiresTiming') || 'Selected characters need timing first - sync the line before offsetting part of it.');
 				return;
@@ -9030,15 +9038,43 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				if (!prev || !Array.isArray(prev.lines)) return prev;
 				const targetIndex = prev.lines.findIndex(line => line.start === currentLineStart);
 				if (targetIndex < 0) return prev;
-				const shifted = shiftSyncCreatorSelectionTimes(
-					prev.lines[targetIndex].chars, selectionRange.start, selectionRange.end,
+				const sourceLine = prev.lines[targetIndex];
+				if (!activeParallelPart) {
+					const shifted = shiftSyncCreatorSelectionTimes(
+						sourceLine.chars, selectionRange.start, selectionRange.end,
+						deltaMs / 1000, SYNC_CREATOR_MIN_SEQUENTIAL_STEP_SEC
+					);
+					if (!shifted.ok) return prev;
+					return {
+						...prev,
+						lines: prev.lines.map((line, index) => index === targetIndex
+							? { ...line, chars: shifted.times }
+							: line)
+					};
+				}
+				// Stacked parts keep their timing in their own runs, so the shift
+				// lands on the active part's chars and the merged row is rebuilt.
+				const parallel = mergeSyncCreatorParallelTemplate(currentParallelTemplate, sourceLine);
+				const targetPart = parallel?.parts?.find(part => part.id === activeParallelPart.id
+					&& areSyncCreatorParallelRangesEqual(part.ranges, activeParallelPart.ranges));
+				if (!targetPart) return prev;
+				const shiftedPart = shiftSyncCreatorSelectionTimes(
+					targetPart.chars, selectionRange.start, selectionRange.end,
 					deltaMs / 1000, SYNC_CREATOR_MIN_SEQUENTIAL_STEP_SEC
 				);
-				if (!shifted.ok) return prev;
+				if (!shiftedPart.ok) return prev;
 				return {
 					...prev,
 					lines: prev.lines.map((line, index) => index === targetIndex
-						? { ...line, chars: shifted.times }
+						? refreshSyncCreatorLineCharsFromParallel({
+							...sourceLine,
+							parallel: preserveSyncCreatorParallelTimingRuns({
+								...parallel,
+								parts: parallel.parts.map(part => part === targetPart
+									? { ...part, chars: shiftedPart.times }
+									: part)
+							})
+						})
 						: line)
 				};
 			});
@@ -9109,7 +9145,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				lines: prev.lines.map((line, index) => index === targetIndex ? shiftedLine : line)
 			};
 		});
-	}, [claimSessionForLocalEditing, currentLineStart, activeParallelPart, currentParallelTemplate, resetCurrentSyncInput, mode, syncData, currentLineChars.length]);
+	}, [claimSessionForLocalEditing, resetCurrentSyncInput, currentLineStart, currentLineChars.length, currentParallelTemplate, activeParallelPart, mode, syncData]);
 
 	const resetFromStart = useCallback(async () => {
 		const confirmed = window.confirm(

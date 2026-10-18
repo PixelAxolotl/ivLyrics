@@ -5719,6 +5719,8 @@ ruby rt {
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  min-width: 0;
+  min-height: 0;
   height: 100%;
   /* Reserve space for ticker */
   padding: 40px;
@@ -5742,11 +5744,28 @@ ruby rt {
   align-items: center;
   /* Center align content */
   text-align: center;
+  min-width: 0;
   max-width: 90%;
   width: 100%;
   transition:
     transform var(--iv-motion-duration-slow) var(--iv-motion-ease-emphasis),
     opacity var(--iv-motion-duration-medium) var(--iv-motion-ease-standard);
+}
+
+/* Auto margins center a stack that fits and resolve to zero when it overflows,
+   so the top and bottom both remain reachable without changing saved sizes. */
+.lyrics-fullscreen-left-panel:has(.left-controls-player) {
+  justify-content: flex-start;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.26) transparent;
+}
+
+.lyrics-fullscreen-left-panel:has(.left-controls-player) > .lyrics-fullscreen-left-content {
+  flex-shrink: 0;
+  margin-block: auto;
 }
 
 .lyrics-fullscreen-album-art {
@@ -6343,6 +6362,8 @@ ruby rt {
 .fullscreen-left-controls {
   margin-top: 24px;
   width: 100%;
+  min-width: 0;
+  max-width: min(100%, var(--iv-fullscreen-controller-max-width, 100%));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -6827,6 +6848,47 @@ ruby rt {
   -webkit-backdrop-filter: blur(20px);
   padding: 16px 20px;
   border-radius: 16px;
+}
+
+/* Fit the under-album controller to its contents without entering the lyrics
+   region. Include background padding in the bound and wrap, never shrink, the
+   configured buttons. Bottom, portrait and TV controls keep their own layout. */
+.fullscreen-left-controls > .fullscreen-player-controls {
+  box-sizing: border-box;
+  width: fit-content;
+  min-width: 0;
+  max-width: 100%;
+  flex-shrink: 0;
+  padding-inline: clamp(4px, 4%, 20px);
+}
+
+.fullscreen-left-controls > .fullscreen-progress-container,
+.fullscreen-left-controls > .fullscreen-progress-standalone {
+  flex-shrink: 0;
+}
+
+.fullscreen-left-controls .fullscreen-control-main-row {
+  flex-wrap: wrap;
+}
+
+.fullscreen-left-controls .fullscreen-control-btn,
+.fullscreen-left-controls .fullscreen-playlist-control {
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.fullscreen-left-controls .fullscreen-volume-wrapper {
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+@media (pointer: coarse) {
+  .fullscreen-left-controls .fullscreen-control-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
 }
 
 /* Lyrics progress indicator */

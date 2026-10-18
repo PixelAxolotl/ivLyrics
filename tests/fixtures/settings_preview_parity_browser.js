@@ -105,13 +105,24 @@ async page => {
           if (!element) return null;
           const box = element.getBoundingClientRect(), parent = host.getBoundingClientRect();
           const x = (box.left + box.right - parent.left - parent.right) / 2 / parent.width;
+          const y = (box.top + box.bottom - parent.top - parent.bottom) / 2 / parent.height;
+          // With album art hidden, the in-column timeline sits near the
+          // center. Font metrics and content-fit controls can put it a few
+          // percent either side of the midpoint; that is not a new corner.
           return [Math.abs(x) < .04 ? 'center' : x < 0 ? 'left' : 'right',
-            (box.top + box.bottom) / 2 < (parent.top + parent.bottom) / 2 ? 'top' : 'bottom'].join('-');
+            Math.abs(y) < .04 ? 'center' : y < 0 ? 'top' : 'bottom'].join('-');
+        };
+        const centerY = (host, selector) => {
+          const element = host.querySelector(selector);
+          if (!element) return null;
+          const box = element.getBoundingClientRect(), parent = host.getBoundingClientRect();
+          return ((box.top + box.bottom) / 2 - parent.top) / parent.height;
         };
         return { clock: [quadrant(preview, '.settings-fs-clock'), quadrant(runtime, '.fullscreen-clock')],
           context: [quadrant(preview, '.settings-fs-context'), quadrant(runtime, '.fullscreen-context-info')],
           lyricProgress: [quadrant(preview, '.settings-fs-lprog'), quadrant(runtime, '.fullscreen-lyrics-progress')],
           transport: [quadrant(preview, '.settings-fs-progress'), quadrant(runtime, '.fullscreen-progress-bar, .fullscreen-tv-progress-bar, .fullscreen-stage-controls-progress')],
+          transportCenterY: [centerY(preview, '.settings-fs-progress'), centerY(runtime, '.fullscreen-progress-bar, .fullscreen-tv-progress-bar, .fullscreen-stage-controls-progress')],
           previewMode: preview.dataset.previewMode };
       });
       for (const key of ['clock', 'context', 'lyricProgress', 'transport']) {

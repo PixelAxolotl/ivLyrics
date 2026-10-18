@@ -2010,6 +2010,60 @@ const FullscreenOverlay = (() => {
         );
     });
 
+    // Wrapped controls need their full natural height in the album stack, even
+    // while max-height animates to zero. Observe the in-flow children only;
+    // an absolute playlist popover must not change the collapse distance.
+    const observeFullscreenControllerHeight = (container) => {
+        const view = container.ownerDocument?.defaultView || window;
+        const property = "--iv-fullscreen-controls-height";
+        let frame = null;
+        let disposed = false;
+        const pixels = value => Number.parseFloat(value) || 0;
+        const measure = () => {
+            frame = null;
+            if (disposed || !container.isConnected) return;
+            const children = Array.from(container.children).filter(child => child.offsetHeight > 0);
+            const style = view.getComputedStyle(container);
+            let height = pixels(style.paddingTop) + pixels(style.paddingBottom)
+                + pixels(style.borderTopWidth) + pixels(style.borderBottomWidth)
+                + Math.max(0, children.length - 1) * pixels(style.rowGap);
+            for (const child of children) {
+                const childStyle = view.getComputedStyle(child);
+                // offsetHeight ignores the ancestor's hidden-state scale.
+                height += child.offsetHeight + pixels(childStyle.marginTop) + pixels(childStyle.marginBottom);
+            }
+            if (height <= 0) return;
+            const value = `${Math.ceil(height)}px`;
+            if (container.style.getPropertyValue(property) !== value) container.style.setProperty(property, value);
+        };
+        const schedule = () => {
+            if (!disposed && frame === null) frame = view.requestAnimationFrame(measure);
+        };
+        const resizeObserver = typeof view.ResizeObserver === "function"
+            ? new view.ResizeObserver(schedule) : null;
+        const observeChildren = () => {
+            if (disposed) return;
+            if (frame !== null) view.cancelAnimationFrame(frame);
+            frame = null;
+            resizeObserver?.disconnect();
+            for (const child of container.children) resizeObserver?.observe(child);
+            measure();
+        };
+        const mutationObserver = typeof view.MutationObserver === "function"
+            ? new view.MutationObserver(observeChildren) : null;
+        mutationObserver?.observe(container, { childList: true });
+        if (!resizeObserver) view.addEventListener("resize", schedule);
+        observeChildren();
+        return () => {
+            disposed = true;
+            if (frame !== null) view.cancelAnimationFrame(frame);
+            resizeObserver?.disconnect();
+            mutationObserver?.disconnect();
+            if (!resizeObserver) view.removeEventListener("resize", schedule);
+            container.style.removeProperty(property);
+        };
+    };
+
     // Center standard fullscreen lyrics beside the outer edge of the album or
     // CD spectrum. Measure its stable frame, never the rotating artwork bounds.
     // Keep observation away from the frequently changing karaoke subtree.
@@ -2174,6 +2228,13 @@ const FullscreenOverlay = (() => {
             }
             return window.matchMedia("(orientation: portrait)").matches;
         });
+        const controllerHeightCleanupRef = useRef(null);
+        const setControllerHeightRef = useCallback((container) => {
+            controllerHeightCleanupRef.current?.();
+            controllerHeightCleanupRef.current = container
+                ? observeFullscreenControllerHeight(container)
+                : null;
+        }, []);
         const hideTimerRef = useRef(null);
         const uiVisibleRef = useRef(true);
         const tmiOpeningRef = useRef(false);
@@ -3605,7 +3666,14 @@ const FullscreenOverlay = (() => {
                     // Normal Mode
                     react.createElement("div", {
                         className: "lyrics-fullscreen-left-content",
-                        style: { gap: `${infoGap}px` }
+                        style: {
+                            gap: `${infoGap}px`,
+                            // Lyrics start at the visible album edge, which can
+                            // be inside the grid column for a small cover/CD.
+                            "--iv-fullscreen-controller-max-width": showAlbum
+                                ? `${albumSize * (cdAlbumActive ? cdScale : 1)}px`
+                                : undefined
+                        }
                     },
                         // Album click toggles LP mode. Context click or hold opens TMI.
                         showAlbum && react.createElement("div", {
@@ -3704,7 +3772,8 @@ const FullscreenOverlay = (() => {
                         ),
                         // Controls in left panel (under album)
                         showControlsInLeftPanel && react.createElement("div", {
-                            className: leftPlayerControlsClass
+                            className: leftPlayerControlsClass,
+                            ref: setControllerHeightRef
                         },
                             // Progress bar (독립적으로 표시)
                             showProgress && react.createElement(ProgressBar, { show: true }),

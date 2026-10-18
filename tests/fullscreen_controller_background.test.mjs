@@ -20,15 +20,23 @@ const controller = `${left} > .fullscreen-player-controls`;
 const start = source.indexOf("        const renderLeftPanel =");
 const end = source.indexOf("        const renderTopRightOverlay =", start);
 assert.ok(start >= 0 && end > start, "exercise the production under-album renderer");
+// The hover-gate derivation lives above the renderer, so pull it in too rather than
+// stubbing the visibility decision the assertions below depend on.
+const gateStart = source.indexOf("        const hoverGateControls =");
+const gateEnd = source.indexOf("        const showContextInOverlay =", gateStart);
+assert.ok(gateStart >= 0 && gateEnd > gateStart, "exercise the production hover-gate decision");
+const panelSource = source.slice(gateStart, gateEnd) + "\n" + source.slice(start, end);
 
 function render(overrides = {}) {
   const context = vm.createContext({
     react: { createElement: (type, props, ...children) => ({ type, props: { ...props, children } }) },
     uiVisible: true, showControlsInLeftPanel: true, tmiMode: false,
+    autoHideUI: true, pointerCanHover: true, leftControlsRevealed: true,
+    setControlsHoverSource() {},
     setAlbumLyricsPanelRef() {}, setControllerHeightRef() {}, infoGap: 24, showAlbum: true,
     albumSize: 400, cdAlbumActive: false, cdScale: 1, albumRadius: 12,
     albumInteractionProps: {}, cdSlotStyle: {}, albumShadow: true,
-    renderAlbumVisual() {}, renderAlbumModeHint() {}, showInfoInOverlay: false,
+    renderAlbumVisual() {}, renderAlbumModeHint() {}, renderTmiModeView() {}, showInfoInOverlay: false,
     showProgress: true, showControls: true, ProgressBar: "ProgressBar",
     PlayerControls: "PlayerControls", leftPanelShowVolume: true,
     leftPanelControlButtonSize: 36, leftPanelControlsBackground: true,
@@ -36,7 +44,7 @@ function render(overrides = {}) {
     leftProgressOnlyClass: "fullscreen-left-controls left-controls-progress-only",
     ...overrides,
   });
-  return vm.runInContext(`${source.slice(start, end)}\nrenderLeftPanel();`, context);
+  return vm.runInContext(`${panelSource}\nrenderLeftPanel();`, context);
 }
 const elements = node => Array.isArray(node) ? node.flatMap(elements)
   : node?.props ? [node, ...elements(node.props.children)] : [];
@@ -202,13 +210,158 @@ test("hide animations and the separate portrait, bottom and TV layouts retain th
     assert.match(css.transform, /translateY\(var\(--iv-motion-distance-md\)\) scale\(0\.985\)/);
   }
   assert.match(declarations(left).transition, /max-height var\(--iv-motion-duration-slow\)/);
-  assert.ok(findClass(render({ uiVisible: false }), "controls-hidden"));
+  assert.ok(findClass(render({ leftControlsRevealed: false }), "controls-hidden"));
+  assert.ok(!findClass(render({ leftControlsRevealed: true }), "controls-hidden"),
+    "hovering the album column reveals the controller");
   assert.equal(declarations(".portrait-overlay-bottom .fullscreen-player-controls").width, "100%");
   assert.equal(declarations(".portrait-overlay-bottom .fullscreen-player-controls.with-background").background, "transparent !important");
   assert.equal(declarations(".fullscreen-bottom").position, "fixed");
   assert.equal(declarations(".fullscreen-tv-controls").display, "flex");
   assert.equal(source.slice(start, end).match(/"--iv-fullscreen-controller-max-width"/g)?.length, 1,
     "the under-album content publishes its album width bound");
+});
+
+test("only the album column gates the left-panel controller, and only for hover-capable pointers", () => {
+  const gated = overrides => !!findClass(render(overrides), "controls-hidden");
+  // Hovering the column is the single trigger once auto-hide UI is on.
+  assert.equal(gated({ leftControlsRevealed: true, uiVisible: true }), false);
+  assert.equal(gated({ leftControlsRevealed: true, uiVisible: false }), false,
+    "the global idle timer must no longer hide the controller");
+  assert.equal(gated({ leftControlsRevealed: false, uiVisible: true }), true,
+    "mouse movement in the lyrics pane must not reveal the controller");
+  // Auto-hide off, TMI, or a touch-only pointer fall back to the pinned behaviour.
+  assert.equal(gated({ leftControlsRevealed: false, uiVisible: true, autoHideUI: false }), false);
+  assert.equal(gated({ leftControlsRevealed: false, uiVisible: true, pointerCanHover: false }), false);
+  assert.equal(gated({ leftControlsRevealed: false, uiVisible: true, tmiMode: true, autoHideUI: true }), false);
+  // Every non-gating combination still follows the idle timer.
+  assert.equal(gated({ leftControlsRevealed: false, uiVisible: false, autoHideUI: false }), true);
+  assert.equal(gated({ leftControlsRevealed: false, uiVisible: false, pointerCanHover: false }), true);
+
+  // The hover strip is 115% of the album, full height, and only exists when gating.
+  const zoneOf = overrides => findClass(render(overrides), "lyrics-fullscreen-hover-zone");
+  assert.equal(zoneOf({ albumSize: 400 }).props.style.width, "460px");
+  assert.equal(zoneOf({ albumSize: 200 }).props.style.width, "230px");
+  assert.equal(zoneOf({ autoHideUI: false }), undefined, "no strip when nothing is hover-gated");
+  assert.equal(zoneOf({ pointerCanHover: false }), undefined, "a touch device cannot use the strip");
+  const zone = declarations(".lyrics-fullscreen-hover-zone");
+  assert.equal(zone.position, "absolute");
+  assert.equal(zone.height, "100%");
+  assert.equal(zone["z-index"], "-1", "the strip must sit behind the album and metadata links");
+
+  // Asymmetric reveal: quick in, unhurried out.
+  const hide = declarations(`.lyrics-fullscreen-left-panel.controls-hidden ${left}`).transition;
+  const show = declarations(`.lyrics-fullscreen-left-panel:not(.controls-hidden) ${left}`).transition;
+  assert.match(hide, /opacity 1000ms/);
+  assert.match(show, /opacity 150ms/);
+  // `max-height` collapses alongside `overflow: hidden`, so it must track the
+  // opacity. Clipping early made a 1s fade read as instant.
+  assert.match(hide, /max-height 1000ms/,
+    "the collapse must not outrun the fade or the fade looks instantaneous");
+});
+
+test("hover gating ignores the (hover: none) media query Spotify's CEF gets wrong", () => {
+  // Regression guard: CEF reports "(hover: none)" with a mouse attached, so gating
+  // must not be derived from matchMedia - only from an actually observed pointer.
+  const block = source.slice(source.indexOf("const [pointerCanHover"),
+    source.indexOf("const tmiOpeningRef"));
+  assert.ok(!/matchMedia/.test(block),
+    "pointer capability must not come from a media query");
+  assert.match(block, /pointerType === "touch"/, "a real touch pointer disables gating");
+  assert.match(block, /pointerType === "mouse"/, "a real mouse pointer re-enables gating");
+  assert.match(block, /useState\(true\)/, "gating starts on until a touch pointer is seen");
+});
+
+test("the album art and metadata re-arm the reveal the hover strip drops", () => {
+  // The strip sits behind the panel content, so crossing onto the cover fires the
+  // strip's leave. The content stack must carry its own hover source.
+  const tree = render({ albumSize: 400 });
+  const content = findClass(tree, "lyrics-fullscreen-left-content");
+  assert.equal(typeof content.props.onMouseEnter, "function");
+  assert.equal(typeof content.props.onMouseLeave, "function");
+  assert.equal(typeof findClass(tree, "lyrics-fullscreen-hover-zone").props.onMouseEnter, "function");
+  assert.equal(typeof findClass(tree, "left-controls-player").props.onFocus, "function");
+});
+
+test("running a hover handler actually flips the reveal (catches a misspelled setter)", () => {
+  // Rendering the tree is not enough: a handler that throws on entry leaves the
+  // panel permanently hidden. Execute the real state block and drive it for real.
+  const start = source.indexOf("const CONTROLS_HIDE_HOLD_MS");
+  const end = source.indexOf("const tmiOpeningRef");
+  assert.ok(start >= 0 && end > start, "locate the hover-gate state block");
+  const block = source.slice(start, end);
+
+  const setters = new Map();
+  const context = {
+    useRef: initial => ({ current: initial }),
+    useState: initial => [initial, next => setters.set(next, typeof next === "function" ? next(initial) : next)],
+    useCallback: fn => fn,
+    useEffect: () => {},
+  };
+  const run = new Function(...Object.keys(context), `${block}
+    return { setControlsHoverSource, syncLeftControlsReveal };`);
+  const api = run(...Object.values(context));
+
+  assert.equal(typeof api.setControlsHoverSource, "function");
+  assert.equal(api.syncLeftControlsReveal(), undefined, "sync must not throw");
+  assert.equal(api.setControlsHoverSource("zone", true), undefined, "enter must not throw");
+  assert.equal(api.syncLeftControlsReveal(), undefined);
+  assert.equal(api.setControlsHoverSource("zone", false), undefined, "leave must not throw");
+  assert.equal(api.syncLeftControlsReveal(), undefined);
+});
+
+function gateRuntime() {
+  const start = source.indexOf("const CONTROLS_HIDE_HOLD_MS");
+  const end = source.indexOf("const tmiOpeningRef");
+  const block = source.slice(start, end);
+  const revealed = { value: false };
+  const timers = new Map();
+  let nextTimer = 0;
+  const context = {
+    useRef: initial => ({ current: initial }),
+    useState: initial => [initial, next => {
+      revealed.value = typeof next === "function" ? next(revealed.value) : next;
+    }],
+    useCallback: fn => fn,
+    useEffect: fn => { if (typeof fn === "function") fn(() => {}); },
+    setTimeout: (fn, ms) => { const id = ++nextTimer; timers.set(id, { fn, ms }); return id; },
+    clearTimeout: id => timers.delete(id),
+    document: { addEventListener() {}, removeEventListener() {} },
+    window: { addEventListener() {}, removeEventListener() {} },
+  };
+  const run = new Function(...Object.keys(context), `${block}
+    return { setControlsHoverSource, syncLeftControlsReveal, controlsHoverSourcesRef };`);
+  return { api: run(...Object.values(context)), revealed, timers };
+}
+
+test("the controls linger briefly before the hide is committed", () => {
+  const { api, revealed, timers } = gateRuntime();
+  api.setControlsHoverSource("zone", true);
+  assert.equal(revealed.value, true, "entering the column reveals immediately");
+
+  api.setControlsHoverSource("zone", false);
+  assert.equal(revealed.value, true, "leaving must not hide on the spot");
+  assert.equal(timers.size, 1, "a single hold timer is armed");
+  const [id] = [...timers.keys()];
+  assert.equal(timers.get(id).ms, 500, "hold is 500ms");
+
+  // Re-entering during the hold cancels it - brushing past must not hide anything.
+  api.setControlsHoverSource("zone", true);
+  assert.equal(timers.size, 0, "re-entry cancels the pending hide");
+  assert.equal(revealed.value, true);
+
+  api.setControlsHoverSource("zone", false);
+  assert.equal(timers.size, 1, "the hold re-arms after a real leave");
+  timers.get([...timers.keys()][0]).fn();
+  assert.equal(revealed.value, false, "the hide lands once the hold expires");
+});
+
+test("the focus and drag releases also wait out the hold", () => {
+  const { api, revealed, timers } = gateRuntime();
+  api.setControlsHoverSource("zone", true);
+  api.controlsHoverSourcesRef.current.delete("zone");
+  api.syncLeftControlsReveal(); // what a blur / mouseup release does
+  assert.equal(revealed.value, true, "still revealed before the hold expires");
+  assert.equal(timers.size, 1, "a bare sync with no sources arms the hold too");
 });
 
 test("an oversized album stack scrolls from its top instead of hiding its first or last controls", () => {

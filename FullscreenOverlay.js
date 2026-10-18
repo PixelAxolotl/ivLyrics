@@ -2241,6 +2241,98 @@ const FullscreenOverlay = (() => {
         }, []);
         const hideTimerRef = useRef(null);
         const uiVisibleRef = useRef(true);
+
+        // Left-panel controls are revealed by hover, not by global mouse activity.
+        // Multiple sources can hold the panel open at once (hover strip + the panel
+        // content + the controls themselves + keyboard focus + an in-progress drag),
+        // so each source is tracked independently and OR'd together.
+        const CONTROLS_HIDE_HOLD_MS = 500;
+        const controlsHoverSourcesRef = useRef(new Set());
+        const controlsFocusHeldRef = useRef(false);
+        const controlsDragHeldRef = useRef(false);
+        const controlsHideTimerRef = useRef(null);
+        const [leftControlsRevealed, setLeftControlsRevealed] = useState(false);
+
+        const cancelControlsHideHold = useCallback(() => {
+            if (!controlsHideTimerRef.current) return;
+            clearTimeout(controlsHideTimerRef.current);
+            controlsHideTimerRef.current = null;
+        }, []);
+
+        // Losing the last source does not hide the panel straight away - it lingers
+        // briefly, so brushing past the column on the way somewhere else does not
+        // throw the controls away. Every path (hover, focus, drag) goes through here.
+        const syncLeftControlsReveal = useCallback(() => {
+            const revealed = controlsHoverSourcesRef.current.size > 0
+                || controlsFocusHeldRef.current
+                || controlsDragHeldRef.current;
+            if (revealed) {
+                cancelControlsHideHold();
+                setLeftControlsRevealed(true);
+                return;
+            }
+            if (!controlsHideTimerRef.current) {
+                controlsHideTimerRef.current = setTimeout(() => {
+                    controlsHideTimerRef.current = null;
+                    setLeftControlsRevealed(false);
+                }, CONTROLS_HIDE_HOLD_MS);
+            }
+        }, [cancelControlsHideHold]);
+
+        const setControlsHoverSource = useCallback((source, active) => {
+            const sources = controlsHoverSourcesRef.current;
+            if (active) {
+                if (sources.has(source)) return;
+                sources.add(source);
+            } else {
+                if (!sources.has(source)) return;
+                sources.delete(source);
+            }
+            syncLeftControlsReveal();
+        }, [syncLeftControlsReveal]);
+
+        useEffect(() => () => cancelControlsHideHold(), [cancelControlsHideHold]);
+
+        // Spotify's CEF reports "(hover: none)" even with a mouse attached, so that
+        // media query cannot be trusted to mean "touch". Assume hover works and only
+        // give up once a touch-only pointer is actually seen.
+        const [pointerCanHover, setPointerCanHover] = useState(true);
+
+        useEffect(() => {
+            if (typeof window === "undefined" || typeof window.addEventListener !== "function") return;
+            const seenTouchPointer = event => {
+                if (event?.pointerType === "touch") setPointerCanHover(false);
+            };
+            const seenMouse = event => {
+                if (event?.pointerType === "mouse") setPointerCanHover(true);
+            };
+            window.addEventListener("pointerdown", seenTouchPointer, true);
+            window.addEventListener("pointerdown", seenMouse, true);
+            return () => {
+                window.removeEventListener("pointerdown", seenTouchPointer, true);
+                window.removeEventListener("pointerdown", seenMouse, true);
+            };
+        }, []);
+
+        // A drag can start inside the controls and continue outside them. Without
+        // this pin the panel would collapse mid-drag and the slider rect would
+        // shift under the pointer.
+        useEffect(() => {
+            if (!controlsDragHeldRef.current) return;
+            const releaseDrag = () => {
+                controlsDragHeldRef.current = false;
+                syncLeftControlsReveal();
+            };
+            document.addEventListener('mouseup', releaseDrag);
+            document.addEventListener('mouseleave', releaseDrag);
+            window.addEventListener('blur', releaseDrag);
+            return () => {
+                document.removeEventListener('mouseup', releaseDrag);
+                document.removeEventListener('mouseleave', releaseDrag);
+                window.removeEventListener('blur', releaseDrag);
+            };
+        }, [syncLeftControlsReveal, leftControlsRevealed]);
+
         const tmiOpeningRef = useRef(false);
         const tmiRequestRef = useRef(0);
         const tmiPlaybackGuardRef = useRef({
@@ -3157,6 +3249,13 @@ const FullscreenOverlay = (() => {
         const hideLeftPanel = !showAlbum && !showInfo && controlsPosition !== "left-panel";
         const showControlsInLeftPanel = controlsPosition === "left-panel" && showControls;
         const showControlsInBottom = controlsPosition === "bottom" && showControls;
+        // Left-panel controls ignore the global idle timer and follow hover over the
+        // album column instead. With auto-hide UI switched off - or on a device with
+        // no hover-capable pointer - they stay pinned visible, exactly as they were
+        // before hover gating existed. TMI mode renders no `.fullscreen-left-controls`,
+        // so it keeps the idle-timer behaviour.
+        const hoverGateControls = showControlsInLeftPanel && autoHideUI && !tmiMode && pointerCanHover;
+        const leftControlsHidden = hoverGateControls ? !leftControlsRevealed : !uiVisible;
         const showContextInOverlay = showContext;
         const showNextTrackInOverlay = showNextTrack;
         const showQueueInOverlay = showQueue;
@@ -3169,7 +3268,7 @@ const FullscreenOverlay = (() => {
         const leftPanelControlButtonSize = controlButtonSize;
         const leftControlsClass = [
             "fullscreen-left-controls",
-            !uiVisible ? "hidden" : ""
+            leftControlsHidden ? "hidden" : ""
         ].filter(Boolean).join(" ");
         const leftPlayerControlsClass = `${leftControlsClass} left-controls-player`;
         const leftProgressOnlyClass = `${leftControlsClass} left-controls-progress-only`;
@@ -3660,9 +3759,19 @@ const FullscreenOverlay = (() => {
 
         const renderLeftPanel = () =>
             react.createElement("div", {
-                className: `lyrics-fullscreen-left-panel ${!uiVisible && showControlsInLeftPanel ? 'controls-hidden' : ''} ${tmiMode ? 'tmi-mode' : ''}`,
+                className: `lyrics-fullscreen-left-panel ${leftControlsHidden && showControlsInLeftPanel ? 'controls-hidden' : ''} ${tmiMode ? 'tmi-mode' : ''}`,
                 ref: setAlbumLyricsPanelRef
             },
+                // Invisible hover strip spanning the full column height. It sits behind
+                // the panel content so it only claims the empty margins around the album,
+                // and stays a fixed width even when `.fullscreen-no-lyrics` stretches
+                // the panel across the whole grid.
+                hoverGateControls && react.createElement("div", {
+                    className: "lyrics-fullscreen-hover-zone",
+                    style: { width: `${Math.round(albumSize * 1.15)}px` },
+                    onMouseEnter: () => setControlsHoverSource("zone", true),
+                    onMouseLeave: () => setControlsHoverSource("zone", false)
+                }),
                 // TMI Mode View
                 tmiMode ? (
                     renderTmiModeView(true)
@@ -3670,6 +3779,10 @@ const FullscreenOverlay = (() => {
                     // Normal Mode
                     react.createElement("div", {
                         className: "lyrics-fullscreen-left-content",
+                        // The hover strip sits behind this stack, so crossing onto the
+                        // album art fires the strip's leave. Re-arm on the content.
+                        onMouseEnter: () => setControlsHoverSource("content", true),
+                        onMouseLeave: () => setControlsHoverSource("content", false),
                         style: {
                             gap: `${infoGap}px`,
                             // Lyrics start at the visible album edge, which can
@@ -3777,7 +3890,21 @@ const FullscreenOverlay = (() => {
                         // Controls in left panel (under album)
                         showControlsInLeftPanel && react.createElement("div", {
                             className: leftPlayerControlsClass,
-                            ref: setControllerHeightRef
+                            ref: setControllerHeightRef,
+                            onMouseEnter: () => setControlsHoverSource("controls", true),
+                            onMouseLeave: () => setControlsHoverSource("controls", false),
+                            onFocus: () => {
+                                controlsFocusHeldRef.current = true;
+                                syncLeftControlsReveal();
+                            },
+                            onBlur: () => {
+                                controlsFocusHeldRef.current = false;
+                                syncLeftControlsReveal();
+                            },
+                            onMouseDown: () => {
+                                controlsDragHeldRef.current = true;
+                                syncLeftControlsReveal();
+                            }
                         },
                             // Player controls, with the timeline inside their surface
                             react.createElement(PlayerControls, {

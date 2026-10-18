@@ -130,13 +130,33 @@ async page => {
       return percent.left >= surface.left - 1 && percent.right <= surface.right + 1;
     });
     assert(volumeFits, "hovered volume percentage escapes the controller background");
+    const zoneCenter = async () => page.evaluate(() => {
+      const zone = document.querySelector("#controller-background-runtime .lyrics-fullscreen-hover-zone");
+      if (!zone) throw new Error("hover zone is not rendered");
+      const { left, right, top, bottom } = zone.getBoundingClientRect();
+      return { x: (left + right) / 2, y: (top + bottom) / 2 };
+    });
+    const hiddenState = async () => page.evaluate(() => ({
+      hidden: document.querySelector("#controller-background-runtime .lyrics-fullscreen-left-panel")
+        ?.classList.contains("controls-hidden"),
+      maxHeight: getComputedStyle(document.querySelector("#controller-background-runtime .fullscreen-left-controls")).maxHeight,
+    }));
+    // Moving anywhere in the lyrics column must not bring the controller back.
     await page.mouse.move(1050, 400);
     await page.waitForFunction(() => document.querySelector("#controller-background-runtime .lyrics-fullscreen-left-panel")?.classList.contains("controls-hidden"));
     await page.waitForFunction(() => getComputedStyle(document.querySelector("#controller-background-runtime .fullscreen-left-controls")).maxHeight === "0px");
     await page.mouse.move(1050, 420);
+    await page.waitForTimeout(400);
+    assert((await hiddenState()).hidden, "moving inside the lyrics pane revealed the left-panel controls");
+    // Only the album column reveals it.
+    const zone = await zoneCenter();
+    await page.mouse.move(zone.x, zone.y);
     await page.waitForFunction(() => !document.querySelector("#controller-background-runtime .lyrics-fullscreen-left-panel")?.classList.contains("controls-hidden"));
     await page.waitForFunction(() => parseFloat(getComputedStyle(document.querySelector("#controller-background-runtime .fullscreen-left-controls")).maxHeight) > 0);
-    results.push({ label: "volume-hover-and-auto-hide", bounded: true, hideRestore: true });
+    // Leaving the column hides it again.
+    await page.mouse.move(1050, 400);
+    await page.waitForFunction(() => document.querySelector("#controller-background-runtime .lyrics-fullscreen-left-panel")?.classList.contains("controls-hidden"));
+    results.push({ label: "volume-hover-and-column-hover-gate", bounded: true, lyricsPaneStaysHidden: true });
     // The under-album constraint must not replace the independent TV, portrait
     // or bottom-controller paths.
     for (const [label, width, height, options, selector] of [

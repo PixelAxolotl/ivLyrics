@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
 
@@ -13,42 +13,61 @@ const slice = (start, end) => {
   return source.slice(from, to);
 };
 
-test("each preview layer is a named native button leading to its existing Appearance controls", () => {
+test("the layer preview has one edit action and four informational color labels", () => {
   const calls = [];
   const react = { createElement: (type, props, ...children) => ({ type, props: props || {}, children }) };
   const context = vm.createContext({
     react, SettingsUiIcon: "SettingsUiIcon",
     getSettingsText: (_key, fallback) => fallback,
-    LYRICS_TYPOGRAPHY_SECTIONS: [
-      { role: "original", section: "original-style" },
-      { role: "phonetic", section: "pronunciation-style" },
-      { role: "translation", section: "translation-style" },
-    ],
   });
   vm.runInContext(slice("const getSettingsLayerLegend =", "const renderSettingsPreviewLine =")
-    + "\nglobalThis.Links = SettingsPreviewLayerLinks;", context);
+    + "\nglobalThis.Links = SettingsPreviewLayerControls;", context);
   const tree = context.Links({ onNavigate: (...args) => calls.push(args) });
-  assert.equal(tree.props.className, "settings-preview-legend");
+  assert.equal(tree.props.className, "settings-preview-layers");
+  assert.equal(tree.props.role, "group");
+  assert.equal(tree.props["aria-label"], "Lyric layers");
+  const [heading, legend] = tree.children;
+  const button = heading.children[1];
+  assert.equal(button.type, "button");
+  assert.equal(button.props.type, "button");
+  assert.equal(button.props.className, "settings-preview-edit-link");
+  assert.equal(button.props["aria-label"], "Lyric layers · Edit");
+  assert.equal(button.children[0].children[0], "Edit");
+  button.props.onClick();
+  assert.equal(legend.type, "ul");
+  assert.equal(legend.props.className, "settings-preview-legend");
+  assert.equal(legend.children.length, 4);
   const names = ["Original", "Pronunciation", "Translation", "Furigana"];
-  tree.children.forEach((button, index) => {
-    assert.equal(button.type, "button");
-    assert.equal(button.props.type, "button");
-    assert.equal(button.children[1].children[0], names[index]);
-    assert.equal(button.children[0].props["aria-hidden"], "true");
-    assert.equal(button.children[2].props.name, "right");
-    button.props.onClick();
+  legend.children.forEach((label, index) => {
+    assert.equal(label.type, "li");
+    assert.equal(label.props.onClick, undefined);
+    assert.equal(label.props.tabIndex, undefined);
+    assert.equal(label.children[1].children[0], names[index]);
+    assert.equal(label.children[0].props["aria-hidden"], "true");
+    assert.equal(label.children.length, 2, "informational labels have no navigation arrows");
   });
-  assert.deepEqual(calls, [
-    ["appearance", "original-style"], ["appearance", "pronunciation-style"],
-    ["appearance", "translation-style"], ["appearance", "furigana-style"],
-  ]);
+  assert.deepEqual(calls, [["appearance", "lyric-layers"]]);
   assert.match(source, /onNavigate: navigateToDestination/);
 });
 
-test("layer links reserve space for long labels and keep a visible inner keyboard outline", () => {
+test("the shared edit action uses existing translated strings in every locale", () => {
+  const languages = readdirSync(new URL("../langs/", import.meta.url)).filter(name => /^Lang.*\.js$/.test(name));
+  assert.equal(languages.length, 22);
+  for (const language of languages) {
+    const window = {};
+    vm.runInNewContext(readFileSync(new URL(`../langs/${language}`, import.meta.url), "utf8"), { window });
+    const strings = Object.values(window)[0];
+    assert.ok(strings.buttons.edit?.trim(), `${language}: edit action`);
+    assert.ok(strings.settingsUi.sections.lyricLayers.title?.trim(), `${language}: layer editor name`);
+  }
+});
+
+test("layer labels wrap and the single edit action keeps a visible inner keyboard outline", () => {
   assert.match(css, /\.settings-preview-legend \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(css, /\.settings-preview-layer-link > span \{[^}]*overflow-wrap: anywhere/);
-  assert.match(css, /\.settings-preview-layer-link:focus-visible \{[^}]*outline: 2px[^}]*outline-offset: -2px/);
+  assert.match(css, /\.settings-preview-layer-label > span \{[^}]*overflow-wrap: anywhere/);
+  assert.match(css, /\.settings-preview-edit-link \{[^}]*min-height: 32px/);
+  assert.match(css, /\.settings-preview-edit-link:focus-visible \{[^}]*outline: 2px[^}]*outline-offset: -2px/);
+  assert.doesNotMatch(css, /settings-preview-layer-link/);
 });
 
 test("toolbar focus ring stays inside entries clipped by the scroll container", () => {

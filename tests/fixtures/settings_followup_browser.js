@@ -25,25 +25,17 @@ async (page) => {
     await page.goto(`http://127.0.0.1:64377/?language=${language}&theme=${theme}&tab=appearance`);
     await page.waitForFunction(() => window.__settingsFixtureState?.ready);
     await settle();
-    const links = page.locator(".settings-preview-layer-link");
+    const edit = page.locator(".settings-preview-edit-link");
     if (width > 980) {
-      assert(await links.count() === 4, `${label}: preview shortcuts missing`);
-      for (const [role, anchor] of layers) {
-        const button = page.locator(`.settings-preview-layer-link[data-layer="${role}"]`);
-        // Click/keyboard activation must navigate the existing live window,
-        // reveal a tabbed layer and never save any preference by itself.
-        const before = await page.evaluate(() => JSON.stringify(CONFIG.visual));
-        if (role === "translation") { await button.focus(); await page.keyboard.press("Enter"); }
-        else await button.click();
-        await page.waitForFunction(value => {
-          const matrix = document.querySelector(".settings-matrix");
-          if (!matrix?.classList.contains("is-tabs")) return true;
-          return matrix.querySelector(`[data-setting-key="${value}"][aria-checked="true"]`) !== null;
-        }, anchor);
-        await settle();
-        assert(await page.evaluate(() => JSON.stringify(CONFIG.visual)) === before, `${label}: shortcut changed saved settings`);
-      }
-      const geometry = await links.evaluateAll(nodes => nodes.map(node => ({
+      assert(await edit.count() === 1, `${label}: expected one shared layer editor action`);
+      assert(await page.locator(".settings-preview-legend li").count() === 4, `${label}: informational layer labels missing`);
+      const before = await page.evaluate(() => JSON.stringify(CONFIG.visual));
+      await edit.focus();
+      await page.keyboard.press("Enter");
+      await page.waitForFunction(() => document.querySelector('[data-setting-key="lyric-layers"]')?.classList.contains("setting-highlight-flash"));
+      await settle();
+      assert(await page.evaluate(() => JSON.stringify(CONFIG.visual)) === before, `${label}: edit shortcut changed saved settings`);
+      const geometry = await edit.evaluateAll(nodes => nodes.map(node => ({
         overflow: node.scrollWidth - node.clientWidth,
         height: node.getBoundingClientRect().height,
       })));
@@ -87,7 +79,7 @@ async (page) => {
     assert(focus.entry === "settings" && focus.visible && focus.outline === "2px" && parseFloat(focus.offset) < 0 && focus.shadow === "none",
       `${label}: toolbar focus is not a complete inset ring ${JSON.stringify(focus)}`);
     await page.screenshot({ path: `output/playwright/ui-followup-${label}-toolbar.png` });
-    results.push({ label, shortcuts: width > 980 ? 4 : "layer deep links", performance: "7/7", bars: onBars, focus });
+    results.push({ label, shortcuts: width > 980 ? 1 : "layer deep links", performance: "7/7", bars: onBars, focus });
   }
   assert(errors.length === 0, `Runtime errors: ${errors.join("; ")}`);
   return results;

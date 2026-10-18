@@ -7843,29 +7843,47 @@ const getSettingsLayerLegend = () => [
   ["furigana", getSettingsText("translationMenu.furigana", "Furigana")],
 ];
 
-// The preview labels are shortcuts to the same layer controls, not decorative
-// chips that look clickable but do nothing. Keep navigation in this window.
-const SettingsPreviewLayerLinks = ({ onNavigate }) => react.createElement(
-  "div",
-  { className: "settings-preview-legend" },
-  ...getSettingsLayerLegend().map(([role, label]) => {
-    const anchor = LYRICS_TYPOGRAPHY_SECTIONS.find((section) => section.role === role)?.section || "furigana-style";
-    return react.createElement(
-      "button",
-      {
-        key: role,
-        type: "button",
-        className: "settings-preview-layer-link",
-        "data-layer": role,
-        style: { "--layer-color": `var(--settings-layer-${role})` },
-        onClick: () => onNavigate("appearance", anchor),
-      },
-      react.createElement("i", { "aria-hidden": "true" }),
-      react.createElement("span", null, label),
-      react.createElement(SettingsUiIcon, { name: "right", size: 12 })
-    );
-  })
-);
+// All four layers share one editor. Keep their color key informational and
+// offer one explicit action rather than four buttons to the same matrix.
+const SettingsPreviewLayerControls = ({ onNavigate }) => {
+  const title = getSettingsText("settingsUi.sections.lyricLayers.title", "Lyric layers");
+  const edit = getSettingsText("buttons.edit", "Edit");
+  return react.createElement(
+    "div",
+    { className: "settings-preview-layers", role: "group", "aria-label": title },
+    react.createElement(
+      "div",
+      { className: "settings-preview-layer-heading" },
+      react.createElement("span", null, title),
+      react.createElement(
+        "button",
+        {
+          type: "button",
+          className: "settings-preview-edit-link",
+          "aria-label": `${title} · ${edit}`,
+          onClick: () => onNavigate("appearance", "lyric-layers"),
+        },
+        react.createElement("span", null, edit),
+        react.createElement(SettingsUiIcon, { name: "right", size: 12 })
+      )
+    ),
+    react.createElement(
+      "ul",
+      { className: "settings-preview-legend" },
+      ...getSettingsLayerLegend().map(([role, label]) => react.createElement(
+        "li",
+        {
+          key: role,
+          className: "settings-preview-layer-label",
+          "data-layer": role,
+          style: { "--layer-color": `var(--settings-layer-${role})` },
+        },
+        react.createElement("i", { "aria-hidden": "true" }),
+        react.createElement("span", null, label)
+      ))
+    )
+  );
+};
 
 const getSettingsPreviewSupplementVisibility = () => {
   const visual = CONFIG.visual || {};
@@ -8943,7 +8961,7 @@ const SettingsDock = ({ open, onToggle, menu, signal, fullscreenView, onNavigate
         { className: "settings-dock-body" },
         preview,
         kind === "lyrics" || kind === "annotation"
-          ? react.createElement(SettingsPreviewLayerLinks, { onNavigate })
+          ? react.createElement(SettingsPreviewLayerControls, { onNavigate })
           : null,
         react.createElement(
           "p",

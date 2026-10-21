@@ -59,6 +59,21 @@ test('editor ID loading and manual search both use the shared transport with a b
   assert.doesNotMatch(callbacks, /await fetch\(/);
 });
 
+test('a click event is never treated as an LRCLIB id', async () => {
+  const requests = [];
+  const h = harness({ fetch: async (...args) => {
+    requests.push(args);
+    return Response.json(candidate);
+  } });
+  // The "Load by ID" button wires the handler straight to onClick, so React
+  // hands it the click event. That event must never become the requested id.
+  await h.api.loadLrclibById({ type: 'click', target: {}, preventDefault() {} });
+  assert.equal(h.calls.some(([name, value]) => name === 'setLrclibIdInput' && value === '[object Object]'), false);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0][0], 'https://lrclib.net/api/get/18694795');
+  assert.equal(h.calls.filter(([name]) => name === 'applyLoadedLyricsResult').length, 1);
+});
+
 test('missing transport, failed network, HTTP errors and invalid JSON stop editor loading cleanly', async () => {
   for (const transport of [
     undefined, { fetch: async () => null },

@@ -119,6 +119,20 @@ const normalizeSyncCreatorLrclibId = (value) => {
 	const normalized = value === null || value === undefined ? '' : String(value).trim();
 	return /^[1-9]\d*$/.test(normalized) ? normalized : '';
 };
+// The official LRCLIB id of the lyrics the app is currently showing, or ''
+// when the current lyrics do not come from the official LRCLIB API.
+const resolveSyncCreatorLoadedLyricsLrclibId = (trackUri) => {
+	try {
+		const snapshot = window.LyricsService?.getLyricsSnapshot?.(trackUri);
+		if (!snapshot) return '';
+		const provider = snapshot.provider || snapshot.rawResult?.provider || '';
+		if (provider !== SYNC_CREATOR_SOURCE_ADDON_ID) return '';
+		const source = snapshot.rawResult?.lrclibSource || null;
+		return normalizeSyncCreatorLrclibId(source?.lrclibId ?? snapshot.rawResult?.lrclibId);
+	} catch (_) {
+		return '';
+	}
+};
 const isCompleteSyncCreatorLrclibSource = (source) => {
 	if (!source || source.provider !== SYNC_CREATOR_SOURCE_ADDON_ID) return false;
 	if (!normalizeSyncCreatorLrclibId(source.lrclibId)) return false;
@@ -4204,6 +4218,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		setAddonId(usedProvider);
 		setLyrics(result);
 		setSelectedLrclibSourceValue(finalProvider === 'lrclib' ? (result?.lrclibSource || null) : null);
+		if (finalProvider === 'lrclib') {
+			const loadedLrclibId = result?.lrclibSource?.lrclibId || result?.lrclibId;
+			if (loadedLrclibId) setLrclibIdInput(String(loadedLrclibId));
+		}
 
 		if (window.SyncDataService && trackId) {
 			try {
@@ -4427,12 +4445,19 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		};
 	}, [buildLrclibIdCandidate, getLrclibCandidateText, getSyncCreatorLyricsFingerprint]);
 
-	const loadLrclibById = useCallback(async () => {
-		const lrclibId = String(lrclibIdInput || '').trim();
+	const loadLrclibById = useCallback(async (requestedId = null) => {
+		// The "Load by ID" button wires this callback straight to onClick, so
+		// React hands it the click event. Only a literal id may be requested;
+		// anything else falls back to the value in the LRCLIB ID box.
+		const requested = (typeof requestedId === 'string' || typeof requestedId === 'number')
+			? String(requestedId).trim()
+			: '';
+		const lrclibId = requested || String(lrclibIdInput || '').trim();
 		if (!/^\d+$/.test(lrclibId)) {
 			Toast.error(I18n.t('syncCreator.lrclibIdInvalid') || 'Enter a valid LRCLIB ID.');
 			return;
 		}
+		setLrclibIdInput(lrclibId);
 
 		const sourceChangeRequestId = beginSyncCreatorSourceChange();
 		setIsLoadingLrclibId(true);
@@ -5727,6 +5752,36 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		clearLrclibCandidateState();
 
 		try {
+			// When reopening the editor for an already published sync, prefer its
+			// stored LRCLIB id so the exact source lyrics are reloaded instead of
+			// relying on a metadata search that may return no candidates.
+			let existingSyncLrclibId = '';
+			try {
+				if (trackId && window.SyncDataService?.getSyncData) {
+					const existingSyncData = await window.SyncDataService.getSyncData(trackId, SYNC_CREATOR_SOURCE_ADDON_ID, {
+						...trackInfo,
+						title: trackName,
+						artist: artistName,
+						album: albumName,
+						isrc: (typeof trackIsrc !== 'undefined' ? trackIsrc : '') || undefined
+					});
+					const existingSource = existingSyncData?.syncData?.source || existingSyncData?.source || null;
+					if (existingSource?.provider === SYNC_CREATOR_SOURCE_ADDON_ID) {
+						const normalizeId = (typeof normalizeSyncCreatorLrclibId === 'undefined')
+							? (value => (/^[1-9]\d*$/.test(String(value || '').trim()) ? String(value).trim() : ''))
+							: normalizeSyncCreatorLrclibId;
+						existingSyncLrclibId = normalizeId(existingSource.lrclibId);
+					}
+				}
+			} catch (existingSyncError) {
+				window.__ivLyricsDebugLog?.('[SyncDataCreator] Failed to resolve existing sync LRCLIB id:', existingSyncError?.message || existingSyncError);
+			}
+			const loadExistingSyncLrclibById = (typeof loadLrclibById === 'undefined') ? null : loadLrclibById;
+			if (existingSyncLrclibId && typeof loadExistingSyncLrclibById === 'function') {
+				await loadExistingSyncLrclibById(existingSyncLrclibId);
+				return;
+			}
+
 			const firstArtist = trackInfo?.artists?.[0]?.name ||
 				Spicetify.Player?.data?.item?.artists?.[0]?.name ||
 				artistName.split(',')[0].trim();
@@ -5739,7 +5794,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				artist: firstArtist,
 				album: trackInfo?.album?.name || Spicetify.Player?.data?.item?.album?.name || '',
 				duration: Spicetify.Player?.data?.item?.duration?.milliseconds || 0,
-				lrclibOfficialOnly: true
+				lrclibOfficialOnly: true,
+				lrclibId: String((typeof lrclibIdInput !== 'undefined' ? lrclibIdInput : '') || '').trim(),
+				lrclibSource: (typeof selectedLrclibSourceValue !== 'undefined' ? selectedLrclibSourceValue : null) || (typeof lyrics !== 'undefined' ? lyrics?.lrclibSource : null) || null
 			};
 			const lrclibAddon = window.LyricsAddonManager?.getAddon?.(SYNC_CREATOR_SOURCE_ADDON_ID);
 			window.__ivLyricsDebugLog?.('[SyncDataCreator] Trying fixed provider:', SYNC_CREATOR_SOURCE_ADDON_ID);
@@ -5787,7 +5844,19 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			setError(I18n.t('syncCreator.loadError'));
 		}
 
-		if (isCurrentSyncCreatorSourceChange(sourceChangeRequestId)) setIsLoading(false);
+		if (isCurrentSyncCreatorSourceChange(sourceChangeRequestId)) {
+			// The LRCLIB ID box starts with the id of the lyrics the app is
+			// currently showing. The metadata search stays untouched and a
+			// hand-typed id is never replaced.
+			const prefillLrclibId = (typeof resolveSyncCreatorLoadedLyricsLrclibId === 'function')
+				? resolveSyncCreatorLoadedLyricsLrclibId(trackUri)
+				: '';
+			const currentLrclibIdInput = (typeof lrclibIdInput !== 'undefined') ? String(lrclibIdInput || '') : '';
+			if (prefillLrclibId && (!currentLrclibIdInput || currentLrclibIdInput === prefillLrclibId)) {
+				setLrclibIdInput(prefillLrclibId);
+			}
+			setIsLoading(false);
+		}
 	}, [
 		albumName,
 		applyLoadedLyricsResult,
@@ -5798,7 +5867,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		isCurrentSyncCreatorSourceChange,
 		setProviderValue,
 		trackInfo,
-		trackName
+		trackName,
+		trackUri
 	]);
 
 
@@ -12929,7 +12999,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					react.createElement('button', {
 						type: 'button',
 						style: { ...s.loadBtn, whiteSpace: 'nowrap', opacity: isLoadingLrclibId ? 0.6 : 1 },
-						onClick: loadLrclibById,
+						onClick: () => loadLrclibById(),
 						disabled: isLoadingLrclibId
 					}, isLoadingLrclibId
 						? (I18n.t('syncCreator.lrclibIdLoading') || 'Loading...')

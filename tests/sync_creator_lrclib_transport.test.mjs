@@ -23,6 +23,7 @@ function harness(transport) {
     console: { error() {} },
     Toast: { error: value => messages.push(value), success: value => messages.push(value) },
     lrclibIdInput: '18694795', lrclibSearchQuery: 'Fixture & café', SYNC_CREATOR_SOURCE_ADDON_ID: 'lrclib',
+    lrclibIdInputEditedRef: { current: true },
     beginSyncCreatorSourceChange: () => 1,
     isCurrentSyncCreatorSourceChange: () => current,
     resetSyncCreatorLyricsLoadingState() {}, clearLrclibCandidateState() {},
@@ -57,6 +58,22 @@ test('editor ID loading and manual search both use the shared transport with a b
   assert.ok(h.calls.some(([name, value]) => name === 'setLrclibSearchMeta' && value.success && value.totalResults === 1));
   assert.ok(h.calls.some(([name, value]) => name === 'setIsSearchingLrclib' && value === false));
   assert.doesNotMatch(callbacks, /await fetch\(/);
+});
+
+test('a click event is never treated as an LRCLIB id', async () => {
+  const requests = [];
+  const h = harness({ fetch: async (...args) => {
+    requests.push(args);
+    return Response.json(candidate);
+  } });
+  // The "Load by ID" button wires the handler straight to onClick, so React
+  // hands it the click event. That event must never become the requested id.
+  await h.api.loadLrclibById({ type: 'click', target: {}, preventDefault() {} });
+  assert.equal(h.calls.some(([name, value]) => name === 'setLrclibIdInput' && value === '[object Object]'), false);
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0][0], 'https://lrclib.net/api/get/18694795');
+  assert.equal(h.calls.filter(([name]) => name === 'applyLoadedLyricsResult').length, 1);
+  assert.equal(h.context.lrclibIdInputEditedRef.current, false, 'a loaded typed id may be mirrored again');
 });
 
 test('missing transport, failed network, HTTP errors and invalid JSON stop editor loading cleanly', async () => {

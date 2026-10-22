@@ -868,6 +868,8 @@ test('the actual creator fallback passes official-only metadata through the mana
             console: { error: (...args) => errors.push(args) }, I18n: { t: key => key },
             useCallback: fn => fn, SYNC_CREATOR_SOURCE_ADDON_ID: 'lrclib',
             trackInfo: { uri: track.uri, artists: [{ name: track.artist }], album: { name: track.album } },
+            trackUri: track.uri, trackIsrc: '',
+            lrclibIdInputEditedRef: { current: false }, resolveSyncCreatorLoadedLyricsLrclibId: () => '',
             trackName: track.title, artistName: track.artist, albumName: track.album,
             beginSyncCreatorSourceChange: () => 1, isCurrentSyncCreatorSourceChange: () => true,
             clearLrclibCandidateState() {}, buildSyntheticLrclibResult() { assert.fail('candidate branch was not selected'); },

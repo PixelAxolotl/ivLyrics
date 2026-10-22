@@ -119,6 +119,20 @@ const normalizeSyncCreatorLrclibId = (value) => {
 	const normalized = value === null || value === undefined ? '' : String(value).trim();
 	return /^[1-9]\d*$/.test(normalized) ? normalized : '';
 };
+// The official LRCLIB id of the lyrics the app is currently showing, or ''
+// when the current lyrics do not come from the official LRCLIB API.
+const resolveSyncCreatorLoadedLyricsLrclibId = (trackUri) => {
+	try {
+		const snapshot = window.LyricsService?.getLyricsSnapshot?.(trackUri);
+		if (!snapshot) return '';
+		const provider = snapshot.provider || snapshot.rawResult?.provider || '';
+		if (provider !== SYNC_CREATOR_SOURCE_ADDON_ID) return '';
+		const source = snapshot.rawResult?.lrclibSource || null;
+		return normalizeSyncCreatorLrclibId(source?.lrclibId ?? snapshot.rawResult?.lrclibId);
+	} catch (_) {
+		return '';
+	}
+};
 const isCompleteSyncCreatorLrclibSource = (source) => {
 	if (!source || source.provider !== SYNC_CREATOR_SOURCE_ADDON_ID) return false;
 	if (!normalizeSyncCreatorLrclibId(source.lrclibId)) return false;
@@ -3592,6 +3606,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const [lrclibSearchMeta, setLrclibSearchMeta] = useState(null);
 	const [showLrclibCandidates, setShowLrclibCandidates] = useState(true);
 	const [lrclibIdInput, setLrclibIdInput] = useState('');
+	// True while the LRCLIB ID box holds an id the user typed and has not loaded
+	// yet. Neither the prefill nor the loaded-entry mirror overwrites it.
+	const lrclibIdInputEditedRef = useRef(false);
 	const [isLoadingLrclibId, setIsLoadingLrclibId] = useState(false);
 	const [lrclibSearchQuery, setLrclibSearchQuery] = useState('');
 	const [isSearchingLrclib, setIsSearchingLrclib] = useState(false);
@@ -4209,6 +4226,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		setAddonId(usedProvider);
 		setLyrics(result);
 		setSelectedLrclibSourceValue(finalProvider === 'lrclib' ? (result?.lrclibSource || null) : null);
+		if (finalProvider === 'lrclib' && !lrclibIdInputEditedRef.current) {
+			const loadedLrclibId = result?.lrclibSource?.lrclibId || result?.lrclibId;
+			if (loadedLrclibId) setLrclibIdInput(String(loadedLrclibId));
+		}
 
 		if (window.SyncDataService && trackId) {
 			try {
@@ -4432,6 +4453,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		};
 	}, [buildLrclibIdCandidate, getLrclibCandidateText, getSyncCreatorLyricsFingerprint]);
 
+	// Always loads the id in the LRCLIB ID box; event arguments are ignored.
 	const loadLrclibById = useCallback(async () => {
 		const lrclibId = String(lrclibIdInput || '').trim();
 		if (!/^\d+$/.test(lrclibId)) {
@@ -4478,6 +4500,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			setShowLrclibCandidates(true);
 			const applied = await applyLoadedLyricsResult(syntheticResult, SYNC_CREATOR_SOURCE_ADDON_ID, sourceChangeRequestId);
 			if (!applied || !isCurrentSyncCreatorSourceChange(sourceChangeRequestId)) return;
+			// The typed id is now the loaded entry, so later loads may mirror again.
+			lrclibIdInputEditedRef.current = false;
 			setSelectedLrclibSourceValue(syntheticResult.lrclibSource || buildLrclibSyncSource(decoratedCandidate));
 			Toast.success(I18n.t('syncCreator.lrclibIdLoadSuccess') || 'Loaded lyrics from LRCLIB ID.');
 		} catch (e) {
@@ -5744,7 +5768,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				artist: firstArtist,
 				album: trackInfo?.album?.name || Spicetify.Player?.data?.item?.album?.name || '',
 				duration: Spicetify.Player?.data?.item?.duration?.milliseconds || 0,
-				lrclibOfficialOnly: true
+				lrclibOfficialOnly: true,
+				// The addon restores a published sync's stored LRCLIB id before it
+				// searches metadata. Give it the ISRC the editor already resolved,
+				// so it looks up the same published sync as the editor itself.
+				isrc: trackIsrc || undefined
 			};
 			const lrclibAddon = window.LyricsAddonManager?.getAddon?.(SYNC_CREATOR_SOURCE_ADDON_ID);
 			window.__ivLyricsDebugLog?.('[SyncDataCreator] Trying fixed provider:', SYNC_CREATOR_SOURCE_ADDON_ID);
@@ -5792,7 +5820,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			setError(I18n.t('syncCreator.loadError'));
 		}
 
-		if (isCurrentSyncCreatorSourceChange(sourceChangeRequestId)) setIsLoading(false);
+		if (isCurrentSyncCreatorSourceChange(sourceChangeRequestId)) {
+			// The LRCLIB ID box suggests the id of the lyrics the app is currently
+			// showing (official LRCLIB only), so one "Load by ID" switches to them.
+			// The metadata search above is unaffected and a typed id is kept.
+			const prefillLrclibId = resolveSyncCreatorLoadedLyricsLrclibId(trackUri);
+			if (prefillLrclibId && !lrclibIdInputEditedRef.current) setLrclibIdInput(prefillLrclibId);
+			setIsLoading(false);
+		}
 	}, [
 		albumName,
 		applyLoadedLyricsResult,
@@ -5803,7 +5838,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		isCurrentSyncCreatorSourceChange,
 		setProviderValue,
 		trackInfo,
-		trackName
+		trackIsrc,
+		trackName,
+		trackUri
 	]);
 
 
@@ -12978,7 +13015,12 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						style: s.lrclibIdInput,
 						value: lrclibIdInput,
 						placeholder: I18n.t('syncCreator.lrclibIdPlaceholder') || 'e.g. 5206921',
-						onChange: (e) => setLrclibIdInput(e.target.value.replace(/[^\d]/g, '')),
+						onChange: (e) => {
+							const nextLrclibId = e.target.value.replace(/[^\d]/g, '');
+							// An emptied box is no longer a typed id, so it may be filled again.
+							lrclibIdInputEditedRef.current = nextLrclibId !== '';
+							setLrclibIdInput(nextLrclibId);
+						},
 						onKeyDown: (e) => {
 							if (e.key === 'Enter') loadLrclibById();
 						},
@@ -12987,7 +13029,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					react.createElement('button', {
 						type: 'button',
 						style: { ...s.loadBtn, whiteSpace: 'nowrap', opacity: isLoadingLrclibId ? 0.6 : 1 },
-						onClick: loadLrclibById,
+						onClick: () => loadLrclibById(),
 						disabled: isLoadingLrclibId
 					}, isLoadingLrclibId
 						? (I18n.t('syncCreator.lrclibIdLoading') || 'Loading...')

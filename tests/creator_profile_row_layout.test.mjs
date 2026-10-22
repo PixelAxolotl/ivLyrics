@@ -88,11 +88,24 @@ test('the date is set off from the artist with a separator', () => {
 	assert.equal(declarations('.lyrics-creator-profile-track-updated')['margin-top'], undefined);
 });
 
-test('the score and provider read as one horizontal group', () => {
+test('the score and provider stack in one column beside the picker', () => {
 	assert.equal(declarations(side).display, 'flex');
-	assert.equal(declarations(side)['flex-direction'], 'row');
-	assert.equal(declarations(side)['align-items'], 'center');
-	assert.equal(declarations(side)['text-align'], undefined, 'a horizontal group has no ragged right edge');
+	assert.equal(declarations(side)['flex-direction'], 'column');
+	assert.equal(declarations(side)['align-items'], 'flex-end');
+	assert.equal(declarations(actions)['align-items'], 'center');
+});
+
+test('the update keeps the room and the artist gives way', () => {
+	const artist = declarations('.lyrics-creator-profile-track-artist');
+	const updated = declarations('.lyrics-creator-profile-track-updated');
+
+	// The date is the priority: it keeps its width and the artist truncates.
+	assert.equal(updated.flex, '0 0 auto', 'the date does not give up its width');
+	assert.ok(Number.parseFloat(updated['max-width']) <= 85, 'and it is capped so the row cannot collapse');
+	assert.equal(artist.flex, '0 1 auto', 'the artist truncates instead');
+	assert.equal(artist['min-width'], '0');
+	assert.equal(artist.overflow, 'hidden');
+	assert.equal(artist['text-overflow'], 'ellipsis');
 });
 
 test('the actions cluster keeps the metadata and the picker on one line', () => {
@@ -139,17 +152,6 @@ test('status pills pad their label instead of clipping it against the border', (
 		'no fixed floor that the line box can outgrow');
 });
 
-test('the artist keeps a real width instead of collapsing when the row is tight', () => {
-	const artist = declarations('.lyrics-creator-profile-track-artist');
-	const updated = declarations('.lyrics-creator-profile-track-updated');
-
-	// A zero flex-basis leaves the artist with nothing to grow into, so it
-	// collapsed to nothing while the date overflowed the row and was clipped.
-	assert.notEqual(artist.flex, '1 1 0');
-	assert.equal(artist.flex, '0 1 auto', 'the artist sizes to its content and only yields when squeezed');
-	assert.equal(updated.flex, '0 8 auto', 'the date yields space long before the artist does');
-});
-
 test('a long provider name cannot starve the track column or clip the date', () => {
 	const provider = declarations('.lyrics-creator-profile-track-provider');
 	const updated = declarations('.lyrics-creator-profile-track-updated');
@@ -157,7 +159,7 @@ test('a long provider name cannot starve the track column or clip the date', () 
 	assert.ok(Number.parseFloat(provider['max-width']) <= 150, 'provider is capped so it cannot starve the track');
 	assert.equal(provider.overflow, 'hidden');
 	assert.equal(provider['text-overflow'], 'ellipsis');
-	assert.equal(updated.flex, '0 8 auto', 'the date yields space when the row is tight');
+	assert.equal(updated.flex, '0 0 auto', 'the date keeps the room it needs');
 	assert.equal(updated['min-width'], '0');
 	assert.equal(updated.overflow, 'hidden');
 	assert.equal(declarations('.lyrics-creator-profile-track-actions')['max-width'], '240px', 'the cluster cannot starve the track');

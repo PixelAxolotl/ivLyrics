@@ -52,7 +52,7 @@ async (page) => {
       const open = document.createElement("button");
       open.className = "lyrics-creator-profile-track-open";
       open.style.cssText = "display:grid;grid-template-columns:56px minmax(0,1fr);gap:14px;background:none;border:0;color:inherit;text-align:left;";
-      open.innerHTML = '<div class="lyrics-creator-profile-track-cover"></div><div class="lyrics-creator-profile-track-main"><div class="lyrics-creator-profile-track-title">Offline song</div><div class="lyrics-creator-profile-track-subline"><span class="lyrics-creator-profile-track-artist">Eve</span><span class="lyrics-creator-profile-track-updated">Updated 10/21/2026</span></div></div>';
+      open.innerHTML = '<div class="lyrics-creator-profile-track-cover"></div><div class="lyrics-creator-profile-track-main"><div class="lyrics-creator-profile-track-title">Offline song</div><div class="lyrics-creator-profile-track-subline"><span class="lyrics-creator-profile-track-artist">Centimillimental</span><span class="lyrics-creator-profile-track-updated">Updated 10/21/2026</span></div></div>';
       const actions = document.createElement("div");
       actions.className = "lyrics-creator-profile-track-actions";
       // A long provider string is what squeezes the track column in the real
@@ -105,22 +105,29 @@ async (page) => {
       const mainBox = document.querySelector(".lyrics-creator-profile-track-main").getBoundingClientRect();
       const rowBox = document.querySelector(".lyrics-creator-profile-track").getBoundingClientRect();
       const actionsBox = document.querySelector(".lyrics-creator-profile-track-actions").getBoundingClientRect();
+      const scoreBox = document.querySelector(".lyrics-sync-score-badge").getBoundingClientRect();
+      const providerBox = document.querySelector(".lyrics-creator-profile-track-provider").getBoundingClientRect();
       return {
         popover: { left: p.left, right: p.right, top: p.top, bottom: p.bottom },
         modal: { left: m.left, right: m.right, top: m.top, bottom: m.bottom },
         trigger: { left: t.left, right: t.right, top: t.top, bottom: t.bottom },
         artist: { width: a.width, right: a.right, text: artist.textContent, clipped: artist.scrollWidth > artist.clientWidth + 1, needed: artist.scrollWidth },
-        updated: { right: u.right, width: u.width },
+        updated: { right: u.right, width: u.width, text: updated.textContent, clipped: updated.scrollWidth > updated.clientWidth + 1 },
         subline: { right: s.right, width: s.width },
         chain: { row: rowBox.width, actions: actionsBox.width, open: openBtn.width, main: mainBox.width },
+        stacked: { score: { top: scoreBox.top, right: scoreBox.right }, provider: { top: providerBox.top, right: providerBox.right } },
         items: popover.querySelectorAll(".fullscreen-playlist-item").length,
         theme: popover.getAttribute("data-ui-theme"),
       };
     });
 
     assert(geometry.artist.width > 0, "the artist line keeps a real width");
-    assert(!geometry.artist.clipped, `the artist is not truncated: ${geometry.artist.text} (width ${geometry.artist.width}, needs ${geometry.artist.needed}, subline ${geometry.subline.width}, date ${geometry.updated.width}, chain ${JSON.stringify(geometry.chain)})`);
+    assert(!geometry.updated.clipped, `the update keeps its room: ${geometry.updated.text}`);
     assert(geometry.updated.right <= geometry.subline.right + 1, "the date does not overflow the row");
+    assert(geometry.artist.clipped, "the artist gives way instead: " + geometry.artist.text);
+    // Points and source stack in one column, right-aligned with each other.
+    assert(geometry.stacked.provider.top >= geometry.stacked.score.top, "the source sits below the points");
+    assert(Math.abs(geometry.stacked.provider.right - geometry.stacked.score.right) < 2, "both are right-aligned in the column");
 
     assert(geometry.items === 2, `the menu lists both playlists, saw ${geometry.items}`);
     assert(geometry.theme === theme, `the menu follows the host theme, saw ${geometry.theme}`);

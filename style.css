@@ -17864,9 +17864,7 @@ html.is-lp-view-switch::view-transition-new(root) {
 
 .lyrics-creator-profile-track-artist,
 .lyrics-creator-profile-modal[data-ui-theme="light"] .lyrics-creator-profile-track-artist {
-  /* Size to the content, then yield only when the row is squeezed. A zero
-     basis (1 1 0) left the artist with nothing to grow into, so it collapsed
-     to nothing while the date overflowed the row and was clipped. */
+  /* The update keeps the room; the artist gives way and truncates. */
   flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
@@ -17878,9 +17876,11 @@ html.is-lp-view-switch::view-transition-new(root) {
 
 .lyrics-creator-profile-track-updated,
 .lyrics-creator-profile-modal[data-ui-theme="light"] .lyrics-creator-profile-track-updated {
-  /* The date yields space long before the artist does: the artist identifies
-     the track, the date is only metadata. */
-  flex: 0 8 auto;
+  /* The update has priority: it keeps its width and the artist truncates.
+     The cap stops it eating the whole line, which would collapse the artist
+     to nothing again. */
+  flex: 0 0 auto;
+  max-width: 80%;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -17897,10 +17897,11 @@ html.is-lp-view-switch::view-transition-new(root) {
 
 .lyrics-creator-profile-track-side,
 .lyrics-creator-profile-modal[data-ui-theme="light"] .lyrics-creator-profile-track-side {
+  /* Points and source stack in one column beside the playlist button. */
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
   color: var(--creator-muted);
 }
 
@@ -18017,7 +18018,7 @@ html.is-lp-view-switch::view-transition-new(root) {
 
   .lyrics-creator-profile-track-side,
   .lyrics-creator-profile-modal[data-ui-theme="light"] .lyrics-creator-profile-track-side {
-    align-items: center;
+    align-items: flex-start;
   }
 
   .lyrics-creator-decoration-fields {

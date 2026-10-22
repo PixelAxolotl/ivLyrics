@@ -3601,6 +3601,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	const [lrclibSearchMeta, setLrclibSearchMeta] = useState(null);
 	const [showLrclibCandidates, setShowLrclibCandidates] = useState(true);
 	const [lrclibIdInput, setLrclibIdInput] = useState('');
+	// True while the LRCLIB ID box holds an id the user typed and has not loaded
+	// yet. Neither the prefill nor the loaded-entry mirror overwrites it.
+	const lrclibIdInputEditedRef = useRef(false);
 	const [isLoadingLrclibId, setIsLoadingLrclibId] = useState(false);
 	const [lrclibSearchQuery, setLrclibSearchQuery] = useState('');
 	const [isSearchingLrclib, setIsSearchingLrclib] = useState(false);
@@ -4218,7 +4221,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		setAddonId(usedProvider);
 		setLyrics(result);
 		setSelectedLrclibSourceValue(finalProvider === 'lrclib' ? (result?.lrclibSource || null) : null);
-		if (finalProvider === 'lrclib') {
+		if (finalProvider === 'lrclib' && !lrclibIdInputEditedRef.current) {
 			const loadedLrclibId = result?.lrclibSource?.lrclibId || result?.lrclibId;
 			if (loadedLrclibId) setLrclibIdInput(String(loadedLrclibId));
 		}
@@ -4445,19 +4448,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		};
 	}, [buildLrclibIdCandidate, getLrclibCandidateText, getSyncCreatorLyricsFingerprint]);
 
-	const loadLrclibById = useCallback(async (requestedId = null) => {
-		// The "Load by ID" button wires this callback straight to onClick, so
-		// React hands it the click event. Only a literal id may be requested;
-		// anything else falls back to the value in the LRCLIB ID box.
-		const requested = (typeof requestedId === 'string' || typeof requestedId === 'number')
-			? String(requestedId).trim()
-			: '';
-		const lrclibId = requested || String(lrclibIdInput || '').trim();
+	// Always loads the id in the LRCLIB ID box; event arguments are ignored.
+	const loadLrclibById = useCallback(async () => {
+		const lrclibId = String(lrclibIdInput || '').trim();
 		if (!/^\d+$/.test(lrclibId)) {
 			Toast.error(I18n.t('syncCreator.lrclibIdInvalid') || 'Enter a valid LRCLIB ID.');
 			return;
 		}
-		setLrclibIdInput(lrclibId);
 
 		const sourceChangeRequestId = beginSyncCreatorSourceChange();
 		setIsLoadingLrclibId(true);
@@ -4498,6 +4495,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			setShowLrclibCandidates(true);
 			const applied = await applyLoadedLyricsResult(syntheticResult, SYNC_CREATOR_SOURCE_ADDON_ID, sourceChangeRequestId);
 			if (!applied || !isCurrentSyncCreatorSourceChange(sourceChangeRequestId)) return;
+			// The typed id is now the loaded entry, so later loads may mirror again.
+			lrclibIdInputEditedRef.current = false;
 			setSelectedLrclibSourceValue(syntheticResult.lrclibSource || buildLrclibSyncSource(decoratedCandidate));
 			Toast.success(I18n.t('syncCreator.lrclibIdLoadSuccess') || 'Loaded lyrics from LRCLIB ID.');
 		} catch (e) {
@@ -5752,36 +5751,6 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		clearLrclibCandidateState();
 
 		try {
-			// When reopening the editor for an already published sync, prefer its
-			// stored LRCLIB id so the exact source lyrics are reloaded instead of
-			// relying on a metadata search that may return no candidates.
-			let existingSyncLrclibId = '';
-			try {
-				if (trackId && window.SyncDataService?.getSyncData) {
-					const existingSyncData = await window.SyncDataService.getSyncData(trackId, SYNC_CREATOR_SOURCE_ADDON_ID, {
-						...trackInfo,
-						title: trackName,
-						artist: artistName,
-						album: albumName,
-						isrc: (typeof trackIsrc !== 'undefined' ? trackIsrc : '') || undefined
-					});
-					const existingSource = existingSyncData?.syncData?.source || existingSyncData?.source || null;
-					if (existingSource?.provider === SYNC_CREATOR_SOURCE_ADDON_ID) {
-						const normalizeId = (typeof normalizeSyncCreatorLrclibId === 'undefined')
-							? (value => (/^[1-9]\d*$/.test(String(value || '').trim()) ? String(value).trim() : ''))
-							: normalizeSyncCreatorLrclibId;
-						existingSyncLrclibId = normalizeId(existingSource.lrclibId);
-					}
-				}
-			} catch (existingSyncError) {
-				window.__ivLyricsDebugLog?.('[SyncDataCreator] Failed to resolve existing sync LRCLIB id:', existingSyncError?.message || existingSyncError);
-			}
-			const loadExistingSyncLrclibById = (typeof loadLrclibById === 'undefined') ? null : loadLrclibById;
-			if (existingSyncLrclibId && typeof loadExistingSyncLrclibById === 'function') {
-				await loadExistingSyncLrclibById(existingSyncLrclibId);
-				return;
-			}
-
 			const firstArtist = trackInfo?.artists?.[0]?.name ||
 				Spicetify.Player?.data?.item?.artists?.[0]?.name ||
 				artistName.split(',')[0].trim();
@@ -5795,8 +5764,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				album: trackInfo?.album?.name || Spicetify.Player?.data?.item?.album?.name || '',
 				duration: Spicetify.Player?.data?.item?.duration?.milliseconds || 0,
 				lrclibOfficialOnly: true,
-				lrclibId: String((typeof lrclibIdInput !== 'undefined' ? lrclibIdInput : '') || '').trim(),
-				lrclibSource: (typeof selectedLrclibSourceValue !== 'undefined' ? selectedLrclibSourceValue : null) || (typeof lyrics !== 'undefined' ? lyrics?.lrclibSource : null) || null
+				// The addon restores a published sync's stored LRCLIB id before it
+				// searches metadata. Give it the ISRC the editor already resolved,
+				// so it looks up the same published sync as the editor itself.
+				isrc: trackIsrc || undefined
 			};
 			const lrclibAddon = window.LyricsAddonManager?.getAddon?.(SYNC_CREATOR_SOURCE_ADDON_ID);
 			window.__ivLyricsDebugLog?.('[SyncDataCreator] Trying fixed provider:', SYNC_CREATOR_SOURCE_ADDON_ID);
@@ -5845,16 +5816,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 
 		if (isCurrentSyncCreatorSourceChange(sourceChangeRequestId)) {
-			// The LRCLIB ID box starts with the id of the lyrics the app is
-			// currently showing. The metadata search stays untouched and a
-			// hand-typed id is never replaced.
-			const prefillLrclibId = (typeof resolveSyncCreatorLoadedLyricsLrclibId === 'function')
-				? resolveSyncCreatorLoadedLyricsLrclibId(trackUri)
-				: '';
-			const currentLrclibIdInput = (typeof lrclibIdInput !== 'undefined') ? String(lrclibIdInput || '') : '';
-			if (prefillLrclibId && (!currentLrclibIdInput || currentLrclibIdInput === prefillLrclibId)) {
-				setLrclibIdInput(prefillLrclibId);
-			}
+			// The LRCLIB ID box suggests the id of the lyrics the app is currently
+			// showing (official LRCLIB only), so one "Load by ID" switches to them.
+			// The metadata search above is unaffected and a typed id is kept.
+			const prefillLrclibId = resolveSyncCreatorLoadedLyricsLrclibId(trackUri);
+			if (prefillLrclibId && !lrclibIdInputEditedRef.current) setLrclibIdInput(prefillLrclibId);
 			setIsLoading(false);
 		}
 	}, [
@@ -5867,6 +5833,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		isCurrentSyncCreatorSourceChange,
 		setProviderValue,
 		trackInfo,
+		trackIsrc,
 		trackName,
 		trackUri
 	]);
@@ -12990,7 +12957,12 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						style: s.lrclibIdInput,
 						value: lrclibIdInput,
 						placeholder: I18n.t('syncCreator.lrclibIdPlaceholder') || 'e.g. 5206921',
-						onChange: (e) => setLrclibIdInput(e.target.value.replace(/[^\d]/g, '')),
+						onChange: (e) => {
+							const nextLrclibId = e.target.value.replace(/[^\d]/g, '');
+							// An emptied box is no longer a typed id, so it may be filled again.
+							lrclibIdInputEditedRef.current = nextLrclibId !== '';
+							setLrclibIdInput(nextLrclibId);
+						},
 						onKeyDown: (e) => {
 							if (e.key === 'Enter') loadLrclibById();
 						},

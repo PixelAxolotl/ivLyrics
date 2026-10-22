@@ -23,6 +23,7 @@ function harness(transport) {
     console: { error() {} },
     Toast: { error: value => messages.push(value), success: value => messages.push(value) },
     lrclibIdInput: '18694795', lrclibSearchQuery: 'Fixture & café', SYNC_CREATOR_SOURCE_ADDON_ID: 'lrclib',
+    lrclibIdInputEditedRef: { current: true },
     beginSyncCreatorSourceChange: () => 1,
     isCurrentSyncCreatorSourceChange: () => current,
     resetSyncCreatorLyricsLoadingState() {}, clearLrclibCandidateState() {},
@@ -72,6 +73,7 @@ test('a click event is never treated as an LRCLIB id', async () => {
   assert.equal(requests.length, 1);
   assert.equal(requests[0][0], 'https://lrclib.net/api/get/18694795');
   assert.equal(h.calls.filter(([name]) => name === 'applyLoadedLyricsResult').length, 1);
+  assert.equal(h.context.lrclibIdInputEditedRef.current, false, 'a loaded typed id may be mirrored again');
 });
 
 test('missing transport, failed network, HTTP errors and invalid JSON stop editor loading cleanly', async () => {

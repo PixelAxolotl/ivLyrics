@@ -2622,22 +2622,6 @@
                     }
                 }
 
-                if (!syncDataSource) {
-                    const infoSource = info?.lrclibSource
-                        || info?.lrclibSourceValue
-                        || info?.syncData?.source
-                        || info?.syncData?.syncData?.source
-                        || null;
-                    if (infoSource && getSyncDataLrclibSource({ syncData: { source: infoSource } })) {
-                        syncDataSource = infoSource;
-                        if (!syncDataLineCharCounts && Array.isArray(infoSource.lineCharCounts)) {
-                            syncDataLineCharCounts = infoSource.lineCharCounts;
-                        }
-                    } else if (info?.lrclibId) {
-                        syncDataSource = { provider: ADDON_INFO.id, lrclibId: info.lrclibId };
-                    }
-                }
-
         return { headers, syncDataLineCharCounts, syncDataSource };
     }
     // searchCandidates()와 getLyrics()의 트랙 메타데이터 파싱은 동일하다.

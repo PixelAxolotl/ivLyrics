@@ -5759,8 +5759,14 @@ ruby rt {
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.26) transparent;
+  /* This column ends on the grid boundary, so its native scrollbar paints
+     over the lyrics that start next to the album. Keep the scroll path,
+     drop the bar. */
+  scrollbar-width: none;
+}
+
+.lyrics-fullscreen-left-panel:has(.left-controls-player)::-webkit-scrollbar {
+  display: none;
 }
 
 .lyrics-fullscreen-left-panel:has(.left-controls-player) > .lyrics-fullscreen-left-content {

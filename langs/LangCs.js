@@ -3091,6 +3091,7 @@ window.LANG_CS = {
     "import": "Importovat",
     "importSuccess": "Data synchronizace byla importována",
     "importError": "Import se nezdařil",
+    "importLyricsMismatch": "Tento soubor neodpovídá aktuálním textům ani textům z LRCLIB {id}.",
     "importDifferentTrack": "Tato synchronizační data pocházejí z jiné stopy. Chcete přesto importovat?",
     "kindVocal": "Žádný efekt",
     "kindEffect": "Chvění",

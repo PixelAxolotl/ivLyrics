@@ -82,6 +82,7 @@ function createEditor({ rows = ['PRE', 'ABCD', 'TAIL'], data = null } = {}) {
         trackInfo: {}, onClose: null, ensureScoreTracker: () => null,
         clearLyricsCachesAfterSyncSubmit() {}, deleteActiveSyncCreatorDraft() {},
         confirm() { throw new Error('fixture unexpectedly required incomplete submission confirmation'); },
+        loadLrclibSourceForImport() { throw new Error('fixture unexpectedly replaced the lyrics for an import'); },
         SyncDataService: { submitSyncData: async (_trackId, _provider, data) => {
             submittedFile = plain(data);
             return true;
@@ -952,3 +953,75 @@ test('reported full attachment preserves every vocal and merged group after loca
         assert.deepEqual(editor.times(), expected, `reported row ${index} keeps exact edited times`);
     }
 });
+
+const lrclibSourceFor = (context, rows) => {
+    const lineCharCounts = rows.map(row => Array.from(row).length);
+    return {
+        provider: 'lrclib', lrclibId: '424242', preferredLyricsSource: 'plain', duration: 120,
+        lyricsFingerprint: vm.runInContext(`getSyncCreatorLyricsFingerprintFromText(${JSON.stringify(rows.join('\n'))})`, context),
+        lineCharCounts, lineCount: rows.length,
+        textCharCount: lineCharCounts.reduce((sum, count) => sum + count, 0),
+    };
+};
+// Imports without the fixture re-render, for files that replace the shown rows.
+const importFile = async (editor, file) => {
+    let input;
+    editor.context.document = { createElement: () => (input = { click() {} }) };
+    editor.api.importSyncData();
+    await input.onchange({ target: { files: [{ text: async () => JSON.stringify(file) }] } });
+};
+// The reported entry's shape: its plain text breaks two lines differently from
+// the timed text the editor was showing (synthetic rows).
+const FILE_ROWS = ['Morning light', 'Hold me close, (oh)', 'Never, never let go'];
+const SHOWN_ROWS = ['Morning light', 'Hold me close', 'Never let go'];
+
+test('a file made on other lyrics loads them before its timings are placed', async () => {
+    const maker = createEditor({ rows: FILE_ROWS });
+    const file = { ...(await maker.export()), source: lrclibSourceFor(maker.context, FILE_ROWS) };
+    const reference = createEditor({ rows: FILE_ROWS });
+    await reference.import(file);
+    const editor = createEditor({ rows: SHOWN_ROWS });
+    const requested = [];
+    const loadedSource = { ...file.source, searchSource: 'id' };
+    editor.context.loadLrclibSourceForImport = async source => {
+        requested.push(plain(source));
+        return { lyricsChars: FILE_ROWS.flatMap(row => Array.from(row)), lyricsFingerprint: 'file-text', lrclibSource: loadedSource };
+    };
+    await importFile(editor, file);
+    assert.deepEqual(requested, [plain(file.source)]);
+    assert.deepEqual(plain(editor.context.syncData), plain(reference.context.syncData),
+        'the timings apply exactly as they do on the lyrics they were made on');
+    assert.deepEqual(plain(editor.context.selectedLrclibSource), loadedSource);
+});
+
+test('files for the shown lyrics, or with the same line lengths, import without loading other lyrics', async () => {
+    const rows = ['PRE', 'ABCD', 'TAIL'];
+    const exported = await createEditor({ rows }).export();
+    const shown = createEditor({ rows });
+    for (const source of [lrclibSourceFor(shown.context, rows), lrclibSourceFor(shown.context, ['PRX', 'ABCE', 'TAIX'])]) {
+        const editor = createEditor({ rows, data: { version: 5, lines: [] } });
+        await editor.import({ ...exported, source });
+        assert.equal(editor.context.syncData.lines.length, rows.length);
+        assert.deepEqual(plain(editor.context.selectedLrclibSource), source);
+    }
+});
+
+test('a file that fits no available lyrics fails instead of reporting success', async () => {
+    const maker = createEditor({ rows: FILE_ROWS });
+    const file = { ...(await maker.export()), source: lrclibSourceFor(maker.context, FILE_ROWS) };
+    const editor = createEditor({ rows: SHOWN_ROWS });
+    const before = plain(editor.context.syncData);
+    editor.context.loadLrclibSourceForImport = async () => { throw new Error('syncCreator.importLyricsMismatch'); };
+    await assert.rejects(importFile(editor, file), { message: 'syncCreator.importError: syncCreator.importLyricsMismatch' });
+    assert.deepEqual(plain(editor.context.syncData), before);
+
+    let loads = 0;
+    editor.context.loadLrclibSourceForImport = async () => { loads += 1; return null; };
+    await assert.rejects(importFile(editor, { ...file, lines: [{ start: 4, end: 1, chars: [1] }] }), /Invalid sync data/);
+    assert.equal(loads, 0, 'an unusable file is refused before the shown lyrics are replaced');
+
+    await importFile(editor, file);
+    assert.equal(loads, 1);
+    assert.deepEqual(plain(editor.context.syncData), before, 'a newer lyrics load replaces a pending import');
+});
+

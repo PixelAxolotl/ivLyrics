@@ -10,7 +10,7 @@ const slice = (start, end) => {
   return source.slice(from, to);
 };
 const helper = slice('const fetchSyncCreatorLrclib =', 'const SYNC_CREATOR_RTL_STRONG_CHAR_REGEX');
-const callbacks = slice('\tconst loadLrclibById =', '\t// 가사를 줄 단위로 파싱');
+const callbacks = slice('\tconst applyLrclibRecord =', '\t// 가사를 줄 단위로 파싱');
 const candidate = { id: 18694795, syncedLyrics: '[00:01.00]Fixture', candidateKey: 'fixture' };
 
 function harness(transport) {
@@ -24,6 +24,10 @@ function harness(transport) {
     Toast: { error: value => messages.push(value), success: value => messages.push(value) },
     lrclibIdInput: '18694795', lrclibSearchQuery: 'Fixture & café', SYNC_CREATOR_SOURCE_ADDON_ID: 'lrclib',
     lrclibIdInputEditedRef: { current: true },
+    selectedLrclibSourceRef: { current: null }, lyrics: null, syncCreatorDraftStore: null,
+    resolveKnownLrclibRecordVariant: async () => '',
+    getLrclibRecordVariantForSource: () => '',
+    extractLyricsText: value => value.map(line => line.text).join('\n'),
     beginSyncCreatorSourceChange: () => 1,
     isCurrentSyncCreatorSourceChange: () => current,
     resetSyncCreatorLyricsLoadingState() {}, clearLrclibCandidateState() {},

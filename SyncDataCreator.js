@@ -1631,6 +1631,20 @@ const normalizeLoadedSyncCreatorBodyForLyrics = (syncBody, lyricsText) => {
 	};
 };
 
+// Fingerprint and line lengths of a lyrics text, as an LRCLIB source records them.
+const getSyncCreatorLrclibTextShape = (text) => ({
+	lyricsFingerprint: getSyncCreatorLyricsFingerprintFromText(text),
+	lineCharCounts: getSyncCreatorLineCharCountsFromText(text)
+});
+
+// True when a complete LRCLIB source was made from exactly the text with this
+// shape. Sync timings are character positions, so they only fit that text.
+const doesSyncCreatorLrclibSourceMatchShape = (source, shape) => (
+	isCompleteSyncCreatorLrclibSource(source)
+	&& source.lyricsFingerprint === shape?.lyricsFingerprint
+	&& hasExactSyncCreatorLineShape(source.lineCharCounts, shape?.lineCharCounts)
+);
+
 const normalizeSyncCreatorSpeakerToken = (value) => {
 	const raw = String(value || '').trim();
 	if (!raw) return '';
@@ -4098,6 +4112,44 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		};
 	}, [buildLineObjectsFromText, buildLrclibSyncSource, getLrclibCandidateText, stripLrclibTimestamp]);
 
+	// One LRCLIB entry can carry different timed and plain texts. These find
+	// the version a saved sync source was made from.
+	const getLrclibRecordVariantText = useCallback((record, variant) => {
+		const hasVariant = variant === 'synced' ? !!record?.syncedLyrics : (variant === 'plain' && !!record?.plainLyrics);
+		return hasVariant ? getLrclibCandidateText({ ...record, preferredLyricsSource: variant }) : '';
+	}, [getLrclibCandidateText]);
+
+	const getLrclibRecordVariantForSource = useCallback((record, source) => {
+		if (!record || !isCompleteSyncCreatorLrclibSource(source)) return '';
+		const recordId = normalizeSyncCreatorLrclibId(record.id ?? record.lrclibId);
+		if (recordId && recordId !== normalizeSyncCreatorLrclibId(source.lrclibId)) return '';
+		return [...new Set([source.preferredLyricsSource, 'synced', 'plain'])].find(variant => {
+			const variantText = getLrclibRecordVariantText(record, variant);
+			return !!variantText && doesSyncCreatorLrclibSourceMatchShape(source, getSyncCreatorLrclibTextShape(variantText));
+		}) || '';
+	}, [getLrclibRecordVariantText]);
+
+	// Load by ID shows the version an existing sync for the entry was made on:
+	// the source the editor already uses, else the published sync's source.
+	const resolveKnownLrclibRecordVariant = useCallback(async (record, knownSources = []) => {
+		for (const source of knownSources) {
+			const variant = getLrclibRecordVariantForSource(record, source);
+			if (variant) return variant;
+		}
+		if (!window.SyncDataService || !trackId) return '';
+		try {
+			const published = await window.SyncDataService.getSyncData(trackId, SYNC_CREATOR_SOURCE_ADDON_ID, {
+				isrc: trackIsrc || undefined,
+				title: trackName,
+				artist: artistName,
+				album: albumName
+			});
+			return getLrclibRecordVariantForSource(record, published?.syncData?.source);
+		} catch (_) {
+			return '';
+		}
+	}, [albumName, artistName, getLrclibRecordVariantForSource, trackId, trackIsrc, trackName]);
+
 	const clearLrclibCandidateState = useCallback(() => {
 		setLrclibCandidates([]);
 		setSelectedLrclibCandidateKey('');
@@ -4402,9 +4454,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		setSelectedLrclibSourceValue
 	]);
 
-	const buildLrclibIdCandidate = useCallback((candidate, requestedId) => {
+	const buildLrclibIdCandidate = useCallback((candidate, requestedId, variant = '') => {
 		if (!candidate) return null;
-		const preferredLyricsSource = candidate.syncedLyrics ? 'synced' : (candidate.plainLyrics ? 'plain' : 'unknown');
+		const preferredLyricsSource = (variant === 'synced' && candidate.syncedLyrics) || (variant === 'plain' && candidate.plainLyrics)
+			? variant
+			: (candidate.syncedLyrics ? 'synced' : (candidate.plainLyrics ? 'plain' : 'unknown'));
 		const baseCandidate = {
 			...candidate,
 			id: candidate.id ?? requestedId,
@@ -4453,6 +4507,48 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		};
 	}, [buildLrclibIdCandidate, getLrclibCandidateText, getSyncCreatorLyricsFingerprint]);
 
+	// Shows one LRCLIB entry in the editor, in the given version when it has
+	// one. Returns the loaded lyrics result, or null when a newer source load
+	// replaced it.
+	const applyLrclibRecord = useCallback(async (record, lrclibId, variant, sourceChangeRequestId) => {
+		const decoratedCandidate = buildLrclibIdCandidate(record, lrclibId, variant);
+		if (!decoratedCandidate || !getLrclibCandidateText(decoratedCandidate).trim()) {
+			throw new Error('No lyrics found');
+		}
+
+		const syntheticResult = buildSyntheticLrclibResult(decoratedCandidate);
+		setAddonId(SYNC_CREATOR_SOURCE_ADDON_ID);
+		setProviderValue(SYNC_CREATOR_SOURCE_ADDON_ID);
+		setLrclibCandidates([decoratedCandidate]);
+		setSelectedLrclibCandidateKey(decoratedCandidate.candidateKey);
+		setPreviewLrclibCandidateKey(decoratedCandidate.candidateKey);
+		setLrclibSearchMeta({
+			success: true,
+			totalResults: 1,
+			selectedCandidateKey: decoratedCandidate.candidateKey,
+			selectedSource: 'id',
+			searchMode: 'id',
+			directLrclibId: lrclibId
+		});
+		setShowLrclibCandidates(true);
+		const applied = await applyLoadedLyricsResult(syntheticResult, SYNC_CREATOR_SOURCE_ADDON_ID, sourceChangeRequestId);
+		if (!applied || !isCurrentSyncCreatorSourceChange(sourceChangeRequestId)) return null;
+		// The loaded id is now the editor's entry, so later loads may mirror again.
+		lrclibIdInputEditedRef.current = false;
+		setLrclibIdInput(lrclibId);
+		setSelectedLrclibSourceValue(syntheticResult.lrclibSource || buildLrclibSyncSource(decoratedCandidate));
+		return syntheticResult;
+	}, [
+		applyLoadedLyricsResult,
+		buildLrclibIdCandidate,
+		buildLrclibSyncSource,
+		buildSyntheticLrclibResult,
+		getLrclibCandidateText,
+		isCurrentSyncCreatorSourceChange,
+		setProviderValue,
+		setSelectedLrclibSourceValue
+	]);
+
 	// Always loads the id in the LRCLIB ID box; event arguments are ignored.
 	const loadLrclibById = useCallback(async () => {
 		const lrclibId = String(lrclibIdInput || '').trim();
@@ -4461,6 +4557,8 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			return;
 		}
 
+		// Read before the reset below clears the selected source.
+		const knownLrclibSources = [selectedLrclibSourceRef.current, lyrics?.lrclibSource];
 		const sourceChangeRequestId = beginSyncCreatorSourceChange();
 		setIsLoadingLrclibId(true);
 		resetSyncCreatorLyricsLoadingState();
@@ -4478,31 +4576,12 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				throw new Error('No lyrics found');
 			}
 
-			const decoratedCandidate = buildLrclibIdCandidate(candidate, lrclibId);
-			if (!decoratedCandidate || !getLrclibCandidateText(decoratedCandidate).trim()) {
-				throw new Error('No lyrics found');
-			}
-
-			const syntheticResult = buildSyntheticLrclibResult(decoratedCandidate);
-			setAddonId(SYNC_CREATOR_SOURCE_ADDON_ID);
-			setProviderValue(SYNC_CREATOR_SOURCE_ADDON_ID);
-			setLrclibCandidates([decoratedCandidate]);
-			setSelectedLrclibCandidateKey(decoratedCandidate.candidateKey);
-			setPreviewLrclibCandidateKey(decoratedCandidate.candidateKey);
-			setLrclibSearchMeta({
-				success: true,
-				totalResults: 1,
-				selectedCandidateKey: decoratedCandidate.candidateKey,
-				selectedSource: 'id',
-				searchMode: 'id',
-				directLrclibId: lrclibId
-			});
-			setShowLrclibCandidates(true);
-			const applied = await applyLoadedLyricsResult(syntheticResult, SYNC_CREATOR_SOURCE_ADDON_ID, sourceChangeRequestId);
-			if (!applied || !isCurrentSyncCreatorSourceChange(sourceChangeRequestId)) return;
-			// The typed id is now the loaded entry, so later loads may mirror again.
-			lrclibIdInputEditedRef.current = false;
-			setSelectedLrclibSourceValue(syntheticResult.lrclibSource || buildLrclibSyncSource(decoratedCandidate));
+			// The timed and plain texts of one entry can differ. Show the one an
+			// existing sync was made on, so its timings load onto it.
+			const variant = await resolveKnownLrclibRecordVariant(candidate, knownLrclibSources);
+			if (!isCurrentSyncCreatorSourceChange(sourceChangeRequestId)) return;
+			const loaded = await applyLrclibRecord(candidate, lrclibId, variant, sourceChangeRequestId);
+			if (!loaded) return;
 			Toast.success(I18n.t('syncCreator.lrclibIdLoadSuccess') || 'Loaded lyrics from LRCLIB ID.');
 		} catch (e) {
 			if (!isCurrentSyncCreatorSourceChange(sourceChangeRequestId)) return;
@@ -4516,17 +4595,65 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			setIsLoadingLrclibId(false);
 		}
 	}, [
-		applyLoadedLyricsResult,
-		buildLrclibIdCandidate,
-		buildLrclibSyncSource,
-		buildSyntheticLrclibResult,
+		applyLrclibRecord,
 		beginSyncCreatorSourceChange,
 		clearLrclibCandidateState,
-		getLrclibCandidateText,
 		isCurrentSyncCreatorSourceChange,
 		lrclibIdInput,
-		setProviderValue,
-		setSelectedLrclibSourceValue
+		lyrics,
+		resolveKnownLrclibRecordVariant
+	]);
+
+	// An exported sync file names the LRCLIB source its timings were made on.
+	// Shows that entry's matching version, so the timings land on the
+	// characters they were recorded for. Returns the loaded lyrics, or null
+	// when a newer source load replaced them.
+	const loadLrclibSourceForImport = useCallback(async (source) => {
+		const lrclibId = normalizeSyncCreatorLrclibId(source?.lrclibId);
+		let record = null;
+		try {
+			const response = await fetchSyncCreatorLrclib(`https://lrclib.net/api/get/${encodeURIComponent(lrclibId)}`);
+			if (!response.ok) throw new Error(`LRCLIB ${response.status}`);
+			record = await response.json();
+		} catch (error) {
+			throw new Error(`${I18n.t('syncCreator.lrclibIdLoadError') || 'Failed to load lyrics from LRCLIB ID'} (${lrclibId}): ${error?.message || error}`);
+		}
+		const variant = getLrclibRecordVariantForSource(record, source);
+		if (!variant) {
+			throw new Error(I18n.t('syncCreator.importLyricsMismatch', { id: lrclibId })
+				|| `This file does not match the current lyrics or the lyrics of LRCLIB ${lrclibId}.`);
+		}
+
+		const sourceChangeRequestId = beginSyncCreatorSourceChange();
+		resetSyncCreatorLyricsLoadingState();
+		clearLrclibCandidateState();
+		try {
+			const loaded = await applyLrclibRecord(record, lrclibId, variant, sourceChangeRequestId);
+			if (!loaded) return null;
+			const text = extractLyricsText(loaded.synced || loaded.unsynced);
+			// The file's own vocal parts decide multi-vocal mode, so show the
+			// text even when the load stopped to ask about it.
+			setLyricsText(text);
+			return {
+				lyricsChars: getSyncCreatorFlatLyricsCharsFromText(text),
+				lyricsFingerprint: syncCreatorDraftStore?.createLyricsFingerprint?.(text)
+					|| getSyncCreatorLyricsFingerprintFromText(text),
+				lrclibSource: loaded.lrclibSource || null
+			};
+		} catch (error) {
+			if (isCurrentSyncCreatorSourceChange(sourceChangeRequestId)) setError(I18n.t('syncCreator.loadError'));
+			throw error;
+		} finally {
+			if (isCurrentSyncCreatorSourceChange(sourceChangeRequestId)) setIsLoading(false);
+		}
+	}, [
+		applyLrclibRecord,
+		beginSyncCreatorSourceChange,
+		clearLrclibCandidateState,
+		extractLyricsText,
+		getLrclibRecordVariantForSource,
+		isCurrentSyncCreatorSourceChange,
+		syncCreatorDraftStore
 	]);
 
 	const searchLrclibByQuery = useCallback(async () => {
@@ -9340,6 +9467,18 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		Spicetify.Player.seek(Math.max(0, Spicetify.Player.getProgress() + offsetMs));
 	}, []);
 
+	// Shape of the shown lyrics and the versions of each loaded LRCLIB entry
+	// that match them, computed once per text rather than on every snapshot.
+	const lyricsTextLrclibShape = useMemo(() => getSyncCreatorLrclibTextShape(lyricsText), [lyricsText]);
+	const lrclibCandidateVariantsForLyrics = useMemo(() => new Map(lrclibCandidates.map(candidate => [
+		candidate,
+		['synced', 'plain'].filter(variant => {
+			const variantText = getLrclibRecordVariantText(candidate, variant);
+			return !!variantText
+				&& getSyncCreatorLyricsFingerprintFromText(variantText) === lyricsTextLrclibShape.lyricsFingerprint;
+		})
+	])), [getLrclibRecordVariantText, lrclibCandidates, lyricsTextLrclibShape]);
+
 	const attachSelectedLrclibSource = useCallback((data) => {
 		const sanitized = sanitizeSyncCreatorSyncData(data, lyricsFullTextChars);
 		if (!sanitized) {
@@ -9358,22 +9497,38 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const currentLrclibSource = selectedLrclibSourceRef.current;
 		const loadedLrclibSource = lyrics?.lrclibSource;
 		const persistedLrclibSource = sanitized?.source;
-		let resolvedSource = [currentLrclibSource, loadedLrclibSource, persistedLrclibSource]
-			.find(isCompleteSyncCreatorLrclibSource) || null;
-
+		const knownLrclibSources = [currentLrclibSource, loadedLrclibSource, persistedLrclibSource];
+		const desiredLrclibId = [
+			currentLrclibSource?.lrclibId,
+			loadedLrclibSource?.lrclibId,
+			persistedLrclibSource?.lrclibId,
+			lyrics?.lrclibId
+		].map(normalizeSyncCreatorLrclibId).find(Boolean) || '';
+		const selectedCandidate = lrclibCandidates.find(candidate => (
+			desiredLrclibId
+				? normalizeSyncCreatorLrclibId(candidate?.id ?? candidate?.lrclibId) === desiredLrclibId
+				: candidate?.candidateKey === selectedLrclibCandidateKey
+		)) || null;
+		// The source has to describe the text these timings are on. One LRCLIB
+		// entry can carry different timed and plain texts, and a source taken
+		// from an imported file or an older submission may name the other one.
+		let resolvedSource = knownLrclibSources
+			.find(source => doesSyncCreatorLrclibSourceMatchShape(source, lyricsTextLrclibShape)) || null;
+		const selectedCandidateId = normalizeSyncCreatorLrclibId(selectedCandidate?.id ?? selectedCandidate?.lrclibId);
+		if (selectedCandidate && (!resolvedSource || normalizeSyncCreatorLrclibId(resolvedSource.lrclibId) === selectedCandidateId)) {
+			const matchingVariants = lrclibCandidateVariantsForLyrics.get(selectedCandidate) || [];
+			const labeledVariant = resolvedSource?.preferredLyricsSource || selectedCandidate.preferredLyricsSource;
+			const variant = matchingVariants.includes(labeledVariant) ? labeledVariant : (matchingVariants[0] || '');
+			if (variant) {
+				resolvedSource = resolvedSource
+					? { ...resolvedSource, preferredLyricsSource: variant }
+					: buildLrclibSyncSource({ ...selectedCandidate, preferredLyricsSource: variant });
+			}
+		}
+		// Lyrics that no known source describes keep the earlier fallback.
 		if (!resolvedSource) {
-			const desiredLrclibId = [
-				currentLrclibSource?.lrclibId,
-				loadedLrclibSource?.lrclibId,
-				persistedLrclibSource?.lrclibId,
-				lyrics?.lrclibId
-			].map(normalizeSyncCreatorLrclibId).find(Boolean) || '';
-			const selectedCandidate = lrclibCandidates.find(candidate => (
-				desiredLrclibId
-					? normalizeSyncCreatorLrclibId(candidate?.id ?? candidate?.lrclibId) === desiredLrclibId
-					: candidate?.candidateKey === selectedLrclibCandidateKey
-			)) || null;
-			resolvedSource = buildLrclibSyncSource(selectedCandidate);
+			resolvedSource = knownLrclibSources.find(isCompleteSyncCreatorLrclibSource)
+				|| buildLrclibSyncSource(selectedCandidate);
 		}
 
 		if (!resolvedSource) {
@@ -9394,8 +9549,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	}, [
 		buildLrclibSyncSource,
 		lrclibCandidates,
+		lrclibCandidateVariantsForLyrics,
 		lyrics,
 		lyricsFullTextChars,
+		lyricsTextLrclibShape,
 		selectedLrclibCandidateKey
 	]);
 
@@ -10711,8 +10868,36 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 					throw new Error('Invalid sync data format');
 				}
 
+				// Timings are character positions in the lyrics they were made on.
+				// When the file's source has other line lengths (often the other
+				// version of the same LRCLIB entry), load those lyrics first
+				// instead of placing its timings on the wrong characters. Files
+				// with equal line lengths keep every timing on its character.
+				let target = {
+					lyricsChars: lyricsFullTextChars,
+					lyricsFingerprint: sessionLyricsFingerprint,
+					provider,
+					addonId,
+					lrclibSource: null
+				};
+				const fileLrclibSource = isCompleteSyncCreatorLrclibSource(importedData.source) ? importedData.source : null;
+				if (fileLrclibSource && !hasExactSyncCreatorLineShape(
+					fileLrclibSource.lineCharCounts,
+					getSyncCreatorLineCharCountsFromText(lyricsText)
+				)) {
+					// Reject an unusable file before it replaces the current lyrics.
+					assertValidSyncCreatorSyncData(sanitizeSyncCreatorSyncData(importedData));
+					const loaded = await loadLrclibSourceForImport(fileLrclibSource);
+					if (!loaded) return;
+					target = {
+						...loaded,
+						provider: SYNC_CREATOR_SOURCE_ADDON_ID,
+						addonId: SYNC_CREATOR_SOURCE_ADDON_ID
+					};
+				}
+
 				// 싱크 데이터 적용
-				const sanitizedData = sanitizeSyncCreatorSyncData(importedData, lyricsFullTextChars);
+				const sanitizedData = sanitizeSyncCreatorSyncData(importedData, target.lyricsChars);
 				assertValidSyncCreatorSyncData(sanitizedData);
 				// Import is an immutable queue boundary, including small/repeated
 				// imports and files previously exported from this editor.
@@ -10729,14 +10914,13 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				sessionAutosaveSuppressedRef.current = false;
 				latestSessionRecordRef.current = null;
 				setIsRestoringCheckpoint(false);
-				const importedLrclibSource = sanitizedData?.source?.provider === 'lrclib'
-					? sanitizedData.source
-					: null;
+				const importedLrclibSource = target.lrclibSource
+					|| (sanitizedData?.source?.provider === 'lrclib' ? sanitizedData.source : null);
 				const importedDraftKey = syncCreatorDraftStore?.createDraftKey?.({
 					trackKey: sessionTrackKey,
-					provider,
-					addonId,
-					lyricsFingerprint: sessionLyricsFingerprint,
+					provider: target.provider,
+					addonId: target.addonId,
+					lyricsFingerprint: target.lyricsFingerprint,
 					lrclibId: importedLrclibSource?.lrclibId ?? ''
 				}) || activeSessionDraftKey;
 				if (importedDraftKey) {
@@ -10773,7 +10957,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	}, [
 		activeSessionDraftKey,
 		addonId,
+		loadLrclibSourceForImport,
 		lyricsFullTextChars,
+		lyricsText,
 		provider,
 		sessionLyricsFingerprint,
 		sessionTrackKey,

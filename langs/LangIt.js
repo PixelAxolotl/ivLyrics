@@ -3091,6 +3091,7 @@ window.LANG_IT = {
     "import": "Importa",
     "importSuccess": "Dati di sincronizzazione importati",
     "importError": "Importazione fallita",
+    "importLyricsMismatch": "Questo file non corrisponde né al testo attuale né al testo di LRCLIB {id}.",
     "importDifferentTrack": "Questi sono dati di sincronizzazione di un'altra traccia. Vuoi importare comunque?",
     "kindVocal": "Nessun effetto",
     "kindEffect": "Tremolio",

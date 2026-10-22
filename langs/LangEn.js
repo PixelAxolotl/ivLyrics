@@ -3091,6 +3091,7 @@ window.LANG_EN = {
     "import": "Import",
     "importSuccess": "Sync data imported",
     "importError": "Import failed",
+    "importLyricsMismatch": "This file does not match the current lyrics or the lyrics of LRCLIB {id}.",
     "importDifferentTrack": "This sync data is from a different track. Do you want to import anyway?",
     "kindVocal": "No effect",
     "kindEffect": "Shake",

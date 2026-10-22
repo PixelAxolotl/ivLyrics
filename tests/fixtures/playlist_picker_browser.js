@@ -42,17 +42,33 @@ async (page) => {
       const host = document.createElement("div");
       host.className = "lyrics-creator-profile-modal";
       host.setAttribute("data-ui-theme", theme);
-      host.style.cssText = "position:fixed;left:120px;top:60px;width:520px;height:420px;padding:16px;background:#11131a;color:#f5f7fb;";
+      // A narrow panel is what squeezes the track column: the long provider
+      // leaves the subline narrower than the date needs, which is where the
+      // artist line used to collapse to nothing.
+      host.style.cssText = "position:fixed;left:120px;top:60px;width:460px;height:420px;padding:16px;background:#11131a;color:#f5f7fb;";
       const row = document.createElement("div");
       row.className = "lyrics-creator-profile-track";
       row.style.cssText = "display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px;padding:13px 16px;";
       const open = document.createElement("button");
       open.className = "lyrics-creator-profile-track-open";
       open.style.cssText = "display:grid;grid-template-columns:56px minmax(0,1fr);gap:14px;background:none;border:0;color:inherit;text-align:left;";
-      open.innerHTML = '<div class="lyrics-creator-profile-track-main"><div class="lyrics-creator-profile-track-title">Offline song</div><div class="lyrics-creator-profile-track-subline"><span class="lyrics-creator-profile-track-artist">Offline artist</span><span class="lyrics-creator-profile-track-updated">Updated 2 days ago</span></div></div>';
+      open.innerHTML = '<div class="lyrics-creator-profile-track-cover"></div><div class="lyrics-creator-profile-track-main"><div class="lyrics-creator-profile-track-title">Offline song</div><div class="lyrics-creator-profile-track-subline"><span class="lyrics-creator-profile-track-artist">Eve</span><span class="lyrics-creator-profile-track-updated">Updated 10/21/2026</span></div></div>';
       const actions = document.createElement("div");
       actions.className = "lyrics-creator-profile-track-actions";
-      actions.style.cssText = "display:flex;align-items:center;gap:12px;";
+      // A long provider string is what squeezes the track column in the real
+      // panel, and it is what collapsed the artist line.
+      const side = document.createElement("div");
+      side.className = "lyrics-creator-profile-track-side";
+      const score = document.createElement("span");
+      score.className = "lyrics-sync-score-badge";
+      score.textContent = "20.37 pts";
+      const provider = document.createElement("span");
+      provider.className = "lyrics-creator-profile-track-provider";
+      provider.textContent = "LRCLIB, SPOTIFY-MUSIXMATCH";
+      side.append(score, provider);
+      // React clears whatever it renders into, so the picker gets its own node.
+      const pickerMount = document.createElement("div");
+      actions.append(side, pickerMount);
       row.append(open, actions);
       host.append(row);
       document.body.append(host);
@@ -64,7 +80,7 @@ async (page) => {
         anchored: true,
         theme,
         boundary: ".lyrics-creator-profile-modal",
-      }), actions);
+      }), pickerMount);
     }, theme);
 
     await page.locator(".lyrics-creator-profile-track-playlist").click();
@@ -76,17 +92,35 @@ async (page) => {
       const popover = document.querySelector("body > .fullscreen-playlist-popover");
       const modal = document.querySelector(".lyrics-creator-profile-modal");
       const trigger = document.querySelector(".lyrics-creator-profile-track-playlist");
+      const subline = document.querySelector(".lyrics-creator-profile-track-subline");
+      const artist = document.querySelector(".lyrics-creator-profile-track-artist");
+      const updated = document.querySelector(".lyrics-creator-profile-track-updated");
       const p = popover.getBoundingClientRect();
       const m = modal.getBoundingClientRect();
       const t = trigger.getBoundingClientRect();
+      const a = artist.getBoundingClientRect();
+      const u = updated.getBoundingClientRect();
+      const s = subline.getBoundingClientRect();
+      const openBtn = document.querySelector(".lyrics-creator-profile-track-open").getBoundingClientRect();
+      const mainBox = document.querySelector(".lyrics-creator-profile-track-main").getBoundingClientRect();
+      const rowBox = document.querySelector(".lyrics-creator-profile-track").getBoundingClientRect();
+      const actionsBox = document.querySelector(".lyrics-creator-profile-track-actions").getBoundingClientRect();
       return {
         popover: { left: p.left, right: p.right, top: p.top, bottom: p.bottom },
         modal: { left: m.left, right: m.right, top: m.top, bottom: m.bottom },
         trigger: { left: t.left, right: t.right, top: t.top, bottom: t.bottom },
+        artist: { width: a.width, right: a.right, text: artist.textContent, clipped: artist.scrollWidth > artist.clientWidth + 1, needed: artist.scrollWidth },
+        updated: { right: u.right, width: u.width },
+        subline: { right: s.right, width: s.width },
+        chain: { row: rowBox.width, actions: actionsBox.width, open: openBtn.width, main: mainBox.width },
         items: popover.querySelectorAll(".fullscreen-playlist-item").length,
         theme: popover.getAttribute("data-ui-theme"),
       };
     });
+
+    assert(geometry.artist.width > 0, "the artist line keeps a real width");
+    assert(!geometry.artist.clipped, `the artist is not truncated: ${geometry.artist.text} (width ${geometry.artist.width}, needs ${geometry.artist.needed}, subline ${geometry.subline.width}, date ${geometry.updated.width}, chain ${JSON.stringify(geometry.chain)})`);
+    assert(geometry.updated.right <= geometry.subline.right + 1, "the date does not overflow the row");
 
     assert(geometry.items === 2, `the menu lists both playlists, saw ${geometry.items}`);
     assert(geometry.theme === theme, `the menu follows the host theme, saw ${geometry.theme}`);

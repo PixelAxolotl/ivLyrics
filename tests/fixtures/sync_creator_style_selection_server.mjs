@@ -38,6 +38,7 @@ function SelectionFixture(){
   const charElementsRef=useRef([]),scorePendingEffectsRef=useRef(new Map());
   const rightLockDragStartRef=useRef(-1),isRightLockDraggingRef=useRef(false),rightOffsetDragStartRef=useRef(-1),isRightOffsetDraggingRef=useRef(false),suppressNextLockContextMenuRef=useRef(false);
   const isCurrentSyncTargetMetaComplete=true,syncGranularity='character',currentSpeakerTextColor='#f2f4f7',currentSpeakerMutedColor='#999';
+  const getGranularityRangeForIndex=useCallback(index=>({start:index,end:index}),[]);
   const getCharIndexFromPoint=useCallback(x=>{
     const distances=charElementsRef.current.slice(0,currentLineChars.length).map((element,index)=>({index,distance:Math.abs(x-(element.getBoundingClientRect().left+element.getBoundingClientRect().width/2))}));
     return distances.sort((a,b)=>a.distance-b.distance)[0]?.index??-1;

@@ -6,7 +6,8 @@ import vm from 'node:vm';
 const source = readFileSync(new URL('../SyncDataCreator.js', import.meta.url), 'utf8');
 const section = (start, end) => source.slice(source.indexOf(start), source.indexOf(end, source.indexOf(start)));
 function shift(data, delta) {
-    const context = { useCallback: fn => fn, currentLineStart: 3, activeParallelPart: null, currentParallelTemplate: null,
+    const context = { useCallback: fn => fn, currentLineStart: 3, activeParallelPart: null, activeParallelTargetId: 'full',
+        currentParallelTemplate: null,
         claimSessionForLocalEditing() {}, resetCurrentSyncInput() {},
         roundSyncTime: value => Math.round(value * 1000) / 1000,
         SYNC_CREATOR_MIN_SEQUENTIAL_STEP_SEC: 0.001,

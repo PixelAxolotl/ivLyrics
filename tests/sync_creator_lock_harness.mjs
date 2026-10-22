@@ -51,6 +51,7 @@ export function createLockedEditor({ text = 'ABCDEF', saved = [10, 11, 12, 13, 1
 		advanceAfterCompletedTarget: () => { advances++; },
 		markScoreTimingInput() {},
 		cacheCharHitBoxes() {}, getGranularityEndIndex: index => index,
+		getGranularityRangeForIndex: index => ({ start: index, end: index }),
 		getCharIndexFromPoint: x => Math.max(0, Math.min(Math.round(x), context.currentLineChars.length - 1)),
 		useState: initial => [initial, value => { context.offsetSelectionRange = value; }],
 		useRef: initial => ({ current: initial }),

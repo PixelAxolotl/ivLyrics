@@ -258,6 +258,22 @@ test('a word selected inside a stacked part offsets only that word, never the wh
     assert.deepEqual(editor.times(), [11.5, 11.85, 12.1, 12.25]);
 });
 
+test('a selection inside a stacked part without reusable marks is refused and moves nothing', () => {
+    const editor = createEditor({ rows: ['PRE', 'ABCDEF', 'TAIL'] });
+    editor.split(2);
+    editor.render('b');
+    const [lead, background] = plain(editor.context.currentParallelData.parts);
+    const line = editor.line();
+    // The saved run no longer matches the part's four glyphs.
+    line.parallel = { layout: 'stack', parts: [lead, { ...background, chars: [11.5, 11.75, 12] }] };
+    line.chars = [11, 11.25, 11.5, 11.75, 12];
+    editor.render('b');
+    const before = plain(editor.line());
+    editor.context.offsetSelectionRangeRef = { current: { start: 1, end: 2 } };
+    assert.throws(() => editor.api.adjustCurrentLineOffset(100), /selectionOffsetRequiresTiming/);
+    assert.deepEqual(plain(editor.line()), before, 'neither the part nor the merged row moves');
+});
+
 for (const row of ['AB / CD', 'AB (CD) EF', 'AB | CD | EF']) {
     test(`automatic vocal offset is independent for ${JSON.stringify(row)}`, () => {
         const editor = createEditor({ rows: ['PRE', row, 'TAIL'] });

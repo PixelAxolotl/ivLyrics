@@ -978,6 +978,11 @@ const hasReusableSyncCreatorParallelChars = (targetPart, sourcePart) => (
 	&& areSyncCreatorParallelRangesEqual(targetPart?.ranges, sourcePart?.ranges)
 	&& sourcePart.chars.length === countSyncCreatorRangeChars(targetPart?.ranges)
 );
+// Character spans own the right-click. Record-mode locks are character-only,
+// while outside record mode a plain right-click arms a character or a word.
+const isSyncCreatorCharContextMenuEnabled = (granularity, mode) => (
+	granularity === 'character' || (granularity === 'word' && mode !== 'record')
+);
 const getSyncCreatorParallelPreviewChars = (part, savedPart) => {
 	const timingSource = hasReusableSyncCreatorParallelChars(part, part) ? part : savedPart;
 	return hasReusableSyncCreatorParallelChars(part, timingSource)
@@ -7216,10 +7221,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			suppressNextLockContextMenuRef.current = false;
 			return;
 		}
-		// Outside record mode a plain right-click toggles a single-character
-		// offset range (same idiom as the record-mode lock): click inside the
-		// armed range to disarm it, click elsewhere to arm that character.
-		// Ranges spanning multiple chars are armed by right-drag instead.
+		// Outside record mode a plain right-click toggles an offset range (same
+		// idiom as the record-mode lock): click inside the armed range to disarm
+		// it, click elsewhere to arm the unit under the cursor - the whole word
+		// in word mode, one character otherwise. Other spans use right-drag.
 		if (mode !== 'record' && currentLineIndex < lyricsLines.length && currentLineChars.length) {
 			if (!isCurrentSyncTargetMetaComplete) {
 				showMissingMetaToast();
@@ -7230,10 +7235,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			if (offsetRange && clickedIndex >= offsetRange.start && clickedIndex <= offsetRange.end) {
 				clearOffsetSelection();
 			} else {
-				// Arm the whole granularity unit under the cursor (a word in word
-				// mode, one character in character mode) instead of a single glyph.
-				const armEnd = Math.max(clickedIndex, Math.min(getGranularityEndIndex(clickedIndex), currentLineChars.length - 1));
-				setOffsetSelectionRangeValue(clickedIndex, armEnd);
+				// A click in the middle of a word still arms it from its first glyph.
+				const unit = syncGranularity === 'word' ? getGranularityRangeForIndex(clickedIndex) : null;
+				const armStart = unit ? Math.max(0, Math.min(unit.start, clickedIndex)) : clickedIndex;
+				const armEnd = unit ? Math.min(currentLineChars.length - 1, Math.max(unit.end, clickedIndex)) : clickedIndex;
+				setOffsetSelectionRangeValue(armStart, armEnd);
 			}
 			return;
 		}
@@ -7308,7 +7314,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		clearRecordingLock,
 		clearOffsetSelection,
 		setOffsetSelectionRangeValue,
-		getGranularityEndIndex,
+		getGranularityRangeForIndex,
 		getCurrentSyncTargetSavedChars,
 		getActiveRecordingLockRange,
 		setRecordingLockRangeValue,
@@ -9020,13 +9026,28 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		const selectionRange = selectedRange && !(selectedRange.start === 0 && selectedRange.end === currentLineChars.length - 1)
 			? selectedRange : null;
 		if (selectionRange) {
+			// Selection coordinates belong to the vocal that was displayed when the
+			// range was armed. Ignore one left behind by a part switch that the
+			// clearing effect has not processed yet.
+			const selectionTarget = offsetSelectionTargetRef.current;
+			if (selectionTarget && (selectionTarget.lineStart !== currentLineStart
+				|| selectionTarget.targetId !== activeParallelTargetId)) return;
 			const existing = Array.isArray(syncData?.lines)
 				? syncData.lines.find(line => line.start === currentLineStart)
 				: null;
 			// Stacked parts keep their timing in their own runs, so the selection
-			// reads the active part's marks instead of the shared source row.
+			// moves the active part's marks instead of the shared source row. Like
+			// the whole-line path, only a part whose saved marks still match its
+			// ranges is reusable; anything else would shift misaligned indexes.
+			const findSelectionTargetPart = (line) => {
+				const parallel = mergeSyncCreatorParallelTemplate(currentParallelTemplate, line);
+				const part = parallel?.parts?.find(entry => entry.id === activeParallelPart.id
+					&& areSyncCreatorParallelRangesEqual(entry.ranges, activeParallelPart.ranges));
+				return part && hasReusableSyncCreatorParallelChars(activeParallelPart, part) ? { parallel, part } : null;
+			};
+			const renderedTarget = activeParallelPart ? findSelectionTargetPart(existing) : null;
 			const savedChars = activeParallelPart
-				? (Array.isArray(activeParallelPart.chars) ? activeParallelPart.chars : [])
+				? (renderedTarget ? renderedTarget.part.chars : [])
 				: (Array.isArray(existing?.chars) ? existing.chars : []);
 			if (savedChars.length <= selectionRange.end || savedChars.slice(selectionRange.start, selectionRange.end + 1).some(time => !isFiniteSyncCreatorTime(time))) {
 				Toast.error(I18n.t('syncCreator.selectionOffsetRequiresTiming') || 'Selected characters need timing first - sync the line before offsetting part of it.');
@@ -9052,12 +9073,11 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 							: line)
 					};
 				}
-				// Stacked parts keep their timing in their own runs, so the shift
-				// lands on the active part's chars and the merged row is rebuilt.
-				const parallel = mergeSyncCreatorParallelTemplate(currentParallelTemplate, sourceLine);
-				const targetPart = parallel?.parts?.find(part => part.id === activeParallelPart.id
-					&& areSyncCreatorParallelRangesEqual(part.ranges, activeParallelPart.ranges));
-				if (!targetPart) return prev;
+				// The shift lands on the active part's chars and the merged row is
+				// rebuilt from the updater's current data, never a stale render's.
+				const target = findSelectionTargetPart(sourceLine);
+				if (!target) return prev;
+				const { parallel, part: targetPart } = target;
 				const shiftedPart = shiftSyncCreatorSelectionTimes(
 					targetPart.chars, selectionRange.start, selectionRange.end,
 					deltaMs / 1000, SYNC_CREATOR_MIN_SEQUENTIAL_STEP_SEC
@@ -9145,7 +9165,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				lines: prev.lines.map((line, index) => index === targetIndex ? shiftedLine : line)
 			};
 		});
-	}, [claimSessionForLocalEditing, resetCurrentSyncInput, currentLineStart, currentLineChars.length, currentParallelTemplate, activeParallelPart, mode, syncData]);
+	}, [claimSessionForLocalEditing, resetCurrentSyncInput, currentLineStart, currentLineChars.length, currentParallelTemplate, activeParallelPart, activeParallelTargetId, mode, syncData]);
 
 	const resetFromStart = useCallback(async () => {
 		const confirmed = window.confirm(
@@ -12182,7 +12202,9 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			'data-iv-sync-creator-base-background': baseBackground,
 			'data-iv-sync-creator-base-color': baseColor,
 			'data-iv-sync-creator-range-color': options.wordSpacer ? '' : (inlineStyleColor || ''),
-			onContextMenu: options.wordSpacer || syncGranularity !== 'character' ? undefined : (e) => handleCharacterContextMenu(i, e),
+			onContextMenu: options.wordSpacer || !isSyncCreatorCharContextMenuEnabled(syncGranularity, mode)
+				? undefined
+				: (e) => handleCharacterContextMenu(i, e),
 			title: options.wordSpacer || mode !== 'record' || syncGranularity !== 'character'
 				? undefined
 				: (I18n.t('settings.syncLockTooltip') || 'Right-click to lock timing up to this character')

@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import vm from 'node:vm';
 import { createLockedEditor } from './sync_creator_lock_harness.mjs';
 
 for (const [name, start, end, editable] of [
@@ -120,16 +122,53 @@ test('plain context menu selects one character; another click inside clears sele
 	assert.equal(h.context.offsetSelectionRangeRef.current, null);
 });
 
-test('a plain right-click arms the word under the cursor; a second right-click disarms it', () => {
+test('a plain right-click arms the whole word under the cursor; a second right-click disarms it', () => {
 	const h = createLockedEditor({ text: 'AB CD EF', saved: [1, 2, 3, 4, 5, 6, 7, 8] });
-	h.context.mode = 'idle';
-	h.context.getGranularityEndIndex = index => (index >= 6 ? 7 : index >= 3 ? 4 : 1);
-	h.contextMenu(3);
+	h.context.mode = 'idle'; h.context.syncGranularity = 'word';
+	const words = [{ start: 0, end: 1 }, { start: 3, end: 4 }, { start: 6, end: 7 }];
+	h.context.getGranularityRangeForIndex = index => words.find(word => index >= word.start && index <= word.end) || null;
+	h.contextMenu(4);
 	assert.deepEqual(JSON.parse(JSON.stringify(h.context.offsetSelectionRangeRef.current)), { start: 3, end: 4 });
+	assert.equal(h.context.offsetSelectionTargetRef.current?.lineStart, h.context.currentLineStart, 'the armed range records its target');
 	h.api.adjustCurrentLineOffset(100);
 	assert.deepEqual(h.times(), [1, 2, 3, 4.1, 5.1, 6, 7, 8]);
 	h.contextMenu(3);
 	assert.equal(h.context.offsetSelectionRangeRef.current, null);
+	h.contextMenu(7);
+	assert.deepEqual(JSON.parse(JSON.stringify(h.context.offsetSelectionRangeRef.current)), { start: 6, end: 7 },
+		'a click on the last glyph still arms the word from its first glyph');
+});
+
+test('plain right-click arming stays single-glyph outside word mode', () => {
+	const h = createLockedEditor({ text: 'AB CD EF', saved: [1, 2, 3, 4, 5, 6, 7, 8] });
+	h.context.mode = 'idle'; h.context.syncGranularity = 'line';
+	h.context.getGranularityRangeForIndex = () => ({ start: 0, end: 7 });
+	h.contextMenu(4);
+	assert.deepEqual(JSON.parse(JSON.stringify(h.context.offsetSelectionRangeRef.current)), { start: 4, end: 4 });
+});
+
+test('character spans take the right-click in character mode and, outside record mode, in word mode', () => {
+	const h = createLockedEditor();
+	const enabled = vm.runInContext('isSyncCreatorCharContextMenuEnabled', h.context);
+	assert.equal(enabled('character', 'record'), true, 'record-mode locks stay on character spans');
+	assert.equal(enabled('character', 'idle'), true);
+	assert.equal(enabled('word', 'idle'), true, 'a plain right-click can arm a word');
+	assert.equal(enabled('word', 'record'), false, 'record-mode locks are character-only');
+	assert.equal(enabled('line', 'idle'), false);
+	const source = readFileSync(new URL('../SyncDataCreator.js', import.meta.url), 'utf8');
+	assert.match(source, /onContextMenu: options\.wordSpacer \|\| !isSyncCreatorCharContextMenuEnabled\(syncGranularity, mode\)/,
+		'the character span wiring uses the shared rule');
+});
+
+test('a selection armed for another vocal never shifts the current one', () => {
+	const h = createLockedEditor(); h.context.mode = 'idle'; h.select(1, 2);
+	const before = h.times();
+	h.context.activeParallelTargetId = 'another-part';
+	h.api.adjustCurrentLineOffset(100);
+	assert.deepEqual(h.times(), before, 'a stale target is ignored before the clearing effect runs');
+	h.context.activeParallelTargetId = 'full';
+	h.api.adjustCurrentLineOffset(100);
+	assert.deepEqual(h.times(), [10, 11.1, 12.1, 13, 14, 15]);
 });
 
 test('queued repeated selection offsets compute from the latest functional state', () => {

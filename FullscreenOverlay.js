@@ -956,6 +956,7 @@ const FullscreenOverlay = (() => {
         if (!show) return null;
 
         const progressPercent = duration > 0 ? (progress / duration) * 100 : 0;
+        const fillPercent = Math.max(0, Math.min(100, progressPercent));
 
         return react.createElement("div", { className: "fullscreen-progress-standalone" },
             react.createElement("span", { className: "fullscreen-time" }, formatTime(progress)),
@@ -965,11 +966,16 @@ const FullscreenOverlay = (() => {
                 onClick: handleProgressClick,
                 onMouseDown: handleMouseDown
             },
-                react.createElement("div", {
-                    className: "fullscreen-progress-fill",
-                    // Width, not scaleX: a scaled pill squashes its own caps.
-                    style: { width: `${Math.max(0, Math.min(100, progressPercent))}%` }
-                }),
+                // The clip owns the rounded track shape and a full-width pill slides
+                // inside it, so both ends stay round without scaleX squashing the
+                // caps, and progress keeps animating a transform instead of width
+                // (a width transition re-runs layout on every frame of playback).
+                react.createElement("div", { className: "fullscreen-progress-clip" },
+                    react.createElement("div", {
+                        className: "fullscreen-progress-fill",
+                        style: { transform: `translateX(${fillPercent - 100}%)` }
+                    })
+                ),
                 react.createElement("div", {
                     className: "fullscreen-progress-handle",
                     style: { left: `${progressPercent}%` }
@@ -2293,6 +2299,52 @@ const FullscreenOverlay = (() => {
 
         useEffect(() => () => cancelControlsHideHold(), [cancelControlsHideHold]);
 
+        // A press can start inside the controls and finish outside them (timeline or
+        // volume drag), so the hold is taken on the press and dropped by the first
+        // release anywhere. The release listener is registered by the press itself:
+        // the panel is already revealed when a press lands, so nothing re-renders
+        // that could register it later.
+        const controlsDragReleaseRef = useRef(null);
+        const beginControlsDragHold = useCallback(() => {
+            if (controlsDragReleaseRef.current) return;
+            if (typeof window === "undefined" || typeof window.addEventListener !== "function") return;
+            const detach = () => {
+                window.removeEventListener("mouseup", release, true);
+                window.removeEventListener("blur", release);
+                controlsDragReleaseRef.current = null;
+            };
+            const release = () => {
+                detach();
+                controlsDragHeldRef.current = false;
+                syncLeftControlsReveal();
+            };
+            controlsDragReleaseRef.current = detach;
+            controlsDragHeldRef.current = true;
+            window.addEventListener("mouseup", release, true);
+            window.addEventListener("blur", release);
+            syncLeftControlsReveal();
+        }, [syncLeftControlsReveal]);
+
+        useEffect(() => () => controlsDragReleaseRef.current?.(), []);
+
+        // Only keyboard focus pins the controls. A mouse press also focuses the
+        // button it lands on, and that focus must not keep the panel up once the
+        // pointer has left the column. A press in progress marks pointer focus;
+        // :focus-visible rules out programmatic focus after a pointer interaction.
+        const setControlsFocusHold = useCallback((target, focused) => {
+            let keyboardFocus = false;
+            if (focused && !controlsDragHeldRef.current) {
+                try {
+                    keyboardFocus = typeof target?.matches === "function" ? target.matches(":focus-visible") : true;
+                } catch {
+                    keyboardFocus = true;
+                }
+            }
+            if (controlsFocusHeldRef.current === keyboardFocus) return;
+            controlsFocusHeldRef.current = keyboardFocus;
+            syncLeftControlsReveal();
+        }, [syncLeftControlsReveal]);
+
         // Spotify's CEF reports "(hover: none)" even with a mouse attached, so that
         // media query cannot be trusted to mean "touch". Assume hover works and only
         // give up once a touch-only pointer is actually seen.
@@ -2313,25 +2365,6 @@ const FullscreenOverlay = (() => {
                 window.removeEventListener("pointerdown", seenMouse, true);
             };
         }, []);
-
-        // A drag can start inside the controls and continue outside them. Without
-        // this pin the panel would collapse mid-drag and the slider rect would
-        // shift under the pointer.
-        useEffect(() => {
-            if (!controlsDragHeldRef.current) return;
-            const releaseDrag = () => {
-                controlsDragHeldRef.current = false;
-                syncLeftControlsReveal();
-            };
-            document.addEventListener('mouseup', releaseDrag);
-            document.addEventListener('mouseleave', releaseDrag);
-            window.addEventListener('blur', releaseDrag);
-            return () => {
-                document.removeEventListener('mouseup', releaseDrag);
-                document.removeEventListener('mouseleave', releaseDrag);
-                window.removeEventListener('blur', releaseDrag);
-            };
-        }, [syncLeftControlsReveal, leftControlsRevealed]);
 
         const tmiOpeningRef = useRef(false);
         const tmiRequestRef = useRef(0);
@@ -3893,18 +3926,13 @@ const FullscreenOverlay = (() => {
                             ref: setControllerHeightRef,
                             onMouseEnter: () => setControlsHoverSource("controls", true),
                             onMouseLeave: () => setControlsHoverSource("controls", false),
-                            onFocus: () => {
-                                controlsFocusHeldRef.current = true;
-                                syncLeftControlsReveal();
+                            onFocus: event => setControlsFocusHold(event?.target, true),
+                            onBlur: event => {
+                                // Focus moving between two controls keeps the hold.
+                                if (event?.relatedTarget && event.currentTarget?.contains?.(event.relatedTarget)) return;
+                                setControlsFocusHold(null, false);
                             },
-                            onBlur: () => {
-                                controlsFocusHeldRef.current = false;
-                                syncLeftControlsReveal();
-                            },
-                            onMouseDown: () => {
-                                controlsDragHeldRef.current = true;
-                                syncLeftControlsReveal();
-                            }
+                            onMouseDown: beginControlsDragHold
                         },
                             // Player controls, with the timeline inside their surface
                             react.createElement(PlayerControls, {

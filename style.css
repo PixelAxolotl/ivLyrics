@@ -6495,12 +6495,23 @@ ruby rt {
   height: 8px;
 }
 
+/* Rounded clip for the fill. The fill is a full-width pill moved with
+   translateX, so both visible ends stay round and the progress animation
+   stays a compositor transform rather than a per-frame width layout. */
+.fullscreen-progress-clip {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
 .fullscreen-progress-fill {
   width: 100%;
   height: 100%;
   background: var(--spice-text);
   border-radius: 999px;
-  transition: width var(--iv-motion-duration-medium) var(--iv-motion-ease-emphasis);
+  transform: translateX(-100%);
+  transition: transform var(--iv-motion-duration-medium) var(--iv-motion-ease-emphasis);
 }
 
 .fullscreen-progress-handle {

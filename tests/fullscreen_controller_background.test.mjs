@@ -32,7 +32,7 @@ function render(overrides = {}) {
     react: { createElement: (type, props, ...children) => ({ type, props: { ...props, children } }) },
     uiVisible: true, showControlsInLeftPanel: true, tmiMode: false,
     autoHideUI: true, pointerCanHover: true, leftControlsRevealed: true,
-    setControlsHoverSource() {},
+    setControlsHoverSource() {}, beginControlsDragHold() {}, setControlsFocusHold() {},
     setAlbumLyricsPanelRef() {}, setControllerHeightRef() {}, infoGap: 24, showAlbum: true,
     albumSize: 400, cdAlbumActive: false, cdScale: 1, albumRadius: 12,
     albumInteractionProps: {}, cdSlotStyle: {}, albumShadow: true,
@@ -173,10 +173,19 @@ test("the timeline spans its new surface and both of its ends stay round at any 
   for (const selector of [".fullscreen-progress-bar", ".fullscreen-progress-fill"]) {
     assert.equal(declarations(selector)["border-radius"], "999px", selector);
   }
-  const fill = findClass(renderComponent("ProgressBar").tree, "fullscreen-progress-fill");
-  assert.equal(fill.props.style.width, "50%", "a width-driven fill keeps its caps round at any progress");
-  assert.equal(fill.props.style.transform, undefined, "scaleX squashes the cap radii horizontally");
-  assert.equal(findClass(renderComponent("ProgressBar").tree, "fullscreen-progress-handle").props.style.left, "50%",
+  const clip = declarations(".fullscreen-progress-clip");
+  assert.equal(clip.overflow, "hidden", "the rounded clip shapes the fill's leading edge");
+  assert.equal(clip["border-radius"], "inherit", "the clip follows the track radius at any thickness");
+  const fillTransition = declarations(".fullscreen-progress-fill").transition;
+  assert.match(fillTransition, /^transform /, "progress animates a compositor transform");
+  assert.doesNotMatch(fillTransition, /width/, "a width transition re-runs layout on every frame of playback");
+  const tree = renderComponent("ProgressBar").tree;
+  const fill = findClass(tree, "fullscreen-progress-fill");
+  assert.ok(findClass(tree, "fullscreen-progress-clip").props.children.flat().includes(fill),
+    "the fill slides inside the rounded clip");
+  assert.equal(fill.props.style.transform, "translateX(-50%)", "a full-width pill slides; scaleX would squash its caps");
+  assert.equal(fill.props.style.width, undefined, "no width-driven fill");
+  assert.equal(findClass(tree, "fullscreen-progress-handle").props.style.left, "50%",
     "the handle still tracks the fill");
 });
 
@@ -316,6 +325,8 @@ function gateRuntime() {
   const revealed = { value: false };
   const timers = new Map();
   let nextTimer = 0;
+  const listeners = new Map();
+  const listenersOf = type => listeners.get(type) || [];
   const context = {
     useRef: initial => ({ current: initial }),
     useState: initial => [initial, next => {
@@ -326,12 +337,65 @@ function gateRuntime() {
     setTimeout: (fn, ms) => { const id = ++nextTimer; timers.set(id, { fn, ms }); return id; },
     clearTimeout: id => timers.delete(id),
     document: { addEventListener() {}, removeEventListener() {} },
-    window: { addEventListener() {}, removeEventListener() {} },
+    window: {
+      addEventListener: (type, fn) => listeners.set(type, [...listenersOf(type), fn]),
+      removeEventListener: (type, fn) => listeners.set(type, listenersOf(type).filter(entry => entry !== fn)),
+    },
   };
   const run = new Function(...Object.keys(context), `${block}
-    return { setControlsHoverSource, syncLeftControlsReveal, controlsHoverSourcesRef };`);
-  return { api: run(...Object.values(context)), revealed, timers };
+    return { setControlsHoverSource, syncLeftControlsReveal, controlsHoverSourcesRef,
+      beginControlsDragHold, setControlsFocusHold, controlsDragHeldRef, controlsFocusHeldRef };`);
+  const fire = type => [...listenersOf(type)].forEach(fn => fn());
+  return { api: run(...Object.values(context)), revealed, timers, listenersOf, fire };
 }
+
+test("a press inside the controls holds them only until that button is released", () => {
+  // Regression: the release used to be registered by an effect keyed on the reveal
+  // state, which never changes when a press lands on already-visible controls, so
+  // one click kept the controller up for good.
+  const { api, revealed, timers, listenersOf, fire } = gateRuntime();
+  api.setControlsHoverSource("controls", true);
+  api.beginControlsDragHold();
+  assert.equal(api.controlsDragHeldRef.current, true);
+  assert.equal(listenersOf("mouseup").length, 1, "the press registers its own release");
+  api.beginControlsDragHold();
+  assert.equal(listenersOf("mouseup").length, 1, "a second press does not stack listeners");
+  api.setControlsHoverSource("controls", false);
+  assert.equal(timers.size, 0, "no hide while the press is held, even outside the column");
+  assert.equal(revealed.value, true);
+  fire("mouseup");
+  assert.equal(api.controlsDragHeldRef.current, false, "the release drops the hold");
+  assert.equal(listenersOf("mouseup").length + listenersOf("blur").length, 0, "and removes its listeners");
+  assert.equal(timers.size, 1, "then the normal hide hold runs");
+  [...timers.values()][0].fn();
+  assert.equal(revealed.value, false, "the controller hides after a click and a leave");
+  api.beginControlsDragHold();
+  fire("blur");
+  assert.equal(api.controlsDragHeldRef.current, false, "losing the window also releases the press");
+});
+
+test("only keyboard focus pins the controls; the focus a click leaves behind does not", () => {
+  const { api, revealed, timers, fire } = gateRuntime();
+  let focusVisible = false;
+  const button = { matches: selector => selector === ":focus-visible" && focusVisible };
+  api.setControlsHoverSource("controls", true);
+  api.beginControlsDragHold();
+  api.setControlsFocusHold(button, true);
+  assert.equal(api.controlsFocusHeldRef.current, false, "focus taken during a press is pointer focus");
+  fire("mouseup");
+  api.setControlsHoverSource("controls", false);
+  [...timers.values()][0].fn();
+  assert.equal(revealed.value, false, "the clicked button keeps focus, but the controller still hides");
+  focusVisible = true;
+  api.setControlsFocusHold(button, true);
+  assert.equal(api.controlsFocusHeldRef.current, true, "keyboard focus pins the controller");
+  assert.equal(revealed.value, true, "and reveals it without hover");
+  api.setControlsFocusHold(null, false);
+  assert.equal(api.controlsFocusHeldRef.current, false, "focus leaving the controls releases the pin");
+  focusVisible = false;
+  api.setControlsFocusHold(button, true);
+  assert.equal(api.controlsFocusHeldRef.current, false, "programmatic focus after a pointer interaction does not pin");
+});
 
 test("the controls linger briefly before the hide is committed", () => {
   const { api, revealed, timers } = gateRuntime();

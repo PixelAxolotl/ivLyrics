@@ -184,6 +184,42 @@ test("LP labels follow existing metadata modes, simplification and track ownersh
   }
 });
 
+test("the bottom placement renders its timeline inside the control surface", () => {
+  const h = createHarness({ visual: {
+    "fullscreen-controls-position": "bottom", "fullscreen-controls-background": true,
+  } });
+  const rows = () => [byClass(h.tree, "fullscreen-bottom").props.children]
+    .flat().filter(child => child && typeof child === "object");
+  const surface = () => rows().find(child => child.type?.name === "PlayerControls");
+  assert.equal(rows().some(child => child.type?.name === "ProgressBar"), false,
+    "the timeline is no longer a sibling of the surface");
+  assert.equal(surface().props.showProgress, true, "the surface owns the timeline");
+  assert.equal(surface().props.showBackground, true);
+  assert.equal(Boolean(surface().props.progressOnly), false);
+  h.config.visual["fullscreen-show-controls"] = false;
+  h.update();
+  assert.equal(surface().props.progressOnly, true, "a timeline-only bottom bar reuses the same surface");
+  assert.equal(surface().props.showProgress, true);
+  assert.equal(surface().props.showVolume, false);
+  h.unmount();
+});
+
+test("the under-album controller owns its timeline instead of a sibling row", () => {
+  const h = createHarness({ visual: { "fullscreen-controls-background": true } });
+  const rows = () => [byClass(h.tree, "fullscreen-left-controls").props.children]
+    .flat().filter(child => child && typeof child === "object");
+  const surface = () => rows().find(child => child.type?.name === "PlayerControls");
+  assert.equal(rows().some(child => child.type?.name === "ProgressBar"), false,
+    "the timeline is no longer a sibling of the surface");
+  assert.equal(surface().props.showProgress, true, "the surface owns the timeline");
+  assert.equal(surface().props.progressOnly, undefined, "transport buttons still render");
+  h.config.visual["fullscreen-show-controls"] = false;
+  h.update();
+  assert.equal(byClass(h.tree, "left-controls-progress-only") !== undefined, true,
+    "a timeline-only album column keeps its own bare row");
+  h.unmount();
+});
+
 test("CD settings reach only the compact presentation and stay independent of LP animation switches", () => {
   const h = createHarness({ mode: "compact-vinyl", visual: {
     "fullscreen-vinyl-animations": false, "fullscreen-vinyl-center-rotation": false,
@@ -461,7 +497,8 @@ for (const mode of ["standard", "compact-vinyl"]) {
     for (let i = 0; i < 20; i++) h.tick();
     assert.equal(h.renders, initialRenders);
     assert.equal(h.progressReads, 0);
-    assert.ok(elements(h.tree).some((node) => node.type?.name === "ProgressBar"), "progress remains owned by the existing child");
+    assert.equal(elements(h.tree).find((node) => node.type?.name === "PlayerControls")?.props.showProgress, true,
+      "progress remains owned by an existing child");
 
     h.player.data.isPaused = true;
     h.emit("onplaypause");

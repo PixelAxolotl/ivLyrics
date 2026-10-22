@@ -8206,24 +8206,27 @@ const SettingsFullscreenPreview = ({ view = "basic" }) => {
     react.createElement("small", null),
     flag(albumNameKey, true) ? react.createElement("em", null) : null
   );
-  // Match the runtime hierarchy: progress is above the buttons, volume is
-  // below them, and only the button/volume surface receives its background.
+  // Match the runtime hierarchy: volume is below the buttons, and the bottom bar
+  // keeps its timeline inside the surface that owns the background.
   const player = (placement, showControls, showProgress, showVolume = false) => {
     if (!showControls && !showProgress) return null;
+    const inSurface = placement === "bottom" || (placement === "left" && showControls);
     const progressRow = showProgress ? react.createElement("div", { className: "settings-fs-progress-row" },
         react.createElement("small", null, "1:24"),
         react.createElement("span", { className: "settings-fs-progress" }),
         react.createElement("small", null, "3:42")) : null;
-    const surface = showControls ? react.createElement("div", {
+    const surface = showControls || (showProgress && inSurface) ? react.createElement("div", {
         className: `settings-fs-control-surface${!tvMode && !focused && flag("fullscreen-controls-background", false) ? " has-bg" : ""}`,
       },
-      react.createElement("span", { className: "settings-fs-controls" },
+      inSurface ? progressRow : null,
+      showControls ? react.createElement("span", { className: "settings-fs-controls" },
         ...(tvMode || focused ? [0, 1, 2] : [0, 1, 2, 3, 4, 5, 6]).map(index =>
-          react.createElement("i", { key: index, className: index === (tvMode || focused ? 1 : 3) ? "is-play" : "" }))),
-      showVolume ? react.createElement("span", { className: "settings-fs-volume" }) : null) : null;
+          react.createElement("i", { key: index, className: index === (tvMode || focused ? 1 : 3) ? "is-play" : "" }))) : null,
+      showControls && showVolume ? react.createElement("span", { className: "settings-fs-volume" }) : null) : null;
     return react.createElement("div", { key: `player-${placement}`, className: `settings-fs-player is-${placement}` },
-      // TV puts its timeline below the transport; normal and LP put it above.
-      ...(tvMode ? [surface, progressRow] : [progressRow, surface])
+      // TV puts its timeline below the transport, the bottom bar inside the
+      // surface, and normal and LP above it.
+      ...(tvMode ? [surface, progressRow] : inSurface ? [surface] : [progressRow, surface])
     );
   };
   const artChildren = (art) => [

@@ -122,6 +122,23 @@ async page => {
       "fullscreen-album-size": 200, "fullscreen-cd-disc-size": 70,
       "fullscreen-control-button-size": 48, "fullscreen-controls-background": true,
       "fullscreen-show-volume": true, "fullscreen-auto-hide-ui": true, "fullscreen-auto-hide-delay": 1 }));
+    const zoneCenter = async () => page.evaluate(() => {
+      const zone = document.querySelector("#controller-background-runtime .lyrics-fullscreen-hover-zone");
+      if (!zone) throw new Error("hover zone is not rendered");
+      const { left, right, top, bottom } = zone.getBoundingClientRect();
+      return { x: (left + right) / 2, y: (top + bottom) / 2 };
+    });
+    const hiddenState = async () => page.evaluate(() => ({
+      hidden: document.querySelector("#controller-background-runtime .lyrics-fullscreen-left-panel")
+        ?.classList.contains("controls-hidden"),
+      maxHeight: getComputedStyle(document.querySelector("#controller-background-runtime .fullscreen-left-controls")).maxHeight,
+    }));
+    const waitHidden = hidden => page.waitForFunction(expected => document.querySelector(
+      "#controller-background-runtime .lyrics-fullscreen-left-panel")?.classList.contains("controls-hidden") === expected, hidden);
+    // Under the hover gate the controller starts hidden, so reveal it from the album column first.
+    const revealAt = await zoneCenter();
+    await page.mouse.move(revealAt.x, revealAt.y);
+    await waitHidden(false);
     await page.locator("#controller-background-runtime .fullscreen-volume-wrapper").hover();
     await page.locator("#controller-background-runtime .fullscreen-volume-percent").waitFor({ state: "visible" });
     const volumeFits = await page.locator("#controller-background-runtime .fullscreen-player-controls").evaluate(node => {
@@ -130,13 +147,43 @@ async page => {
       return percent.left >= surface.left - 1 && percent.right <= surface.right + 1;
     });
     assert(volumeFits, "hovered volume percentage escapes the controller background");
+    // Moving anywhere in the lyrics column must not bring the controller back.
     await page.mouse.move(1050, 400);
     await page.waitForFunction(() => document.querySelector("#controller-background-runtime .lyrics-fullscreen-left-panel")?.classList.contains("controls-hidden"));
     await page.waitForFunction(() => getComputedStyle(document.querySelector("#controller-background-runtime .fullscreen-left-controls")).maxHeight === "0px");
     await page.mouse.move(1050, 420);
+    await page.waitForTimeout(400);
+    assert((await hiddenState()).hidden, "moving inside the lyrics pane revealed the left-panel controls");
+    // Only the album column reveals it.
+    const zone = await zoneCenter();
+    await page.mouse.move(zone.x, zone.y);
     await page.waitForFunction(() => !document.querySelector("#controller-background-runtime .lyrics-fullscreen-left-panel")?.classList.contains("controls-hidden"));
     await page.waitForFunction(() => parseFloat(getComputedStyle(document.querySelector("#controller-background-runtime .fullscreen-left-controls")).maxHeight) > 0);
-    results.push({ label: "volume-hover-and-auto-hide", bounded: true, hideRestore: true });
+    // Leaving the column hides it again.
+    await page.mouse.move(1050, 400);
+    await page.waitForFunction(() => document.querySelector("#controller-background-runtime .lyrics-fullscreen-left-panel")?.classList.contains("controls-hidden"));
+    // A click must not pin the controller: press a transport button, leave, and it hides.
+    await page.evaluate(() => { Spicetify.Player.togglePlay = () => {}; });
+    const play = page.locator("#controller-background-runtime .left-controls-player .fullscreen-control-play");
+    await page.mouse.move(zone.x, zone.y);
+    await waitHidden(false);
+    await play.click();
+    await page.mouse.move(1050, 400);
+    await waitHidden(true);
+    // Keyboard focus inside the controller does pin it, until focus leaves.
+    await page.mouse.move(zone.x, zone.y);
+    await waitHidden(false);
+    await play.click();
+    await page.keyboard.press("Tab");
+    assert(await page.evaluate(() => !!document.activeElement?.closest("#controller-background-runtime .left-controls-player")
+      && document.activeElement.matches(":focus-visible")), "Tab did not move keyboard focus inside the controller");
+    await page.mouse.move(1050, 400);
+    await page.waitForTimeout(900);
+    assert(!(await hiddenState()).hidden, "keyboard focus inside the controller no longer pins it");
+    await page.mouse.click(1050, 400);
+    await waitHidden(true);
+    results.push({ label: "volume-hover-and-column-hover-gate", bounded: true, lyricsPaneStaysHidden: true,
+      clickThenLeaveHides: true, keyboardFocusPins: true });
     // The under-album constraint must not replace the independent TV, portrait
     // or bottom-controller paths.
     for (const [label, width, height, options, selector] of [

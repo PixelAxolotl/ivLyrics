@@ -956,6 +956,7 @@ const FullscreenOverlay = (() => {
         if (!show) return null;
 
         const progressPercent = duration > 0 ? (progress / duration) * 100 : 0;
+        const fillPercent = Math.max(0, Math.min(100, progressPercent));
 
         return react.createElement("div", { className: "fullscreen-progress-standalone" },
             react.createElement("span", { className: "fullscreen-time" }, formatTime(progress)),
@@ -965,10 +966,16 @@ const FullscreenOverlay = (() => {
                 onClick: handleProgressClick,
                 onMouseDown: handleMouseDown
             },
-                react.createElement("div", {
-                    className: "fullscreen-progress-fill",
-                    style: { transform: `scaleX(${Math.max(0, Math.min(1, progressPercent / 100))})` }
-                }),
+                // The clip owns the rounded track shape and a full-width pill slides
+                // inside it, so both ends stay round without scaleX squashing the
+                // caps, and progress keeps animating a transform instead of width
+                // (a width transition re-runs layout on every frame of playback).
+                react.createElement("div", { className: "fullscreen-progress-clip" },
+                    react.createElement("div", {
+                        className: "fullscreen-progress-fill",
+                        style: { transform: `translateX(${fillPercent - 100}%)` }
+                    })
+                ),
                 react.createElement("div", {
                     className: "fullscreen-progress-handle",
                     style: { left: `${progressPercent}%` }
@@ -979,7 +986,8 @@ const FullscreenOverlay = (() => {
     };
 
     // Player Controls Component (개선된 UI/UX)
-    const PlayerControls = ({ show, showVolume = true, buttonSize = 36, showBackground = false }) => {
+    const PlayerControls = ({ show, showVolume = true, buttonSize = 36, showBackground = false,
+        showProgress = false, progressOnly = false }) => {
         const [isPlaying, setIsPlaying] = useState(false);
         const [isShuffle, setIsShuffle] = useState(false);
         const [repeatMode, setRepeatMode] = useState(0);
@@ -1002,7 +1010,7 @@ const FullscreenOverlay = (() => {
 
         // 재생 상태를 Spicetify.Player.data.isPaused에서 직접 가져옴
         useEffect(() => {
-            if (!show) return;
+            if (!show || progressOnly) return;
 
             const updatePlayState = () => {
                 // Spicetify.Player.data.isPaused가 가장 신뢰할 수 있는 소스
@@ -1075,7 +1083,7 @@ const FullscreenOverlay = (() => {
         }, [isPlaylistPickerOpen]);
 
         useEffect(() => {
-            if (!show) return;
+            if (!show || progressOnly) return;
 
             const updatePlaylistTrackUri = () => {
                 const nextTrackUri = Spicetify.Player.data?.item?.uri || "";
@@ -1537,10 +1545,12 @@ const FullscreenOverlay = (() => {
         return react.createElement("div", {
             className: `fullscreen-player-controls ${showBackground ? 'with-background' : ''}`
         },
+            // Timeline row, grouped inside the surface that owns the background
+            showProgress && react.createElement(ProgressBar, { show: true }),
             // Main control row: like, shuffle, prev, play, next, repeat, add-to-playlist
-            renderMainControlRow(),
+            !progressOnly && renderMainControlRow(),
             // Volume row
-            showVolume && renderVolumeRow()
+            showVolume && !progressOnly && renderVolumeRow()
         );
     };
 
@@ -2237,6 +2247,125 @@ const FullscreenOverlay = (() => {
         }, []);
         const hideTimerRef = useRef(null);
         const uiVisibleRef = useRef(true);
+
+        // Left-panel controls are revealed by hover, not by global mouse activity.
+        // Multiple sources can hold the panel open at once (hover strip + the panel
+        // content + the controls themselves + keyboard focus + an in-progress drag),
+        // so each source is tracked independently and OR'd together.
+        const CONTROLS_HIDE_HOLD_MS = 500;
+        const controlsHoverSourcesRef = useRef(new Set());
+        const controlsFocusHeldRef = useRef(false);
+        const controlsDragHeldRef = useRef(false);
+        const controlsHideTimerRef = useRef(null);
+        const [leftControlsRevealed, setLeftControlsRevealed] = useState(false);
+
+        const cancelControlsHideHold = useCallback(() => {
+            if (!controlsHideTimerRef.current) return;
+            clearTimeout(controlsHideTimerRef.current);
+            controlsHideTimerRef.current = null;
+        }, []);
+
+        // Losing the last source does not hide the panel straight away - it lingers
+        // briefly, so brushing past the column on the way somewhere else does not
+        // throw the controls away. Every path (hover, focus, drag) goes through here.
+        const syncLeftControlsReveal = useCallback(() => {
+            const revealed = controlsHoverSourcesRef.current.size > 0
+                || controlsFocusHeldRef.current
+                || controlsDragHeldRef.current;
+            if (revealed) {
+                cancelControlsHideHold();
+                setLeftControlsRevealed(true);
+                return;
+            }
+            if (!controlsHideTimerRef.current) {
+                controlsHideTimerRef.current = setTimeout(() => {
+                    controlsHideTimerRef.current = null;
+                    setLeftControlsRevealed(false);
+                }, CONTROLS_HIDE_HOLD_MS);
+            }
+        }, [cancelControlsHideHold]);
+
+        const setControlsHoverSource = useCallback((source, active) => {
+            const sources = controlsHoverSourcesRef.current;
+            if (active) {
+                if (sources.has(source)) return;
+                sources.add(source);
+            } else {
+                if (!sources.has(source)) return;
+                sources.delete(source);
+            }
+            syncLeftControlsReveal();
+        }, [syncLeftControlsReveal]);
+
+        useEffect(() => () => cancelControlsHideHold(), [cancelControlsHideHold]);
+
+        // A press can start inside the controls and finish outside them (timeline or
+        // volume drag), so the hold is taken on the press and dropped by the first
+        // release anywhere. The release listener is registered by the press itself:
+        // the panel is already revealed when a press lands, so nothing re-renders
+        // that could register it later.
+        const controlsDragReleaseRef = useRef(null);
+        const beginControlsDragHold = useCallback(() => {
+            if (controlsDragReleaseRef.current) return;
+            if (typeof window === "undefined" || typeof window.addEventListener !== "function") return;
+            const detach = () => {
+                window.removeEventListener("mouseup", release, true);
+                window.removeEventListener("blur", release);
+                controlsDragReleaseRef.current = null;
+            };
+            const release = () => {
+                detach();
+                controlsDragHeldRef.current = false;
+                syncLeftControlsReveal();
+            };
+            controlsDragReleaseRef.current = detach;
+            controlsDragHeldRef.current = true;
+            window.addEventListener("mouseup", release, true);
+            window.addEventListener("blur", release);
+            syncLeftControlsReveal();
+        }, [syncLeftControlsReveal]);
+
+        useEffect(() => () => controlsDragReleaseRef.current?.(), []);
+
+        // Only keyboard focus pins the controls. A mouse press also focuses the
+        // button it lands on, and that focus must not keep the panel up once the
+        // pointer has left the column. A press in progress marks pointer focus;
+        // :focus-visible rules out programmatic focus after a pointer interaction.
+        const setControlsFocusHold = useCallback((target, focused) => {
+            let keyboardFocus = false;
+            if (focused && !controlsDragHeldRef.current) {
+                try {
+                    keyboardFocus = typeof target?.matches === "function" ? target.matches(":focus-visible") : true;
+                } catch {
+                    keyboardFocus = true;
+                }
+            }
+            if (controlsFocusHeldRef.current === keyboardFocus) return;
+            controlsFocusHeldRef.current = keyboardFocus;
+            syncLeftControlsReveal();
+        }, [syncLeftControlsReveal]);
+
+        // Spotify's CEF reports "(hover: none)" even with a mouse attached, so that
+        // media query cannot be trusted to mean "touch". Assume hover works and only
+        // give up once a touch-only pointer is actually seen.
+        const [pointerCanHover, setPointerCanHover] = useState(true);
+
+        useEffect(() => {
+            if (typeof window === "undefined" || typeof window.addEventListener !== "function") return;
+            const seenTouchPointer = event => {
+                if (event?.pointerType === "touch") setPointerCanHover(false);
+            };
+            const seenMouse = event => {
+                if (event?.pointerType === "mouse") setPointerCanHover(true);
+            };
+            window.addEventListener("pointerdown", seenTouchPointer, true);
+            window.addEventListener("pointerdown", seenMouse, true);
+            return () => {
+                window.removeEventListener("pointerdown", seenTouchPointer, true);
+                window.removeEventListener("pointerdown", seenMouse, true);
+            };
+        }, []);
+
         const tmiOpeningRef = useRef(false);
         const tmiRequestRef = useRef(0);
         const tmiPlaybackGuardRef = useRef({
@@ -3153,6 +3282,13 @@ const FullscreenOverlay = (() => {
         const hideLeftPanel = !showAlbum && !showInfo && controlsPosition !== "left-panel";
         const showControlsInLeftPanel = controlsPosition === "left-panel" && showControls;
         const showControlsInBottom = controlsPosition === "bottom" && showControls;
+        // Left-panel controls ignore the global idle timer and follow hover over the
+        // album column instead. With auto-hide UI switched off - or on a device with
+        // no hover-capable pointer - they stay pinned visible, exactly as they were
+        // before hover gating existed. TMI mode renders no `.fullscreen-left-controls`,
+        // so it keeps the idle-timer behaviour.
+        const hoverGateControls = showControlsInLeftPanel && autoHideUI && !tmiMode && pointerCanHover;
+        const leftControlsHidden = hoverGateControls ? !leftControlsRevealed : !uiVisible;
         const showContextInOverlay = showContext;
         const showNextTrackInOverlay = showNextTrack;
         const showQueueInOverlay = showQueue;
@@ -3165,7 +3301,7 @@ const FullscreenOverlay = (() => {
         const leftPanelControlButtonSize = controlButtonSize;
         const leftControlsClass = [
             "fullscreen-left-controls",
-            !uiVisible ? "hidden" : ""
+            leftControlsHidden ? "hidden" : ""
         ].filter(Boolean).join(" ");
         const leftPlayerControlsClass = `${leftControlsClass} left-controls-player`;
         const leftProgressOnlyClass = `${leftControlsClass} left-controls-progress-only`;
@@ -3656,9 +3792,19 @@ const FullscreenOverlay = (() => {
 
         const renderLeftPanel = () =>
             react.createElement("div", {
-                className: `lyrics-fullscreen-left-panel ${!uiVisible && showControlsInLeftPanel ? 'controls-hidden' : ''} ${tmiMode ? 'tmi-mode' : ''}`,
+                className: `lyrics-fullscreen-left-panel ${leftControlsHidden && showControlsInLeftPanel ? 'controls-hidden' : ''} ${tmiMode ? 'tmi-mode' : ''}`,
                 ref: setAlbumLyricsPanelRef
             },
+                // Invisible hover strip spanning the full column height. It sits behind
+                // the panel content so it only claims the empty margins around the album,
+                // and stays a fixed width even when `.fullscreen-no-lyrics` stretches
+                // the panel across the whole grid.
+                hoverGateControls && react.createElement("div", {
+                    className: "lyrics-fullscreen-hover-zone",
+                    style: { width: `${Math.round(albumSize * 1.15)}px` },
+                    onMouseEnter: () => setControlsHoverSource("zone", true),
+                    onMouseLeave: () => setControlsHoverSource("zone", false)
+                }),
                 // TMI Mode View
                 tmiMode ? (
                     renderTmiModeView(true)
@@ -3666,6 +3812,10 @@ const FullscreenOverlay = (() => {
                     // Normal Mode
                     react.createElement("div", {
                         className: "lyrics-fullscreen-left-content",
+                        // The hover strip sits behind this stack, so crossing onto the
+                        // album art fires the strip's leave. Re-arm on the content.
+                        onMouseEnter: () => setControlsHoverSource("content", true),
+                        onMouseLeave: () => setControlsHoverSource("content", false),
                         style: {
                             gap: `${infoGap}px`,
                             // Lyrics start at the visible album edge, which can
@@ -3773,16 +3923,24 @@ const FullscreenOverlay = (() => {
                         // Controls in left panel (under album)
                         showControlsInLeftPanel && react.createElement("div", {
                             className: leftPlayerControlsClass,
-                            ref: setControllerHeightRef
+                            ref: setControllerHeightRef,
+                            onMouseEnter: () => setControlsHoverSource("controls", true),
+                            onMouseLeave: () => setControlsHoverSource("controls", false),
+                            onFocus: event => setControlsFocusHold(event?.target, true),
+                            onBlur: event => {
+                                // Focus moving between two controls keeps the hold.
+                                if (event?.relatedTarget && event.currentTarget?.contains?.(event.relatedTarget)) return;
+                                setControlsFocusHold(null, false);
+                            },
+                            onMouseDown: beginControlsDragHold
                         },
-                            // Progress bar (독립적으로 표시)
-                            showProgress && react.createElement(ProgressBar, { show: true }),
-                            // Player controls
+                            // Player controls, with the timeline inside their surface
                             react.createElement(PlayerControls, {
                                 show: true,
                                 showVolume: leftPanelShowVolume,
                                 buttonSize: leftPanelControlButtonSize,
-                                showBackground: leftPanelControlsBackground
+                                showBackground: leftPanelControlsBackground,
+                                showProgress
                             })
                         ),
                         // Progress bar only (컨트롤 없이 진행바만 표시)
@@ -3845,19 +4003,25 @@ const FullscreenOverlay = (() => {
             !isPortraitFullscreen && showControlsInBottom && react.createElement("div", {
                 className: `fullscreen-bottom ${!uiVisible ? 'hidden' : ''}`
             },
-                showProgress && react.createElement(ProgressBar, { show: true }),
                 react.createElement(PlayerControls, {
                     show: true,
                     showVolume,
                     buttonSize: controlButtonSize,
-                    showBackground: controlsBackground
+                    showBackground: controlsBackground,
+                    showProgress
                 })
             ),
-            // Progress bar only at bottom (landscape only)
+            // Progress bar only at bottom (landscape only) - same surface as the controls
             !isPortraitFullscreen && !showControls && showProgress && controlsPosition === "bottom" && react.createElement("div", {
                 className: `fullscreen-bottom ${!uiVisible ? 'hidden' : ''}`
             },
-                react.createElement(ProgressBar, { show: true })
+                react.createElement(PlayerControls, {
+                    show: true,
+                    showVolume: false,
+                    showBackground: controlsBackground,
+                    showProgress: true,
+                    progressOnly: true
+                })
             ),
             // Lyrics progress (always at bottom right if enabled)
             !tvModeEnabled && showLyricsProgress && react.createElement("div", {

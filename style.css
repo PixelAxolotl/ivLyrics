@@ -5715,6 +5715,7 @@ ruby rt {
 
 /* Left Panel (Album Art & Info) */
 .lyrics-fullscreen-left-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -5736,6 +5737,20 @@ ruby rt {
   padding: 0;
   overflow: hidden;
   justify-content: flex-start;
+}
+
+/* Hover strip that reveals the left-panel playback controls. Width is set inline
+   from the album size (115%) so it stays narrow even when .fullscreen-no-lyrics
+   stretches the panel across the full grid. Negative z-index keeps it behind the
+   panel content, so the album, title and artist links keep their own hit area. */
+.lyrics-fullscreen-hover-zone {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 100%;
+  max-width: 100%;
+  z-index: -1;
 }
 
 .lyrics-fullscreen-left-content {
@@ -6336,8 +6351,7 @@ ruby rt {
   pointer-events: none;
 }
 
-.fullscreen-bottom.hidden .fullscreen-player-controls,
-.fullscreen-bottom.hidden .fullscreen-progress-standalone {
+.fullscreen-bottom.hidden .fullscreen-player-controls {
   transform: translateY(var(--iv-motion-distance-sm)) scale(0.985);
   opacity: 0;
 }
@@ -6473,7 +6487,8 @@ ruby rt {
   flex: 1;
   height: 6px;
   background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
+  /* Height-independent radius: both ends stay round when hover thickens the bar. */
+  border-radius: 999px;
   cursor: pointer;
   position: relative;
   transition:
@@ -6486,12 +6501,22 @@ ruby rt {
   height: 8px;
 }
 
+/* Rounded clip for the fill. The fill is a full-width pill moved with
+   translateX, so both visible ends stay round and the progress animation
+   stays a compositor transform rather than a per-frame width layout. */
+.fullscreen-progress-clip {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+}
+
 .fullscreen-progress-fill {
   width: 100%;
   height: 100%;
   background: var(--spice-text);
-  border-radius: 3px;
-  transform-origin: left center;
+  border-radius: 999px;
+  transform: translateX(-100%);
   transition: transform var(--iv-motion-duration-medium) var(--iv-motion-ease-emphasis);
 }
 
@@ -6856,6 +6881,14 @@ ruby rt {
   border-radius: 16px;
 }
 
+/* A surface groups its timeline: the surface gap replaces the standalone
+   margin and the timeline spans the whole inner width. */
+.fullscreen-player-controls > .fullscreen-progress-standalone {
+  margin-bottom: 0;
+  max-width: none;
+  width: 100%;
+}
+
 /* Fit the under-album controller to its contents without entering the lyrics
    region. Include background padding in the bound and wrap, never shrink, the
    configured buttons. Bottom, portrait and TV controls keep their own layout. */
@@ -6980,6 +7013,23 @@ ruby rt {
   max-height: 0;
   overflow: hidden;
   pointer-events: none;
+  /* Fade out slower than it fades in - read from the target state. `max-height`
+     collapses with `overflow: hidden`, so it has to track the opacity: clipping
+     the panel away early makes a long fade look instantaneous. */
+  transition:
+    opacity 1000ms var(--iv-motion-ease-standard),
+    transform 1000ms var(--iv-motion-ease-emphasis),
+    margin-top 1000ms var(--iv-motion-ease-emphasis),
+    max-height 1000ms var(--iv-motion-ease-emphasis);
+}
+
+/* Fade in faster than it fades out. */
+.lyrics-fullscreen-left-panel:not(.controls-hidden) .fullscreen-left-controls {
+  transition:
+    opacity 150ms var(--iv-motion-ease-standard),
+    transform var(--iv-motion-duration-slow) var(--iv-motion-ease-emphasis),
+    margin-top var(--iv-motion-duration-slow) var(--iv-motion-ease-emphasis),
+    max-height var(--iv-motion-duration-slow) var(--iv-motion-ease-emphasis);
 }
 
 .lyrics-fullscreen-left-panel.controls-hidden .lyrics-fullscreen-left-content {
@@ -7004,6 +7054,16 @@ ruby rt {
 .lyrics-fullscreen-left-panel.controls-hidden .lyrics-fullscreen-album-name {
   transform: translateY(8px);
   opacity: 0.88;
+}
+
+/* Hover gating is a plain show/hide, so drop the motion when it is unwelcome.
+   Touch devices never reach this rule - they skip hover gating entirely in JS. */
+@media (prefers-reduced-motion: reduce) {
+  .lyrics-fullscreen-left-panel .fullscreen-left-controls,
+  .lyrics-fullscreen-left-panel.controls-hidden .fullscreen-left-controls,
+  .lyrics-fullscreen-left-panel:not(.controls-hidden) .fullscreen-left-controls {
+    transition-duration: 1ms !important;
+  }
 }
 
 /* Responsive adjustments */

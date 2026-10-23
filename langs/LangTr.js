@@ -3080,7 +3080,9 @@ window.LANG_TR = {
       "cancel": "İptal",
       "playPause": "Oynat/Duraklat",
       "seekBack": "-3 San",
+      "seekBack1": "-1 San",
       "seekForward": "+3 San",
+      "seekForward1": "+1 San",
       "syllable": "Hece"
     },
     "copyLyrics": "Sözleri Kopyala",

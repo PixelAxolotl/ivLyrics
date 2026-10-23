@@ -3080,7 +3080,9 @@ window.LANG_ZH_CN = {
       "cancel": "取消",
       "playPause": "播放/暂停",
       "seekBack": "-3秒",
+      "seekBack1": "-1秒",
       "seekForward": "+3秒",
+      "seekForward1": "+1秒",
       "syllable": "音节"
     },
     "copyLyrics": "复制歌词",

@@ -3080,7 +3080,9 @@ window.LANG_SV = {
       "cancel": "Avbryt",
       "playPause": "Spela/Pausa",
       "seekBack": "-3 sek",
+      "seekBack1": "-1 sek",
       "seekForward": "+3 sek",
+      "seekForward1": "+1 sek",
       "syllable": "Stavelse"
     },
     "copyLyrics": "Kopiera sångtexter",

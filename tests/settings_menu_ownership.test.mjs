@@ -67,6 +67,7 @@ function harness(overrides = {}, initial = {}) {
     I18n: { t: (key) => key, getAvailableLanguages: () => [] },
     StorageManager: {
       saveConfig: (key, value) => saves.push({ method: "saveConfig", key, value }),
+      getItem: (key) => null,
       setItem: (key, value) => saves.push({ method: "setItem", key, value }),
     },
     Spicetify: { LocalStorage: { get: () => null }, Player: { data: {} } },

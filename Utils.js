@@ -705,11 +705,7 @@ const Utils = {
    * @param {string} text - HTML로 렌더링할 텍스트
    * @returns {object} - dangerouslySetInnerHTML props 또는 빈 객체
    */
-  createHTMLProps(text) {
-    return typeof text === "string" && text
-      ? { dangerouslySetInnerHTML: { __html: this.rubyTextToHTML(text) } }
-      : {};
-  },
+
 
   escapeHtml(value) {
     return String(value ?? "")

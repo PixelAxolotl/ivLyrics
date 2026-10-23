@@ -3080,7 +3080,9 @@ window.LANG_CS = {
       "cancel": "Zrušit",
       "playPause": "Přehrát/Pozastavit",
       "seekBack": "-3 sec",
+      "seekBack1": "-1 sec",
       "seekForward": "+3 sec",
+      "seekForward1": "+1 sec",
       "syllable": "Slabika"
     },
     "copyLyrics": "Kopírovat texty",

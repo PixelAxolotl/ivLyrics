@@ -3080,7 +3080,9 @@ window.LANG_TH = {
       "cancel": "ยกเลิก",
       "playPause": "เล่น/หยุด",
       "seekBack": "-3 วิ",
+      "seekBack1": "-1 วิ",
       "seekForward": "+3 วิ",
+      "seekForward1": "+1 วิ",
       "syllable": "พยางค์"
     },
     "copyLyrics": "คัดลอกเนื้อเพลง",

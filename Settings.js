@@ -6803,10 +6803,13 @@ const normalizeSettingsHotkeyEvent = (event) => {
   return [...new Set(parts)].join("+");
 };
 
-const getSettingsHotkeyTokens = (value) => String(value || "")
-  .split("+")
-  .map((token) => token.trim().toLowerCase())
-  .filter(Boolean);
+const getSettingsHotkeyTokens = (value) => {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return [];
+  const match = normalized.match(/^(.+)\+(.+)$/);
+  const parts = match ? [...match[1].split("+"), match[2]] : [normalized];
+  return parts.map((token) => token.trim()).filter(Boolean);
+};
 
 const ConfigHotkey = ({ name, settingKey, defaultValue, onChange = () => { } }) => {
   const [value, setValue] = useState(defaultValue || "");
@@ -7449,6 +7452,10 @@ const SETTINGS_FALLBACK_DEFAULT_VALUES = Object.freeze({
   "sync-creator-word-back-alt-key": "", "sync-creator-syllable-key": ";",
   "sync-creator-syllable-alt-key": "", "sync-creator-drag-key": "/",
   "sync-creator-drag-alt-key": "numpaddivide",
+  "sync-creator-seek-back-key": "z", "sync-creator-seek-back-alt-key": "",
+  "sync-creator-seek-forward-key": "x", "sync-creator-seek-forward-alt-key": "",
+  "sync-creator-seek-back-1-key": "a", "sync-creator-seek-back-1-alt-key": "",
+  "sync-creator-seek-forward-1-key": "s", "sync-creator-seek-forward-1-alt-key": "",
 });
 
 const SETTINGS_DEFAULT_BACKGROUND_MODE = "gradient-background";
@@ -12370,48 +12377,80 @@ const ConfigModal = ({
         id: "char-forward",
         label: getSettingsText("syncCreator.shortcuts.charForward", "Advance one character"),
         items: [
-          { key: "sync-creator-char-forward-key", defaultValue: CONFIG.visual["sync-creator-char-forward-key"] ?? "right" },
-          { key: "sync-creator-char-forward-alt-key", defaultValue: CONFIG.visual["sync-creator-char-forward-alt-key"] ?? "" },
+          { key: "sync-creator-char-forward-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-char-forward-key") ?? CONFIG.visual["sync-creator-char-forward-key"] ?? "right" },
+          { key: "sync-creator-char-forward-alt-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-char-forward-alt-key") ?? CONFIG.visual["sync-creator-char-forward-alt-key"] ?? "" },
         ],
       },
       {
         id: "char-back",
         label: getSettingsText("syncCreator.shortcuts.charBack", "Revert one character"),
         items: [
-          { key: "sync-creator-char-back-key", defaultValue: CONFIG.visual["sync-creator-char-back-key"] ?? "left" },
-          { key: "sync-creator-char-back-alt-key", defaultValue: CONFIG.visual["sync-creator-char-back-alt-key"] ?? "" },
+          { key: "sync-creator-char-back-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-char-back-key") ?? CONFIG.visual["sync-creator-char-back-key"] ?? "left" },
+          { key: "sync-creator-char-back-alt-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-char-back-alt-key") ?? CONFIG.visual["sync-creator-char-back-alt-key"] ?? "" },
         ],
       },
       {
         id: "word-forward",
         label: getSettingsText("syncCreator.shortcuts.wordForward", "Advance one word"),
         items: [
-          { key: "sync-creator-word-forward-key", defaultValue: CONFIG.visual["sync-creator-word-forward-key"] ?? "." },
-          { key: "sync-creator-word-forward-alt-key", defaultValue: CONFIG.visual["sync-creator-word-forward-alt-key"] ?? "" },
+          { key: "sync-creator-word-forward-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-word-forward-key") ?? CONFIG.visual["sync-creator-word-forward-key"] ?? "." },
+          { key: "sync-creator-word-forward-alt-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-word-forward-alt-key") ?? CONFIG.visual["sync-creator-word-forward-alt-key"] ?? "" },
         ],
       },
       {
         id: "word-back",
         label: getSettingsText("syncCreator.shortcuts.wordBack", "Revert one word"),
         items: [
-          { key: "sync-creator-word-back-key", defaultValue: CONFIG.visual["sync-creator-word-back-key"] ?? "," },
-          { key: "sync-creator-word-back-alt-key", defaultValue: CONFIG.visual["sync-creator-word-back-alt-key"] ?? "" },
+          { key: "sync-creator-word-back-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-word-back-key") ?? CONFIG.visual["sync-creator-word-back-key"] ?? "," },
+          { key: "sync-creator-word-back-alt-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-word-back-alt-key") ?? CONFIG.visual["sync-creator-word-back-alt-key"] ?? "" },
         ],
       },
       {
         id: "syllable",
         label: getSettingsText("syncCreator.shortcuts.syllable", "Advance one syllable"),
         items: [
-          { key: "sync-creator-syllable-key", defaultValue: CONFIG.visual["sync-creator-syllable-key"] ?? ";" },
-          { key: "sync-creator-syllable-alt-key", defaultValue: CONFIG.visual["sync-creator-syllable-alt-key"] ?? "" },
+          { key: "sync-creator-syllable-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-syllable-key") ?? CONFIG.visual["sync-creator-syllable-key"] ?? ";" },
+          { key: "sync-creator-syllable-alt-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-syllable-alt-key") ?? CONFIG.visual["sync-creator-syllable-alt-key"] ?? "" },
         ],
       },
       {
         id: "drag",
         label: getSettingsText("syncCreator.shortcuts.drag", "Hold to drag"),
         items: [
-          { key: "sync-creator-drag-key", defaultValue: CONFIG.visual["sync-creator-drag-key"] ?? "/" },
-          { key: "sync-creator-drag-alt-key", defaultValue: CONFIG.visual["sync-creator-drag-alt-key"] ?? "numpaddivide" },
+          { key: "sync-creator-drag-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-drag-key") ?? CONFIG.visual["sync-creator-drag-key"] ?? "/" },
+          { key: "sync-creator-drag-alt-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-drag-alt-key") ?? CONFIG.visual["sync-creator-drag-alt-key"] ?? "numpaddivide" },
+        ],
+      },
+      {
+        id: "seek-back",
+        label: getSettingsText("syncCreator.shortcuts.seekBack", "Seek backward 3 sec"),
+        items: [
+          { key: "sync-creator-seek-back-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-seek-back-key") ?? CONFIG.visual["sync-creator-seek-back-key"] ?? "z" },
+          { key: "sync-creator-seek-back-alt-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-seek-back-alt-key") ?? CONFIG.visual["sync-creator-seek-back-alt-key"] ?? "" },
+        ],
+      },
+      {
+        id: "seek-forward",
+        label: getSettingsText("syncCreator.shortcuts.seekForward", "Seek forward 3 sec"),
+        items: [
+          { key: "sync-creator-seek-forward-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-seek-forward-key") ?? CONFIG.visual["sync-creator-seek-forward-key"] ?? "x" },
+          { key: "sync-creator-seek-forward-alt-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-seek-forward-alt-key") ?? CONFIG.visual["sync-creator-seek-forward-alt-key"] ?? "" },
+        ],
+      },
+      {
+        id: "seek-back-1",
+        label: getSettingsText("syncCreator.shortcuts.seekBack1", "-1 Sec"),
+        items: [
+          { key: "sync-creator-seek-back-1-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-seek-back-1-key") ?? CONFIG.visual["sync-creator-seek-back-1-key"] ?? "a" },
+          { key: "sync-creator-seek-back-1-alt-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-seek-back-1-alt-key") ?? CONFIG.visual["sync-creator-seek-back-1-alt-key"] ?? "" },
+        ],
+      },
+      {
+        id: "seek-forward-1",
+        label: getSettingsText("syncCreator.shortcuts.seekForward1", "+1 Sec"),
+        items: [
+          { key: "sync-creator-seek-forward-1-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-seek-forward-1-key") ?? CONFIG.visual["sync-creator-seek-forward-1-key"] ?? "s" },
+          { key: "sync-creator-seek-forward-1-alt-key", defaultValue: StorageManager.getItem("ivLyrics:visual:sync-creator-seek-forward-1-alt-key") ?? CONFIG.visual["sync-creator-seek-forward-1-alt-key"] ?? "" },
         ],
       },
     ];
@@ -13413,7 +13452,7 @@ react.createElement(OptionList, {
 													</svg>
 													<div>
 														<div style="font-weight: 600; margin-bottom: 2px;">${I18n.t("notifications.exportFailed")}</div>
-														<div style="opacity: 0.8; font-size: 12px;">${e.message || e.reason || e.toString()
+														<div style="opacity: 0.8; font-size: 12px;">${escapeSettingsReleaseHtml(e.message || e.reason || e.toString())
                     }</div>
 													</div>
 												</div>
@@ -13541,7 +13580,7 @@ react.createElement(OptionList, {
 													</svg>
 													<div>
 														<div style="font-weight: 600; margin-bottom: 2px;">${I18n.t("notifications.importFailed")}</div>
-														<div style="opacity: 0.8; font-size: 12px;">${e.message || e.reason || e.toString()
+														<div style="opacity: 0.8; font-size: 12px;">${escapeSettingsReleaseHtml(e.message || e.reason || e.toString())
                           }</div>
 													</div>
 												</div>
@@ -13646,7 +13685,7 @@ react.createElement(OptionList, {
                         </svg>
                         <div>
                           <div style="font-weight: 600; margin-bottom: 2px;">${I18n.t("notifications.dbExportFailed")}</div>
-                          <div style="opacity: 0.8; font-size: 12px;">${e.message || e.reason || e.toString()}</div>
+                          <div style="opacity: 0.8; font-size: 12px;">${escapeSettingsReleaseHtml(e.message || e.reason || e.toString())}</div>
                         </div>
                       </div>
                     </div>`;
@@ -13759,7 +13798,7 @@ react.createElement(OptionList, {
                               </svg>
                               <div>
                                 <div style="font-weight: 600; margin-bottom: 2px;">${I18n.t("notifications.dbImportFailed")}</div>
-                                <div style="opacity: 0.8; font-size: 12px;">${e.message || e.reason || e.toString()}</div>
+                                <div style="opacity: 0.8; font-size: 12px;">${escapeSettingsReleaseHtml(e.message || e.reason || e.toString())}</div>
                               </div>
                             </div>
                           </div>`;
@@ -13963,7 +14002,7 @@ react.createElement(OptionList, {
 													</svg>
 													<div>
 														<div style="font-weight: 600; margin-bottom: 2px;">${I18n.t("notifications.resetFailed")}</div>
-														<div style="opacity: 0.8; font-size: 12px;">${e.message || e.reason || e.toString()
+														<div style="opacity: 0.8; font-size: 12px;">${escapeSettingsReleaseHtml(e.message || e.reason || e.toString())
                     }</div>
 													</div>
 												</div>

@@ -1870,7 +1870,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
             const value = window.ivLyricsStoragePersistence?.getItem?.(key)
                 ?? Spicetify.LocalStorage?.get?.(key)
                 ?? localStorage.getItem(key);
-            if (value === null) return defaultValue;
+            if (value === null || value === undefined || value === "") return defaultValue;
             if (value === "true") return true;
             if (value === "false") return false;
             const num = parseInt(value, 10);
@@ -5422,22 +5422,29 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     // 패널 감지 및 삽입
     // ============================================
     const findNowPlayingPanel = () => {
-        const panelRoot = document.querySelector('[data-testid="NPV_Panel_OpenDiv"], .main-nowPlayingView-panel');
-        if (panelRoot) return panelRoot;
+        try {
+            const panelRoot = document.querySelector('[data-testid="NPV_Panel_OpenDiv"], .main-nowPlayingView-panel');
+            if (panelRoot) return panelRoot;
 
-        const widget = document.querySelector('.main-nowPlayingView-nowPlayingWidget, .main-nowPlayingView-nowPlayingGrid');
-        if (widget) {
-            return widget.closest('[data-testid="NPV_Panel_OpenDiv"], .main-nowPlayingView-panel')
-                || widget;
+            const widget = document.querySelector('.main-nowPlayingView-nowPlayingWidget, .main-nowPlayingView-nowPlayingGrid');
+            if (widget) {
+                return widget.closest('[data-testid="NPV_Panel_OpenDiv"], .main-nowPlayingView-panel')
+                    || widget;
+            }
+
+            const section = document.querySelector('.main-nowPlayingView-section');
+            if (section) {
+                return section.closest('[data-testid="NPV_Panel_OpenDiv"], .main-nowPlayingView-panel, .main-nowPlayingView-nowPlayingWidget')
+                    || section.parentElement;
+            }
+
+            const resilient = document.querySelector('[data-testid="now-playing-view"], .main-nowPlayingView-container, [aria-label*="Now playing view" i]');
+            if (resilient) return resilient;
+
+            return document.querySelector('.iHa_q9pq4un3VNRQgwTx')?.parentElement || null;
+        } catch {
+            return null;
         }
-
-        const section = document.querySelector('.main-nowPlayingView-section');
-        if (section) {
-            return section.closest('[data-testid="NPV_Panel_OpenDiv"], .main-nowPlayingView-panel, .main-nowPlayingView-nowPlayingWidget')
-                || section.parentElement;
-        }
-
-        return document.querySelector('.iHa_q9pq4un3VNRQgwTx')?.parentElement || null;
     };
 
     // ============================================
@@ -5453,6 +5460,9 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     const PANEL_SLOT_MAX_RETRIES = 10;
     const PANEL_SLOT_RETRY_DELAY = 150;
     let panelSlotRetryCount = 0;
+    let panelMissingWarnedAt = 0;
+    let panelFallbackWarnedAt = 0;
+    let panelVerifyMissCount = 0;
 
     const findPanelContextItemInfo = (panel) => {
         if (!panel) return null;
@@ -5475,16 +5485,53 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     };
 
     // 가사 카드 자리: 곡 정보 블록 바로 다음, 없으면 첫 관련 섹션(뮤직비디오 등) 앞.
+    // 2.46.2에서는 .main-nowPlayingView-* 매핑이 없어도 data-testid 기준으로 찾는다.
+    // 패널이 있으면 null을 반환하지 않고 끝에 붙이는 append-slot을 반환한다.
     const getPanelLyricsSlot = (panel) => {
+        if (!panel) return null;
         const contextItemInfo = findPanelContextItemInfo(panel);
         if (contextItemInfo?.parentElement) {
             return { parent: contextItemInfo.parentElement, after: contextItemInfo, before: null };
         }
-        const relatedSection = panel?.querySelector('.main-nowPlayingView-section');
-        if (relatedSection?.parentElement) {
-            return { parent: relatedSection.parentElement, after: null, before: relatedSection };
+        try {
+            const trackVisual = panel.querySelector('[data-testid="track-visual-enhancement"]');
+            if (trackVisual) {
+                let node = trackVisual;
+                while (node?.parentElement && node.parentElement !== panel) {
+                    const parent = node.parentElement;
+                    if (parent.parentElement === panel) {
+                        return { parent: panel, after: parent, before: parent.nextElementSibling || null };
+                    }
+                    node = parent;
+                }
+            }
+        } catch { /* 다음 fallback으로 진행 */ }
+        try {
+            const lyricsSection = panel.querySelector('[data-testid="lyrics-npv-section"]');
+            if (lyricsSection?.parentElement) {
+                return { parent: lyricsSection.parentElement, after: null, before: lyricsSection };
+            }
+            const relatedSection = panel.querySelector('.main-nowPlayingView-section');
+            if (relatedSection?.parentElement) {
+                return { parent: relatedSection.parentElement, after: null, before: relatedSection };
+            }
+            const children = Array.from(panel.children || []);
+            const textSection = children.find((child) => {
+                const text = child.textContent || "";
+                return text.includes("About the artist")
+                    || text.includes("Lyrics")
+                    || child.querySelector?.('[data-testid="lyrics-npv-section"]');
+            });
+            if (textSection) {
+                return { parent: panel, after: null, before: textSection };
+            }
+        } catch { /* append-slot으로 진행 */ }
+        const now = Date.now();
+        if (now - panelFallbackWarnedAt > 5000) {
+            panelFallbackWarnedAt = now;
+            console.warn("[NowPlayingPanelLyrics] using fallback slot (2.46.2 structure)");
         }
-        return null;
+        return { parent: panel, after: null, before: null, fallback: true };
     };
 
     const isPanelContainerPlaced = (container, slot) => {
@@ -5588,9 +5635,18 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
     const verifyPanelContainerRendered = (container) => {
         setTimeout(() => {
             if (!container?.isConnected) return;
-            if (container.querySelector(`.${PANEL_SECTION_CLASS}`)) return;
+            if (container.querySelector(`.${PANEL_SECTION_CLASS}`)) {
+                panelVerifyMissCount = 0;
+                return;
+            }
 
             panelDebug("[NowPlayingPanelLyrics] Empty panel container detected, retrying render");
+            panelVerifyMissCount += 1;
+            if (panelVerifyMissCount < 3) {
+                renderPanelLyricsIntoContainer(container);
+                return;
+            }
+            panelVerifyMissCount = 0;
             removePanelLyrics();
             if (!isIvLyricsPageActive()) {
                 scheduleInsertPanelLyrics(100);
@@ -5622,6 +5678,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         // ivLyrics 페이지에 있으면 삽입하지 않음
         if (isIvLyricsPageActive()) {
             removePanelLyrics();
+            setPanelActiveState(false);
             return;
         }
 
@@ -5648,6 +5705,12 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         // ========================================
         const panel = findNowPlayingPanel();
         if (!panel) {
+            const now = Date.now();
+            if (now - panelMissingWarnedAt > 5000) {
+                panelMissingWarnedAt = now;
+                console.warn("[NowPlayingPanelLyrics] panel slot not found, retrying");
+            }
+            setPanelActiveState(false);
             return;
         }
 
@@ -5657,7 +5720,11 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
                 removePanelLyrics();
             } else {
                 ensurePanelContainerPlacement(panel, existingContainer);
-                renderPanelLyricsIntoContainer(existingContainer);
+                if (renderPanelLyricsIntoContainer(existingContainer)) {
+                    setPanelActiveState(true);
+                } else {
+                    setPanelActiveState(false);
+                }
                 return;
             }
         }
@@ -5669,7 +5736,8 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         //   ├── main-nowPlayingView-contextItemInfo (곡제목+아티스트+버튼들)  ← 이 다음
         //   └── main-nowPlayingView-section (관련 뮤직비디오 등)
         const slot = getPanelLyricsSlot(panel);
-        if (!slot && panelSlotRetryCount < PANEL_SLOT_MAX_RETRIES) {
+        // append-slot(fallback:true)은 즉시 진행하고, 패널 자체가 없을 때만 다시 시도한다.
+        if (!slot?.fallback && !slot && panelSlotRetryCount < PANEL_SLOT_MAX_RETRIES) {
             // 곡 정보가 아직 그려지지 않았다. 패널 끝에 붙이지 말고 잠시 뒤 다시 찾는다.
             panelSlotRetryCount += 1;
             scheduleInsertPanelLyrics(PANEL_SLOT_RETRY_DELAY);
@@ -5692,9 +5760,12 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         }
 
         if (renderPanelLyricsIntoContainer(container)) {
+            setPanelActiveState(true);
             panelDebug("[NowPlayingPanelLyrics] Panel lyrics inserted successfully");
         } else {
-            container.remove();
+            console.error("[NowPlayingPanelLyrics] Panel render failed, keeping container for retry");
+            setPanelActiveState(false);
+            scheduleInsertPanelLyrics(1000);
         }
     };
 
@@ -5718,6 +5789,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         }
         // Starry Night bar 가사도 제거
         removeNowPlayingBarLyrics();
+        setPanelActiveState(false);
     };
 
     // ============================================
@@ -5927,7 +5999,6 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
         }
 
         moduleState.runtimeStarted = true;
-        setPanelActiveState(true);
 
         setupPageDetection();
         setupObserver();

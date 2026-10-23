@@ -2326,8 +2326,23 @@ const normalizeSyncCreatorPronunciationUnits = (lineData, lineChars) => {
 		.sort((a, b) => a.start - b.start || a.end - b.end);
 };
 
-const buildSyncCreatorVisualPronunciationUnits = (lineChars, pronunciationMap) => {
+const buildSyncCreatorVisualPronunciationUnits = (lineChars, pronunciationMap, timingUnits = null) => {
 	const chars = Array.isArray(lineChars) ? lineChars : [];
+	// Timing-derived units win when present (same source the editor
+	// prefers); visual grouping is only the fallback.
+	if (Array.isArray(timingUnits) && timingUnits.length > 0) {
+		const valid = timingUnits.filter((unit) => (
+			unit && Number.isInteger(unit.start) && Number.isInteger(unit.end)
+			&& typeof unit.pronunciation === 'string' && unit.pronunciation.trim()
+			&& unit.start >= 0 && unit.end >= unit.start && unit.end < chars.length
+		)).map((unit) => ({
+			start: unit.start,
+			end: unit.end,
+			pronunciation: String(unit.pronunciation).trim(),
+			text: typeof unit.text === 'string' ? unit.text : chars.slice(unit.start, unit.end + 1).join('')
+		}));
+		if (valid.length > 0) return valid.sort((a, b) => a.start - b.start || a.end - b.end);
+	}
 	if (!chars.length || !(pronunciationMap instanceof Map) || pronunciationMap.size === 0) {
 		return [];
 	}
@@ -2406,9 +2421,11 @@ const buildSyncCreatorPreviewCharReadings = (chars, pronMap, units, glyphPx = 32
 		if (/\s/u.test(char)) continue;
 		const item = unitByStart.get(index);
 		if (item) {
-			const mid = (item.start + item.end) >> 1;
+			let mid = (item.start + item.end) >> 1;
 			const text = String(item.pronunciation).trim();
-			if (mid >= 0 && mid < chars.length && text) {
+			if (typeof item.text === 'string' && chars.slice(item.start, item.end + 1).join('') !== item.text) mid = item.start;
+			if (/\s/u.test(chars[mid] ?? '')) mid = item.start;
+			if (mid >= 0 && mid < chars.length && text && !/\s/u.test(chars[mid] ?? '')) {
 				const evenWidth = ((item.end - item.start) % 2) === 1;
 				map.set(mid, { text, dx: evenWidth ? Math.round(widthOf(chars[mid]) / 2) : 0 });
 			}
@@ -2464,10 +2481,17 @@ const isSyncCreatorCharacterPronunciationCompatible = (result, lyricsLines) => {
 		if (!Array.isArray(resultLine?.chars) || resultLine.chars.length !== sourceChars.length) {
 			return false;
 		}
-		return resultLine.chars.every((item, charIndex) => (
+		const charsMatch = resultLine.chars.every((item, charIndex) => (
 			Number(item?.i ?? charIndex) === charIndex
 			&& String(item?.char ?? '') === sourceChars[charIndex]
 		));
+		if (!charsMatch) return false;
+		if (!/[\p{L}\p{N}]/u.test(String(text || ''))) return true;
+		if (resultLine.chars.some(item => String(item?.pronunciation ?? item?.p ?? '').trim() !== '')) return true;
+		const resultUnits = Array.isArray(resultLine?.units)
+			? resultLine.units
+			: (Array.isArray(resultLine?.u) ? resultLine.u : []);
+		return resultUnits.some(unit => String(unit?.pronunciation ?? unit?.p ?? '').trim() !== '');
 	});
 };
 
@@ -5598,6 +5622,37 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 		const fullPronByLocal = currentFullLinePronunciationByLocal;
 		const hasAnyPron = fullPronByLocal.size > 0;
+		// Timing-derived units for the full merged line (same source the
+		// editor prefers via currentLinePronunciationUnits). Sliced per part
+		// below; visual grouping stays the fallback.
+		const fullTimingUnits = [];
+		try {
+			if (showCharacterPronunciations && characterPronunciations && Array.isArray(characterPronunciations.lines)) {
+				const timingLinesByIndex = new Map();
+				characterPronunciations.lines.forEach((line) => {
+					const idx = Number(line?.index);
+					if (Number.isInteger(idx) && !timingLinesByIndex.has(idx)) timingLinesByIndex.set(idx, line);
+				});
+				const timingMergedIndexes = Array.isArray(currentMergedLineIndexes) && currentMergedLineIndexes.length > 0
+					? currentMergedLineIndexes
+					: [currentLineIndex];
+				let timingOffset = 0;
+				timingMergedIndexes.forEach((lyricsIndex) => {
+					const timingLineChars = Array.from(lyricsLines[lyricsIndex] || '');
+					const timingLineData = timingLinesByIndex.get(lyricsIndex) || characterPronunciations.lines[lyricsIndex] || null;
+					if (timingLineData) {
+						const normalized = typeof normalizeSyncCreatorPronunciationUnits === 'function'
+							? normalizeSyncCreatorPronunciationUnits(timingLineData, timingLineChars) || []
+							: [];
+						normalized.forEach((unit) => {
+							if (!unit || !Number.isInteger(unit.start) || !Number.isInteger(unit.end) || !unit.pronunciation) return;
+							fullTimingUnits.push({ start: unit.start + timingOffset, end: unit.end + timingOffset, pronunciation: unit.pronunciation, text: unit.text });
+						});
+					}
+					timingOffset += timingLineChars.length;
+				});
+			}
+		} catch { }
 		for (const part of currentParallelParts) {
 			if (!part || typeof part.id !== 'string') continue;
 			const refs = rangesToCharRefs(part.ranges, currentFullLineChars, currentLineStart);
@@ -5620,7 +5675,26 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			let units = [];
 			try {
 				if (typeof buildSyncCreatorVisualPronunciationUnits === 'function') {
-					units = buildSyncCreatorVisualPronunciationUnits(partChars, pronMap) || [];
+					const partLocalToDisplay = new Map();
+					refs.forEach((partRef, partDisplayIndex) => partLocalToDisplay.set(partRef.localIndex, partDisplayIndex));
+					let partTimingUnits = [];
+					if (fullTimingUnits.length > 0) {
+						fullTimingUnits.forEach((timingUnit) => {
+							const timingDisplayIndexes = [];
+							for (let timingLocalIndex = timingUnit.start; timingLocalIndex <= timingUnit.end; timingLocalIndex++) {
+								const timingDisplayIndex = partLocalToDisplay.get(timingLocalIndex);
+								if (Number.isInteger(timingDisplayIndex)) timingDisplayIndexes.push(timingDisplayIndex);
+							}
+							if (timingDisplayIndexes.length === 0) return;
+							partTimingUnits.push({
+								start: Math.min(...timingDisplayIndexes),
+								end: Math.max(...timingDisplayIndexes),
+								pronunciation: timingUnit.pronunciation,
+								text: timingDisplayIndexes.map((timingDisplayIndex) => partChars[timingDisplayIndex] || '').join('')
+							});
+						});
+					}
+					units = buildSyncCreatorVisualPronunciationUnits(partChars, pronMap, partTimingUnits) || [];
 				}
 			} catch { units = []; }
 			const unitByStart = new Map();
@@ -5636,7 +5710,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			});
 		}
 		return maps;
-	}, [hasCurrentParallelParts, currentParallelParts, currentFullLineChars, currentLineStart, currentFullLinePronunciationByLocal, getSyncCreatorFuriganaMap]);
+	}, [hasCurrentParallelParts, currentParallelParts, currentFullLineChars, currentLineStart, currentFullLinePronunciationByLocal, getSyncCreatorFuriganaMap, showCharacterPronunciations, characterPronunciations, currentMergedLineIndexes, currentLineIndex, lyricsLines]);
 	const useFixedPrimaryCharacterCells = usePrimaryCharacterPronunciation
 		&& currentLineRenderedPronunciationUnits.length === 0
 		&& /[\u3040-\u30ff\u3400-\u9fff\uf900-\ufaff\uac00-\ud7af]/u.test(currentLineText);
@@ -11941,7 +12015,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		lyricsLine: { display: 'inline-flex', flexWrap: 'nowrap', gap: '0px', paddingLeft: '32px', paddingRight: '32px', justifyContent: 'center', alignItems: usePrimaryCharacterPronunciation ? 'flex-start' : 'stretch', color: currentSpeakerTextColor },
 		rtlLyricsLine: { display: 'block', width: '100%', paddingLeft: '32px', paddingRight: '32px', textAlign: 'center', direction: 'rtl', unicodeBidi: 'plaintext', color: currentSpeakerTextColor },
 		rtlTextRun: { display: 'inline-block', maxWidth: '100%', padding: '10px 1px', fontSize: '32px', fontWeight: '600', lineHeight: 1.45, letterSpacing: 0, whiteSpace: 'pre', cursor: mode === 'record' ? 'pointer' : 'default', color: 'transparent', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' },
-		charSpan: { padding: usePrimaryCharacterPronunciation ? '4px 4px 6px' : `${hasCurrentLineFurigana ? 18 : 10}px 1px ${(hasCurrentLineCharacterPronunciation && currentLineRenderedPronunciationUnits.length === 0) ? 26 : (currentLineRenderedPronunciationUnits.length > 0 ? (activeParallelPart ? 28 : 27) : 10)}px`, marginInline: 0, borderRadius: 0, cursor: mode === 'record' ? 'pointer' : 'default', position: 'relative', fontSize: usePrimaryCharacterPronunciation ? '15px' : '32px', fontWeight: '600', minWidth: usePrimaryCharacterPronunciation ? '18px' : '6px', minHeight: usePrimaryCharacterPronunciation ? '68px' : undefined, boxSizing: 'border-box', textAlign: 'center', flexShrink: 0, color: currentSpeakerTextColor, letterSpacing: 0, lineHeight: usePrimaryCharacterPronunciation ? 1.05 : 1.15 },
+		charSpan: { padding: usePrimaryCharacterPronunciation ? '4px 0 6px' : `${hasCurrentLineFurigana ? 18 : 10}px 1px ${(hasCurrentLineCharacterPronunciation && currentLineRenderedPronunciationUnits.length === 0) ? 26 : (currentLineRenderedPronunciationUnits.length > 0 ? (activeParallelPart ? 28 : 27) : 10)}px`, marginInline: 0, borderRadius: 0, cursor: mode === 'record' ? 'pointer' : 'default', position: 'relative', fontSize: usePrimaryCharacterPronunciation ? '15px' : '32px', fontWeight: '600', minWidth: usePrimaryCharacterPronunciation ? '18px' : '6px', minHeight: usePrimaryCharacterPronunciation ? '68px' : undefined, boxSizing: 'border-box', textAlign: 'center', flexShrink: 0, color: currentSpeakerTextColor, letterSpacing: 0, lineHeight: usePrimaryCharacterPronunciation ? 1.05 : 1.15 },
 		charJoinSeparator: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: usePrimaryCharacterPronunciation ? '12px' : '16px', minWidth: usePrimaryCharacterPronunciation ? '12px' : '16px', padding: 0, flexShrink: 0, color: 'transparent', pointerEvents: 'none' },
 		charSpanPronunciationPrimary: { display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: '2px' },
 		charWordGroup: { display: 'inline-flex', position: 'relative', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', flexShrink: 0, borderRadius: 0, padding: '0 0 3px', boxSizing: 'border-box', color: currentSpeakerTextColor },
@@ -14254,7 +14328,24 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				const syllables = [];
 				for (let charIndex = 0; charIndex < targetChars.length; charIndex++) {
 					const charStart = targetTimesMs[charIndex];
-					if (!Number.isFinite(charStart)) continue;
+					if (!Number.isFinite(charStart)) {
+						// Untimed chars (spaces arrive as null, unsynced glyphs
+						// may too) still emit a zero-width placeholder so glyph
+						// indexes stay aligned with furigana/charReading maps
+						// keyed by glyph index. The karaoke renderer skips
+						// zero-duration syllables visually but keeps the index.
+						const nextStart = targetTimesMs.slice(charIndex + 1).find(value => Number.isFinite(value));
+						const gapStart = syllables.length > 0 && Number.isFinite(syllables[syllables.length - 1].endTime)
+							? syllables[syllables.length - 1].endTime
+							: firstMs;
+						const spaceTime = Number.isFinite(nextStart) ? nextStart : gapStart;
+						syllables.push(applyInlineStyleToSyllable({
+							text: targetChars[charIndex],
+							startTime: spaceTime,
+							endTime: Math.max(spaceTime, Number.isFinite(nextStart) ? nextStart : lineEndMs)
+						}, targetAbsoluteStart + charIndex, normalizedRanges));
+						continue;
+					}
 					const nextStart = targetTimesMs.slice(charIndex + 1).find(value => Number.isFinite(value));
 					const charEnd = Number.isFinite(nextStart) && nextStart >= charStart
 						? nextStart
@@ -14738,7 +14829,51 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 						try {
 							const entry = findPreviewPronEntry(part, suffix);
 							if (entry) {
-								partReadings = getCachedPreviewCharReadings(entry.partChars, entry.pronMap, entry.units, previewGlyphSize);
+								// part.syllables re-injects join spaces (see partText
+								// construction above), so readings must align to the
+								// expanded text: Array.from(part.text) is
+								// index-identical to part.syllables, while
+								// entry.partChars omits the join separators.
+								const expandedChars = Array.from(part.text || '');
+								const compactChars = Array.isArray(entry.partChars) ? entry.partChars : [];
+								const isIdentityChars = expandedChars.length === compactChars.length
+									&& expandedChars.every((char, charIndex) => char === compactChars[charIndex]);
+								if (isIdentityChars) {
+									partReadings = getCachedPreviewCharReadings(entry.partChars, entry.pronMap, entry.units, previewGlyphSize);
+								} else {
+									const compactToExpanded = [];
+									let compactCursor = 0;
+									for (let expandedIndex = 0; expandedIndex < expandedChars.length; expandedIndex++) {
+										if (compactCursor < compactChars.length && expandedChars[expandedIndex] === compactChars[compactCursor]) {
+											compactToExpanded[compactCursor] = expandedIndex;
+											compactCursor++;
+										} else if (/\s/u.test(expandedChars[expandedIndex] || '')) {
+											continue;
+										} else if (compactCursor < compactChars.length) {
+											compactToExpanded[compactCursor] = expandedIndex;
+											compactCursor++;
+										}
+									}
+									let expandedPronMap = entry.pronMap;
+									if (entry.pronMap instanceof Map) {
+										expandedPronMap = new Map();
+										entry.pronMap.forEach((value, key) => {
+											const mapped = compactToExpanded[Number(key)];
+											if (Number.isInteger(mapped)) expandedPronMap.set(mapped, value);
+										});
+									}
+									let expandedUnits = entry.units;
+									if (Array.isArray(entry.units)) {
+										expandedUnits = entry.units.map((unit) => {
+											if (!unit || !Number.isInteger(unit.start) || !Number.isInteger(unit.end)) return null;
+											const mappedStart = compactToExpanded[unit.start];
+											const mappedEnd = compactToExpanded[unit.end];
+											if (!Number.isInteger(mappedStart) || !Number.isInteger(mappedEnd)) return null;
+											return { ...unit, start: mappedStart, end: mappedEnd, text: expandedChars.slice(mappedStart, mappedEnd + 1).join('') };
+										}).filter(Boolean);
+									}
+									partReadings = getCachedPreviewCharReadings(expandedChars, expandedPronMap, expandedUnits, previewGlyphSize);
+								}
 							}
 						} catch (error) {
 							partReadings = null;
@@ -14770,9 +14905,62 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		}
 		if (!previewBody && displaySourceLine) {
 			let previewReadings = null;
-			if (showCharacterPronunciations && displaySourceLine.text === currentLineChars.join('')) {
+			if (showCharacterPronunciations) {
 				try {
-					previewReadings = getCachedPreviewCharReadings(currentLineChars, currentLineCharacterPronunciationMap, currentLineRenderedPronunciationUnits, previewGlyphSize);
+					if (displaySourceLine.text === currentLineChars.join('')) {
+						previewReadings = getCachedPreviewCharReadings(currentLineChars, currentLineCharacterPronunciationMap, currentLineRenderedPronunciationUnits, previewGlyphSize);
+					} else if (characterPronunciations && Array.isArray(characterPronunciations.lines)) {
+						// Playback preview on a non-edited line: build readings
+						// from that line's own pron map instead of the edited
+						// line's. Furigana-only remains the fallback when the
+						// previewed line has no pron data.
+						const previewChars = Array.from(displaySourceLine.text || '');
+						let previewMergedIndexes = [previewLineIndex];
+						try {
+							if (typeof getMergedLineIndexesForStart === 'function') {
+								const resolved = getMergedLineIndexesForStart(previewLineIndex);
+								if (Array.isArray(resolved) && resolved.length > 0) previewMergedIndexes = resolved;
+							}
+						} catch { previewMergedIndexes = [previewLineIndex]; }
+						const previewLinesByIndex = new Map();
+						characterPronunciations.lines.forEach((pronLine) => {
+							const pronIndex = Number(pronLine?.index);
+							if (Number.isInteger(pronIndex) && !previewLinesByIndex.has(pronIndex)) previewLinesByIndex.set(pronIndex, pronLine);
+						});
+						const previewPronMap = new Map();
+						const previewTimingUnits = [];
+						let previewOffset = 0;
+						previewMergedIndexes.forEach((mergedLineIndex) => {
+							const mergedLineChars = Array.from(lyricsLines[mergedLineIndex] || '');
+							const mergedLineData = previewLinesByIndex.get(mergedLineIndex) || characterPronunciations.lines[mergedLineIndex] || null;
+							if (mergedLineData) {
+								if (Array.isArray(mergedLineData.chars)) {
+									mergedLineData.chars.forEach((charItem, fallbackIndex) => {
+										const sourceIndex = Number.isInteger(Number(charItem?.i)) ? Number(charItem.i) : fallbackIndex;
+										const pronunciation = typeof charItem?.pronunciation === 'string' ? charItem.pronunciation.trim() : '';
+										if (pronunciation && Number.isInteger(sourceIndex) && sourceIndex >= 0 && sourceIndex < mergedLineChars.length) {
+											const previewIndex = previewOffset + sourceIndex;
+											if (previewIndex >= 0 && previewIndex < previewChars.length) previewPronMap.set(previewIndex, pronunciation);
+										}
+									});
+								}
+								const mergedUnits = typeof normalizeSyncCreatorPronunciationUnits === 'function'
+									? normalizeSyncCreatorPronunciationUnits(mergedLineData, mergedLineChars) || []
+									: [];
+								mergedUnits.forEach((pronUnit) => {
+									if (!pronUnit || !Number.isInteger(pronUnit.start) || !Number.isInteger(pronUnit.end) || !pronUnit.pronunciation) return;
+									previewTimingUnits.push({ start: pronUnit.start + previewOffset, end: pronUnit.end + previewOffset, pronunciation: pronUnit.pronunciation, text: pronUnit.text });
+								});
+							}
+							previewOffset += mergedLineChars.length;
+						});
+						if (previewPronMap.size > 0 || previewTimingUnits.length > 0) {
+							const previewUnits = previewTimingUnits.length > 0
+								? previewTimingUnits
+								: buildSyncCreatorVisualPronunciationUnits(previewChars, previewPronMap);
+							previewReadings = getCachedPreviewCharReadings(previewChars, previewPronMap.size > 0 ? previewPronMap : null, previewUnits, previewGlyphSize);
+						}
+					}
 				} catch (error) {
 					previewReadings = null;
 				}

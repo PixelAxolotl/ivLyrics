@@ -6090,10 +6090,13 @@ async function openSyncDataCreator(trackInfo, initialData = null) {
     setSyncDataCreatorVisibility(false);
   };
 
-  // Close on escape key (only if not in recording mode - check global state)
+  // Close on escape key. SyncDataCreator registers capture-phase Escape handlers
+  // that preventDefault while a line is being recorded (closing mid-line would drop
+  // the untimed charTimesRef progress) and while the live preview is up (Escape
+  // there only leaves the preview), so defaultPrevented is how this bubble listener
+  // tells that the editor already consumed the key.
   const handleEscape = (e) => {
     // record 모드에서는 Escape로 닫지 않음 (SyncDataCreator에서 Backspace로 취소)
-    // 키보드 싱크 단축키가 먼저 처리되도록 capture phase에서 처리됨
     if (e.key === "Escape" && !e.defaultPrevented) {
       closeModal();
     }

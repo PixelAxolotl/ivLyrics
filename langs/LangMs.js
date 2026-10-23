@@ -3079,7 +3079,9 @@ window.LANG_MS = {
       "cancel": "Batal",
       "playPause": "Main/Jeda",
       "seekBack": "-3 saat",
+      "seekBack1": "-1 saat",
       "seekForward": "+3 saat",
+      "seekForward1": "+1 saat",
       "syllable": "Suku Kata"
     },
     "copyLyrics": "Salin Lirik",

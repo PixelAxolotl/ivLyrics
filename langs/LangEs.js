@@ -3079,7 +3079,9 @@ window.LANG_ES = {
       "cancel": "Cancelar",
       "playPause": "Reproducir/Pausar",
       "seekBack": "-3 Seg",
+      "seekBack1": "-1 Seg",
       "seekForward": "+3 Seg",
+      "seekForward1": "+1 Seg",
       "syllable": "Sílaba"
     },
     "copyLyrics": "Copiar letra",

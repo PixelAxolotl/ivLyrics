@@ -3079,7 +3079,9 @@ window.LANG_ID = {
       "cancel": "Batal",
       "playPause": "Putar/Jeda",
       "seekBack": "-3 Detik",
+      "seekBack1": "-1 Detik",
       "seekForward": "+3 Detik",
+      "seekForward1": "+1 Detik",
       "syllable": "Suku kata"
     },
     "copyLyrics": "Salin lirik",

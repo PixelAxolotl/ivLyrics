@@ -3079,7 +3079,9 @@ window.LANG_KO = {
       "cancel": "취소",
       "playPause": "재생/일시정지",
       "seekBack": "-3초",
+      "seekBack1": "-1초",
       "seekForward": "+3초",
+      "seekForward1": "+1초",
       "syllable": "음절"
     },
     "copyLyrics": "가사 복사",

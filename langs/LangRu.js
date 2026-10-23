@@ -3079,7 +3079,9 @@ window.LANG_RU = {
       "cancel": "Отмена",
       "playPause": "Воспроизвести/Пауза",
       "seekBack": "-3 сек",
+      "seekBack1": "-1 сек",
       "seekForward": "+3 сек",
+      "seekForward1": "+1 сек",
       "syllable": "Слог"
     },
     "copyLyrics": "Копировать текст",

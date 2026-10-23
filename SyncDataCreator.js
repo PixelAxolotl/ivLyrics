@@ -2504,6 +2504,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		wordBack: { primary: 'sync-creator-word-back-key', secondary: 'sync-creator-word-back-alt-key', defaultPrimary: ',' },
 		syllable: { primary: 'sync-creator-syllable-key', secondary: 'sync-creator-syllable-alt-key', defaultPrimary: ';' },
 		drag: { primary: 'sync-creator-drag-key', secondary: 'sync-creator-drag-alt-key', defaultPrimary: '/', defaultSecondary: 'numpaddivide' },
+		seekBack: { primary: 'sync-creator-seek-back-key', secondary: 'sync-creator-seek-back-alt-key', defaultPrimary: 'z' },
+		seekForward: { primary: 'sync-creator-seek-forward-key', secondary: 'sync-creator-seek-forward-alt-key', defaultPrimary: 'x' },
+		seekBack1: { primary: 'sync-creator-seek-back-1-key', secondary: 'sync-creator-seek-back-1-alt-key', defaultPrimary: 'a' },
+		seekForward1: { primary: 'sync-creator-seek-forward-1-key', secondary: 'sync-creator-seek-forward-1-alt-key', defaultPrimary: 's' },
 	};
 	const SYNC_CREATOR_AUTO_BOUNDARY_CHARS_KEY = 'sync-creator-auto-boundary-chars';
 	const normalizeHotkeyToken = (value) => {
@@ -2557,12 +2561,25 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			return fallback;
 		}
 	};
-	const getSyncCreatorShortcutBindings = () => Object.entries(SYNC_CREATOR_SHORTCUTS).reduce((acc, [action, config]) => {
+	// The table costs ~20 storage reads per call, and it is called on every
+	// keypress (handleKeyDown) plus once per shortcut guide row, so recording
+	// would rebuild it on every playback tick. It is cached on window because
+	// that survives renders; the ivLyrics config event drops the cache, so a
+	// rebind written by the Settings UI is picked up on the next keypress.
+	const SYNC_CREATOR_SHORTCUT_BINDINGS_CACHE_KEY = '__ivLyricsSyncCreatorShortcutBindings';
+	const buildSyncCreatorShortcutBindings = () => Object.entries(SYNC_CREATOR_SHORTCUTS).reduce((acc, [action, config]) => {
 		const primary = readSyncCreatorShortcutSetting(config.primary, config.defaultPrimary);
 		const secondary = readSyncCreatorShortcutSetting(config.secondary, config.defaultSecondary || '');
 		acc[action] = [primary, secondary].filter(Boolean);
 		return acc;
 	}, {});
+	const getSyncCreatorShortcutBindings = () => {
+		const cached = window[SYNC_CREATOR_SHORTCUT_BINDINGS_CACHE_KEY];
+		if (cached) return cached;
+		const bindings = buildSyncCreatorShortcutBindings();
+		window[SYNC_CREATOR_SHORTCUT_BINDINGS_CACHE_KEY] = bindings;
+		return bindings;
+	};
 	const getNormalizedHotkeyFromEvent = (event) => {
 		const parts = [];
 		if (event.ctrlKey) parts.push('ctrl');
@@ -2583,6 +2600,15 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		if (event.ctrlKey || event.altKey || event.shiftKey || event.metaKey) return false;
 		return event.code === 'Slash' || event.code === 'NumpadDivide';
 	};
+	// Target guard shared by the shortcut keys. The editor stacks dialogs, speaker
+	// pickers and dividers on top of the lyric list, so a press that lands on one
+	// of them must stay with that surface. The up/down line-navigation guard below
+	// repeats this union list and mounts without these helpers, so keep both in sync.
+	const isSyncCreatorShortcutTargetBlocked = (target) => (
+		target?.isContentEditable
+		|| ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName)
+		|| target?.closest?.('[role="dialog"], [role="separator"], [role="slider"], [role="listbox"], [role="menu"], [role="menuitem"], [aria-haspopup]')
+	);
 	const formatHotkeyToken = (value) => {
 		const token = normalizeHotkeyToken(value);
 		const displayMap = {
@@ -2604,11 +2630,14 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		if (displayMap[token]) return displayMap[token];
 		return token.length === 1 ? token.toUpperCase() : token;
 	};
-	const formatHotkeyBinding = (binding) => binding
-		.split('+')
-		.filter(Boolean)
-		.map(formatHotkeyToken)
-		.join('+');
+	// A "+" binding stores as e.g. "shift++", so only the last "+" separates the
+	// modifier list from the key; splitting on every "+" rendered "Shift+" and
+	// dropped the key itself.
+	const formatHotkeyBinding = (binding) => {
+		const parts = /^(.+)\+(.+)$/.exec(binding);
+		const modifiers = (parts ? parts[1] : '').split('+').filter(Boolean).map(formatHotkeyToken);
+		return [...modifiers, formatHotkeyToken(parts ? parts[2] : binding)].join('+');
+	};
 	const getSyncCreatorShortcutDisplay = (action) => {
 		const bindings = getSyncCreatorShortcutBindings()[action] || [];
 		return bindings.length ? bindings.map(formatHotkeyBinding).join(' / ') : '';
@@ -7775,34 +7804,35 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				e.stopPropagation();
 				e.stopImmediatePropagation();
 			};
-			const isSeekHotkey = normalizedHotkey === 'z' || normalizedHotkey === 'x';
+			const shortcutBindings = getSyncCreatorShortcutBindings();
+			const shortcutAction = Object.entries(shortcutBindings)
+				.find(([, bindings]) => bindings.includes(normalizedHotkey))?.[0] || null;
+			const seekAmountMs = shortcutAction === 'seekBack' || shortcutAction === 'seekForward'
+				? 3000
+				: shortcutAction === 'seekBack1' || shortcutAction === 'seekForward1'
+					? 1000
+					: 0;
+			const isSeekAction = seekAmountMs > 0;
 			const handleSeekShortcut = () => {
-				const target = e.target;
-				if (
-					target?.isContentEditable
-					|| ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName)
-					|| target?.closest?.('[role="listbox"], [role="menu"], [role="menuitem"], [aria-haspopup]')
-				) return;
+				if (isSyncCreatorShortcutTargetBlocked(e.target)) return;
 
 				consumeKeyboardEvent();
 				const currentPos = Spicetify.Player.getProgress();
-				if (normalizedHotkey === 'z') {
-					Spicetify.Player.seek(Math.max(0, currentPos - 3000));
+				const isBack = shortcutAction.startsWith('seekBack');
+				if (isBack) {
+					Spicetify.Player.seek(Math.max(0, currentPos - seekAmountMs));
 				} else {
 					const duration = Spicetify.Player.getDuration();
-					Spicetify.Player.seek(Math.min(duration, currentPos + 3000));
+					Spicetify.Player.seek(Math.min(duration, currentPos + seekAmountMs));
 				}
 				return;
 			};
-			if (isSeekHotkey) {
+			if (isSeekAction) {
 				handleSeekShortcut();
 				return;
 			}
 
 			const isDragHotkey = isSyncCreatorDragHotkeyEvent(e, normalizedHotkey);
-			const shortcutBindings = getSyncCreatorShortcutBindings();
-			const shortcutAction = Object.entries(shortcutBindings)
-				.find(([, bindings]) => bindings.includes(normalizedHotkey))?.[0] || null;
 			const staticHotkeys = new Set(['enter', 'backspace', 'space']);
 			if (!shortcutAction && !isDragHotkey && !staticHotkeys.has(normalizedHotkey)) return;
 
@@ -9432,11 +9462,16 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 			if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return;
 			if (event.isComposing || event.ctrlKey || event.altKey || event.metaKey || event.shiftKey) return;
 			const target = event.target;
+			// Repeats isSyncCreatorShortcutTargetBlocked above: this listener registers
+			// on its own, so keep the two union lists identical.
 			if (
 				target?.isContentEditable
 				|| ['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName)
 				|| target?.closest?.('[role="dialog"], [role="separator"], [role="slider"], [role="listbox"], [role="menu"], [role="menuitem"], [aria-haspopup]')
 			) return;
+			// Playback drives the line in preview mode, so Up/Down leaves preview
+			// and applies the navigation in the same press.
+			if (mode === 'preview') toggleMode('preview');
 			if (!lyricsText || lyricsLines.length === 0) return;
 
 			event.preventDefault();
@@ -9447,7 +9482,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 
 		window.addEventListener('keydown', handleLineNavigationShortcut, true);
 		return () => window.removeEventListener('keydown', handleLineNavigationShortcut, true);
-	}, [goToNextSyncTarget, goToPreviousSyncTarget, lyricsLines.length, lyricsText]);
+	}, [goToNextSyncTarget, goToPreviousSyncTarget, lyricsLines.length, lyricsText, mode, toggleMode]);
 
 	const goToFirstLine = useCallback(() => {
 		claimSessionForLocalEditing();
@@ -13344,8 +13379,10 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 				['Enter', I18n.t('syncCreator.shortcuts.finish') || '라인 완료'],
 				['Backspace', I18n.t('syncCreator.shortcuts.cancel') || '취소'],
 				['Space', I18n.t('syncCreator.shortcuts.playPause') || '재생/일시정지'],
-				['Z', I18n.t('syncCreator.shortcuts.seekBack') || '-3초'],
-				['X', I18n.t('syncCreator.shortcuts.seekForward') || '+3초']
+				[getSyncCreatorShortcutDisplay('seekBack'), I18n.t('syncCreator.shortcuts.seekBack') || '-3초'],
+				[getSyncCreatorShortcutDisplay('seekForward'), I18n.t('syncCreator.shortcuts.seekForward') || '+3초'],
+				[getSyncCreatorShortcutDisplay('seekBack1'), I18n.t('syncCreator.shortcuts.seekBack1') || '-1 Sec'],
+				[getSyncCreatorShortcutDisplay('seekForward1'), I18n.t('syncCreator.shortcuts.seekForward1') || '+1 Sec'],
 			].map(([key, desc]) => react.createElement('div', { key: `${key}-${desc}`, style: s.shortcutItem },
 				react.createElement('span', { style: s.shortcutKey }, key),
 				react.createElement('span', { style: s.shortcutDesc }, desc)
@@ -14366,11 +14403,42 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 	useEffect(() => {
 		if (!showLivePreview) return undefined;
 		const handlePreviewEscape = (event) => {
-			if (event?.key === 'Escape' || event?.key === 'Esc') setMode('idle');
+			if (event?.key !== 'Escape' && event?.key !== 'Esc') return;
+			// Escape leaves the preview and nothing else: the OptionsMenu listener
+			// closes the whole editor whenever it sees an un-prevented Escape.
+			event.preventDefault();
+			event.stopPropagation();
+			setMode('idle');
 		};
 		document.addEventListener('keydown', handlePreviewEscape, true);
 		return () => document.removeEventListener('keydown', handlePreviewEscape, true);
 	}, [showLivePreview]);
+	useEffect(() => {
+		if (mode !== 'record') return undefined;
+		const handleRecordEscape = (event) => {
+			if (event?.key !== 'Escape' && event?.key !== 'Esc') return;
+			// Recording a line swallows Escape: leaving the editor here would throw
+			// away the charTimesRef timings typed so far for the current line.
+			event.preventDefault();
+		};
+		window.addEventListener('keydown', handleRecordEscape, true);
+		return () => window.removeEventListener('keydown', handleRecordEscape, true);
+	}, [mode]);
+	// Rebinding is written by the Settings UI, which announces every visual config
+	// write with the ivLyrics config event; dropping the cached table there is what
+	// keeps the cached bindings (shared by the key handler and the shortcut guide)
+	// honest without re-reading ~20 storage entries on each keypress.
+	useEffect(() => {
+		const invalidate = () => { delete window[SYNC_CREATOR_SHORTCUT_BINDINGS_CACHE_KEY]; };
+		// Dropping on mount too covers a rebind made while this overlay was closed,
+		// when there was no listener here to hear the config event.
+		invalidate();
+		const handleShortcutConfigChange = (event) => {
+			if (event?.detail?.type === 'config') invalidate();
+		};
+		window.addEventListener('ivLyrics', handleShortcutConfigChange);
+		return () => window.removeEventListener('ivLyrics', handleShortcutConfigChange);
+	}, []);
 	const previewFuriganaCacheRef = useRef({ maps: new Map() });
 	const editorGlyphSize = Number.parseInt(s.charSpan?.fontSize, 10) || 32;
 	const previewGlyphSize = editorGlyphSize || 32;

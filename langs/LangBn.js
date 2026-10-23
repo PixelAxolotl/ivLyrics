@@ -3079,7 +3079,9 @@ window.LANG_BN = {
       "cancel": "বাতিল",
       "playPause": "চালান/থামান",
       "seekBack": "-৩ সেকেন্ড",
+      "seekBack1": "-১ সেকেন্ড",
       "seekForward": "+৩ সেকেন্ড",
+      "seekForward1": "+১ সেকেন্ড",
       "syllable": "Syllable"
     },
     "copyLyrics": "গান কপি করুন",

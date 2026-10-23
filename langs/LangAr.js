@@ -3079,7 +3079,9 @@ window.LANG_AR = {
       "cancel": "إلغاء",
       "playPause": "تشغيل/إيقاف",
       "seekBack": "-3 ثا",
+      "seekBack1": "-1 ثا",
       "seekForward": "+3 ثا",
+      "seekForward1": "+1 ثا",
       "syllable": "مقطع"
     },
     "copyLyrics": "نسخ الكلمات",

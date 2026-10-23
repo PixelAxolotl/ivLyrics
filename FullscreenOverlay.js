@@ -3017,11 +3017,8 @@ const FullscreenOverlay = (() => {
             const currentTrackUri = getFirstSpotifyUri(currentPlayerItem?.uri, trackUri);
             const currentArtistUri = getCurrentArtistUri();
             const currentAlbumUri = getCurrentAlbumUri();
-            const currentCoverUrl = currentPlayerMetadata?.image_xlarge_url
-                || currentPlayerMetadata?.image_large_url
-                || currentPlayerItem?.album?.images?.[0]?.url
-                || currentPlayerMetadata?.image_url
-                || coverUrl;
+            const currentCoverUrl = Utils.getTrackArtwork(currentPlayerItem)
+                || (currentTrackUri === trackUri ? coverUrl : "");
             const currentVinylTitle = currentPlayerMetadata?.title || title || "LP";
             const currentVinylArtist = currentPlayerMetadata?.artist_name || artist || "";
             const currentVinylAlbum = currentPlayerMetadata?.album_title || currentVinylTitle;

@@ -4643,13 +4643,7 @@ body.ivlyrics-starrynight-theme .Root__now-playing-bar {
 
             const getCurrentCoverUrl = () => {
                 const item = Spicetify.Player.data?.item;
-                return item?.metadata?.image_xlarge_url ||
-                    item?.metadata?.image_large_url ||
-                    item?.metadata?.image_url ||
-                    item?.album?.images?.[0]?.url ||
-                    item?.album?.images?.[1]?.url ||
-                    item?.album?.images?.[2]?.url ||
-                    "";
+                return Utils.getTrackArtwork(item);
             };
 
             // 앨범에서 색상 추출

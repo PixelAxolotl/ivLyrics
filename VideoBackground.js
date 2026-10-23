@@ -706,11 +706,7 @@ const VideoBackground = ({ trackUri, firstLyricTime, brightness, blurAmount, cov
         blurCompositeStyle, videoTransform
     } = computeVideoBackgroundTransform();
 
-    const albumArtUrl =
-        Spicetify.Player.data?.item?.metadata?.image_xlarge_url ||
-        Spicetify.Player.data?.item?.metadata?.image_large_url ||
-        Spicetify.Player.data?.item?.metadata?.image_url ||
-        "";
+    const albumArtUrl = Utils.getTrackArtwork(Spicetify.Player.data?.item);
 
     // Capture the previous artwork before the new track is revealed.  The
     // old layer is removed after a single compositor-only crossfade.

@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
+import { artworkUtils } from './artwork_harness.mjs';
 
 const source = readFileSync(new URL("../VideoBackground.js", import.meta.url), "utf8");
 const createVideo = (props) => {
   const context = vm.createContext({
+    Utils: artworkUtils,
     window: {},
     CONFIG: { visual: {} },
     Spicetify: { Player: {

@@ -4889,10 +4889,7 @@ const computeLyricsBackgroundStyle = ({
     const brightness = CONFIG.visual["background-brightness"] / 100;
     const blurAmount = CONFIG.visual["album-bg-blur"] ?? 20;
     // 앨범 커버 이미지 가져오기
-    const albumArtUrl =
-      Spicetify.Player.data?.item?.metadata?.image_xlarge_url ||
-      Spicetify.Player.data?.item?.metadata?.image_large_url ||
-      Spicetify.Player.data?.item?.metadata?.image_url;
+    const albumArtUrl = Utils.getTrackArtwork(Spicetify.Player.data?.item);
 
     if (albumArtUrl) {
       Object.assign(backgroundStyle, compositedBackgroundStyle);
@@ -5645,10 +5642,7 @@ class LyricsContainer extends react.Component {
     return {
       name: item?.name || item?.metadata?.title || '',
       artist: item?.artists?.map(a => a.name).join(', ') || item?.metadata?.artist_name || '',
-      cover: item?.metadata?.image_xlarge_url ||
-        item?.metadata?.image_large_url ||
-        item?.metadata?.image_url ||
-        item?.album?.images?.[0]?.url || '',
+      cover: Utils.getTrackArtwork(item),
     };
   }
 
@@ -7539,11 +7533,7 @@ class LyricsContainer extends react.Component {
       artist: track.artists?.map((artist) => artist?.name).filter(Boolean).join(", ") || meta.artist_name,
       title: meta.title,
       uri: track.uri,
-      image:
-        meta.image_xlarge_url ||
-        meta.image_large_url ||
-        track?.album?.images?.[0]?.url ||
-        meta.image_url,
+      image: Utils.getTrackArtwork(track),
     };
   }
 
@@ -7579,10 +7569,7 @@ class LyricsContainer extends react.Component {
       || (this.getEffectiveBackgroundMode() === "video-background"
         && CONFIG.visual["video-fallback-background"] === "blur-gradient")) {
       try {
-        const coverUrl =
-          Spicetify.Player.data?.item?.metadata?.image_xlarge_url ||
-          Spicetify.Player.data?.item?.metadata?.image_large_url ||
-          Spicetify.Player.data?.item?.metadata?.image_url;
+        const coverUrl = Utils.getTrackArtwork(Spicetify.Player.data?.item);
 
         if (coverUrl && Spicetify.GraphQL?.Definitions?.getDynamicColorsByUris) {
           const colorQuery = await Spicetify.GraphQL.Request(

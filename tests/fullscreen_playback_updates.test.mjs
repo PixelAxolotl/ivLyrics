@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import vm from "node:vm";
+import { artworkUtils } from './artwork_harness.mjs';
 
 const source = readFileSync(new URL("../FullscreenOverlay.js", import.meta.url), "utf8");
 
@@ -80,6 +81,7 @@ const createHarness = ({ mode = "standard", visual = {}, windowOverrides = {}, d
   vinyl.PresentationSwitcher = () => null;
   const config = { visual: { "fullscreen-auto-hide-ui": false, ...visual } };
   const context = vm.createContext({
+    Utils: artworkUtils,
     Spicetify: { React: react, Player: player },
     CONFIG: config,
     I18n: { t: (key) => key },

@@ -927,6 +927,7 @@
     const CHARACTER_PRONUNCIATION_WORD_TEXT_RE = /[\p{L}\p{N}]/u;
     const CHARACTER_PRONUNCIATION_LETTER_RE = /\p{L}/u;
     const CHARACTER_PRONUNCIATION_LATIN_LETTER_RE = /\p{Script=Latin}/u;
+    const CHARACTER_PRONUNCIATION_PUNCTUATION_RE = /[\s\p{P}「」『』（）［］【】、。〈〉《》]/u;
 
     const CHINESE_SOURCE_LANG_RE = /^(zh|cmn|yue|cn|tw|hk)(?:-|$)/i;
     const HAN_SCRIPT_RE = /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/u;
@@ -1206,15 +1207,22 @@ Return exactly ${lineCount} pronunciation lines in ${scriptRule.name}, and nothi
                 ? { i: index, t: text, n: chars.length }
                 : { i: index, a: chars, n: chars.length };
         });
+        const normalizedTargetLang = String(lang || '').trim().toLowerCase().replace(/_/g, '-');
+        const isLatinIpaTarget = scriptRule.id === 'latin' || scriptRule.id === 'ipa'
+            || normalizedTargetLang === 'ipa' || normalizedTargetLang.startsWith('ipa-');
+        const kanaRule = isLatinIpaTarget
+            ? `- Write each hiragana/katakana as its sound in ${scriptRule.name} (e.g. お->o, い->i, ゃ->""); only spaces/punctuation may use "". Kanji with no separate sound (e.g. the second character of a jukugo reading carried by the first) may use "". Never omit array slots to shorten the array.`
+            : `- Hiragana/katakana must echo the source character (e.g. お->お); only spaces/punctuation may use "". Kanji with no separate sound (e.g. the second character of a jukugo reading carried by the first) may use "". Never omit array slots to shorten the array.`;
         const outputRules = isWordMode
             ? `- Output compact JSON only: top key l; each line has i and u; each pronunciation item has s=start character index, e=end character index, and p=whole word pronunciation.
 - Split each line by whitespace into word/token ranges. Do not split alphabetic words into letters.
 - Omit whitespace and punctuation-only tokens from u to save tokens.
 - p must be one natural spoken pronunciation for the whole word/token, written in ${scriptRule.name}.`
             : `- Output compact JSON only: top key l; each line has i and p.
-- p must be an array of exactly n strings, one per input character a[index]. Count every entry of a, including spaces and punctuation; each gets its own p slot (use "" where it has no sound).
+- p must be an array of exactly n strings, one per input character a[index]. Count every entry of a, including spaces and punctuation; each gets its own p slot (use "" only for spaces/punctuation with no sound).
 - If n is 12, p must contain exactly 12 strings. An array with 11 or 13 strings is invalid even if the pronunciation sounds correct.
-- Use an empty string for characters with no separate pronunciation. Never omit array slots to shorten the array.
+- CJK brackets and punctuation (「」『』（） 、。，．!? etc.) must be "" — they never carry a reading. p[i] for 「 or 、 or 」 must be "".
+- ${kanaRule}
 - Each p[index] must be short and written in ${scriptRule.name}.
 - Self-check before responding: for every line, verify p.length === n. If not, recount a positions and fix the array before responding.`;
         const alignmentRules = isWordMode
@@ -2717,7 +2725,7 @@ ${normalizedText}
             return units;
         }
 
-        _normalizeCharacterPronunciationLine(text, lineIndex, unitMode, resultLines, resultLinesByIndex) {
+        _normalizeCharacterPronunciationLine(text, lineIndex, unitMode, resultLines, resultLinesByIndex, lang) {
             const sourceChars = Array.from(text);
             const resultLine = resultLinesByIndex.get(lineIndex) || resultLines[lineIndex] || {};
             const resultChars = Array.isArray(resultLine?.c)
@@ -2747,9 +2755,19 @@ ${normalizedText}
                     });
                 }
 
+                const normalizedEchoTargetLang = String(lang ?? '').trim().toLowerCase().replace(/_/g, '-');
+                const echoScriptRule = getPronunciationScriptRule(lang);
+                const allowKanaEcho = !normalizedEchoTargetLang
+                    || (echoScriptRule.id !== 'latin' && echoScriptRule.id !== 'ipa'
+                        && normalizedEchoTargetLang !== 'ipa' && !normalizedEchoTargetLang.startsWith('ipa-'));
                 repair.slots.forEach((pronunciation, index) => {
+                    const sourceChar = sourceChars[index] ?? '';
                     if (pronunciation) {
                         byIndex.set(index, { p: pronunciation });
+                    } else if (allowKanaEcho && /[ぁ-ヶーｦ-ﾟ]/u.test(sourceChar)
+                        && !/[ぁぃぅぇぉっゃゅょゎァィゥェォッャュョヮ]/u.test(sourceChar)) {
+                        byIndex.set(index, { p: sourceChar });
+                        warnings.push({ lineIndex, index, reason: 'kana-echo' });
                     }
                 });
             } else {
@@ -2776,6 +2794,19 @@ ${normalizedText}
                         }
                         byIndex.set(index, item);
                     });
+                }
+            }
+
+            if (unitMode === 'char' && hasResultPronunciationArray && sourceChars.length > 0) {
+                const hasPronounceableSource = sourceChars.some(character => /[\p{L}\p{N}]/u.test(character));
+                if (hasPronounceableSource) {
+                    const nonEmptyCount = sourceChars.filter((character, index) => {
+                        const raw = byIndex.get(index)?.p ?? byIndex.get(index)?.pronunciation;
+                        return typeof raw === 'string' ? !!raw.trim() : false;
+                    }).length;
+                    if (nonEmptyCount === 0) {
+                        throw this._characterPronunciationSlotError(lineIndex, 0, sourceChars.length, text);
+                    }
                 }
             }
 
@@ -2868,6 +2899,16 @@ ${normalizedText}
                 .map(value => (typeof value === 'string' ? value.trim() : ''));
             const got = coerced.length;
             if (got === expected) {
+                // Brackets/punctuation never carry a reading: a non-empty slot
+                // on 「, 、, 」 etc. means readings shifted onto the wrong
+                // characters. An opening-bracket shift (「いざや、」 answered
+                // from slot 0) still passes the count check, so it is caught
+                // here and retried instead of cached.
+                const punctIndex = sourceChars.findIndex((character, index) =>
+                    CHARACTER_PRONUNCIATION_PUNCTUATION_RE.test(character) && coerced[index]);
+                if (punctIndex >= 0) {
+                    return { slots: coerced, repaired: false, strategy: 'punctuation-shift', needsRetry: true };
+                }
                 return { slots: coerced, repaired: false, strategy: 'exact' };
             }
 
@@ -2884,6 +2925,11 @@ ${normalizedText}
                         slots.push(coerced[cursor++] ?? '');
                     }
                 });
+                const punctIndex = sourceChars.findIndex((character, index) =>
+                    CHARACTER_PRONUNCIATION_PUNCTUATION_RE.test(character) && slots[index]);
+                if (punctIndex >= 0) {
+                    return { slots: coerced, repaired: false, strategy: 'punctuation-shift', needsRetry: true };
+                }
                 return { slots, repaired: true, strategy: 'reinsert-whitespace' };
             }
 
@@ -2912,7 +2958,7 @@ ${normalizedText}
 
             const warnings = [];
             const normalizedLines = sourceLines.map((text, lineIndex) => {
-                const lineResult = this._normalizeCharacterPronunciationLine(text, lineIndex, unitMode, resultLines, resultLinesByIndex);
+                const lineResult = this._normalizeCharacterPronunciationLine(text, lineIndex, unitMode, resultLines, resultLinesByIndex, options.lang);
                 if (lineResult.warnings) {
                     warnings.push(...lineResult.warnings);
                 }
@@ -3074,7 +3120,8 @@ ${normalizedText}
                         : basePrompt
                 });
                 const normalized = this._normalizeCharacterPronunciationResult(result, chunkLines, {
-                    unitMode: unitMode || characterPronunciationUnitMode || 'char'
+                    unitMode: unitMode || characterPronunciationUnitMode || 'char',
+                    lang: providerParams.lang
                 });
                 if (Array.isArray(normalized?.warnings) && normalized.warnings.length > 0) {
                     window.__ivLyricsDebugLog?.(`[AIAddonManager] Character pronunciation auto-repaired ${normalized.warnings.length} line(s): ${normalized.warnings.map(warning => `line ${warning.lineIndex} (${warning.strategy || warning.reason})`).join(', ')}`);

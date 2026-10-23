@@ -2464,10 +2464,17 @@ const isSyncCreatorCharacterPronunciationCompatible = (result, lyricsLines) => {
 		if (!Array.isArray(resultLine?.chars) || resultLine.chars.length !== sourceChars.length) {
 			return false;
 		}
-		return resultLine.chars.every((item, charIndex) => (
+		const charsMatch = resultLine.chars.every((item, charIndex) => (
 			Number(item?.i ?? charIndex) === charIndex
 			&& String(item?.char ?? '') === sourceChars[charIndex]
 		));
+		if (!charsMatch) return false;
+		if (!/[\p{L}\p{N}]/u.test(String(text || ''))) return true;
+		if (resultLine.chars.some(item => String(item?.pronunciation ?? item?.p ?? '').trim() !== '')) return true;
+		const resultUnits = Array.isArray(resultLine?.units)
+			? resultLine.units
+			: (Array.isArray(resultLine?.u) ? resultLine.u : []);
+		return resultUnits.some(unit => String(unit?.pronunciation ?? unit?.p ?? '').trim() !== '');
 	});
 };
 
@@ -11906,7 +11913,7 @@ const SyncDataCreator = ({ trackInfo, initialData, onClose }) => {
 		lyricsLine: { display: 'inline-flex', flexWrap: 'nowrap', gap: '0px', paddingLeft: '32px', paddingRight: '32px', justifyContent: 'center', alignItems: usePrimaryCharacterPronunciation ? 'flex-start' : 'stretch', color: currentSpeakerTextColor },
 		rtlLyricsLine: { display: 'block', width: '100%', paddingLeft: '32px', paddingRight: '32px', textAlign: 'center', direction: 'rtl', unicodeBidi: 'plaintext', color: currentSpeakerTextColor },
 		rtlTextRun: { display: 'inline-block', maxWidth: '100%', padding: '10px 1px', fontSize: '32px', fontWeight: '600', lineHeight: 1.45, letterSpacing: 0, whiteSpace: 'pre', cursor: mode === 'record' ? 'pointer' : 'default', color: 'transparent', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' },
-		charSpan: { padding: usePrimaryCharacterPronunciation ? '4px 4px 6px' : `${hasCurrentLineFurigana ? 18 : 10}px 1px ${(hasCurrentLineCharacterPronunciation && currentLineRenderedPronunciationUnits.length === 0) ? 26 : (currentLineRenderedPronunciationUnits.length > 0 ? (activeParallelPart ? 28 : 27) : 10)}px`, marginInline: 0, borderRadius: 0, cursor: mode === 'record' ? 'pointer' : 'default', position: 'relative', fontSize: usePrimaryCharacterPronunciation ? '15px' : '32px', fontWeight: '600', minWidth: usePrimaryCharacterPronunciation ? '18px' : '6px', minHeight: usePrimaryCharacterPronunciation ? '68px' : undefined, boxSizing: 'border-box', textAlign: 'center', flexShrink: 0, color: currentSpeakerTextColor, letterSpacing: 0, lineHeight: usePrimaryCharacterPronunciation ? 1.05 : 1.15 },
+		charSpan: { padding: usePrimaryCharacterPronunciation ? '4px 0 6px' : `${hasCurrentLineFurigana ? 18 : 10}px 1px ${(hasCurrentLineCharacterPronunciation && currentLineRenderedPronunciationUnits.length === 0) ? 26 : (currentLineRenderedPronunciationUnits.length > 0 ? (activeParallelPart ? 28 : 27) : 10)}px`, marginInline: 0, borderRadius: 0, cursor: mode === 'record' ? 'pointer' : 'default', position: 'relative', fontSize: usePrimaryCharacterPronunciation ? '15px' : '32px', fontWeight: '600', minWidth: usePrimaryCharacterPronunciation ? '18px' : '6px', minHeight: usePrimaryCharacterPronunciation ? '68px' : undefined, boxSizing: 'border-box', textAlign: 'center', flexShrink: 0, color: currentSpeakerTextColor, letterSpacing: 0, lineHeight: usePrimaryCharacterPronunciation ? 1.05 : 1.15 },
 		charJoinSeparator: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: usePrimaryCharacterPronunciation ? '12px' : '16px', minWidth: usePrimaryCharacterPronunciation ? '12px' : '16px', padding: 0, flexShrink: 0, color: 'transparent', pointerEvents: 'none' },
 		charSpanPronunciationPrimary: { display: 'inline-flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', gap: '2px' },
 		charWordGroup: { display: 'inline-flex', position: 'relative', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', flexShrink: 0, borderRadius: 0, padding: '0 0 3px', boxSizing: 'border-box', color: currentSpeakerTextColor },

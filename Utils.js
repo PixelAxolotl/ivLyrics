@@ -2946,6 +2946,8 @@ const Utils = {
   // Local files can carry catalog-matched high-resolution images alongside
   // their embedded artwork. Never let those replace the file's own cover.
   getTrackArtwork(track) {
+    const shared = window.LyricsService?.getTrackArtwork || window.ivLyricsTrackIdentity?.getTrackArtwork;
+    if (typeof shared === "function") return shared(track);
     const meta = track?.metadata || {};
     const images = [meta.image_xlarge_url, meta.image_large_url, meta.image_url,
       ...(track?.album?.images || []).map(image => image?.url)];

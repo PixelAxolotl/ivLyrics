@@ -244,6 +244,24 @@
                 return typeof uri === "string" && uri.startsWith("spotify:local:");
             },
 
+            getTrackArtwork(track) {
+                const meta = track?.metadata || {};
+                const images = [meta.image_xlarge_url, meta.image_large_url, meta.image_url,
+                    ...(track?.album?.images || []).map(image => image?.url)];
+                const embedded = images.find(url => typeof url === "string" && /localfile/i.test(url));
+                if (embedded) return embedded;
+                const isCatalogImage = url => typeof url === "string"
+                    && (/^spotify:image:/i.test(url) || /^https?:\/\/i\.scdn\.co\/image\//i.test(url));
+                const image = api.isLocalTrackUri(track?.uri)
+                    ? [meta.image_url, meta.image_large_url, meta.image_xlarge_url]
+                        .find(url => typeof url === "string" && url && !isCatalogImage(url))
+                    : images.find(url => typeof url === "string" && url);
+                if (typeof image !== "string") return "";
+                return image.startsWith("spotify:image:")
+                    ? `https://i.scdn.co/image/${image.slice("spotify:image:".length)}`
+                    : image;
+            },
+
             extractTrackId(uri) {
                 if (!uri || typeof uri !== "string") return null;
                 const value = uri.trim();
@@ -8331,6 +8349,10 @@
 
         // Track ID / local track 판별
         trackIdentity: TrackIdentity,
+
+        getTrackArtwork(track) {
+            return TrackIdentity.getTrackArtwork(track);
+        },
 
         isSpotifyTrackId(value) {
             return TrackIdentity.isSpotifyTrackId(value);

@@ -7730,14 +7730,11 @@ const buildKaraokeFuriganaMap = (processedText) => {
 		if (kanjiChars.length === 1) {
 			furiganaMap.set(currentPos, reading);
 		} else {
-			const readingChars = splitKaraokeGraphemes(reading, "ja");
-			const charsPerKanji = Math.max(1, Math.floor(readingChars.length / kanjiChars.length));
-			kanjiChars.forEach((_, idx) => {
-				const nextReading = idx === kanjiChars.length - 1
-					? readingChars.slice(idx * charsPerKanji).join("")
-					: readingChars.slice(idx * charsPerKanji, (idx + 1) * charsPerKanji).join("");
-				furiganaMap.set(currentPos + idx, nextReading);
-			});
+			// A ruby can cover several kanji (今日, 大人, 人々). Their reading only
+			// splits on word-specific boundaries (今日 -> きょう, not きょ + う),
+			// so dividing it evenly would invent a wrong per-character reading.
+			// Keep the whole reading on the first character instead.
+			furiganaMap.set(currentPos, reading);
 		}
 
 		currentPos += kanjiChars.length;

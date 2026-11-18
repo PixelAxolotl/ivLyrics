@@ -135,6 +135,170 @@ const FuriganaConverter = (() => {
       .join("");
   };
 
+  // Historical kana spelling (歴史的仮名遣い) survives in lyric text, but
+  // Kuromoji reads it with the modern kanji reading: 想ひ tokenizes as
+  // 想 (ソウ) + ひ (ヒ) instead of the sung おもい, so the kanji gets the wrong
+  // reading and the okurigana looks unread. Annotate only the spellings listed
+  // here, each written as kanji + one kana. There is deliberately no blanket
+  // kana rule (ひ -> い, ふ -> う) and the lyric text itself is never rewritten:
+  // an unlisted spelling keeps the plain dictionary behaviour.
+  const HISTORICAL_KANA_READINGS = new Map(
+    [
+      ["想ひ", "おも", "い"],
+      ["思ひ", "おも", "い"],
+      ["言ひ", "い", "い"],
+      ["恋ひ", "こ", "い"],
+      ["逢ひ", "あ", "い"],
+      ["問ひ", "と", "い"],
+      ["願ひ", "ねが", "い"],
+      ["誓ひ", "ちか", "い"],
+      ["使ひ", "つか", "い"],
+      ["笑ひ", "わら", "い"],
+      ["歌ひ", "うた", "い"],
+      ["唄ひ", "うた", "い"],
+      ["想ふ", "おも", "う"],
+      ["思ふ", "おも", "う"],
+      ["言ふ", "い", "う"],
+      ["恋ふ", "こ", "う"],
+      ["逢ふ", "あ", "う"],
+      ["願ふ", "ねが", "う"],
+      ["使ふ", "つか", "う"],
+      ["給ふ", "たま", "う"],
+      ["笑ふ", "わら", "う"],
+      ["歌ふ", "うた", "う"],
+      ["唄ふ", "うた", "う"],
+    ].map(([surface, kanjiReading, kanaReading]) => [surface, [kanjiReading, kanaReading]])
+  );
+  const HISTORICAL_KANA_PATTERN = new RegExp(
+    [...HISTORICAL_KANA_READINGS.keys()]
+      .sort((a, b) => b.length - a.length)
+      .join("|")
+  );
+  const HISTORICAL_KANA_GLOBAL = new RegExp(HISTORICAL_KANA_PATTERN.source, "g");
+
+  const renderHistoricalKanaRuby = (surface) => {
+    const entry = HISTORICAL_KANA_READINGS.get(surface);
+    if (!entry) return surface;
+
+    const [kanjiReading, kanaReading] = entry;
+    const kanji = surface.slice(0, -1);
+    const kana = surface.slice(-1);
+    return `<ruby>${kanji}<rt>${kanjiReading}</rt></ruby><ruby>${kana}<rt>${kanaReading}</rt></ruby>`;
+  };
+
+  const convertTokensToRuby = (text) => {
+    if (!containsKanji(text)) {
+      return text;
+    }
+
+    const tokens = kuromojiInstance.tokenize(text);
+    let result = "";
+
+    for (const token of tokens) {
+      const surface = token.surface_form;
+      const reading = token.reading || token.pronunciation; // Fallback to pronunciation
+
+      // Only add ruby if token has kanji AND reading
+      if (reading && containsKanji(surface)) {
+        const hiragana = katakanaToHiragana(reading);
+
+        // Process character by character to handle mixed kanji/kana
+        let tokenResult = "";
+        let readingIndex = 0;
+        let i = 0;
+
+        while (i < surface.length) {
+          const char = surface[i];
+
+          if (containsKanji(char)) {
+            // Found a kanji - collect consecutive kanji
+            let kanjiSequence = char;
+            i++;
+
+            while (i < surface.length && containsKanji(surface[i])) {
+              kanjiSequence += surface[i];
+              i++;
+            }
+
+            // Find the reading for this kanji sequence
+            // Look ahead in surface to find kana that matches reading
+            let nextKanaInSurface = "";
+            let tempI = i;
+            while (tempI < surface.length && !containsKanji(surface[tempI])) {
+              nextKanaInSurface += surface[tempI];
+              tempI++;
+            }
+
+            // Find where this kana appears in the remaining reading
+            let kanjiReading = "";
+            if (nextKanaInSurface.length > 0) {
+              // Find the kana in the reading
+              const remainingReading = hiragana.substring(readingIndex);
+              const kanaIndex = remainingReading.indexOf(nextKanaInSurface);
+
+              if (kanaIndex > 0) {
+                // Reading up to the kana is for the kanji
+                kanjiReading = remainingReading.substring(0, kanaIndex);
+              } else if (kanaIndex === 0) {
+                // No reading for this kanji? Shouldn't happen but handle it
+                kanjiReading = "";
+              } else {
+                // Kana not found - take all remaining as kanji reading
+                kanjiReading = remainingReading;
+              }
+            } else {
+              // No more kana in surface - rest of reading is for this kanji
+              kanjiReading = hiragana.substring(readingIndex);
+            }
+
+            if (kanjiReading) {
+              tokenResult += `<ruby>${kanjiSequence}<rt>${kanjiReading}</rt></ruby>`;
+              readingIndex += kanjiReading.length;
+            } else {
+              tokenResult += kanjiSequence;
+            }
+          } else {
+            // Regular kana - just add it
+            tokenResult += char;
+            readingIndex++;
+            i++;
+          }
+        }
+
+        result += tokenResult;
+      } else {
+        result += surface;
+      }
+    }
+
+    return result;
+  };
+
+  // Annotates every known historical spelling, leaving the rest of the line to
+  // the tokenizer. Splitting first keeps Kuromoji from folding the kana suffix
+  // into the preceding word's reading.
+  const applyHistoricalKanaReadings = (text) => {
+    if (!HISTORICAL_KANA_PATTERN.test(text)) {
+      return convertTokensToRuby(text);
+    }
+
+    let result = "";
+    let cursor = 0;
+    for (const match of text.matchAll(HISTORICAL_KANA_GLOBAL)) {
+      if (match.index > cursor) {
+        result += convertTokensToRuby(text.slice(cursor, match.index));
+      }
+      result += renderHistoricalKanaRuby(match[0]);
+      cursor = match.index + match[0].length;
+    }
+
+    if (cursor < text.length) {
+      result += convertTokensToRuby(text.slice(cursor));
+    }
+
+    return result;
+  };
+
   const convertToFurigana = (text) => {
     if (!text || typeof text !== "string") {
       return text;
@@ -157,85 +321,7 @@ const FuriganaConverter = (() => {
     }
 
     try {
-      const tokens = kuromojiInstance.tokenize(text);
-      let result = "";
-
-      for (const token of tokens) {
-        const surface = token.surface_form;
-        const reading = token.reading || token.pronunciation; // Fallback to pronunciation
-
-        // Only add ruby if token has kanji AND reading
-        if (reading && containsKanji(surface)) {
-          const hiragana = katakanaToHiragana(reading);
-
-          // Process character by character to handle mixed kanji/kana
-          let tokenResult = "";
-          let readingIndex = 0;
-          let i = 0;
-
-          while (i < surface.length) {
-            const char = surface[i];
-
-            if (containsKanji(char)) {
-              // Found a kanji - collect consecutive kanji
-              let kanjiSequence = char;
-              i++;
-
-              while (i < surface.length && containsKanji(surface[i])) {
-                kanjiSequence += surface[i];
-                i++;
-              }
-
-              // Find the reading for this kanji sequence
-              // Look ahead in surface to find kana that matches reading
-              let nextKanaInSurface = "";
-              let tempI = i;
-              while (tempI < surface.length && !containsKanji(surface[tempI])) {
-                nextKanaInSurface += surface[tempI];
-                tempI++;
-              }
-
-              // Find where this kana appears in the remaining reading
-              let kanjiReading = "";
-              if (nextKanaInSurface.length > 0) {
-                // Find the kana in the reading
-                const remainingReading = hiragana.substring(readingIndex);
-                const kanaIndex = remainingReading.indexOf(nextKanaInSurface);
-
-                if (kanaIndex > 0) {
-                  // Reading up to the kana is for the kanji
-                  kanjiReading = remainingReading.substring(0, kanaIndex);
-                } else if (kanaIndex === 0) {
-                  // No reading for this kanji? Shouldn't happen but handle it
-                  kanjiReading = "";
-                } else {
-                  // Kana not found - take all remaining as kanji reading
-                  kanjiReading = remainingReading;
-                }
-              } else {
-                // No more kana in surface - rest of reading is for this kanji
-                kanjiReading = hiragana.substring(readingIndex);
-              }
-
-              if (kanjiReading) {
-                tokenResult += `<ruby>${kanjiSequence}<rt>${kanjiReading}</rt></ruby>`;
-                readingIndex += kanjiReading.length;
-              } else {
-                tokenResult += kanjiSequence;
-              }
-            } else {
-              // Regular kana - just add it
-              tokenResult += char;
-              readingIndex++;
-              i++;
-            }
-          }
-
-          result += tokenResult;
-        } else {
-          result += surface;
-        }
-      }
+      const result = applyHistoricalKanaReadings(text);
 
       if (conversionCache.size >= MAX_CONVERSION_CACHE_SIZE) {
         const firstKey = conversionCache.keys().next().value;

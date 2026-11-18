@@ -1066,21 +1066,11 @@ const Utils = {
       if (kanjiSequence.length === 1) {
         furiganaMap.set(currentPos, reading);
       } else {
-        // Multiple kanji - split the reading
-        const kanjiChars = Array.from(kanjiSequence);
-        const readingChars = Array.from(reading);
-        const charsPerKanji = Math.floor(readingChars.length / kanjiChars.length);
-
-        kanjiChars.forEach((kanji, idx) => {
-          let kanjiReading;
-          if (idx === kanjiChars.length - 1) {
-            // Last kanji gets all remaining reading
-            kanjiReading = readingChars.slice(idx * charsPerKanji).join('');
-          } else {
-            kanjiReading = readingChars.slice(idx * charsPerKanji, (idx + 1) * charsPerKanji).join('');
-          }
-          furiganaMap.set(currentPos + idx, kanjiReading);
-        });
+        // A ruby can cover several kanji (今日, 大人, 人々). Their reading only
+        // splits on word-specific boundaries, so dividing it evenly would
+        // invent a wrong per-character reading. Keep the whole reading on the
+        // first character instead.
+        furiganaMap.set(currentPos, reading);
       }
 
       // Move position forward by the number of kanji

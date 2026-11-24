@@ -8227,7 +8227,7 @@ const SettingsFullscreenPreview = ({ view = "basic" }) => {
   // keeps its timeline inside the surface that owns the background.
   const player = (placement, showControls, showProgress, showVolume = false) => {
     if (!showControls && !showProgress) return null;
-    const inSurface = placement === "bottom" || (placement === "left" && showControls);
+    const inSurface = placement === "bottom" || placement === "stage" || (placement === "left" && showControls);
     const progressRow = showProgress ? react.createElement("div", { className: "settings-fs-progress-row" },
         react.createElement("small", null, "1:24"),
         react.createElement("span", { className: "settings-fs-progress" }),
@@ -8344,7 +8344,7 @@ const SettingsFullscreenPreview = ({ view = "basic" }) => {
     const tvPlayer = player("tv", flag("fullscreen-tv-show-controls", true), flag("fullscreen-tv-show-progress", true));
     if (tvPlayer || lyricProgress) nodes.push(react.createElement("div", { key: "tv-controls", className: "settings-fs-el settings-fs-tv-stack" }, lyricProgress, tvPlayer));
   }
-  else if (focused) nodes.push(player("stage", controls, progress));
+  else if (focused) nodes.push(player("stage", controls, progress, flag("fullscreen-show-volume", true)));
   else if (controlsPosition === "bottom") nodes.push(player("bottom", controls, progress, flag("fullscreen-show-volume", true)));
   nodes.push(react.createElement("span", { key: "menu", className: "settings-fs-el settings-fs-menu", "aria-hidden": "true" }, "≡"));
   const backgroundMode = getCurrentSettingsBackgroundMode();

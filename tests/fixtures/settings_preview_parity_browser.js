@@ -22,6 +22,7 @@ async page => {
     const root = ReactDOM.createRoot(container);
     const art = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="400" height="400" fill="#557784"/></svg>');
     Object.assign(Spicetify.Player.data.item.metadata, { title: 'Sample song', artist_name: 'Sample artist', album_title: 'Sample album', image_url: art });
+    Utils.getTrackArtwork = item => item?.metadata?.image_url || art;
     Spicetify.Player.data.context = { metadata: { context_description: 'Sample playlist', image_url: art } };
     Spicetify.Player.getProgress = () => 179000;
     Spicetify.Queue = { prevTracks: [], nextTracks: [{ contextTrack: { uri: 'spotify:track:nextSample',
@@ -64,6 +65,7 @@ async page => {
   const results = [];
   try {
     for (const [label, view, patch] of cases) {
+      await page.evaluate(label => { window.__parityCase = label; }, label);
       await page.evaluate(patch => settingsFixture.setConfig({ ...settingsFixture.defaults,
         'fullscreen-controls-position': 'left-panel', 'fullscreen-auto-hide-ui': false,
         'fullscreen-clock-show-seconds': true, ...patch }), patch);
@@ -73,8 +75,8 @@ async page => {
       await stage.waitFor();
       await page.evaluate(view => previewParityRuntime.render(view), view);
       const pairs = [
-        ['.settings-fs-progress', '.fullscreen-progress-bar, .fullscreen-tv-progress-bar, .fullscreen-stage-controls-progress'],
-        ['.settings-fs-controls', '.fullscreen-player-controls, .fullscreen-tv-controls, .fullscreen-stage-controls-buttons'],
+        ['.settings-fs-progress', '.fullscreen-progress-bar, .fullscreen-tv-progress-bar'],
+        ['.settings-fs-control-surface', '.fullscreen-player-controls, .fullscreen-tv-controls'],
         ['.settings-fs-volume', '.fullscreen-volume-wrapper'],
         ['.settings-fs-clock', '.fullscreen-clock'],
         ['.settings-fs-context', '.fullscreen-context-info'],
@@ -122,8 +124,8 @@ async page => {
         return { clock: [quadrant(preview, '.settings-fs-clock'), quadrant(runtime, '.fullscreen-clock')],
           context: [quadrant(preview, '.settings-fs-context'), quadrant(runtime, '.fullscreen-context-info')],
           lyricProgress: [quadrant(preview, '.settings-fs-lprog'), quadrant(runtime, '.fullscreen-lyrics-progress')],
-          transport: [quadrant(preview, '.settings-fs-progress'), quadrant(runtime, '.fullscreen-progress-bar, .fullscreen-tv-progress-bar, .fullscreen-stage-controls-progress')],
-          transportCenterY: [centerY(preview, '.settings-fs-progress'), centerY(runtime, '.fullscreen-progress-bar, .fullscreen-tv-progress-bar, .fullscreen-stage-controls-progress')],
+          transport: [quadrant(preview, '.settings-fs-progress'), quadrant(runtime, '.fullscreen-progress-bar, .fullscreen-tv-progress-bar')],
+          transportCenterY: [centerY(preview, '.settings-fs-progress'), centerY(runtime, '.fullscreen-progress-bar, .fullscreen-tv-progress-bar')],
           previewMode: preview.dataset.previewMode };
       });
       for (const key of ['clock', 'context', 'lyricProgress', 'transport']) {
@@ -172,5 +174,8 @@ async page => {
     const errors = await page.evaluate(() => settingsFixture.state.errors);
     assert(errors.length === 0, JSON.stringify(errors));
     return { passed: results.length, liveInputUpdates: true, results, errors };
+  } catch (error) {
+    const label = await page.evaluate(() => window.__parityCase).catch(() => "unknown");
+    throw new Error(`case ${label}: ${error.message}`);
   } finally { await page.evaluate(() => previewParityRuntime.cleanup()); }
 }

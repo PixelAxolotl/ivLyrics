@@ -206,6 +206,37 @@ test("the bottom placement renders its timeline inside the control surface", () 
   h.unmount();
 });
 
+test("motion uses the Standard presentation's control bar instead of the stage dock", () => {
+  for (const mode of ["motion", "vinyl", "video"]) {
+    const h = createHarness({ mode, visual: { "fullscreen-show-volume": true } });
+    const stage = () => elements(h.tree).find(node => node.type === h.vinyl);
+    const bar = () => byClass(h.tree, "fullscreen-motion-controls");
+    if (mode === "motion") {
+      assert.ok(bar(), "motion keeps the bottom control bar");
+      assert.equal(byClass(h.tree, "fullscreen-bottom"), bar());
+      assert.equal(bar().props.role, "group");
+      assert.equal(bar().props.tabIndex, 0, "the hover-hidden bar is still keyboard reachable");
+      assert.equal(bar().props.className.split(" ").includes("hidden"), false,
+        "hover gating replaces the idle hide class");
+      const surface = elements(bar()).find(node => node.type?.name === "PlayerControls");
+      assert.equal(surface.props.showProgress, true, "the timeline comes from the standard surface");
+      assert.equal(surface.props.showVolume, true, "the standard volume row is present");
+      assert.equal(stage().props.showStageControls, false, "the stage dock is not used");
+      assert.equal(stage().props.showStageProgress, false);
+      h.config.visual["fullscreen-show-controls"] = false;
+      h.update();
+      const timelineOnly = elements(bar()).find(node => node.type?.name === "PlayerControls");
+      assert.equal(timelineOnly.props.progressOnly, true, "a timeline-only bar reuses the same surface");
+      assert.equal(timelineOnly.props.showVolume, false);
+    } else {
+      assert.equal(bar(), undefined, `${mode} keeps its own stage controls`);
+      assert.equal(stage().props.showStageControls, true);
+      assert.equal(stage().props.showStageProgress, true);
+    }
+    h.unmount();
+  }
+});
+
 test("the under-album controller owns its timeline instead of a sibling row", () => {
   const h = createHarness({ visual: { "fullscreen-controls-background": true } });
   const rows = () => [byClass(h.tree, "fullscreen-left-controls").props.children]

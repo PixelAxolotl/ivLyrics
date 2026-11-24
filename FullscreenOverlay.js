@@ -2669,8 +2669,10 @@ const FullscreenOverlay = (() => {
                 activeLyricsKaraoke,
                 karaokeSource,
                 lyricsSettingsRevision,
-                showStageControls: showControls,
-                showStageProgress: showProgress,
+                // Motion draws the standard player controls below instead of the
+                // stage dock (same bar as the Standard presentation).
+                showStageControls: showControls && normalizedPresentationMode !== "motion",
+                showStageProgress: showProgress && normalizedPresentationMode !== "motion",
                 vinylSettings: computeVinylSettings(),
                 onPrevious: () => Spicetify.Player.back(),
                 onSeek: (nextPosition) => {
@@ -2687,6 +2689,29 @@ const FullscreenOverlay = (() => {
                 onTogglePlayback: () => Spicetify.Player.togglePlay(),
                     onNext: () => Spicetify.Player.next()
                 }),
+                // Motion keeps the Standard presentation's playback control and
+                // the stage dock's reveal: the bar stays hidden until the pointer
+                // enters its bottom strip (or keyboard focus reaches it).
+                normalizedPresentationMode === "motion" && (showControls || showProgress) && react.createElement("div", {
+                    className: "fullscreen-bottom fullscreen-motion-controls",
+                    role: "group",
+                    tabIndex: 0,
+                    "aria-label": I18n.t("settingsAdvanced.fullscreenUI.showControls.desc") || "Player controls"
+                },
+                    react.createElement(PlayerControls, showControls ? {
+                        show: true,
+                        showVolume,
+                        buttonSize: controlButtonSize,
+                        showBackground: controlsBackground,
+                        showProgress
+                    } : {
+                        show: true,
+                        showVolume: false,
+                        showBackground: controlsBackground,
+                        showProgress: true,
+                        progressOnly: true
+                    })
+                ),
                 renderResearchConsentDialog()
         );
 

@@ -241,6 +241,32 @@ test("hide animations and the separate portrait, bottom and TV layouts retain th
     "the under-album content publishes its album width bound");
 });
 
+test("the motion bar keeps the stage dock's bottom-left, hide-until-hovered reveal", () => {
+  const wrapper = ".fullscreen-motion-controls";
+  const surface = `${wrapper} .fullscreen-player-controls`;
+  const css = declarations(wrapper);
+  assert.equal(css["pointer-events"], "none");
+  assert.equal(css["max-height"], "none", "the hidden surface is not clipped");
+  assert.equal(css.transform, "none", "bottom-left anchoring, not the centered bottom bar");
+  assert.equal(css["align-items"], "flex-start");
+  assert.match(css.left, /env\(safe-area-inset-left\)/);
+  assert.match(css.bottom, /env\(safe-area-inset-bottom\)/);
+  assert.equal(declarations(`${wrapper}::before`)["pointer-events"], "auto",
+    "an invisible strip still catches the reveal gesture");
+  assert.equal(declarations(surface).visibility, "hidden");
+  assert.equal(declarations(surface).opacity, "0");
+  assert.equal(declarations(surface)["pointer-events"], "none");
+  for (const selector of [
+    `${wrapper}:hover .fullscreen-player-controls`,
+    `${wrapper}:focus-visible .fullscreen-player-controls`,
+    `${wrapper}:has(:focus-visible) .fullscreen-player-controls`,
+  ]) {
+    assert.equal(declarations(selector).visibility, "visible", selector);
+    assert.equal(declarations(selector).opacity, "1", selector);
+    assert.equal(declarations(selector)["pointer-events"], "auto", selector);
+  }
+});
+
 test("only the album column gates the left-panel controller, and only for hover-capable pointers", () => {
   const gated = overrides => !!findClass(render(overrides), "controls-hidden");
   // Hovering the column is the single trigger once auto-hide UI is on.

@@ -33,6 +33,7 @@ async page => {
     for (const name of ["heart", "heart-active", "shuffle", "play", "pause", "skip-back", "skip-forward", "repeat", "repeat-once", "volume-one-wave", "volume-two-wave", "volume-off"]) {
       Spicetify.SVGIcons[name] = '<path d="M4 3 13 8 4 13Z"/>';
     }
+    Utils.getTrackArtwork = item => item?.metadata?.image_url || art;
     let revision = 0;
     window.controllerBackgroundRuntime = {
       render({ view = "normal", reversed = false, portrait = false, ...patch }) {

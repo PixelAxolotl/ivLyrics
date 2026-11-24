@@ -6494,11 +6494,11 @@ ruby rt {
   opacity: 0;
 }
 
-/* Motion presentation keeps the Standard controls in the same bar, anchored
-   bottom-left like the stage dock it replaces. The bar sits above the
-   vinyl/motion stage layer (z-index 900) and stays hidden until the pointer
-   enters its strip. */
-.fullscreen-motion-controls {
+/* Vinyl, Video, and Motion keep the Standard controls in the same bar,
+   anchored bottom-left like the stage dock they replace. The bar sits above
+   the vinyl/motion stage layer (z-index 900) and stays hidden until the
+   pointer enters its strip. */
+.fullscreen-focus-controls {
   bottom: max(24px, env(safe-area-inset-bottom));
   left: max(24px, env(safe-area-inset-left));
   z-index: 2147481900;
@@ -6513,7 +6513,7 @@ ruby rt {
 
 /* Invisible grab strip along the bottom edge, so the hidden bar can still be
    revealed by hovering where the stage dock used to sit. */
-.fullscreen-motion-controls::before {
+.fullscreen-focus-controls::before {
   position: absolute;
   right: -32px;
   bottom: -24px;
@@ -6523,7 +6523,7 @@ ruby rt {
   pointer-events: auto;
 }
 
-.fullscreen-motion-controls .fullscreen-player-controls {
+.fullscreen-focus-controls .fullscreen-player-controls {
   box-sizing: border-box;
   visibility: hidden;
   opacity: 0;
@@ -6536,9 +6536,9 @@ ruby rt {
     visibility 180ms linear;
 }
 
-.fullscreen-motion-controls:hover .fullscreen-player-controls,
-.fullscreen-motion-controls:focus-visible .fullscreen-player-controls,
-.fullscreen-motion-controls:has(:focus-visible) .fullscreen-player-controls {
+.fullscreen-focus-controls:hover .fullscreen-player-controls,
+.fullscreen-focus-controls:focus-visible .fullscreen-player-controls,
+.fullscreen-focus-controls:has(:focus-visible) .fullscreen-player-controls {
   visibility: visible;
   opacity: 1;
   pointer-events: auto;
@@ -6546,15 +6546,15 @@ ruby rt {
 }
 
 @media (max-width: 620px) {
-  .fullscreen-motion-controls {
+  .fullscreen-focus-controls {
     bottom: max(16px, env(safe-area-inset-bottom));
     left: max(16px, env(safe-area-inset-left));
     width: calc(100vw - 32px);
     max-width: none;
   }
 
-  .fullscreen-motion-controls .fullscreen-player-controls,
-  .fullscreen-motion-controls .fullscreen-player-controls.with-background {
+  .fullscreen-focus-controls .fullscreen-player-controls,
+  .fullscreen-focus-controls .fullscreen-player-controls.with-background {
     width: 100%;
     min-width: 0;
     padding: 12px 14px;

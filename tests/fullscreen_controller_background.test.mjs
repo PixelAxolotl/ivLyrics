@@ -241,8 +241,8 @@ test("hide animations and the separate portrait, bottom and TV layouts retain th
     "the under-album content publishes its album width bound");
 });
 
-test("the motion bar keeps the stage dock's bottom-left, hide-until-hovered reveal", () => {
-  const wrapper = ".fullscreen-motion-controls";
+test("the focus bar keeps the stage dock's bottom-left, hide-until-hovered reveal", () => {
+  const wrapper = ".fullscreen-focus-controls";
   const surface = `${wrapper} .fullscreen-player-controls`;
   const css = declarations(wrapper);
   assert.equal(css["pointer-events"], "none");

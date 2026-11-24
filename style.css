@@ -6515,9 +6515,10 @@ ruby rt {
    revealed by hovering where the stage dock used to sit. */
 .fullscreen-focus-controls::before {
   position: absolute;
-  right: -32px;
+  right: auto;
   bottom: -24px;
   left: -32px;
+  width: min(calc(100% + 64px), 472px);
   height: 84px;
   content: "";
   pointer-events: auto;

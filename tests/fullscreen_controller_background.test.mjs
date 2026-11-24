@@ -253,6 +253,9 @@ test("the focus bar keeps the stage dock's bottom-left, hide-until-hovered revea
   assert.match(css.bottom, /env\(safe-area-inset-bottom\)/);
   assert.equal(declarations(`${wrapper}::before`)["pointer-events"], "auto",
     "an invisible strip still catches the reveal gesture");
+  const strip = declarations(`${wrapper}::before`);
+  assert.equal(strip.right, "auto", "the strip must not stretch to the right edge");
+  assert.equal(strip.width, "min(calc(100% + 64px), 472px)", "the strip stays near the bar");
   assert.equal(declarations(surface).visibility, "hidden");
   assert.equal(declarations(surface).opacity, "0");
   assert.equal(declarations(surface)["pointer-events"], "none");

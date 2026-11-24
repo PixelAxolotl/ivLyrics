@@ -6550,7 +6550,8 @@ ruby rt {
   .fullscreen-focus-controls {
     bottom: max(16px, env(safe-area-inset-bottom));
     left: max(16px, env(safe-area-inset-left));
-    width: calc(100vw - 32px);
+    right: max(16px, env(safe-area-inset-right));
+    width: auto;
     max-width: none;
   }
 

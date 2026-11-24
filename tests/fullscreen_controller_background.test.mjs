@@ -268,6 +268,13 @@ test("the focus bar keeps the stage dock's bottom-left, hide-until-hovered revea
     assert.equal(declarations(selector).opacity, "1", selector);
     assert.equal(declarations(selector)["pointer-events"], "auto", selector);
   }
+  const mobile = styles.slice(
+    styles.indexOf("@media (max-width: 620px)"),
+    styles.indexOf("/* Player controls container */"));
+  assert.match(mobile, /right:\s*max\(16px, env\(safe-area-inset-right\)\)/,
+    "the narrow bar is bounded on the right");
+  assert.match(mobile, /width:\s*auto/,
+    "the narrow bar does not use a fixed viewport width");
 });
 
 test("only the album column gates the left-panel controller, and only for hover-capable pointers", () => {

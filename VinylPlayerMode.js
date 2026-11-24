@@ -384,134 +384,6 @@ const VinylPlayerMode = (() => {
         );
     });
 
-    const StagePlaybackControls = react.memo(({
-        isPlaying = false,
-        position = 0,
-        duration = 0,
-        showControls = true,
-        showProgress = true,
-        onPrevious,
-        onTogglePlayback,
-        onNext,
-        onSeek
-    }) => {
-        const [seekPreview, setSeekPreview] = useState(null);
-        const safeDuration = Math.max(Number(duration) || 0, 0);
-        const safePosition = Math.min(
-            safeDuration || Number.MAX_SAFE_INTEGER,
-            Math.max(Number(position) || 0, 0)
-        );
-        const displayedPosition = seekPreview === null
-            ? safePosition
-            : seekPreview;
-        const groupLabel = I18n.t("settingsAdvanced.fullscreenUI.showControls.desc")
-            || "Player controls";
-        const progressLabel = I18n.t("settingsAdvanced.fullscreenUI.showProgressBar.desc")
-            || "Playback position";
-
-        const previewSeek = useCallback((event) => {
-            setSeekPreview(Number(event.currentTarget.value) || 0);
-        }, []);
-
-        const commitSeek = useCallback((event) => {
-            const nextPosition = Math.max(Number(event.currentTarget.value) || 0, 0);
-            setSeekPreview(null);
-            onSeek?.(nextPosition);
-        }, [onSeek]);
-
-        if (!showControls && !showProgress) return null;
-
-        const renderIconButton = ({
-            key,
-            className = "",
-            label,
-            icon,
-            onClick
-        }) => react.createElement("button", {
-            key,
-            type: "button",
-            className: `fullscreen-stage-control-button ${className}`.trim(),
-            onClick,
-            "aria-label": label,
-            title: label
-        },
-            react.createElement("svg", {
-                viewBox: "0 0 16 16",
-                fill: "currentColor",
-                "aria-hidden": "true",
-                dangerouslySetInnerHTML: { __html: icon || "" }
-            })
-        );
-
-        return react.createElement("div", {
-            className: "fullscreen-stage-controls-dock",
-            role: "group",
-            tabIndex: 0,
-            "aria-label": groupLabel
-        },
-            react.createElement("div", {
-                className: "fullscreen-stage-controls-surface"
-            },
-                showProgress && react.createElement("div", {
-                    className: "fullscreen-stage-controls-progress"
-                },
-                    react.createElement("span", {
-                        className: "fullscreen-stage-controls-time"
-                    }, formatTime(displayedPosition)),
-                    react.createElement("input", {
-                        className: "fullscreen-stage-controls-range",
-                        type: "range",
-                        min: 0,
-                        max: Math.max(safeDuration, 1),
-                        step: 250,
-                        value: Math.min(displayedPosition, Math.max(safeDuration, 1)),
-                        disabled: safeDuration <= 0,
-                        "aria-label": progressLabel,
-                        onPointerDown: (event) => {
-                            event.currentTarget.setPointerCapture?.(event.pointerId);
-                        },
-                        onInput: previewSeek,
-                        onChange: previewSeek,
-                        onPointerUp: commitSeek,
-                        onPointerCancel: () => setSeekPreview(null),
-                        onKeyUp: commitSeek,
-                        onBlur: seekPreview === null ? undefined : commitSeek
-                    }),
-                    react.createElement("span", {
-                        className: "fullscreen-stage-controls-time"
-                    }, formatTime(safeDuration))
-                ),
-                showControls && react.createElement("div", {
-                    className: "fullscreen-stage-controls-buttons"
-                }, [
-                    renderIconButton({
-                        key: "previous",
-                        label: I18n.t("fullscreen.controls.previous") || "Previous",
-                        icon: Spicetify.SVGIcons["skip-back"],
-                        onClick: onPrevious
-                    }),
-                    renderIconButton({
-                        key: "play-pause",
-                        className: "is-primary",
-                        label: isPlaying
-                            ? (I18n.t("fullscreen.controls.pause") || "Pause")
-                            : (I18n.t("fullscreen.controls.play") || "Play"),
-                        icon: isPlaying
-                            ? Spicetify.SVGIcons.pause
-                            : Spicetify.SVGIcons.play,
-                        onClick: onTogglePlayback
-                    }),
-                    renderIconButton({
-                        key: "next",
-                        label: I18n.t("fullscreen.controls.next") || "Next",
-                        icon: Spicetify.SVGIcons["skip-forward"],
-                        onClick: onNext
-                    })
-                ])
-            )
-        );
-    });
-
     // Keep the former compact-vinyl presentation id and public component alias
     // so saved preferences and FullscreenOverlay's album interactions survive.
     // The CD face rotates on its own compositor layer, never the spectrum or
@@ -1306,8 +1178,6 @@ const VinylPlayerMode = (() => {
         karaokeSource = null,
         lyricsSettingsRevision = 0,
         vinylSettings = {},
-        showStageControls = true,
-        showStageProgress = true,
         onPresentationModeChange,
         onPrevious,
         onSeek,
@@ -1811,17 +1681,6 @@ const VinylPlayerMode = (() => {
                 visible: true,
                 onChange: onPresentationModeChange,
                 onRedirect: motionPlayable ? redirectMotion : null
-            }),
-            (isFullVinylPresentation || isVideoPresentation || isMotionPresentation) && react.createElement(StagePlaybackControls, {
-                isPlaying,
-                position,
-                duration,
-                showControls: showStageControls,
-                showProgress: showStageProgress,
-                onPrevious,
-                onTogglePlayback,
-                onNext,
-                onSeek
             }),
             lyricsEnabled && !motionPlayable ? react.createElement("div", {
                 className: `fullscreen-vinyl-lyric-stage${hasVisibleLyric ? "" : " is-empty"}`,

@@ -220,8 +220,8 @@ test("vinyl, video, and motion use the Standard presentation's control bar", () 
     const surface = elements(bar()).find(node => node.type?.name === "PlayerControls");
     assert.equal(surface.props.showProgress, true, "the timeline comes from the standard surface");
     assert.equal(surface.props.showVolume, true, "the standard volume row is present");
-    assert.equal(stage().props.showStageControls, false, "the stage dock is not used");
-    assert.equal(stage().props.showStageProgress, false);
+    assert.equal("showStageControls" in stage().props, false, `${mode} no longer receives stage dock props`);
+    assert.equal("showStageProgress" in stage().props, false);
     h.config.visual["fullscreen-show-controls"] = false;
     h.update();
     const timelineOnly = elements(bar()).find(node => node.type?.name === "PlayerControls");

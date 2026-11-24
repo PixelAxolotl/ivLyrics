@@ -2669,10 +2669,6 @@ const FullscreenOverlay = (() => {
                 activeLyricsKaraoke,
                 karaokeSource,
                 lyricsSettingsRevision,
-                // Vinyl, Video, and Motion draw the Standard bar below, so the
-                // stage dock is never used.
-                showStageControls: false,
-                showStageProgress: false,
                 vinylSettings: computeVinylSettings(),
                 onPrevious: () => Spicetify.Player.back(),
                 onSeek: (nextPosition) => {

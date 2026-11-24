@@ -19,7 +19,7 @@ async page => {
       style.textContent = `html, body { height: 100%; }
         body { background: repeating-linear-gradient(135deg, #567b8c 0 70px, #b687a9 70px 140px, #354151 140px 210px); }
         #video-box-replay .fullscreen-vinyl-overlay { background: transparent; }
-        #video-box-replay .fullscreen-presentation-dock, #video-box-replay .fullscreen-stage-controls-dock { display: none; }`;
+        #video-box-replay .fullscreen-presentation-dock, #video-box-replay .fullscreen-focus-controls { display: none; }`;
       document.head.append(style);
       const syllables = (text, start = 1000) => Array.from(text, (text, index) => ({ text, startTime: start + index * 220, endTime: start + 220 + index * 220 }));
       const lead = { text: 'All night 好きにしてね', startTime: 1000, endTime: 6500,

@@ -707,8 +707,6 @@ const FullscreenOverlay = (() => {
             setRepeatMode(nextMode);
         };
 
-        if (!show) return null;
-
         const buttonStyle = useMemo(() => ({
             width: `${buttonSize}px`,
             height: `${buttonSize}px`
@@ -721,6 +719,8 @@ const FullscreenOverlay = (() => {
             width: `${buttonSize - 4}px`,
             height: `${buttonSize - 4}px`
         }), [buttonSize]);
+
+        if (!show) return null;
 
         const applyVolumeChange = (newVolume) => {
             setVolume(newVolume);
@@ -846,7 +846,7 @@ const FullscreenOverlay = (() => {
                     })
                 ),
                 // Add to playlist (same menu as the Sync Creator profile rows)
-                window.PlaylistPicker.PlaylistPickerButton({
+                react.createElement(window.PlaylistPicker.PlaylistPickerButton, {
                     trackUri: playlistTrackUri,
                     buttonClassName: "fullscreen-control-btn",
                     buttonStyle: smallButtonStyle,

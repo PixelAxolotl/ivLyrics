@@ -45,7 +45,7 @@ const settingsSource = baseline => {
   const items = section(source.slice(from), "            items: [", "            onChange: saveVinylSetting,")
     .replace(/^\s*items:\s*/, "").trim().replace(/,$/, "");
   return `window.fixtureSettingItems = CONFIG => {
-    const ConfigSlider = "toggle", ConfigSliderRange = "range";
+    const ConfigSlider = "toggle", ConfigSliderRange = "range", ConfigSelection = "cards";
     return (${items});
   };`;
 };

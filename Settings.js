@@ -8233,12 +8233,12 @@ const SettingsFullscreenPreview = ({ view = "basic" }) => {
         react.createElement("span", { className: "settings-fs-progress" }),
         react.createElement("small", null, "3:42")) : null;
     const surface = showControls || (showProgress && inSurface) ? react.createElement("div", {
-        className: `settings-fs-control-surface${!tvMode && !focused && flag("fullscreen-controls-background", false) ? " has-bg" : ""}`,
+        className: `settings-fs-control-surface${!tvMode && flag("fullscreen-controls-background", false) ? " has-bg" : ""}`,
       },
       inSurface ? progressRow : null,
       showControls ? react.createElement("span", { className: "settings-fs-controls" },
-        ...(tvMode || focused ? [0, 1, 2] : [0, 1, 2, 3, 4, 5, 6]).map(index =>
-          react.createElement("i", { key: index, className: index === (tvMode || focused ? 1 : 3) ? "is-play" : "" }))) : null,
+        ...(tvMode ? [0, 1, 2] : [0, 1, 2, 3, 4, 5, 6]).map(index =>
+          react.createElement("i", { key: index, className: index === (tvMode ? 1 : 3) ? "is-play" : "" }))) : null,
       showControls && showVolume ? react.createElement("span", { className: "settings-fs-volume" }) : null) : null;
     return react.createElement("div", { key: `player-${placement}`, className: `settings-fs-player is-${placement}` },
       // TV puts its timeline below the transport, the bottom bar inside the

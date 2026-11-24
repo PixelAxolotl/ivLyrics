@@ -61,6 +61,8 @@ async page => {
     ['cd-reversed', 'cd', { 'fullscreen-layout-reverse': true }],
     ['lp', 'vinyl', {}], ['lp-progress-only', 'vinyl', { 'fullscreen-show-controls': false }],
     ['lp-progress-off', 'vinyl', { 'fullscreen-show-progress': false }],
+    ['lp-background', 'vinyl', { 'fullscreen-controls-background': true }],
+    ['lp-background-off', 'vinyl', { 'fullscreen-controls-background': false }],
   ];
   const results = [];
   try {
@@ -88,6 +90,10 @@ async page => {
         ['.settings-fs-album, .settings-fs-cd', '.lyrics-fullscreen-album-container, .fullscreen-tv-album-wrapper'],
         ['.settings-fs-info', '.lyrics-fullscreen-track-info, .fullscreen-tv-track-info'],
         ['.settings-fs-info em', '.lyrics-fullscreen-album-name, .fullscreen-tv-album-name']);
+      if (view !== 'tv') pairs.push(
+        ['.settings-fs-controls i', '.fullscreen-control-main-row .fullscreen-control-btn']);
+      if (label === 'lp-background' || label === 'lp-background-off') pairs.push(
+        ['.settings-fs-control-surface.has-bg', '.fullscreen-focus-controls .fullscreen-player-controls.with-background']);
       for (const [previewSelector, runtimeSelector] of pairs) {
         try {
           await page.waitForFunction(([previewSelector, runtimeSelector]) =>
@@ -95,6 +101,10 @@ async page => {
             document.getElementById('preview-parity-runtime').querySelectorAll(runtimeSelector).length,
           [previewSelector, runtimeSelector]);
         } catch (error) { throw new Error(`${label}: ${previewSelector} differs from ${runtimeSelector}: ${error.message}`); }
+      }
+      if (label === 'tv-controls') {
+        const tvIcons = await page.locator('.settings-fs-stage .settings-fs-controls i').count();
+        assert(tvIcons === 3, `tv preview transport changed: ${tvIcons}`);
       }
       await stage.evaluate(async node => {
         await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -138,7 +148,7 @@ async page => {
         });
         assert(Math.abs(center - .5) < .03, `single-column lyrics are not centered: ${center}`);
       }
-      if (['default', 'progress-only', 'reverse', 'tv-progress', 'cd', 'lp'].includes(label)) {
+      if (['default', 'progress-only', 'reverse', 'tv-progress', 'cd', 'lp', 'lp-background', 'lp-background-off'].includes(label)) {
         await page.screenshot({ path: `output/playwright/settings-preview-parity-${label}.png` });
       }
       results.push({ label, view, ...details });
